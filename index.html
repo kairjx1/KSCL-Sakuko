@@ -2,1265 +2,1107 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KSCL Academy – Kiểm soát chất lượng Sakuko</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KSCL System – Sakuko Vietnam</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --primary:#1565C0;--primary-dark:#0D47A1;--primary-light:#E3F2FD;
-  --secondary:#00897B;--accent:#FF6F00;
-  --bg:#F5F7FA;--surface:#fff;--text:#212121;--text2:#757575;
-  --border:#E0E0E0;--success:#2E7D32;--warn:#F57F17;--error:#C62828;
-  --sw:260px
+  --pri:#0066cc;--pri-d:#004fa3;--pri-l:#e8f2ff;
+  --sb:#1b2a4a;--sb-t:#7a92bc;--sb-h:#253a5e;
+  --bg:#f0f2f7;--surface:#fff;--border:#dde3ef;
+  --t1:#1a2332;--t2:#6b7a99;--t3:#a8b5cc;
+  --ok:#16a34a;--warn:#f59e0b;--err:#dc2626;--info:#0ea5e9;
+  --r:8px;--sh:0 2px 12px rgba(0,0,0,.08)
 }
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
-.hidden{display:none!important}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t1);font-size:14px}
+button{cursor:pointer;border:none;outline:none}
+input,select,textarea{outline:none;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;font-family:inherit}
+input:focus,select:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(0,102,204,.12)}
 
-/* ── LOADING ── */
-.loading-page{min-height:100vh;display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,var(--primary-dark),var(--primary) 55%,var(--secondary));
-  flex-direction:column;gap:16px;color:#fff}
-.spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,.3);
-  border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+/* LOADING */
+.loading{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#1b2a4a 0%,#0d5ea8 100%)}
+.ld-logo{width:80px;height:80px;background:#fff;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:20px;box-shadow:0 8px 32px rgba(0,0,0,.25)}
+.spinner{width:38px;height:38px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:14px}
 @keyframes spin{to{transform:rotate(360deg)}}
+.loading p{color:rgba(255,255,255,.75);font-size:14px}
 
-/* ── LOGIN ── */
-.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,var(--primary-dark),var(--primary) 55%,var(--secondary))}
-.login-card{background:#fff;border-radius:16px;padding:44px 40px;width:100%;max-width:420px;
-  box-shadow:0 24px 64px rgba(0,0,0,.3)}
-.login-logo{text-align:center;margin-bottom:32px}
-.login-logo .logo-icon{font-size:48px;margin-bottom:8px}
-.login-logo h1{color:var(--primary);font-size:26px;font-weight:700}
-.login-logo p{color:var(--text2);font-size:13px;margin-top:4px}
-.login-logo .chip{display:inline-block;background:var(--primary-light);color:var(--primary);
-  padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;margin-top:8px}
-.fg{margin-bottom:18px}
-.fg label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
-.fg input{width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:8px;
-  font-size:15px;outline:none;transition:border-color .2s}
-.fg input:focus{border-color:var(--primary)}
-.err{color:var(--error);font-size:12px;margin-top:4px;display:none}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  padding:11px 22px;border-radius:8px;font-size:14px;font-weight:600;
-  cursor:pointer;border:none;transition:all .2s}
-.btn-primary{background:var(--primary);color:#fff;width:100%}
-.btn-primary:hover{background:var(--primary-dark);transform:translateY(-1px);box-shadow:0 4px 14px rgba(21,101,192,.4)}
-.btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
-.btn-sm{padding:7px 14px;font-size:13px}
-.btn-outline{background:transparent;color:var(--primary);border:2px solid var(--primary)}
-.btn-outline:hover{background:var(--primary-light)}
-.btn-success{background:var(--success);color:#fff}
-.btn-success:hover{background:#1B5E20}
-.btn-danger{background:var(--error);color:#fff;width:auto}
-.btn-danger:hover{background:#B71C1C}
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1b2a4a 0%,#0d5ea8 100%)}
+.login-card{background:#fff;border-radius:18px;padding:48px 42px;width:430px;max-width:96vw;box-shadow:0 32px 80px rgba(0,0,0,.25)}
+.login-brand{display:flex;align-items:center;gap:14px;margin-bottom:36px}
+.login-brand-icon{width:52px;height:52px;background:linear-gradient(135deg,#0066cc,#00c6ff);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;flex-shrink:0}
+.login-brand h2{font-size:20px;font-weight:800;color:var(--t1);line-height:1.2}
+.login-brand p{font-size:12px;color:var(--t2);margin-top:2px}
+.login-card h3{font-size:24px;font-weight:700;margin-bottom:6px}
+.login-sub{color:var(--t2);font-size:13px;margin-bottom:28px}
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.fg input{width:100%;padding:11px 14px;font-size:14px}
+.btn-login{background:var(--pri);color:#fff;border-radius:9px;padding:13px;font-size:15px;font-weight:700;width:100%;transition:.2s;margin-top:4px}
+.btn-login:hover{background:var(--pri-d)}
+.err-box{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;color:#dc2626;font-size:13px;margin-bottom:14px}
 
-/* ── SETUP MODAL ── */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;
-  display:flex;align-items:center;justify-content:center}
-.modal{background:#fff;border-radius:16px;padding:36px 32px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.modal h2{font-size:20px;font-weight:700;margin-bottom:8px}
-.modal p{color:var(--text2);font-size:13px;margin-bottom:22px}
+/* APP SHELL */
+#shell{display:flex;height:100vh;overflow:hidden}
 
-/* ── APP SHELL ── */
-.app{display:flex;min-height:100vh}
-.sidebar{width:var(--sw);background:var(--primary-dark);color:#fff;
-  display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;
-  z-index:100;overflow-y:auto}
-.s-logo{padding:20px 18px;border-bottom:1px solid rgba(255,255,255,.1)}
-.s-logo h2{font-size:17px;font-weight:700}
-.s-logo p{font-size:11px;opacity:.6;margin-top:2px}
-.s-user{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px}
-.s-avatar{width:38px;height:38px;border-radius:50%;background:var(--secondary);
-  display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
-.s-uname{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.s-urole{font-size:11px;opacity:.65;margin-top:2px}
-.s-nav{padding:10px 0;flex:1}
-.s-sec{padding:8px 18px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.45}
-.s-item{display:flex;align-items:center;gap:12px;padding:10px 18px;font-size:13.5px;
-  cursor:pointer;color:rgba(255,255,255,.8);border-left:3px solid transparent;transition:all .18s}
-.s-item:hover{background:rgba(255,255,255,.1);color:#fff}
-.s-item.active{background:rgba(255,255,255,.15);color:#fff;border-left-color:var(--accent);font-weight:600}
-.s-icon{font-size:17px;width:22px;text-align:center;flex-shrink:0}
-.s-foot{padding:14px 18px;border-top:1px solid rgba(255,255,255,.1)}
-.s-logout{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.65);
-  font-size:13px;cursor:pointer;padding:6px 0}
-.s-logout:hover{color:#fff}
+/* SIDEBAR */
+.sb{width:240px;background:var(--sb);color:var(--sb-t);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sb::-webkit-scrollbar{width:4px}.sb::-webkit-scrollbar-thumb{background:#ffffff20;border-radius:2px}
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px}
+.sb-logo-ic{width:40px;height:40px;background:linear-gradient(135deg,#0066cc,#00c6ff);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.sb-logo h3{color:#fff;font-size:14px;font-weight:800;line-height:1.3}
+.sb-logo p{font-size:11px;color:var(--sb-t)}
+.sb-user{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px}
+.sb-av{width:36px;height:36px;border-radius:50%;background:var(--pri);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex-shrink:0}
+.sb-ui strong{display:block;color:#fff;font-size:13px;line-height:1.4;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-ui span{font-size:11px}
+.role-pill{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:700;background:var(--pri-l);color:var(--pri)}
+.sb-g{padding:6px 0}
+.sb-gl{padding:7px 16px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.28)}
+.sb-it{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;border-left:3px solid transparent;color:var(--sb-t);font-size:13.5px;transition:.15s}
+.sb-it:hover{background:var(--sb-h);color:#fff}
+.sb-it.active{background:var(--sb-h);color:#fff;border-left-color:var(--pri)}
+.sb-ic{font-size:17px;width:22px;text-align:center;flex-shrink:0}
+.sb-bot{margin-top:auto;border-top:1px solid rgba(255,255,255,.07);padding:6px 0}
 
-/* ── MAIN ── */
-.main{margin-left:var(--sw);flex:1;padding:28px 32px;min-height:100vh}
-.ph{margin-bottom:26px}
-.ph h1{font-size:24px;font-weight:700}
-.ph p{color:var(--text2);margin-top:4px;font-size:14px}
-.bc{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);margin-bottom:18px}
-.bc a{color:var(--primary);cursor:pointer}
-.bc a:hover{text-decoration:underline}
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:54px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.tb-title{font-size:15px;font-weight:700;color:var(--t1);min-width:120px}
+.tb-search{flex:1;max-width:300px;position:relative}
+.tb-search input{padding:7px 12px 7px 34px;border-radius:18px;background:#f0f2f7;border-color:transparent;width:100%;font-size:13px}
+.tb-search input:focus{background:#fff;border-color:var(--pri)}
+.tb-s-ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--t2);font-size:14px}
+.tb-acts{margin-left:auto;display:flex;align-items:center;gap:6px}
+.ico-btn{width:36px;height:36px;border-radius:50%;background:transparent;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--t2);cursor:pointer;transition:.15s;position:relative}
+.ico-btn:hover{background:#f0f2f7;color:var(--t1)}
+.notif-dot{position:absolute;top:5px;right:5px;width:7px;height:7px;background:var(--err);border-radius:50%;border:2px solid #fff}
+.tb-av{width:36px;height:36px;border-radius:50%;background:var(--pri);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;cursor:pointer;font-size:14px}
+.content{flex:1;overflow-y:auto;padding:20px}
+.content::-webkit-scrollbar{width:6px}.content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
-/* ── CARDS ── */
-.card{background:var(--surface);border-radius:12px;padding:22px 24px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:26px}
-.stat{background:var(--surface);border-radius:12px;padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.06);
-  display:flex;align-items:center;gap:14px}
-.stat-ic{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;
-  justify-content:center;font-size:22px;flex-shrink:0}
-.ic-blue{background:var(--primary-light)}.ic-green{background:#E8F5E9}
-.ic-orange{background:#FFF3E0}.ic-teal{background:#E0F2F1}
-.stat-v{font-size:26px;font-weight:700;line-height:1}
-.stat-l{font-size:12px;color:var(--text2);margin-top:3px}
+/* GRIDS */
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(max-width:1200px){.g4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:720px){.g4,.g3,.g2{grid-template-columns:1fr}}
 
-/* ── MODULE CARDS ── */
-.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px}
-.mc{background:var(--surface);border-radius:12px;overflow:hidden;
-  box-shadow:0 2px 8px rgba(0,0,0,.08);cursor:pointer;transition:all .2s;border:2px solid transparent}
-.mc:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.14);border-color:var(--primary)}
-.mc-head{padding:22px;color:#fff}
-.mc-head .mc-icon{font-size:34px;margin-bottom:10px}
-.mc-head h3{font-size:15px;font-weight:700}
-.mc-head p{font-size:12px;opacity:.85;margin-top:3px}
-.mc-body{padding:14px 18px}
-.pbar-wrap{height:6px;background:var(--border);border-radius:3px;margin:8px 0}
-.pbar{height:100%;border-radius:3px;background:var(--primary);transition:width .5s}
-.mc-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-top:6px}
-.chip{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600}
-.chip-blue{background:var(--primary-light);color:var(--primary)}
-.chip-green{background:#E8F5E9;color:var(--success)}
-.chip-warn{background:#FFF3E0;color:var(--warn)}
+/* CARD */
+.card{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:20px}
 
-/* ── LESSON LIST ── */
-.ll{display:flex;flex-direction:column;gap:8px}
-.li{display:flex;align-items:center;gap:14px;padding:14px 18px;
-  background:var(--surface);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);
-  cursor:pointer;border:2px solid transparent;transition:all .18s}
-.li:hover{border-color:var(--primary);background:var(--primary-light)}
-.li.done{border-color:var(--success)}
-.li-num{width:34px;height:34px;border-radius:50%;background:var(--bg);
-  border:2px solid var(--border);display:flex;align-items:center;
-  justify-content:center;font-size:12px;font-weight:700;color:var(--text2);flex-shrink:0}
-.li.done .li-num{background:var(--success);border-color:var(--success);color:#fff}
-.li-info{flex:1}
-.li-info h4{font-size:14px;font-weight:600}
-.li-info p{font-size:12px;color:var(--text2);margin-top:2px}
-.li-dur{font-size:12px;color:var(--text2);flex-shrink:0}
+/* KPI */
+.kpi{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:16px 18px;border-top:4px solid currentColor;position:relative;overflow:hidden}
+.kpi-lb{font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.kpi-v{font-size:30px;font-weight:800;line-height:1;color:var(--t1)}
+.kpi-u{font-size:14px;font-weight:500;color:var(--t2);margin-left:3px}
+.kpi-tr{font-size:11px;margin-top:7px;display:flex;align-items:center;gap:3px}
+.tr-ok{color:var(--ok)}.tr-dn{color:var(--err)}
+.kpi-bg{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:38px;opacity:.12}
 
-/* ── LESSON CONTENT ── */
-.lc{max-width:800px}
-.lc h1{font-size:22px;margin-bottom:6px}
-.lc-meta{display:flex;gap:14px;color:var(--text2);font-size:13px;margin-bottom:22px;flex-wrap:wrap}
-.body{line-height:1.85;font-size:15px}
-.body h2{font-size:17px;font-weight:700;margin:26px 0 10px;color:var(--primary-dark)}
-.body h3{font-size:15px;font-weight:700;margin:18px 0 7px}
-.body p{margin-bottom:12px}
-.body ul,.body ol{padding-left:22px;margin-bottom:12px}
-.body li{margin-bottom:5px}
-.hbox{background:var(--primary-light);border-left:4px solid var(--primary);padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0}
-.wbox{background:#FFF8E1;border-left:4px solid var(--warn);padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0}
-.sbox{background:#E8F5E9;border-left:4px solid var(--success);padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0}
-.body table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
-.body th{background:var(--primary);color:#fff;padding:9px 13px;text-align:left}
-.body td{padding:9px 13px;border-bottom:1px solid var(--border)}
-.body tr:nth-child(even) td{background:var(--bg)}
-.ln{display:flex;gap:10px;margin-top:28px;flex-wrap:wrap}
+/* MODULE GRID */
+.mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px}
+.mc{background:#fff;border-radius:12px;padding:22px 14px;text-align:center;cursor:pointer;transition:.2s;box-shadow:var(--sh);border:2px solid transparent}
+.mc:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(0,0,0,.13)}
+.mc-ic{width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px}
+.mc-lb{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:3px}
+.mc-ds{font-size:11px;color:var(--t2);line-height:1.4}
 
-/* ── QUIZ ── */
-.qc{max-width:680px}
-.qprog{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;font-size:13px;color:var(--text2)}
-.qq{font-size:17px;font-weight:600;margin-bottom:18px;line-height:1.6}
-.qopts{display:flex;flex-direction:column;gap:9px}
-.qopt{padding:13px 16px;border-radius:8px;border:2px solid var(--border);cursor:pointer;transition:all .2s;font-size:14px}
-.qopt:hover:not(.dis){border-color:var(--primary);background:var(--primary-light)}
-.qopt.sel{border-color:var(--primary);background:var(--primary-light)}
-.qopt.ok{border-color:var(--success);background:#E8F5E9}
-.qopt.bad{border-color:var(--error);background:#FFEBEE}
-.qopt.dis{cursor:default}
-.qfeed{margin-top:14px;padding:11px 15px;border-radius:8px;font-size:14px}
-.qfeed.ok{background:#E8F5E9;color:var(--success)}
-.qfeed.bad{background:#FFEBEE;color:var(--error)}
-.qres{text-align:center;padding:40px 20px}
-.qscore{font-size:60px;font-weight:700;color:var(--primary)}
-.qscore-l{font-size:15px;color:var(--text2);margin-top:4px}
+/* TABS */
+.tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:20px;overflow-x:auto}
+.tabs::-webkit-scrollbar{height:0}
+.tab{padding:10px 18px;font-size:13.5px;font-weight:600;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:.15s}
+.tab:hover{color:var(--pri)}
+.tab.on{color:var(--pri);border-bottom-color:var(--pri)}
 
-/* ── ADMIN TABLE ── */
-.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
-.tbl th{background:var(--bg);padding:11px 14px;text-align:left;font-size:11px;
-  text-transform:uppercase;letter-spacing:.5px;color:var(--text2);border-bottom:2px solid var(--border)}
-.tbl td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
-.tbl tr:hover td{background:var(--bg)}
+/* TABLE */
+.tw{overflow-x:auto;border-radius:var(--r)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:#f8f9fc;padding:10px 13px;text-align:left;font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid #f0f2f7;transition:.1s}
+tbody tr:hover{background:#f8f9ff}
+tbody td{padding:11px 13px}
+tbody tr:last-child{border-bottom:none}
 
-/* ── CHECKLIST ── */
-.clitem{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--border)}
-.clitem input[type=checkbox]{width:17px;height:17px;margin-top:2px;cursor:pointer;accent-color:var(--primary)}
-.clitem label{cursor:pointer;flex:1;font-size:14px}
-.clitem.chk label{text-decoration:line-through;color:var(--text2)}
+/* BADGE */
+.bdg{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.b-ok{background:#dcfce7;color:#16a34a}.b-warn{background:#fef9c3;color:#b45309}
+.b-err{background:#fee2e2;color:#dc2626}.b-info{background:#e0f2fe;color:#0369a1}
+.b-gray{background:#f1f5f9;color:#475569}
 
-/* ── TREE / ACCORDION ── */
-.tree{display:flex;flex-direction:column;gap:6px}
-.tree-folder{border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.07)}
-.tree-header{display:flex;align-items:center;gap:10px;padding:14px 18px;
-  cursor:pointer;user-select:none;font-weight:600;font-size:14px;
-  background:var(--surface);border-left:4px solid transparent;transition:background .15s}
-.tree-header:hover{background:var(--bg)}
-.tree-header.open{border-left-color:var(--accent)}
-.tree-arrow{font-size:11px;color:var(--text2);transition:transform .2s;width:14px;flex-shrink:0}
-.tree-header.open .tree-arrow{transform:rotate(90deg)}
-.tree-icon{font-size:20px;flex-shrink:0}
-.tree-label{flex:1}
-.tree-count{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;
-  background:var(--bg);color:var(--text2)}
-.tree-body{display:none;background:#FAFBFD;border-top:1px solid var(--border)}
-.tree-body.open{display:block}
-.tree-item{display:flex;align-items:center;gap:10px;padding:11px 18px 11px 46px;
-  font-size:13.5px;cursor:pointer;border-bottom:1px solid var(--border);
-  transition:background .15s;color:var(--text)}
-.tree-item:last-child{border-bottom:none}
-.tree-item:hover{background:var(--primary-light);color:var(--primary)}
-.tree-item-icon{font-size:15px;flex-shrink:0;color:var(--text2)}
-.tree-item:hover .tree-item-icon{color:var(--primary)}
-.tree-empty{padding:20px 46px;font-size:13px;color:var(--text2);font-style:italic}
-/* ── TOAST ── */
-.toast-wrap{position:fixed;top:18px;right:18px;z-index:9999;display:flex;flex-direction:column;gap:7px}
-.toast{background:var(--text);color:#fff;padding:11px 18px;border-radius:8px;
-  font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.2);animation:toastIn .3s ease;max-width:300px}
-.toast.ok{background:var(--success)}.toast.err{background:var(--error)}
-@keyframes toastIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+/* BTN */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;font-family:inherit}
+.b-pri{background:var(--pri);color:#fff}.b-pri:hover{background:var(--pri-d)}
+.b-ok2{background:var(--ok);color:#fff}.b-ok2:hover{background:#14803a}
+.b-out{background:#fff;color:var(--t2);border:1px solid var(--border)}.b-out:hover{border-color:var(--pri);color:var(--pri)}
+.b-sm{padding:5px 11px;font-size:12px}
+.b-danger{background:#fee2e2;color:#dc2626}.b-danger:hover{background:#fecaca}
 
-/* ── MISC ── */
-.divider{height:1px;background:var(--border);margin:20px 0}
-.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.mt16{margin-top:16px}.mt24{margin-top:24px}
-.text2{color:var(--text2)}
+/* ALERT */
+.alert{border-radius:8px;padding:12px 16px;display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;font-size:13px}
+.a-warn{background:#fffbeb;border:1px solid #fcd34d}.a-err{background:#fef2f2;border:1px solid #fca5a5}
+.a-ok{background:#f0fdf4;border:1px solid #86efac}.a-info{background:#f0f9ff;border:1px solid #7dd3fc}
+.a-ic{font-size:18px;flex-shrink:0;margin-top:1px}
+.a-bd strong{display:block;font-weight:700;margin-bottom:2px}
+.a-bd p{color:var(--t2);font-size:12px}
 
-@media(max-width:768px){
-  :root{--sw:58px}
-  .s-logo p,.s-uname,.s-urole,.s-item span,.s-sec,.s-foot span{display:none}
-  .s-item{justify-content:center;padding:13px}
-  .main{padding:16px}
-  .stats{grid-template-columns:1fr 1fr}
-  .mgrid{grid-template-columns:1fr}
-  .login-card{margin:16px;padding:32px 24px}
-}
+/* CHART */
+.chart-box{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:18px 20px}
+.chart-title{font-size:13px;font-weight:700;margin-bottom:14px;color:var(--t1)}
+.chart-wrap{position:relative;height:240px}
+
+/* MODAL */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:#fff;border-radius:16px;width:480px;max-width:100%;max-height:92vh;overflow:auto;box-shadow:0 32px 80px rgba(0,0,0,.3)}
+.mhdr{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.mhdr h3{font-size:16px;font-weight:700}
+.mclose{width:32px;height:32px;border-radius:50%;background:#f0f2f7;border:none;cursor:pointer;font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;color:var(--t2)}
+.mbody{padding:20px 24px}
+.mfoot{padding:0 24px 20px;display:flex;gap:10px;justify-content:flex-end}
+
+/* DROP ZONE */
+.dz{border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:.2s;background:#fafbff}
+.dz:hover,.dz.over{border-color:var(--pri);background:var(--pri-l)}
+.dz p{color:var(--t2);font-size:13px;margin-top:10px;line-height:1.5}
+
+/* PROGRESS */
+.prog{height:8px;background:#f0f2f7;border-radius:4px;overflow:hidden;margin-top:5px}
+.prog-f{height:100%;border-radius:4px;transition:width .4s}
+
+/* SECTION HEADER */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.sec-hdr h1{font-size:20px;font-weight:700}
+.breadcrumb{font-size:12px;color:var(--t2);margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.breadcrumb span{color:var(--pri);cursor:pointer}.breadcrumb span:hover{text-decoration:underline}
+
+/* TOAST */
+.tw-wrap{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:#1a2332;color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.3);animation:tin .3s forwards,tout .3s 3.2s forwards;max-width:320px}
+.t-ok{background:#16a34a}.t-err{background:#dc2626}.t-warn{background:#b45309}
+@keyframes tin{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+@keyframes tout{to{opacity:0;transform:translateX(20px)}}
+
+/* MISC */
+.divider{height:1px;background:var(--border);margin:18px 0}
+.empty-state{text-align:center;padding:40px 20px;color:var(--t2)}
+.empty-state .es-ic{font-size:48px;margin-bottom:12px}
+.empty-state p{font-size:13px}
+.toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.spacer{flex:1}
+.checklist-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #f0f2f7;font-size:13.5px;cursor:pointer}
+.checklist-item input[type=checkbox]{width:17px;height:17px;flex-shrink:0;cursor:pointer;accent-color:var(--pri)}
+.checklist-item.done{color:var(--t3);text-decoration:line-through}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f5f6fa;font-size:13px}
+.stat-row:last-child{border:none}
+.stat-row .label{color:var(--t2)}
+.stat-row .value{font-weight:700;color:var(--t1)}
 </style>
-</head>
 <body>
-
-<!-- LOADING -->
-<div id="p-loading" class="loading-page">
-  <div class="spinner"></div>
-  <p style="font-size:14px;opacity:.8">Đang kết nối...</p>
-</div>
-
-<!-- LOGIN -->
-<div id="p-login" class="login-page hidden">
-  <div class="login-card">
-    <div class="login-logo">
-      <div class="logo-icon">🏭</div>
-      <h1>KSCL Academy</h1>
-      <p>Cổng học tập – Phòng Kiểm soát chất lượng</p>
-      <span class="chip">SAKUKO VIỆT NAM</span>
-    </div>
-    <div class="fg">
-      <label>Email</label>
-      <input id="l-email" type="email" placeholder="email@sakuko.com" autocomplete="username">
-    </div>
-    <div class="fg">
-      <label>Mật khẩu</label>
-      <input id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password">
-      <div class="err" id="l-err">Email hoặc mật khẩu không đúng</div>
-    </div>
-    <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Đăng nhập</button>
-  </div>
-</div>
-
-<!-- SETUP MODAL (first login) -->
-<div id="p-setup" class="modal-overlay hidden">
-  <div class="modal">
-    <h2>👋 Chào mừng!</h2>
-    <p>Vui lòng điền thông tin để hoàn tất hồ sơ của bạn.</p>
-    <div class="fg"><label>Họ và tên</label><input id="s-name" type="text" placeholder="Nguyễn Thị Lan"></div>
-    <div class="fg">
-      <label>Phòng ban</label>
-      <input id="s-dept" type="text" placeholder="KSCL" value="KSCL">
-    </div>
-    <button class="btn btn-primary" onclick="saveProfile()">Lưu và bắt đầu →</button>
-  </div>
-</div>
-
-<!-- APP -->
-<div id="p-app" class="app hidden">
-  <nav class="sidebar">
-    <div class="s-logo"><h2>🏭 KSCL Academy</h2><p>Sakuko Việt Nam</p></div>
-    <div class="s-user" id="s-user"></div>
-    <div class="s-nav">
-      <div class="s-sec">Học tập</div>
-      <div class="s-item" id="nav-dashboard" onclick="go('dashboard')"><span class="s-icon">🏠</span><span>Tổng quan</span></div>
-      <div class="s-item" id="nav-modules" onclick="go('modules')"><span class="s-icon">📚</span><span>Modules học</span></div>
-      <div class="s-item" id="nav-congviec" onclick="go('congviec')"><span class="s-icon">💼</span><span>Công việc</span></div>
-      <div class="s-item" id="nav-baocao" onclick="go('baocao')"><span class="s-icon">📊</span><span>Báo cáo</span></div>
-      <div class="s-item" id="nav-checklist" onclick="go('checklist')"><span class="s-icon">✅</span><span>Checklist ca</span></div>
-      <div class="s-sec">Tài khoản</div>
-      <div class="s-item" id="nav-profile" onclick="go('profile')"><span class="s-icon">👤</span><span>Hồ sơ cá nhân</span></div>
-      <div class="s-item hidden" id="nav-admin" onclick="go('admin')"><span class="s-icon">⚙️</span><span>Quản trị</span></div>
-    </div>
-    <div class="s-foot"><div class="s-logout" onclick="doLogout()"><span>🚪</span><span>Đăng xuất</span></div></div>
-  </nav>
-  <main class="main" id="main-content"></main>
-</div>
-
-<div class="toast-wrap" id="toast-wrap"></div>
-
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<div id="app"></div>
+<div class="tw-wrap" id="tw"></div>
+<div id="mr"></div>
 
 <script>
-// ════════════════════════════════════════════════
-//  ⚙️  CẤU HÌNH FIREBASE  –  ĐIỀN VÀO ĐÂY
-// ════════════════════════════════════════════════
-const FB_CONFIG = {
-  apiKey:            "AIzaSyBeeAx7dJ6x5TS-MyoB-IH3NY-eiFsCOzk",
-  authDomain:        "kscl---sakuko.firebaseapp.com",
-  databaseURL:       "https://kscl---sakuko-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:         "kscl---sakuko",
-  storageBucket:     "kscl---sakuko.firebasestorage.app",
-  messagingSenderId: "341527530481",
-  appId:             "1:341527530481:web:084ac4e25294ba52f85250"
+/* ══════════════════════════════════════════
+   CONFIG
+══════════════════════════════════════════ */
+const FB={
+  apiKey:"AIzaSyBeeAx7dJ6x5TS-MyoB-IH3NY-eiFsCOzk",
+  authDomain:"kscl---sakuko.firebaseapp.com",
+  databaseURL:"https://kscl---sakuko-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"kscl---sakuko",
+  storageBucket:"kscl---sakuko.firebasestorage.app",
+  messagingSenderId:"341527530481",
+  appId:"1:341527530481:web:084ac4e25294ba52f85250"
+};
+const ADMIN_EMAILS=["kairjx1@gmail.com"];
+
+/* ══════════════════════════════════════════
+   ROLES – 6 cấp phân quyền
+══════════════════════════════════════════ */
+const ROLES={
+  superadmin:{label:'Quản trị viên',color:'#7c3aed',all:true,admin:true},
+  admin:      {label:'Admin',color:'#0066cc',all:true,admin:true},
+  manager:    {label:'Quản lý',color:'#059669',mods:['dashboard','kk','qc','congviec','baocao','daotao','nhansu']},
+  staff_kk:   {label:'NV Kiểm kê',color:'#2563eb',mods:['dashboard','kk','congviec','daotao']},
+  staff_qc:   {label:'NV QC',color:'#dc2626',mods:['dashboard','qc','congviec','daotao']},
+  viewer:     {label:'Xem',color:'#64748b',mods:['dashboard','daotao']}
 };
 
-// Email admin (có quyền xem toàn bộ tiến độ team)
-const ADMIN_EMAILS = [
-  "kairjx1@gmail.com"
+/* ══════════════════════════════════════════
+   MODULES
+══════════════════════════════════════════ */
+const MODS=[
+  {id:'dashboard',ic:'🏠',lb:'Tổng quan',  color:'#0066cc',bg:'#e8f2ff',ds:'KPI & tổng hợp'},
+  {id:'kk',       ic:'📦',lb:'Kiểm kê',    color:'#16a34a',bg:'#dcfce7',ds:'Kiểm kê hàng hóa'},
+  {id:'qc',       ic:'🔬',lb:'Kiểm soát CL',color:'#0284c7',bg:'#e0f2fe',ds:'Quality Control'},
+  {id:'congviec', ic:'✅',lb:'Công việc',  color:'#ea580c',bg:'#fff7ed',ds:'Task & Checklist'},
+  {id:'baocao',   ic:'📊',lb:'Báo cáo',    color:'#7c3aed',bg:'#f5f3ff',ds:'Phân tích & KPI'},
+  {id:'daotao',   ic:'📚',lb:'Đào tạo',    color:'#0d9488',bg:'#ccfbf1',ds:'Học liệu nội bộ'},
+  {id:'nhansu',   ic:'👥',lb:'Nhân sự QC', color:'#db2777',bg:'#fce7f3',ds:'Quản lý nhân viên'},
+  {id:'admin',    ic:'⚙️',lb:'Quản trị',   color:'#475569',bg:'#f1f5f9',ds:'Cài đặt & phân quyền'},
 ];
-// ════════════════════════════════════════════════
 
-firebase.initializeApp(FB_CONFIG);
-const auth = firebase.auth();
-const db   = firebase.database();
+/* ══════════════════════════════════════════
+   STATE
+══════════════════════════════════════════ */
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{}};
 
-// ══════════════════════════════════════════════════
-//  DATA
-// ══════════════════════════════════════════════════
-const CATEGORIES = [
-  {id:'kk', title:'Kiểm kê', icon:'📦', color:'#2E7D32',
-   desc:'Nghiệp vụ và quy trình kiểm kê hàng hóa', modules:[]},
-  {id:'qc', title:'QC – Kiểm soát chất lượng', icon:'🔍', color:'#1565C0',
-   desc:'Tiêu chuẩn, quy trình và nghiệp vụ kiểm soát chất lượng', modules:['m1','m2','m3','m4']},
-];
+/* ══════════════════════════════════════════
+   FIREBASE
+══════════════════════════════════════════ */
+firebase.initializeApp(FB);
+const auth=firebase.auth(), db=firebase.database();
 
-const MODULES = [
-  {id:'m1',title:'Quy trình Kiểm soát chất lượng',desc:'Nắm vững quy trình KCS từ nhập kho đến xuất hàng',icon:'🔍',color:'#1565C0',lessons:4},
-  {id:'m2',title:'Đào tạo & Onboarding nhân sự',desc:'Hướng dẫn dành cho nhân viên mới phòng KSCL',icon:'👥',color:'#00897B',lessons:3},
-  {id:'m3',title:'Báo cáo & KPI chất lượng',desc:'Đọc hiểu chỉ số, phân tích báo cáo và cải tiến',icon:'📊',color:'#6A1B9A',lessons:3},
-  {id:'m4',title:'Công việc & Checklist hàng ngày',desc:'Quy trình ca làm, bàn giao và phân công nhiệm vụ',icon:'📋',color:'#E65100',lessons:3},
-];
-
-function getCatModules(catId) {
-  const cat = CATEGORIES.find(c=>c.id===catId);
-  if (!cat) return [];
-  return cat.modules.map(mid=>MODULES.find(m=>m.id===mid)).filter(Boolean);
-}
-function getModuleCat(modId) {
-  return CATEGORIES.find(c=>c.modules.includes(modId));
-}
-
-const LESSONS = {
-  m1:[
-    {id:'m1l1',title:'Tổng quan về KSCL tại Sakuko',dur:'10 phút',summary:'Vai trò, mục tiêu và cơ cấu phòng KSCL',
-     content:`<h2>1. Phòng KSCL là gì?</h2>
-<p>Phòng Kiểm soát chất lượng (KSCL) chịu trách nhiệm đảm bảo tất cả sản phẩm nhập về kho và trưng bày tại các cửa hàng đều đáp ứng tiêu chuẩn chất lượng đã quy định.</p>
-<div class="hbox"><strong>📌 Sứ mệnh:</strong> Bảo vệ khách hàng khỏi hàng hóa kém chất lượng và bảo vệ thương hiệu Sakuko thông qua kiểm soát nghiêm ngặt từng công đoạn.</div>
-<h2>2. Cơ cấu tổ chức</h2>
-<table><tr><th>Vị trí</th><th>Trách nhiệm chính</th><th>Số lượng</th></tr>
-<tr><td>Trưởng phòng KSCL</td><td>Phê duyệt, định hướng toàn bộ hoạt động KSCL</td><td>1</td></tr>
-<tr><td>Kiểm soát viên cấp cao</td><td>Kiểm tra hàng đặc biệt, báo cáo lên Ban giám đốc</td><td>2</td></tr>
-<tr><td>Nhân viên KSCL</td><td>Thực hiện kiểm tra hàng hóa hàng ngày</td><td>8–12</td></tr>
-<tr><td>Nhân viên hành chính KSCL</td><td>Lưu trữ hồ sơ, tổng hợp báo cáo</td><td>2</td></tr></table>
-<h2>3. Quy trình tổng quát</h2>
-<ol>
-<li><strong>Tiếp nhận thông tin hàng về</strong> – Phòng kho thông báo lịch nhập hàng trước 24 giờ.</li>
-<li><strong>Cử nhân viên KSCL</strong> – Trưởng ca phân công nhân viên phù hợp.</li>
-<li><strong>Kiểm tra thực tế</strong> – Thực hiện kiểm tra theo bộ tiêu chuẩn SVN-KSCL-001.</li>
-<li><strong>Phân loại kết quả</strong> – Đạt / Không đạt / Cần xem xét thêm.</li>
-<li><strong>Ghi nhận & Báo cáo</strong> – Cập nhật hệ thống và lưu phiếu kiểm tra vật lý.</li>
-</ol>
-<div class="sbox"><strong>✅ Kết quả mong đợi:</strong> Tỷ lệ hàng đạt chất lượng khi xuất bán ≥ 98%.</div>`},
-    {id:'m1l2',title:'Quy trình kiểm tra hàng nhập kho',dur:'15 phút',summary:'Các bước KCS khi hàng về đến kho',
-     content:`<h2>1. Chuẩn bị trước khi hàng về</h2>
-<ul><li>Nhận thông báo từ phòng mua hàng: số lô, nhà cung cấp, số lượng, loại hàng.</li>
-<li>Chuẩn bị dụng cụ: thước đo, cân, đèn soi, form KCS (mẫu BM-KSCL-001).</li>
-<li>Xác nhận khu vực kiểm tra sạch sẽ, đủ ánh sáng.</li></ul>
-<h2>2. Các bước kiểm tra</h2>
-<table><tr><th>Bước</th><th>Nội dung</th><th>Công cụ</th></tr>
-<tr><td>B1</td><td>Kiểm đếm số lượng kiện/thùng so với phiếu vận chuyển</td><td>Phiếu giao hàng</td></tr>
-<tr><td>B2</td><td>Kiểm tra bao bì bên ngoài: rách, ẩm, móp méo</td><td>Mắt thường</td></tr>
-<tr><td>B3</td><td>Mở ngẫu nhiên ≥10% số kiện để kiểm tra bên trong</td><td>Dao rọc, găng tay</td></tr>
-<tr><td>B4</td><td>Đo/cân kiểm tra thực tế so với thông số kỹ thuật</td><td>Thước, cân điện tử</td></tr>
-<tr><td>B5</td><td>Kiểm tra hạn sử dụng, nhãn mác, mã vạch</td><td>Máy quét mã vạch</td></tr>
-<tr><td>B6</td><td>Ghi kết quả vào form BM-KSCL-001, ký xác nhận</td><td>Form giấy/Lark</td></tr></table>
-<div class="wbox"><strong>⚠️ Lưu ý:</strong> Không bao giờ ký xác nhận trước khi hoàn thành đủ 6 bước.</div>
-<h2>3. Phân loại sau kiểm tra</h2>
-<ul><li><strong>ĐẠT:</strong> Dán nhãn xanh → chuyển vào khu vực lưu trữ đã phê duyệt.</li>
-<li><strong>CẦN XEM XÉT:</strong> Dán nhãn vàng → giữ ở khu cách ly, báo kiểm soát viên cấp cao.</li>
-<li><strong>KHÔNG ĐẠT:</strong> Dán nhãn đỏ → cách ly ngay, lập biên bản, thông báo phòng mua hàng.</li></ul>`},
-    {id:'m1l3',title:'Tiêu chuẩn đánh giá sản phẩm',dur:'12 phút',summary:'Bộ tiêu chuẩn SVN-KSCL-001 và cách áp dụng',
-     content:`<h2>1. Bộ tiêu chuẩn SVN-KSCL-001</h2>
-<p>Tài liệu nền tảng của phòng KSCL, được ban hành bởi Ban Giám đốc và cập nhật định kỳ mỗi năm.</p>
-<h2>2. Các nhóm tiêu chí</h2>
-<table><tr><th>Nhóm</th><th>Tiêu chí</th><th>Mức chấp nhận</th></tr>
-<tr><td>Ngoại quan</td><td>Màu sắc, hình dạng, bề mặt</td><td>Không có lỗi nhìn thấy rõ ở khoảng cách 30cm</td></tr>
-<tr><td>Kích thước</td><td>Chiều dài, rộng, cao, trọng lượng</td><td>Sai số ≤ ±3% so với thông số</td></tr>
-<tr><td>Nhãn mác</td><td>Tên sản phẩm, hạn SD, mã vạch</td><td>Phải có đủ, rõ ràng, đúng ngôn ngữ tiếng Việt</td></tr>
-<tr><td>Vệ sinh</td><td>Không mốc, không mùi lạ, không dị vật</td><td>Zero tolerance – không chấp nhận bất kỳ vi phạm</td></tr>
-<tr><td>Đóng gói</td><td>Niêm phong, số lượng trong gói</td><td>Nguyên vẹn, đúng số lượng ghi trên nhãn</td></tr></table>
-<h2>3. Cách tính điểm đánh giá</h2>
-<div class="hbox">Mỗi lô hàng được đánh giá theo thang điểm 100:<br>
-• 90–100 điểm: ĐẠT – xuất kho bình thường<br>
-• 70–89 điểm: CẦN XEM XÉT – đợi phê duyệt cấp cao<br>
-• Dưới 70 điểm: KHÔNG ĐẠT – từ chối nhận lô</div>`},
-    {id:'m1l4',title:'Xử lý hàng không đạt chất lượng',dur:'10 phút',summary:'Quy trình cách ly, báo cáo và xử lý hàng lỗi',
-     content:`<h2>1. Nhận biết hàng không đạt</h2>
-<ul><li>Lỗi nhìn thấy rõ về ngoại quan (rách, vỡ, méo)</li>
-<li>Không đạt tiêu chuẩn kích thước (sai số &gt; ±3%)</li>
-<li>Hết hạn sử dụng hoặc hạn sử dụng còn dưới 30 ngày</li>
-<li>Thiếu nhãn tiếng Việt hoặc thông tin không khớp</li>
-<li>Phát hiện dị vật, mốc, mùi lạ</li></ul>
-<h2>2. Quy trình xử lý 6 bước</h2>
-<ol><li><strong>DỪNG NGAY</strong> – Không tiếp tục nhập kho lô hàng đó.</li>
-<li><strong>CÁCH LY</strong> – Chuyển về khu Quarantine Zone, dán nhãn đỏ.</li>
-<li><strong>CHỤP ẢNH</strong> – Ghi lại ít nhất 3 ảnh: tổng thể, chi tiết lỗi, nhãn mác.</li>
-<li><strong>LẬP BIÊN BẢN</strong> – Điền đầy đủ mẫu BB-KSCL-002.</li>
-<li><strong>THÔNG BÁO</strong> – Báo cáo trưởng ca và phòng Mua hàng trong vòng 30 phút.</li>
-<li><strong>THEO DÕI</strong> – Ghi nhận quyết định cuối: trả NCC / tiêu hủy / giảm giá xử lý.</li></ol>
-<div class="sbox"><strong>✅ Thời hạn xử lý:</strong> Tối đa 5 ngày làm việc kể từ ngày phát hiện.</div>`},
-  ],
-  m2:[
-    {id:'m2l1',title:'Onboarding nhân viên mới KSCL',dur:'15 phút',summary:'Quy trình tiếp nhận và định hướng nhân viên mới',
-     content:`<h2>1. Chương trình 5 ngày định hướng</h2>
-<table><tr><th>Ngày</th><th>Nội dung</th><th>Người hướng dẫn</th></tr>
-<tr><td>Ngày 1</td><td>Làm quen phòng ban, đọc nội quy, nhận dụng cụ</td><td>HR + Trưởng phòng</td></tr>
-<tr><td>Ngày 2</td><td>Học tài liệu SVN-KSCL-001 và các form mẫu</td><td>Kiểm soát viên cấp cao</td></tr>
-<tr><td>Ngày 3–4</td><td>Thực hành kiểm tra hàng dưới sự giám sát</td><td>Buddy được phân công</td></tr>
-<tr><td>Ngày 5</td><td>Bài kiểm tra đánh giá kiến thức + thực hành</td><td>Trưởng phòng KSCL</td></tr></table>
-<h2>2. Hồ sơ cần nộp</h2>
-<ul><li>CCCD bản photo</li><li>Bằng cấp/chứng chỉ liên quan</li>
-<li>Ảnh 3×4 (2 tấm)</li><li>Ký biên bản cam kết bảo mật thông tin</li></ul>
-<h2>3. Tiêu chuẩn thông qua thử việc</h2>
-<div class="hbox">Sau 2 tháng thử việc cần đạt:<br>
-• Bài kiểm tra lý thuyết: ≥ 80 điểm<br>
-• Tốc độ kiểm tra: ≥ 80% so với nhân viên chính thức<br>
-• Không có lỗi bỏ qua hàng không đạt nào</div>`},
-    {id:'m2l2',title:'Hướng dẫn sử dụng công cụ kiểm tra',dur:'10 phút',summary:'Sử dụng đúng các thiết bị và form KCS',
-     content:`<h2>1. Thiết bị đo lường</h2>
-<table><tr><th>Thiết bị</th><th>Công dụng</th><th>Tần suất hiệu chuẩn</th></tr>
-<tr><td>Cân điện tử</td><td>Kiểm tra trọng lượng sản phẩm</td><td>Hàng tháng</td></tr>
-<tr><td>Thước kẹp Vernier</td><td>Đo kích thước chính xác</td><td>Quý</td></tr>
-<tr><td>Máy quét mã vạch</td><td>Xác minh mã vạch và thông tin sản phẩm</td><td>Khi có sự cố</td></tr>
-<tr><td>Đèn UV soi kiểm</td><td>Phát hiện lỗi bề mặt ẩn</td><td>Hàng tuần</td></tr>
-<tr><td>Máy đo độ ẩm</td><td>Kiểm tra độ ẩm môi trường kho</td><td>Hàng ngày</td></tr></table>
-<h2>2. Hệ thống form KCS</h2>
-<div class="hbox"><strong>BM-KSCL-001:</strong> Phiếu kiểm tra hàng nhập<br>
-<strong>BM-KSCL-002:</strong> Biên bản hàng không đạt<br>
-<strong>BM-KSCL-003:</strong> Báo cáo tổng hợp tuần (nộp thứ Sáu 17h)<br>
-<strong>BM-KSCL-004:</strong> Phiếu bàn giao ca</div>`},
-    {id:'m2l3',title:'Quy tắc an toàn & vệ sinh lao động',dur:'12 phút',summary:'An toàn tại khu vực kho và kiểm tra',
-     content:`<h2>1. Trang phục bảo hộ bắt buộc</h2>
-<ul><li><strong>Áo bảo hộ KSCL</strong> (màu xanh navy) – trong giờ làm việc</li>
-<li><strong>Giày mũi sắt</strong> – khi vào khu vực kho</li>
-<li><strong>Găng tay nitrile</strong> – khi tiếp xúc trực tiếp hàng hóa</li>
-<li><strong>Khẩu trang y tế</strong> – trong khu vực kiểm tra thực phẩm</li></ul>
-<div class="wbox"><strong>⚠️ Không mặc trang phục bảo hộ</strong> là vi phạm nội quy: nhắc nhở lần 1, cảnh cáo lần 2, kỷ luật lần 3.</div>
-<h2>2. Quy tắc an toàn trong kho</h2>
-<ul><li>Không chạy trong khu vực kho</li>
-<li>Luôn nhìn hai chiều gần lối xe nâng</li>
-<li>Không bốc xếp quá 20kg một mình – yêu cầu hỗ trợ</li>
-<li>Biết vị trí bình chữa cháy và lối thoát hiểm gần nhất</li></ul>`},
-  ],
-  m3:[
-    {id:'m3l1',title:'KPI chính của phòng KSCL',dur:'10 phút',summary:'Các chỉ số đo lường hiệu suất KSCL',
-     content:`<h2>1. Bộ KPI tháng</h2>
-<table><tr><th>KPI</th><th>Mục tiêu</th><th>Đo lường</th></tr>
-<tr><td>Tỷ lệ hàng đạt chất lượng</td><td>≥ 98%</td><td>Số lô đạt / Tổng lô kiểm tra</td></tr>
-<tr><td>Phát hiện lỗi trước xuất hàng</td><td>≥ 99.5%</td><td>Lỗi phát hiện / Tổng lỗi</td></tr>
-<tr><td>Thời gian kiểm tra TB/lô</td><td>≤ 45 phút</td><td>Tổng thời gian / Số lô</td></tr>
-<tr><td>Biên bản nộp đúng hạn</td><td>100%</td><td>Biên bản đúng hạn / Tổng biên bản</td></tr>
-<tr><td>Khiếu nại từ khách hàng</td><td>≤ 3 vụ/tháng</td><td>Dữ liệu từ phòng CS</td></tr></table>
-<div class="hbox"><strong>Tỷ lệ hàng đạt ≥ 98%</strong> – 2% còn lại là ngưỡng kiểm tra lại, không phải cho phép bán hàng lỗi.</div>`},
-    {id:'m3l2',title:'Đọc hiểu báo cáo chất lượng',dur:'15 phút',summary:'Phân tích báo cáo tuần, tháng và xu hướng lỗi',
-     content:`<h2>1. Cấu trúc báo cáo tuần KSCL (BM-KSCL-003)</h2>
-<ol><li>Tóm tắt tổng quan: Số lô kiểm tra, đạt/không đạt</li>
-<li>Chi tiết từng nhà cung cấp: Bảng điểm NCC</li>
-<li>Phân tích loại lỗi: Lỗi phổ biến nhất trong tuần</li>
-<li>So sánh với tuần trước: Tốt hơn hay tệ hơn</li>
-<li>Kiến nghị: Đề xuất cải thiện</li></ol>
-<h2>2. Phân tích mẫu lỗi</h2>
-<table><tr><th>Loại lỗi</th><th>Số lần</th><th>%</th><th>Xu hướng</th></tr>
-<tr><td>Lỗi nhãn mác/hạn SD</td><td>12</td><td>48%</td><td>↑ Tăng</td></tr>
-<tr><td>Lỗi ngoại quan</td><td>7</td><td>28%</td><td>→ Ổn định</td></tr>
-<tr><td>Lỗi kích thước/trọng lượng</td><td>4</td><td>16%</td><td>↓ Giảm</td></tr>
-<tr><td>Lỗi khác</td><td>2</td><td>8%</td><td>→ Ổn định</td></tr></table>
-<h2>3. Nguyên tắc Pareto (80/20)</h2>
-<p>20% loại lỗi gây ra 80% vấn đề. Tập trung vào TOP 2-3 loại lỗi phổ biến để đạt hiệu quả cao nhất.</p>`},
-    {id:'m3l3',title:'Cải tiến liên tục – Kaizen & PDCA',dur:'12 phút',summary:'Áp dụng Kaizen vào công việc KSCL',
-     content:`<h2>1. Kaizen là gì?</h2>
-<p>Kaizen (改善) – cải tiến liên tục, nhỏ nhưng đều đặn. Tại Sakuko: mỗi tuần cải thiện ít nhất một điểm trong quy trình.</p>
-<h2>2. Vòng PDCA</h2>
-<table><tr><th>Bước</th><th>Ý nghĩa</th><th>Áp dụng KSCL</th></tr>
-<tr><td><strong>P</strong>lan</td><td>Lập kế hoạch</td><td>Xác định lỗi phổ biến, đặt mục tiêu cải thiện</td></tr>
-<tr><td><strong>D</strong>o</td><td>Thực hiện</td><td>Thay đổi quy trình kiểm tra, thử nghiệm 2 tuần</td></tr>
-<tr><td><strong>C</strong>heck</td><td>Kiểm tra</td><td>So sánh tỷ lệ lỗi trước/sau thay đổi</td></tr>
-<tr><td><strong>A</strong>ct</td><td>Hành động</td><td>Nếu tốt → chuẩn hóa; nếu không → thử cách khác</td></tr></table>
-<div class="sbox"><strong>Ví dụ thực tế:</strong> Tạo checklist in sẵn điểm kiểm tra nhãn → giảm 30% thời gian kiểm tra, tỷ lệ bỏ sót giảm về 0%.</div>`},
-  ],
-  m4:[
-    {id:'m4l1',title:'Checklist đầu ca và cuối ca',dur:'8 phút',summary:'Các việc cần làm khi bắt đầu và kết thúc ca',
-     content:`<h2>1. Checklist đầu ca (15 phút đầu)</h2>
-<ul><li>Điểm danh nhân sự, báo trưởng ca nếu thiếu người</li>
-<li>Nhận bàn giao từ ca trước: tình trạng tồn đọng, hàng đang cách ly</li>
-<li>Kiểm tra thiết bị đo lường: cân, thước, máy quét</li>
-<li>Xem lịch hàng về trong ca, ưu tiên theo thứ tự NCC</li>
-<li>Chuẩn bị form KCS đủ số lượng</li>
-<li>Đảm bảo khu vực kiểm tra sạch sẽ, đủ ánh sáng</li></ul>
-<h2>2. Checklist cuối ca (15 phút cuối)</h2>
-<ul><li>Hoàn thành và nộp tất cả form KCS vào hộp lưu trữ</li>
-<li>Cập nhật trạng thái hàng đang xử lý vào hệ thống</li>
-<li>Dọn dẹp dụng cụ, trả về đúng vị trí</li>
-<li>Kiểm tra khu cách ly: hàng đủ nhãn, không có hàng mới chưa ghi nhận</li>
-<li>Điền Phiếu bàn giao ca BM-KSCL-004</li></ul>
-<div class="wbox"><strong>⚠️ Không rời vị trí</strong> khi chưa hoàn thành bàn giao ca.</div>`},
-    {id:'m4l2',title:'Quy trình bàn giao ca làm việc',dur:'10 phút',summary:'Cách bàn giao chính xác và đầy đủ giữa các ca',
-     content:`<h2>1. Tại sao bàn giao ca quan trọng?</h2>
-<p>Bàn giao ca kém là nguyên nhân hàng đầu gây ra lỗi "rơi" trong KSCL – hàng xử lý dở bị bỏ quên, hoặc ca sau không biết có lô đặc biệt cần xử lý.</p>
-<h2>2. Nội dung bàn giao (BM-KSCL-004)</h2>
-<table><tr><th>Mục</th><th>Nội dung cần ghi</th></tr>
-<tr><td>Lô hàng đã xong</td><td>Số lô, kết quả, vị trí lưu trữ</td></tr>
-<tr><td>Lô đang dở</td><td>Tiến độ đã làm đến đâu, còn lại bao nhiêu %</td></tr>
-<tr><td>Hàng trong Quarantine</td><td>Số lô, lý do, đang chờ quyết định gì</td></tr>
-<tr><td>Thiết bị cần lưu ý</td><td>Thiết bị nào đang gặp vấn đề</td></tr>
-<tr><td>Thông báo đặc biệt</td><td>Hàng VIP, NCC mới, yêu cầu từ cấp trên</td></tr></table>
-<div class="hbox">Cả 2 người phải ký vào BM-KSCL-004. Đây là căn cứ pháp lý xác định trách nhiệm.</div>`},
-    {id:'m4l3',title:'Phân công và theo dõi nhiệm vụ nhóm',dur:'10 phút',summary:'Cách trưởng ca phân công và nhân viên nhận việc hiệu quả',
-     content:`<h2>1. Nguyên tắc phân công của trưởng ca</h2>
-<ul><li><strong>Phù hợp năng lực:</strong> Hàng phức tạp / lô VIP → nhân viên kinh nghiệm</li>
-<li><strong>Cân bằng khối lượng:</strong> Không để 1 người ôm quá nhiều lô</li>
-<li><strong>Rotation:</strong> Luân phiên để nhân viên học được nhiều danh mục</li>
-<li><strong>Dự phòng:</strong> Luôn có 1 người rảnh để xử lý tình huống phát sinh</li></ul>
-<h2>2. Bảng theo dõi nhiệm vụ ca</h2>
-<table><tr><th>Lô hàng</th><th>NCC</th><th>Nhân viên</th><th>Thời gian</th><th>Trạng thái</th></tr>
-<tr><td>LOT-240601</td><td>NCC Hà Nội</td><td>Nguyễn Lan</td><td>8:00–9:00</td><td>✅ Đạt</td></tr>
-<tr><td>LOT-240602</td><td>NCC TP.HCM</td><td>Trần Minh</td><td>9:00–10:30</td><td>⏳ Đang kiểm</td></tr>
-<tr><td>LOT-240603</td><td>NCC Osaka</td><td>Phạm Hoa</td><td>10:30–11:30</td><td>🔴 Chưa bắt đầu</td></tr></table>`},
-  ],
-};
-
-const QUIZZES = {
-  m1:{title:'Kiểm tra – Module 1',questions:[
-    {q:'Bước đầu tiên khi nhận hàng nhập kho là gì?',opts:['Kiểm đếm số lượng kiện/thùng so với phiếu vận chuyển','Mở bao bì bên trong để kiểm tra ngay','Ký biên bản nhận hàng trước','Thông báo cho cấp trên'],ans:0,exp:'Bước B1: kiểm đếm số lượng so với phiếu giao hàng trước khi làm bất kỳ việc gì khác.'},
-    {q:'Khi phát hiện hàng không đạt, việc đầu tiên cần làm là gì?',opts:['Lập biên bản ngay','Cách ly hàng và dán nhãn đỏ "Không đạt"','Trả lại hàng cho nhà cung cấp ngay','Tiếp tục nhập kho phần còn lại'],ans:1,exp:'DỪNG và CÁCH LY là ưu tiên số 1 để tránh hàng lỗi lẫn vào kho.'},
-    {q:'Mức sai số kích thước cho phép theo SVN-KSCL-001 là bao nhiêu?',opts:['±1%','±3%','±5%','±10%'],ans:1,exp:'Tiêu chuẩn quy định sai số ≤ ±3% so với thông số kỹ thuật.'},
-    {q:'Hàng trong Quarantine Zone được di chuyển ra ngoài khi nào?',opts:['Khi KSCL đã kiểm tra xong','Khi trưởng ca cho phép bằng lời','Khi có quyết định bằng văn bản từ Trưởng phòng KSCL','Sau 48 giờ cách ly'],ans:2,exp:'Bắt buộc có văn bản phê duyệt từ người có thẩm quyền trước khi di chuyển.'},
-    {q:'Thời hạn xử lý dứt điểm hàng không đạt là bao lâu?',opts:['24 giờ','2 ngày làm việc','5 ngày làm việc','10 ngày làm việc'],ans:2,exp:'5 ngày làm việc để đảm bảo kho không bị tắc nghẽn tại Quarantine Zone.'},
-  ]},
-  m2:{title:'Kiểm tra – Module 2',questions:[
-    {q:'Chương trình định hướng nhân viên mới kéo dài mấy ngày?',opts:['3 ngày','5 ngày','7 ngày','10 ngày'],ans:1,exp:'5 ngày: lý thuyết, thực hành có giám sát và bài kiểm tra đánh giá.'},
-    {q:'Cân điện tử cần hiệu chuẩn tần suất như thế nào?',opts:['Hàng ngày','Hàng tuần','Hàng tháng','Hàng quý'],ans:2,exp:'Cân điện tử hiệu chuẩn hàng tháng để đảm bảo độ chính xác.'},
-    {q:'Trang bị tối thiểu khi vào khu vực kho là gì?',opts:['Chỉ áo bảo hộ','Áo bảo hộ và giày mũi sắt','Chỉ giày mũi sắt và khẩu trang','Áo, giày, găng tay, khẩu trang đầy đủ'],ans:1,exp:'Tối thiểu phải có áo bảo hộ và giày mũi sắt. Găng tay bắt buộc khi tiếp xúc hàng.'},
-    {q:'Form báo cáo tổng hợp tuần nộp thứ Sáu là form nào?',opts:['BM-KSCL-001','BM-KSCL-002','BM-KSCL-003','BM-KSCL-004'],ans:2,exp:'BM-KSCL-003 là báo cáo tổng hợp tuần, nộp trước 17h thứ Sáu.'},
-  ]},
-  m3:{title:'Kiểm tra – Module 3',questions:[
-    {q:'Mục tiêu tỷ lệ hàng đạt chất lượng của phòng KSCL là bao nhiêu?',opts:['≥ 90%','≥ 95%','≥ 98%','100%'],ans:2,exp:'KPI tỷ lệ hàng đạt là ≥ 98%.'},
-    {q:'Nguyên tắc Pareto 80/20 trong KSCL có nghĩa là gì?',opts:['80% nhân viên làm 20% công việc','20% loại lỗi gây ra 80% vấn đề','80% hàng đạt tiêu chuẩn','20% NCC gây ra 80% lỗi'],ans:1,exp:'Tập trung vào 20% lỗi phổ biến nhất sẽ giải quyết 80% vấn đề chất lượng.'},
-    {q:'Trong PDCA, sau bước "Do" là bước nào?',opts:['Plan','Act','Check','Repeat'],ans:2,exp:'PDCA: Plan → Do → Check → Act. Sau thực hiện cần kiểm tra kết quả.'},
-    {q:'KPI nào đo lường tính kỷ luật hành chính của KSCL?',opts:['Tỷ lệ hàng đạt','Thời gian kiểm tra TB','Tỷ lệ biên bản đúng hạn','Số khiếu nại khách hàng'],ans:2,exp:'Tỷ lệ biên bản nộp đúng hạn (mục tiêu 100%) đo lường kỷ luật hành chính.'},
-  ]},
-  m4:{title:'Kiểm tra – Module 4',questions:[
-    {q:'Phiếu bàn giao ca là form nào?',opts:['BM-KSCL-001','BM-KSCL-002','BM-KSCL-003','BM-KSCL-004'],ans:3,exp:'BM-KSCL-004 là phiếu bàn giao ca, phải có chữ ký 2 bên.'},
-    {q:'Khi khối lượng công việc được giao quá lớn, nhân viên cần làm gì?',opts:['Cố làm nhanh nhất có thể','Phản hồi ngay với trưởng ca','Tự bỏ bớt một số bước','Nhờ đồng nghiệp không báo trưởng ca'],ans:1,exp:'Phản hồi ngay để trưởng ca điều chỉnh phân công, không để chất lượng bị ảnh hưởng.'},
-    {q:'Hậu quả phổ biến nhất của bàn giao ca kém là gì?',opts:['Thiết bị hỏng nhanh hơn','Lô hàng đang xử lý bị bỏ quên','Nhân viên đi làm muộn','Chi phí vận hành tăng'],ans:1,exp:'Lô hàng "rơi" – không được bàn giao rõ ràng – là hậu quả phổ biến nhất.'},
-    {q:'Trong checklist đầu ca, việc nào thuộc 15 phút đầu tiên?',opts:['Nộp tất cả form KCS','Điền phiếu bàn giao cuối ca','Nhận bàn giao từ ca trước và kiểm tra thiết bị','Báo cáo bất thường cho ca tiếp theo'],ans:2,exp:'15 phút đầu ca: điểm danh, nhận bàn giao, kiểm tra thiết bị, xem lịch hàng về.'},
-  ]},
-};
-
-// ══════════════════════════════════════════════════
-//  STATE
-// ══════════════════════════════════════════════════
-let S = {
-  user: null,       // Firebase user object
-  profile: null,    // { name, dept, role }
-  page: 'dashboard',
-  cat: null, mod: null, lesson: null, quiz: null,
-  quizIdx: 0, quizAnswered: false, quizScore: 0, quizDone: false,
-  progress: { lessons: [], scores: {} },
-  allProgress: {},  // for admin
-  allProfiles: {},  // for admin
-};
-
-// ══════════════════════════════════════════════════
-//  FIREBASE AUTH OBSERVER
-// ══════════════════════════════════════════════════
-auth.onAuthStateChanged(async user => {
-  if (user) {
-    // Load profile
-    const snap = await db.ref(`profiles/${user.uid}`).once('value');
-    const profile = snap.val();
-    if (!profile) {
-      // First login – show profile setup
-      show('p-setup');
-      // Keep reference to user for setup
-      S.user = user;
-      return;
-    }
-    S.user = user;
-    S.profile = profile;
-    // Subscribe to own progress (real-time)
-    db.ref(`progress/${user.uid}`).on('value', snap => {
-      S.progress = snap.val() || { lessons: [], scores: {} };
-      if (S.page !== 'dashboard' && document.getElementById('p-app') && !document.getElementById('p-app').classList.contains('hidden')) {
-        // silently update stats
+auth.onAuthStateChanged(async u=>{
+  if(u){
+    S.user=u;
+    const snap=await db.ref(`profiles/${u.uid}`).get();
+    if(snap.exists()){
+      S.profile=snap.val();
+      if(!S.profile.role){
+        S.profile.role=ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer';
+        db.ref(`profiles/${u.uid}/role`).set(S.profile.role);
       }
-    });
-    showApp();
-  } else {
-    show('p-login');
-  }
+      go('dashboard');
+    } else {
+      S.profile={name:'',email:u.email,role:ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer',dept:'',phone:'',createdAt:Date.now()};
+      render(); showFirstLogin();
+    }
+  } else go('login');
 });
 
-// ══════════════════════════════════════════════════
-//  AUTH
-// ══════════════════════════════════════════════════
-async function doLogin() {
-  const email = document.getElementById('l-email').value.trim();
-  const pass = document.getElementById('l-pass').value;
-  const errEl = document.getElementById('l-err');
-  const btn = document.getElementById('login-btn');
-  errEl.style.display = 'none';
-  btn.disabled = true;
-  btn.textContent = 'Đang đăng nhập...';
-  try {
-    await auth.signInWithEmailAndPassword(email, pass);
-  } catch(e) {
-    errEl.style.display = 'block';
-    errEl.textContent = e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential'
-      ? 'Email hoặc mật khẩu không đúng'
-      : e.code === 'auth/wrong-password' ? 'Mật khẩu không đúng'
-      : e.code === 'auth/too-many-requests' ? 'Quá nhiều lần thử. Vui lòng thử lại sau.'
-      : 'Lỗi đăng nhập: ' + e.message;
-    btn.disabled = false;
-    btn.textContent = 'Đăng nhập';
-  }
+/* ══════════════════════════════════════════
+   PERMISSIONS
+══════════════════════════════════════════ */
+function canAccess(id){
+  if(!S.profile)return false;
+  const r=ROLES[S.profile.role];
+  if(!r)return false;
+  return r.all||(r.mods||[]).includes(id);
+}
+function isAdmin(){return!!(S.profile&&ROLES[S.profile.role]?.admin)}
+
+/* ══════════════════════════════════════════
+   ROUTER
+══════════════════════════════════════════ */
+function go(page,tab=''){
+  if(page==='login'||page==='loading'){S.page=page;S.tab=tab;render();return;}
+  if(!canAccess(page)){toast('Bạn không có quyền truy cập mục này','t-warn');return;}
+  S.page=page;S.tab=tab||'';
+  destroyCharts(); render();
 }
 
-async function doLogout() {
-  db.ref(`progress/${S.user.uid}`).off();
-  S.user = null; S.profile = null; S.progress = { lessons: [], scores: {} };
-  await auth.signOut();
+function destroyCharts(){Object.values(S.charts).forEach(c=>{try{c.destroy()}catch(e){}});S.charts={};}
+
+/* ══════════════════════════════════════════
+   RENDER ROOT
+══════════════════════════════════════════ */
+function render(){
+  const el=document.getElementById('app');
+  if(S.page==='loading'){el.innerHTML=rLoad();return;}
+  if(S.page==='login') {el.innerHTML=rLogin();return;}
+  el.innerHTML=rShell();
+  buildSB(); afterRender();
 }
 
-async function saveProfile() {
-  const name = document.getElementById('s-name').value.trim();
-  const dept = document.getElementById('s-dept').value.trim();
-  if (!name) { toast('Vui lòng nhập họ tên', 'err'); return; }
-  const isAdmin = ADMIN_EMAILS.includes(S.user.email);
-  const profile = { name, dept: dept||'KSCL', role: isAdmin ? 'admin' : 'staff', joined: new Date().toISOString().split('T')[0] };
-  await db.ref(`profiles/${S.user.uid}`).set(profile);
-  S.profile = profile;
-  hide('p-setup');
-  db.ref(`progress/${S.user.uid}`).on('value', snap => {
-    S.progress = snap.val() || { lessons: [], scores: {} };
-  });
-  showApp();
+function rLoad(){
+  return`<div class="loading"><div class="ld-logo">🔬</div><div class="spinner"></div><p>Đang kết nối hệ thống...</p></div>`;
 }
 
-// ══════════════════════════════════════════════════
-//  ADMIN – ADD USER
-// ══════════════════════════════════════════════════
-async function adminAddUser() {
-  const name = document.getElementById('au-name').value.trim();
-  const email = document.getElementById('au-email').value.trim();
-  const pass = document.getElementById('au-pass').value;
-  const dept = document.getElementById('au-dept').value.trim() || 'KSCL';
-  if (!name || !email || !pass) { toast('Điền đầy đủ thông tin', 'err'); return; }
-  if (pass.length < 6) { toast('Mật khẩu tối thiểu 6 ký tự', 'err'); return; }
-
-  // We use a secondary Firebase App to avoid signing out current admin
-  const secondaryApp = firebase.initializeApp(FB_CONFIG, 'secondary-' + Date.now());
-  const secondaryAuth = secondaryApp.auth();
-  try {
-    const cred = await secondaryAuth.createUserWithEmailAndPassword(email, pass);
-    await db.ref(`profiles/${cred.user.uid}`).set({
-      name, email, dept, role: 'staff',
-      joined: new Date().toISOString().split('T')[0]
-    });
-    await secondaryAuth.signOut();
-    secondaryApp.delete();
-    toast('✅ Đã tạo tài khoản: ' + email, 'ok');
-    document.getElementById('au-name').value = '';
-    document.getElementById('au-email').value = '';
-    document.getElementById('au-pass').value = '';
-    loadAdminData(); // refresh
-  } catch(e) {
-    secondaryApp.delete();
-    toast(e.code === 'auth/email-already-in-use' ? 'Email đã tồn tại' : 'Lỗi: ' + e.message, 'err');
-  }
+function rLogin(){
+  return`<div class="login-wrap"><div class="login-card">
+    <div class="login-brand">
+      <div class="login-brand-icon">🔬</div>
+      <div><h2>KSCL System</h2><p>Sakuko Vietnam – Hệ thống Kiểm soát Chất lượng</p></div>
+    </div>
+    <h3>Đăng nhập</h3>
+    <p class="login-sub">Vui lòng đăng nhập để tiếp tục làm việc</p>
+    <div id="lerr"></div>
+    <div class="fg"><label>Email</label><input id="le" type="email" placeholder="email@sakuko.vn"></div>
+    <div class="fg"><label>Mật khẩu</label><input id="lp" type="password" placeholder="••••••••"></div>
+    <button class="btn-login" onclick="doLogin()">Đăng nhập</button>
+  </div></div>`;
 }
 
-async function deleteUser(uid, name) {
-  if (!confirm(`Xóa tài khoản "${name}"? Toàn bộ tiến độ học sẽ bị xóa.`)) return;
-  await db.ref(`profiles/${uid}`).remove();
-  await db.ref(`progress/${uid}`).remove();
-  toast('Đã xóa hồ sơ: ' + name, 'ok');
-  loadAdminData();
+function rShell(){
+  const p=S.profile||{},r=ROLES[p.role]||ROLES.viewer;
+  const av=(p.name||p.email||'U')[0].toUpperCase();
+  const m=MODS.find(x=>x.id===S.page)||{lb:''};
+  return`<div id="shell">
+    <div class="sb">
+      <div class="sb-logo">
+        <div class="sb-logo-ic">🔬</div>
+        <div><h3>KSCL System</h3><p>Sakuko Vietnam</p></div>
+      </div>
+      <div class="sb-user">
+        <div class="sb-av">${av}</div>
+        <div class="sb-ui">
+          <strong>${p.name||p.email||''}</strong>
+          <span><span class="role-pill" style="background:${r.color}20;color:${r.color}">${r.label}</span></span>
+        </div>
+      </div>
+      <div id="sbnav"></div>
+      <div class="sb-bot">
+        <div class="sb-it" onclick="showModal('profile')"><span class="sb-ic">👤</span>Hồ sơ cá nhân</div>
+        ${isAdmin()?`<div class="sb-it${S.page==='admin'?' active':''}" onclick="go('admin')"><span class="sb-ic">⚙️</span>Quản trị hệ thống</div>`:''}
+        <div class="sb-it" onclick="doLogout()"><span class="sb-ic">🚪</span>Đăng xuất</div>
+      </div>
+    </div>
+    <div class="main">
+      <div class="topbar">
+        <div class="tb-title">${m.lb||'KSCL System'}</div>
+        <div class="tb-search"><span class="tb-s-ic">🔍</span><input placeholder="Tìm kiếm..."></div>
+        <div class="tb-acts">
+          <div class="ico-btn" onclick="go('baocao')" title="Thông báo">🔔<div class="notif-dot"></div></div>
+          <div class="tb-av" onclick="showModal('profile')">${av}</div>
+        </div>
+      </div>
+      <div class="content" id="mc">${rMain()}</div>
+    </div>
+  </div><div id="mr"></div>`;
 }
 
-async function loadAdminData() {
-  const [profSnap, progSnap] = await Promise.all([
-    db.ref('profiles').once('value'),
-    db.ref('progress').once('value'),
-  ]);
-  S.allProfiles = profSnap.val() || {};
-  S.allProgress = progSnap.val() || {};
-  render();
+function buildSB(){
+  const nav=document.getElementById('sbnav');if(!nav)return;
+  const gs=[
+    {lb:'Tổng quan',ids:['dashboard']},
+    {lb:'Nghiệp vụ', ids:['kk','qc','congviec']},
+    {lb:'Phân tích',  ids:['baocao']},
+    {lb:'Phát triển', ids:['daotao']},
+    {lb:'Quản lý',    ids:['nhansu'],adm:true},
+  ];
+  nav.innerHTML=gs.filter(g=>!g.adm||isAdmin()).map(g=>{
+    const items=g.ids.filter(id=>canAccess(id));
+    if(!items.length)return'';
+    return`<div class="sb-g"><div class="sb-gl">${g.lb}</div>${items.map(id=>{
+      const m=MODS.find(x=>x.id===id);
+      return`<div class="sb-it${S.page===id?' active':''}" onclick="go('${id}')"><span class="sb-ic">${m.ic}</span>${m.lb}</div>`;
+    }).join('')}</div>`;
+  }).join('');
 }
 
-// ══════════════════════════════════════════════════
-//  PROGRESS (writes to Firebase)
-// ══════════════════════════════════════════════════
-function markDone(lid) {
-  if (!S.progress.lessons) S.progress.lessons = [];
-  if (!S.progress.lessons.includes(lid)) {
-    S.progress.lessons.push(lid);
-    db.ref(`progress/${S.user.uid}/lessons`).set(S.progress.lessons);
-  }
+function rMain(){
+  const fns={dashboard:rDashboard,kk:rKK,qc:rQC,congviec:rCongViec,baocao:rBaoCao,daotao:rDaoTao,nhansu:rNhanSu,admin:rAdmin};
+  return(fns[S.page]||rDashboard)();
 }
 
-function setScore(mid, score) {
-  if (!S.progress.scores) S.progress.scores = {};
-  const newScore = Math.max(score, S.progress.scores[mid] || 0);
-  S.progress.scores[mid] = newScore;
-  db.ref(`progress/${S.user.uid}/scores/${mid}`).set(newScore);
-}
-
-function getUP() { return S.progress || { lessons: [], scores: {} }; }
-
-function modProgress(mid) {
-  const up = getUP();
-  const total = LESSONS[mid].length;
-  const done = LESSONS[mid].filter(l => (up.lessons||[]).includes(l.id)).length;
-  return { done, total, pct: Math.round(done/total*100) };
-}
-
-function totalDone() {
-  return Object.values(LESSONS).flat().filter(l => (getUP().lessons||[]).includes(l.id)).length;
-}
-
-// ══════════════════════════════════════════════════
-//  UI HELPERS
-// ══════════════════════════════════════════════════
-function show(id) {
-  ['p-loading','p-login','p-app','p-setup'].forEach(p => {
-    const el = document.getElementById(p);
-    if (el) el.classList.toggle('hidden', p !== id);
-  });
-}
-function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
-
-function showApp() {
-  show('p-app');
-  const u = S.profile;
-  const isAdmin = ADMIN_EMAILS.includes(S.user.email) || u?.role === 'admin';
-  document.getElementById('s-user').innerHTML = `
-    <div class="s-avatar">${(u?.name||'?')[0]}</div>
-    <div><div class="s-uname">${u?.name||'Người dùng'}</div>
-    <div class="s-urole">${u?.dept||''} · ${isAdmin?'Quản trị viên':'Nhân viên'}</div></div>`;
-  if (isAdmin) document.getElementById('nav-admin').classList.remove('hidden');
-  go('dashboard');
-}
-
-function roleLabel(r) { return r==='admin'?'Quản trị viên':r==='staff'?'Nhân viên KCS':'Học viên'; }
-
-// ══════════════════════════════════════════════════
-//  NAVIGATION
-// ══════════════════════════════════════════════════
-function go(page, params={}) {
-  S.page = page;
-  if (params.cat !== undefined) S.cat = params.cat;
-  if (params.mod !== undefined) S.mod = params.mod;
-  if (params.lesson !== undefined) S.lesson = params.lesson;
-  if (params.quiz !== undefined) {
-    S.quiz = params.quiz; S.quizIdx = 0;
-    S.quizAnswered = false; S.quizScore = 0; S.quizDone = false;
-  }
-  ['dashboard','modules','congviec','baocao','checklist','profile','admin'].forEach(n => {
-    document.getElementById('nav-'+n)?.classList.toggle('active', page===n);
-  });
-  if (['category','module','lesson','quiz'].includes(page))
-    document.getElementById('nav-modules').classList.add('active');
-  if (page === 'admin') loadAdminData(); else render();
-}
-
-// ══════════════════════════════════════════════════
-//  RENDER
-// ══════════════════════════════════════════════════
-function render() {
-  const mc = document.getElementById('main-content');
-  if (!mc) return;
-  switch(S.page) {
-    case 'dashboard':  mc.innerHTML = renderDashboard(); break;
-    case 'modules':    mc.innerHTML = renderCategories(); break;
-    case 'category':   mc.innerHTML = renderCategory();  break;
-    case 'module':     mc.innerHTML = renderModule();    break;
-    case 'lesson':     mc.innerHTML = renderLesson();    break;
-    case 'quiz':       mc.innerHTML = renderQuiz();      break;
-    case 'congviec':   mc.innerHTML = renderCongViec();  break;
-    case 'baocao':     mc.innerHTML = renderBaoCao();    break;
-    case 'checklist':  mc.innerHTML = renderChecklist(); break;
-    case 'profile':    mc.innerHTML = renderProfile();   break;
-    case 'admin':      mc.innerHTML = renderAdmin();     break;
-  }
-}
-
-function renderDashboard() {
-  const total = Object.values(LESSONS).flat().length;
-  const done = totalDone();
-  const up = getUP();
-  const scores = Object.values(up.scores || {});
-  const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : 0;
-  return `
-<div class="ph"><h1>Xin chào, ${S.profile?.name||'bạn'} 👋</h1>
-  <p>${new Date().toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</p></div>
-<div class="stats">
-  <div class="stat"><div class="stat-ic ic-blue">📚</div><div><div class="stat-v">${done}/${total}</div><div class="stat-l">Bài đã hoàn thành</div></div></div>
-  <div class="stat"><div class="stat-ic ic-green">🏆</div><div><div class="stat-v">${avg||'–'}${avg?'%':''}</div><div class="stat-l">Điểm quiz trung bình</div></div></div>
-  <div class="stat"><div class="stat-ic ic-orange">🔥</div><div><div class="stat-v">${MODULES.filter(m=>modProgress(m.id).pct===100).length}</div><div class="stat-l">Module hoàn thành</div></div></div>
-  <div class="stat"><div class="stat-ic ic-teal">📋</div><div><div class="stat-v">${CATEGORIES.length}</div><div class="stat-l">Thư mục</div></div></div>
+/* ══════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════ */
+function rDashboard(){
+  const acc=MODS.filter(m=>m.id!=='dashboard'&&canAccess(m.id));
+  const now=new Date().toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
+  return`
+<div class="sec-hdr"><div><h1>Tổng quan hệ thống</h1><p style="color:var(--t2);font-size:13px">${now}</p></div></div>
+<div class="g4" style="margin-bottom:18px">
+  ${kpi('Lỗi QC hôm nay','0','ca','#dc2626','❌','')}
+  ${kpi('Đợt kiểm kê T.này','0','đợt','#0066cc','📦','')}
+  ${kpi('Tỉ lệ đạt chuẩn','—','%','#16a34a','✅','')}
+  ${kpi('Nhân viên QC','—','người','#7c3aed','👥','')}
 </div>
-<div class="card mt24">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-    <h3 style="font-size:16px;font-weight:700">Thư mục học tập</h3>
-    <button class="btn btn-sm btn-outline" onclick="go('modules')">Xem tất cả →</button>
-  </div>
-  <div class="mgrid">${CATEGORIES.map(c => categoryCard(c)).join('')}</div>
+<div class="alert a-info" style="margin-bottom:18px"><span class="a-ic">💡</span><div class="a-bd"><strong>Bắt đầu sử dụng hệ thống</strong><p>Import file Excel tại mục Kiểm kê hoặc QC để dữ liệu tự động điền vào biểu đồ và kích hoạt cảnh báo ngưỡng.</p></div></div>
+<div style="font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Phân hệ & Ứng dụng</div>
+<div class="mod-grid" style="margin-bottom:20px">
+  ${acc.map(m=>`<div class="mc" onclick="go('${m.id}')" style="--mc:${m.color}">
+    <div class="mc-ic" style="background:${m.bg}">${m.ic}</div>
+    <div class="mc-lb">${m.lb}</div><div class="mc-ds">${m.ds}</div>
+  </div>`).join('')}
+</div>
+<div class="g2">
+  <div class="chart-box"><div class="chart-title">📈 Xu hướng lỗi QC 6 tháng gần nhất</div><div class="chart-wrap"><canvas id="c-dash-trend"></canvas></div></div>
+  <div class="chart-box"><div class="chart-title">🥧 Phân loại lỗi QC</div><div class="chart-wrap"><canvas id="c-dash-pie"></canvas></div></div>
 </div>`;
 }
 
-function moduleCard(m, catId) {
-  const p = modProgress(m.id);
-  const score = (getUP().scores||{})[m.id];
-  return `<div class="mc" onclick="go('module',{cat:'${catId}',mod:'${m.id}'})">
-    <div class="mc-head" style="background:${m.color}">
-      <div class="mc-icon">${m.icon}</div><h3>${m.title}</h3><p>${m.desc}</p>
-    </div>
-    <div class="mc-body">
-      <div class="pbar-wrap"><div class="pbar" style="width:${p.pct}%;background:${m.color}"></div></div>
-      <div class="mc-meta"><span>${p.done}/${p.total} bài</span>
-        ${score!=null?`<span class="chip chip-green">Quiz: ${score}%</span>`:`<span class="chip chip-blue">${p.pct}%</span>`}
-      </div>
-    </div>
+function kpi(lb,val,unit,color,ic,trend){
+  return`<div class="kpi" style="color:${color}">
+    <div class="kpi-lb">${lb}</div>
+    <div class="kpi-v">${val}<span class="kpi-u">${unit}</span></div>
+    ${trend?`<div class="kpi-tr tr-ok">↑ ${trend}</div>`:'<div class="kpi-tr" style="color:var(--t3);font-size:11px">Chưa có dữ liệu</div>'}
+    <div class="kpi-bg">${ic}</div>
   </div>`;
 }
 
-function categoryCard(cat) {
-  const mods = getCatModules(cat.id);
-  const totalL = mods.reduce((s,m)=>s+(LESSONS[m.id]?.length||0),0);
-  const doneL  = mods.reduce((s,m)=>s+modProgress(m.id).done,0);
-  const pct = totalL ? Math.round(doneL/totalL*100) : 0;
-  return `<div class="mc" onclick="go('category',{cat:'${cat.id}'})">
-    <div class="mc-head" style="background:${cat.color}">
-      <div class="mc-icon">${cat.icon}</div><h3>${cat.title}</h3><p>${cat.desc}</p>
-    </div>
-    <div class="mc-body">
-      <div style="font-size:13px;color:var(--text2);margin-bottom:6px">${mods.length} modules · ${totalL} bài học</div>
-      <div class="pbar-wrap"><div class="pbar" style="width:${pct}%;background:${cat.color}"></div></div>
-      <div class="mc-meta"><span>${doneL}/${totalL} bài hoàn thành</span>
-        <span class="chip chip-blue">${pct}%</span>
-      </div>
-    </div>
-  </div>`;
-}
-
-function renderCategories() {
-  return `<div class="ph"><h1>📚 Thư mục học tập</h1><p>Chọn thư mục để xem nội dung</p></div>
-<div class="mgrid">${CATEGORIES.map(c => categoryCard(c)).join('')}</div>`;
-}
-
-function renderCategory() {
-  const cat = CATEGORIES.find(c=>c.id===S.cat);
-  if (!cat) return '<p>Không tìm thấy thư mục</p>';
-  const mods = getCatModules(cat.id);
-  return `
-<div class="bc"><a onclick="go('modules')">📚 Thư mục</a><span>›</span><span>${cat.title}</span></div>
-<div class="ph"><h1>${cat.icon} ${cat.title}</h1><p>${cat.desc}</p></div>
-${mods.length===0
-  ? `<div class="card" style="text-align:center;padding:48px 24px">
-      <div style="font-size:48px;margin-bottom:16px">🚧</div>
-      <h3 style="font-size:18px;margin-bottom:8px">Nội dung đang được cập nhật</h3>
-      <p style="color:var(--text2)">Tài liệu học tập cho thư mục <strong>${cat.title}</strong> sẽ sớm được bổ sung.</p>
-    </div>`
-  : `<div class="mgrid">${mods.map(m => moduleCard(m, cat.id)).join('')}</div>`
-}`;
-}
-
-function renderModule() {
-  const m = MODULES.find(x=>x.id===S.mod);
-  if (!m) return '<p>Module không tồn tại</p>';
-  const lessons = LESSONS[m.id];
-  const up = getUP();
-  const p = modProgress(m.id);
-  const score = (up.scores||{})[m.id];
-  const allDone = p.pct === 100;
-  return `
-<div class="bc"><a onclick="go('modules')">📚</a><span>›</span><a onclick="go('category',{cat:'${S.cat||getModuleCat(m.id)?.id}'})">
-  ${(S.cat?CATEGORIES.find(c=>c.id===S.cat):getModuleCat(m.id))?.title||'Thư mục'}</a><span>›</span><span>${m.title}</span></div>
-<div class="ph"><h1>${m.icon} ${m.title}</h1><p>${m.desc} · ${lessons.length} bài học</p></div>
-<div class="card" style="margin-bottom:20px">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-    <span style="font-size:14px;font-weight:600">Tiến độ</span>
-    <span style="font-size:13px;color:var(--text2)">${p.done}/${p.total} bài · ${p.pct}%</span>
+/* ══════════════════════════════════════════
+   KIỂM KÊ MODULE
+══════════════════════════════════════════ */
+function rKK(){
+  const tabs=['Tổng quan','Biểu đồ','Danh sách','Import Excel'];
+  const t=S.tab||'Tổng quan';
+  return`
+<div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Kiểm kê</div>
+<div class="sec-hdr">
+  <h1>📦 Kiểm kê hàng hóa</h1>
+  <div style="display:flex;gap:8px">
+    <button class="btn b-out b-sm">📥 Template Excel</button>
+    <button class="btn b-ok2 b-sm" onclick="showImport('kk')">⬆️ Import Excel</button>
   </div>
-  <div class="pbar-wrap" style="height:10px"><div class="pbar" style="width:${p.pct}%;background:${m.color}"></div></div>
-  ${score!=null?`<p style="font-size:13px;color:var(--success);margin-top:8px">✅ Quiz: <strong>${score}%</strong></p>`:''}
 </div>
-<div class="ll">
-  ${lessons.map((l,i) => {
-    const done = (up.lessons||[]).includes(l.id);
-    return `<div class="li ${done?'done':''}" onclick="go('lesson',{mod:'${m.id}',lesson:'${l.id}'})">
-      <div class="li-num">${done?'✓':(i+1)}</div>
-      <div class="li-info"><h4>${l.title}</h4><p>${l.summary}</p></div>
-      <div class="li-dur">⏱ ${l.dur}</div>
-    </div>`;
-  }).join('')}
-  <div class="li ${allDone?'done':''}" onclick="${allDone?`go('quiz',{quiz:'${m.id}'})`:`toast('Hoàn thành tất cả bài học để làm quiz','err')`}"
-    style="background:${allDone?'#E8F5E9':'var(--bg)'};border-color:${allDone?'var(--success)':'var(--border)'}">
-    <div class="li-num" style="background:${allDone?'var(--success)':'var(--border)'};color:${allDone?'#fff':'var(--text2)'}">📝</div>
-    <div class="li-info"><h4>Bài kiểm tra Module</h4>
-      <p>${allDone?'Sẵn sàng làm bài kiểm tra!':'Hoàn thành tất cả bài học để mở khóa'}</p></div>
-    <div class="li-dur">${score!=null?`✅ ${score}%`:allDone?'Làm ngay →':'🔒'}</div>
-  </div>
-</div>`;
+<div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('kk','${tb}')">${tb}</div>`).join('')}</div>
+${t==='Tổng quan'?rKKOv():t==='Biểu đồ'?rKKChart():t==='Danh sách'?rKKList():rImport('kk')}`;
 }
-
-function renderLesson() {
-  const lessons = LESSONS[S.mod]||[];
-  const lesson = lessons.find(l=>l.id===S.lesson);
-  if (!lesson) return '<p>Không tìm thấy bài học</p>';
-  const m = MODULES.find(x=>x.id===S.mod);
-  const idx = lessons.indexOf(lesson);
-  markDone(lesson.id);
-  return `
-<div class="bc"><a onclick="go('modules')">📚</a><span>›</span>
-  <a onclick="go('category',{cat:'${S.cat||getModuleCat(S.mod)?.id}'})">
-    ${(S.cat?CATEGORIES.find(c=>c.id===S.cat):getModuleCat(S.mod))?.title||'Thư mục'}</a><span>›</span>
-  <a onclick="go('module',{cat:'${S.cat}',mod:'${S.mod}'})">${m.title}</a><span>›</span><span>${lesson.title}</span></div>
-<div class="lc">
-  <h1>${lesson.title}</h1>
-  <div class="lc-meta"><span>⏱ ${lesson.dur}</span><span class="chip chip-green">✅ Đã học</span></div>
-  <div class="card"><div class="body">${lesson.content}</div></div>
-  <div class="ln">
-    ${idx>0?`<button class="btn btn-outline" onclick="go('lesson',{mod:'${S.mod}',lesson:'${lessons[idx-1].id}'})">← Bài trước</button>`:''}
-    <button class="btn btn-secondary btn-sm" onclick="go('module',{mod:'${S.mod}'})">Danh sách</button>
-    ${idx<lessons.length-1
-      ?`<button class="btn btn-primary" onclick="go('lesson',{mod:'${S.mod}',lesson:'${lessons[idx+1].id}'})">Bài tiếp →</button>`
-      :`<button class="btn btn-success" onclick="go('quiz',{quiz:'${S.mod}'})">Làm bài kiểm tra 📝</button>`}
-  </div>
-</div>`;
-}
-
-function renderQuiz() {
-  const qdata = QUIZZES[S.quiz];
-  const m = MODULES.find(x=>x.id===S.quiz);
-  if (S.quizDone) {
-    const pct = Math.round(S.quizScore/qdata.questions.length*100);
-    setScore(S.quiz, pct);
-    const pass = pct >= 70;
-    return `
-<div class="card qc">
-  <div class="qres">
-    <div class="qscore">${pct}%</div>
-    <div class="qscore-l">${S.quizScore}/${qdata.questions.length} câu đúng</div>
-    <div style="font-size:28px;margin:16px 0">${pass?'🎉':'😓'}</div>
-    <h2 style="font-size:20px;margin-bottom:8px">${pass?'Xuất sắc! Đã qua bài kiểm tra':'Chưa đạt – ôn lại và thử lại'}</h2>
-    <p style="color:var(--text2);font-size:14px;margin-bottom:24px">Điểm đạt: 70% · Điểm của bạn: ${pct}%</p>
-    <div class="row" style="justify-content:center">
-      <button class="btn btn-outline" onclick="go('module',{mod:'${S.quiz}'})">Về danh sách</button>
-      <button class="btn btn-primary" onclick="go('quiz',{quiz:'${S.quiz}'})">Làm lại</button>
-      ${pass?`<button class="btn btn-success" onclick="go('modules')">Module tiếp →</button>`:''}
-    </div>
-  </div>
-</div>`;
-  }
-  const q = qdata.questions[S.quizIdx];
-  return `
-<div class="card qc">
-  <div class="qprog"><span>Câu ${S.quizIdx+1}/${qdata.questions.length}</span><span>${S.quizScore} đúng</span></div>
-  <div class="pbar-wrap"><div class="pbar" style="width:${S.quizIdx/qdata.questions.length*100}%"></div></div>
-  <div class="qq" style="margin-top:20px">${q.q}</div>
-  <div class="qopts" id="qopts">
-    ${q.opts.map((o,i)=>`<div class="qopt" id="qo${i}" onclick="answerQuiz(${i})">${String.fromCharCode(65+i)}. ${o}</div>`).join('')}
-  </div>
-  <div id="qfeed"></div>
-  <div id="qnext" class="hidden" style="margin-top:16px">
-    <button class="btn btn-primary" onclick="nextQuestion()">${S.quizIdx<qdata.questions.length-1?'Câu tiếp →':'Xem kết quả 🏆'}</button>
-  </div>
-</div>`;
-}
-
-function answerQuiz(idx) {
-  if (S.quizAnswered) return;
-  S.quizAnswered = true;
-  const q = QUIZZES[S.quiz].questions[S.quizIdx];
-  const correct = idx === q.ans;
-  if (correct) S.quizScore++;
-  document.querySelectorAll('.qopt').forEach((el,i) => {
-    el.classList.add('dis');
-    if (i===q.ans) el.classList.add('ok');
-    else if (i===idx&&!correct) el.classList.add('bad');
-  });
-  const feed = document.getElementById('qfeed');
-  feed.className = `qfeed ${correct?'ok':'bad'}`;
-  feed.innerHTML = `${correct?'✅ Đúng rồi!':'❌ Chưa đúng.'} ${q.exp}`;
-  document.getElementById('qnext').classList.remove('hidden');
-}
-
-function nextQuestion() {
-  if (S.quizIdx < QUIZZES[S.quiz].questions.length-1) {
-    S.quizIdx++; S.quizAnswered = false; render();
-  } else { S.quizDone = true; render(); }
-}
-
-// Dữ liệu công việc – điền nội dung vào đây khi có
-const CV_DATA = {
-  kk: [], // VD: {icon:'📄', title:'Công việc kiểm kê hàng ngày', content:'...'}
-  qc: [], // VD: {icon:'📄', title:'Quy trình kiểm tra đầu ca', content:'...'}
-};
-
-const BC_DATA = {
-  kk: [], // VD: {icon:'📋', title:'Báo cáo kiểm kê tuần', content:'...'}
-  qc: [], // VD: {icon:'📋', title:'Báo cáo lỗi hàng hóa', content:'...'}
-};
-
-function treeFolder(id, icon, color, label, items, emptyText) {
-  const cnt = items.length;
-  const bodyItems = cnt === 0
-    ? `<div class="tree-empty">🚧 ${emptyText}</div>`
-    : items.map((it,i) => `
-        <div class="tree-item" onclick="openTreeItem('${id}',${i})">
-          <span class="tree-item-icon">${it.icon||'📄'}</span>
-          <span>${it.title}</span>
-        </div>`).join('');
-  return `
-<div class="tree-folder">
-  <div class="tree-header" id="hdr-${id}" onclick="toggleTree('${id}')">
-    <span class="tree-arrow">▶</span>
-    <span class="tree-icon">${icon}</span>
-    <span class="tree-label">${label}</span>
-    <span class="tree-count" style="background:${color}22;color:${color}">${cnt} mục</span>
-  </div>
-  <div class="tree-body" id="body-${id}">${bodyItems}</div>
-</div>`;
-}
-
-function toggleTree(id) {
-  const hdr  = document.getElementById('hdr-'+id);
-  const body = document.getElementById('body-'+id);
-  hdr.classList.toggle('open');
-  body.classList.toggle('open');
-}
-
-// Placeholder – sẽ mở trang nội dung khi có dữ liệu
-function openTreeItem(folderId, idx) {
-  toast('Chức năng xem nội dung sắp ra mắt', '');
-}
-
-function renderCongViec() {
-  return `
-<div class="ph"><h1>💼 Công việc</h1><p>Danh sách công việc theo từng bộ phận – click để mở rộng</p></div>
-<div class="tree">
-  ${treeFolder('cv-kk','📦','#2E7D32','Kiểm kê', CV_DATA.kk, 'Nội dung công việc KK đang được cập nhật')}
-  ${treeFolder('cv-qc','🔍','#1565C0','QC – Kiểm soát chất lượng', CV_DATA.qc, 'Nội dung công việc QC đang được cập nhật')}
-</div>`;
-}
-
-function renderBaoCao() {
-  return `
-<div class="ph"><h1>📊 Báo cáo</h1><p>Biểu mẫu và hướng dẫn báo cáo theo từng bộ phận – click để mở rộng</p></div>
-<div class="tree">
-  ${treeFolder('bc-kk','📦','#2E7D32','Kiểm kê', BC_DATA.kk, 'Biểu mẫu báo cáo KK đang được cập nhật')}
-  ${treeFolder('bc-qc','🔍','#1565C0','QC – Kiểm soát chất lượng', BC_DATA.qc, 'Biểu mẫu báo cáo QC đang được cập nhật')}
-</div>`;
-}
-
-function renderChecklist() {
-  const start = [
-    {id:'c1',t:'Điểm danh nhân sự ca làm việc'},
-    {id:'c2',t:'Nhận bàn giao từ ca trước (BM-KSCL-004)'},
-    {id:'c3',t:'Kiểm tra cân điện tử – reset về 0'},
-    {id:'c4',t:'Kiểm tra máy quét mã vạch – pin đầy đủ'},
-    {id:'c5',t:'Xem lịch hàng về trong ca hôm nay'},
-    {id:'c6',t:'Chuẩn bị đủ form BM-KSCL-001 cho ca'},
-    {id:'c7',t:'Đảm bảo khu vực kiểm tra sạch sẽ, đủ ánh sáng'},
-    {id:'c8',t:'Mặc đầy đủ trang phục bảo hộ'},
-  ];
-  const end = [
-    {id:'e1',t:'Hoàn thành và nộp tất cả form KCS'},
-    {id:'e2',t:'Cập nhật trạng thái hàng đang xử lý vào hệ thống'},
-    {id:'e3',t:'Dọn dẹp dụng cụ – trả về đúng vị trí'},
-    {id:'e4',t:'Kiểm tra Quarantine Zone lần cuối'},
-    {id:'e5',t:'Điền đầy đủ Phiếu bàn giao ca BM-KSCL-004'},
-    {id:'e6',t:'Báo cáo bất thường (nếu có) cho ca tiếp theo'},
-  ];
-  const clRow = it => `<div class="clitem" id="row-${it.id}">
-    <input type="checkbox" id="${it.id}" onchange="toggleCl('${it.id}')">
-    <label for="${it.id}">${it.t}</label></div>`;
-  return `
-<div class="ph"><h1>✅ Checklist công việc</h1>
-  <p>Đánh dấu các mục đã hoàn thành trong ca làm việc</p></div>
-<div class="row" style="margin-bottom:20px">
-  <button class="btn btn-sm btn-outline" onclick="resetChecklist()">🔄 Reset tất cả</button>
-  <span id="cl-count" style="font-size:13px;color:var(--text2)">0/${start.length+end.length} mục</span>
+function rKKOv(){return`
+<div class="g4" style="margin-bottom:18px">
+  ${kpi('Đợt KK tháng này','0','đợt','#16a34a','📦','')}
+  ${kpi('SKU đã kiểm','0','SKU','#0284c7','📋','')}
+  ${kpi('Chênh lệch','0','SKU','#ea580c','⚠️','')}
+  ${kpi('Tỉ lệ khớp kho','—','%','#7c3aed','✅','')}
 </div>
-<div class="card" style="margin-bottom:16px">
-  <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">📋 Checklist đầu ca</h3>
-  ${start.map(clRow).join('')}
-</div>
-<div class="card">
-  <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">🌙 Checklist cuối ca</h3>
-  ${end.map(clRow).join('')}
-</div>`;
-}
-
-function toggleCl(id) {
-  document.getElementById('row-'+id).classList.toggle('chk', document.getElementById(id).checked);
-  const all = document.querySelectorAll('.clitem input[type=checkbox]');
-  document.getElementById('cl-count').textContent =
-    `Đã hoàn thành: ${[...all].filter(c=>c.checked).length}/${all.length} mục`;
-}
-function resetChecklist() {
-  document.querySelectorAll('.clitem input').forEach(c=>c.checked=false);
-  document.querySelectorAll('.clitem').forEach(r=>r.classList.remove('chk'));
-  const all = document.querySelectorAll('.clitem input[type=checkbox]');
-  document.getElementById('cl-count').textContent = `0/${all.length} mục`;
-}
-
-function renderProfile() {
-  const total = Object.values(LESSONS).flat().length;
-  const done = totalDone();
-  const up = getUP();
-  const scores = Object.values(up.scores||{});
-  const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null;
-  return `
-<div class="ph"><h1>👤 Hồ sơ cá nhân</h1></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:800px">
+<div class="g2">
   <div class="card">
-    <div style="text-align:center;padding:16px 0">
-      <div style="width:72px;height:72px;border-radius:50%;background:var(--primary);display:flex;
-        align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff;margin:0 auto 14px">
-        ${(S.profile?.name||'?')[0]}</div>
-      <h2 style="font-size:18px;font-weight:700">${S.profile?.name}</h2>
-      <p style="color:var(--text2);font-size:13px;margin-top:4px">${S.user?.email}</p>
-      <div style="margin-top:10px"><span class="chip chip-blue">${roleLabel(S.profile?.role)}</span>&nbsp;<span class="chip chip-green">${S.profile?.dept}</span></div>
-    </div>
-    <div class="divider"></div>
-    <table style="width:100%;font-size:13px">
-      <tr><td style="color:var(--text2);padding:6px 0">Phòng ban</td><td style="font-weight:600">${S.profile?.dept}</td></tr>
-      <tr><td style="color:var(--text2);padding:6px 0">Vai trò</td><td style="font-weight:600">${roleLabel(S.profile?.role)}</td></tr>
-      <tr><td style="color:var(--text2);padding:6px 0">Ngày tham gia</td><td style="font-weight:600">${S.profile?.joined}</td></tr>
-    </table>
+    <div style="font-weight:700;font-size:14px;margin-bottom:14px">📅 Lịch kiểm kê gần đây</div>
+    <div class="empty-state"><div class="es-ic">📦</div><p>Chưa có dữ liệu kiểm kê.<br>Import Excel để bắt đầu.</p></div>
   </div>
   <div class="card">
-    <h3 style="font-size:15px;font-weight:700;margin-bottom:16px">📊 Tiến độ học tập</h3>
-    <div style="display:flex;flex-direction:column;gap:14px">
-      <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
-        <span>Tổng tiến độ</span><span>${done}/${total}</span></div>
-        <div class="pbar-wrap"><div class="pbar" style="width:${Math.round(done/total*100)}%"></div></div>
-      </div>
-      ${MODULES.map(m=>{const p=modProgress(m.id);const sc=(up.scores||{})[m.id];
-        return `<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
-          <span>${m.icon} ${m.title.substring(0,22)}...</span>
-          <span>${sc!=null?sc+'%':p.pct+'%'}</span></div>
-          <div class="pbar-wrap" style="height:5px"><div class="pbar" style="width:${p.pct}%;background:${m.color}"></div></div>
-        </div>`;}).join('')}
-    </div>
-    ${avg!=null?`<div class="sbox" style="margin-top:16px">🏆 Quiz trung bình: <strong>${avg}%</strong></div>`
-      :'<div class="hbox" style="margin-top:16px">Hoàn thành bài học và làm quiz để xem điểm!</div>'}
-  </div>
-</div>`;
-}
-
-function renderAdmin() {
-  const profiles = S.allProfiles;
-  const progress = S.allProgress;
-  const uids = Object.keys(profiles);
-  const totalLessons = Object.values(LESSONS).flat().length;
-  return `
-<div class="ph"><h1>⚙️ Quản trị</h1><p>Theo dõi tiến độ toàn phòng KSCL</p></div>
-
-<!-- Add user -->
-<div class="card" style="margin-bottom:20px">
-  <h3 style="font-size:15px;font-weight:700;margin-bottom:16px">➕ Thêm tài khoản nhân viên</h3>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
-    <div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Họ tên</label>
-      <input id="au-name" type="text" placeholder="Nguyễn Thị An" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;outline:none"></div>
-    <div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Email</label>
-      <input id="au-email" type="email" placeholder="an.nt@sakuko.com" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;outline:none"></div>
-    <div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Mật khẩu</label>
-      <input id="au-pass" type="text" placeholder="Kscl@2024" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;outline:none"></div>
-    <div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Phòng ban</label>
-      <input id="au-dept" type="text" placeholder="KSCL" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;outline:none"></div>
-    <button class="btn btn-success btn-sm" onclick="adminAddUser()">Tạo</button>
+    <div style="font-weight:700;font-size:14px;margin-bottom:14px">🚨 Cảnh báo chênh lệch tồn kho</div>
+    <div class="alert a-ok"><span class="a-ic">✅</span><div class="a-bd"><strong>Không có cảnh báo</strong><p>Hệ thống sẽ tự cảnh báo khi chênh lệch > 2%</p></div></div>
   </div>
 </div>
+<div class="card" style="margin-top:16px">
+  <div style="font-weight:700;font-size:14px;margin-bottom:14px">📊 KPI Kiểm kê tháng này</div>
+  <div class="g3">
+    <div><div class="stat-row"><span class="label">Kế hoạch KK</span><span class="value">0 đợt</span></div>
+    <div class="stat-row"><span class="label">Thực hiện</span><span class="value">0 đợt</span></div>
+    <div class="stat-row"><span class="label">Hoàn thành</span><span class="value"><span class="bdg b-gray">—</span></span></div></div>
+    <div><div class="stat-row"><span class="label">Tổng SKU kiểm</span><span class="value">0</span></div>
+    <div class="stat-row"><span class="label">SKU khớp</span><span class="value">0</span></div>
+    <div class="stat-row"><span class="label">SKU chênh lệch</span><span class="value">0</span></div></div>
+    <div><div class="stat-row"><span class="label">Tỉ lệ khớp</span><span class="value">—%</span></div>
+    <div class="stat-row"><span class="label">Trạng thái</span><span class="value"><span class="bdg b-info">Chờ dữ liệu</span></span></div></div>
+  </div>
+</div>`;}
+function rKKChart(){return`
+<div class="g2" style="margin-bottom:16px">
+  <div class="chart-box"><div class="chart-title">📊 Số lượng kiểm kê theo tháng</div><div class="chart-wrap"><canvas id="c-kk-bar"></canvas></div></div>
+  <div class="chart-box"><div class="chart-title">📈 Tỉ lệ khớp kho (%)</div><div class="chart-wrap"><canvas id="c-kk-line"></canvas></div></div>
+</div>
+<div class="chart-box"><div class="chart-title">📦 Chênh lệch theo nhóm hàng</div><div class="chart-wrap"><canvas id="c-kk-cat"></canvas></div></div>`;}
+function rKKList(){return`
+<div class="toolbar">
+  <input placeholder="Tìm kiếm..." style="max-width:220px">
+  <select style="max-width:150px"><option>Tất cả trạng thái</option><option>Đã hoàn thành</option><option>Đang thực hiện</option><option>Chênh lệch</option></select>
+  <select style="max-width:140px"><option>Tháng này</option><option>Tháng trước</option><option>Quý này</option></select>
+  <div class="spacer"></div>
+  <button class="btn b-out b-sm">⬇️ Xuất Excel</button>
+  <button class="btn b-pri b-sm" onclick="showImport('kk')">⬆️ Import</button>
+</div>
+<div class="card" style="padding:0"><div class="tw"><table>
+<thead><tr><th>STT</th><th>Mã đợt KK</th><th>Ngày KK</th><th>Loại</th><th>Kho</th><th>Số SKU</th><th>SKU chênh</th><th>Tỉ lệ khớp</th><th>Trạng thái</th><th>NV thực hiện</th></tr></thead>
+<tbody id="kk-list"><tr><td colspan="10"><div class="empty-state"><div class="es-ic">📂</div><p>Chưa có dữ liệu. Import Excel để bắt đầu.</p></div></td></tr></tbody>
+</table></div></div>`;}
 
-<!-- Progress table -->
-<div class="card">
-  <h3 style="font-size:15px;font-weight:700;margin-bottom:16px">👥 Tiến độ học tập (${uids.length} thành viên)</h3>
-  <div style="overflow-x:auto">
-  <table class="tbl">
-    <thead><tr>
-      <th>Họ tên</th><th>Email</th><th>Phòng ban</th>
-      ${MODULES.map(m=>`<th>${m.icon} ${m.title.split(' ')[0]}</th>`).join('')}
-      <th>Tổng</th><th></th>
-    </tr></thead>
+/* ══════════════════════════════════════════
+   QC MODULE
+══════════════════════════════════════════ */
+function rQC(){
+  const tabs=['Tổng quan','Biểu đồ lỗi','Phiếu QC','Tiêu chuẩn','Import Excel'];
+  const t=S.tab||'Tổng quan';
+  return`
+<div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Kiểm soát chất lượng</div>
+<div class="sec-hdr">
+  <h1>🔬 Kiểm soát chất lượng</h1>
+  <div style="display:flex;gap:8px">
+    <button class="btn b-out b-sm">📥 Template Excel</button>
+    <button class="btn b-pri b-sm" onclick="showImport('qc')">⬆️ Import Excel</button>
+  </div>
+</div>
+<div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('qc','${tb}')">${tb}</div>`).join('')}</div>
+${t==='Tổng quan'?rQCOv():t==='Biểu đồ lỗi'?rQCChart():t==='Phiếu QC'?rQCList():t==='Tiêu chuẩn'?rQCStd():rImport('qc')}`;
+}
+function rQCOv(){return`
+<div class="g4" style="margin-bottom:18px">
+  ${kpi('Phiếu QC tháng này','0','phiếu','#0284c7','🔬','')}
+  ${kpi('Lỗi phát hiện','0','lỗi','#dc2626','❌','')}
+  ${kpi('Tỉ lệ đạt','—','%','#16a34a','✅','')}
+  ${kpi('Cảnh báo ngưỡng','0','mục','#f59e0b','⚠️','')}
+</div>
+<div class="g2" style="margin-bottom:16px">
+  <div class="card">
+    <div style="font-weight:700;font-size:14px;margin-bottom:14px">📋 Phiếu QC gần đây</div>
+    <div class="empty-state"><div class="es-ic">🔬</div><p>Chưa có phiếu QC nào.<br>Import Excel hoặc tạo phiếu mới.</p></div>
+  </div>
+  <div class="card">
+    <div style="font-weight:700;font-size:14px;margin-bottom:14px">🚨 Cảnh báo vượt ngưỡng</div>
+    <div class="alert a-warn"><span class="a-ic">⚠️</span><div class="a-bd"><strong>Thiết lập ngưỡng cảnh báo</strong><p>Vào tab "Tiêu chuẩn" để xem và chỉnh ngưỡng. Sau khi import Excel, hệ thống tự so sánh.</p></div></div>
+    <div class="alert a-ok" style="margin-top:10px"><span class="a-ic">✅</span><div class="a-bd"><strong>Không có vi phạm nghiêm trọng</strong></div></div>
+  </div>
+</div>
+<div class="chart-box"><div class="chart-title">📈 Lỗi QC theo ngày (7 ngày gần nhất)</div><div class="chart-wrap"><canvas id="c-qc-week"></canvas></div></div>`;}
+function rQCChart(){return`
+<div class="g2" style="margin-bottom:16px">
+  <div class="chart-box"><div class="chart-title">📊 Phân loại lỗi QC</div><div class="chart-wrap"><canvas id="c-qc-cat"></canvas></div></div>
+  <div class="chart-box"><div class="chart-title">📈 Xu hướng lỗi 6 tháng</div><div class="chart-wrap"><canvas id="c-qc-trend"></canvas></div></div>
+</div>
+<div class="chart-box"><div class="chart-title">🏭 Lỗi theo dây chuyền / điểm bán</div><div class="chart-wrap"><canvas id="c-qc-dc"></canvas></div></div>`;}
+function rQCList(){return`
+<div class="toolbar">
+  <input placeholder="Tìm mã phiếu, sản phẩm..." style="max-width:240px">
+  <select style="max-width:140px"><option>Tất cả</option><option>Đạt</option><option>Không đạt</option><option>Cảnh báo</option></select>
+  <select style="max-width:130px"><option>Tháng này</option><option>Tháng trước</option></select>
+  <div class="spacer"></div>
+  <button class="btn b-out b-sm">⬇️ Xuất Excel</button>
+  <button class="btn b-pri b-sm" onclick="showImport('qc')">⬆️ Import</button>
+</div>
+<div class="card" style="padding:0"><div class="tw"><table>
+<thead><tr><th>Mã phiếu</th><th>Ngày</th><th>Sản phẩm / Lô</th><th>DC/CH</th><th>Phân loại lỗi</th><th>Số lỗi</th><th>Tỉ lệ lỗi</th><th>Kết quả</th><th>NV QC</th><th>Hành động</th></tr></thead>
+<tbody><tr><td colspan="10"><div class="empty-state"><div class="es-ic">📂</div><p>Chưa có dữ liệu. Import Excel để bắt đầu.</p></div></td></tr></tbody>
+</table></div></div>`;}
+function rQCStd(){return`
+<div class="g2">
+  <div class="card">
+    <div style="font-weight:700;font-size:14px;margin-bottom:14px">📏 Tiêu chuẩn chất lượng (JAS)</div>
+    <div class="alert a-info"><span class="a-ic">🇯🇵</span><div class="a-bd"><strong>Chuẩn Nhật Bản – Thịt bò Sakuko</strong><p>Áp dụng cho toàn bộ sản phẩm tại nhà máy & chuỗi cửa hàng</p></div></div>
+    <table style="margin-top:14px"><thead><tr><th>Chỉ tiêu</th><th>Ngưỡng</th><th>Đơn vị</th></tr></thead>
     <tbody>
-      ${uids.length===0?`<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:24px">Chưa có thành viên nào</td></tr>`
-      :uids.map(uid=>{
-        const p = profiles[uid];
-        const prog = progress[uid]||{lessons:[],scores:{}};
-        const done = Object.values(LESSONS).flat().filter(l=>(prog.lessons||[]).includes(l.id)).length;
-        return `<tr>
-          <td><strong>${p.name}</strong></td>
-          <td style="color:var(--text2);font-size:12px">${p.email||''}</td>
-          <td>${p.dept||''}</td>
-          ${MODULES.map(m=>{
-            const mp = LESSONS[m.id].filter(l=>(prog.lessons||[]).includes(l.id)).length;
-            const sc = (prog.scores||{})[m.id];
-            return `<td>${sc!=null?`<span class="chip chip-green">${sc}%</span>`:mp>0?`${mp}/${LESSONS[m.id].length}`:'–'}</td>`;
-          }).join('')}
-          <td>
-            <div style="display:flex;align-items:center;gap:6px">
-              <div class="pbar-wrap" style="width:70px"><div class="pbar" style="width:${Math.round(done/totalLessons*100)}%"></div></div>
-              <span style="font-size:12px">${done}/${totalLessons}</span>
-            </div>
-          </td>
-          <td><button class="btn btn-sm btn-danger" onclick="deleteUser('${uid}','${p.name}')">Xóa</button></td>
-        </tr>`;
-      }).join('')}
-    </tbody>
-  </table>
+      <tr><td>Nhiệt độ bảo quản</td><td>0 – 4</td><td>°C</td></tr>
+      <tr><td>Vi sinh tổng số</td><td>≤ 10⁵</td><td>CFU/g</td></tr>
+      <tr><td>Coliform</td><td>≤ 10²</td><td>CFU/g</td></tr>
+      <tr><td>Độ pH</td><td>5.4 – 6.0</td><td>—</td></tr>
+      <tr><td>Màu sắc (L*)</td><td>≥ 35</td><td>—</td></tr>
+      <tr><td>Tỉ lệ lỗi ngoại quan</td><td>≤ 2</td><td>%</td></tr>
+      <tr><td>Trọng lượng tịnh</td><td>± 5</td><td>%</td></tr>
+    </tbody></table>
   </div>
-</div>`;
+  <div class="card">
+    <div style="font-weight:700;font-size:14px;margin-bottom:14px">🚨 Ngưỡng cảnh báo hệ thống</div>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:14px">Sau khi import Excel, hệ thống tự so sánh với bảng này và bật cảnh báo màu.</p>
+    <table><thead><tr><th>Chỉ tiêu</th><th>⚠️ Cảnh báo</th><th>🔴 Nghiêm trọng</th></tr></thead>
+    <tbody>
+      <tr><td>Tỉ lệ lỗi QC</td><td>> 2%</td><td>> 5%</td></tr>
+      <tr><td>Chênh lệch kho</td><td>> 2%</td><td>> 5%</td></tr>
+      <tr><td>Nhiệt độ</td><td>> 4°C</td><td>> 7°C</td></tr>
+      <tr><td>Coliform</td><td>> 50 CFU/g</td><td>> 100 CFU/g</td></tr>
+    </tbody></table>
+    <div class="divider"></div>
+    <button class="btn b-out b-sm">✏️ Chỉnh sửa ngưỡng</button>
+  </div>
+</div>`;}
+
+/* ══════════════════════════════════════════
+   CÔNG VIỆC
+══════════════════════════════════════════ */
+function rCongViec(){
+  const tabs=['Checklist ca','Việc hôm nay','Phân công','Tất cả'];
+  const t=S.tab||'Checklist ca';
+  return`
+<div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Công việc</div>
+<div class="sec-hdr"><h1>✅ Công việc & Checklist</h1><button class="btn b-pri b-sm">+ Thêm việc</button></div>
+<div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('congviec','${tb}')">${tb}</div>`).join('')}</div>
+${t==='Checklist ca'?rChecklistCa():rTodayTasks()}`;
+}
+function rChecklistCa(){
+  const kkItems=['Điểm danh nhân sự đầu ca','Nhận bàn giao từ ca trước (BM-KSCL-004)','Kiểm tra cân điện tử – reset về 0','Kiểm tra máy quét mã vạch – pin đủ','Xem lịch hàng về trong ca','Kiểm tra khu vực làm việc – sạch sẽ','Xác nhận lịch kiểm kê theo kế hoạch'];
+  const qcItems=['Kiểm tra thiết bị đo lường (cân, nhiệt kế)','Xác nhận tiêu chuẩn QC áp dụng hôm nay','Nhận mẫu kiểm tra lô hàng đầu ca','Kiểm tra tình trạng phòng lạnh','Báo cáo kết quả QC ca trước','Cập nhật phiếu theo dõi vi sinh (nếu có)'];
+  return`<div class="g2">
+    <div class="card">
+      <div style="font-weight:700;font-size:14px;margin-bottom:14px;display:flex;justify-content:space-between">
+        📦 Checklist đầu ca – Kiểm kê
+        <span class="bdg b-info">0/${kkItems.length} hoàn thành</span>
+      </div>
+      ${kkItems.map((t,i)=>`<label class="checklist-item"><input type="checkbox" onchange="updateCL(this,'kk',${i})"> ${t}</label>`).join('')}
+      <button class="btn b-ok2" style="width:100%;margin-top:16px" onclick="completeCa('kk')">✅ Kết thúc ca – Kiểm kê</button>
+    </div>
+    <div class="card">
+      <div style="font-weight:700;font-size:14px;margin-bottom:14px;display:flex;justify-content:space-between">
+        🔬 Checklist đầu ca – QC
+        <span class="bdg b-info">0/${qcItems.length} hoàn thành</span>
+      </div>
+      ${qcItems.map((t,i)=>`<label class="checklist-item"><input type="checkbox" onchange="updateCL(this,'qc',${i})"> ${t}</label>`).join('')}
+      <button class="btn b-ok2" style="width:100%;margin-top:16px" onclick="completeCa('qc')">✅ Kết thúc ca – QC</button>
+    </div>
+  </div>`;}
+function rTodayTasks(){return`
+<div class="card" style="padding:0"><div class="tw"><table>
+<thead><tr><th>Tên công việc</th><th>Bộ phận</th><th>Người phụ trách</th><th>Hạn hoàn thành</th><th>Mức độ</th><th>Trạng thái</th></tr></thead>
+<tbody><tr><td colspan="6"><div class="empty-state"><div class="es-ic">✅</div><p>Không có việc nào hôm nay.</p></div></td></tr></tbody>
+</table></div></div>`;}
+
+function updateCL(cb,dept,idx){
+  const label=cb.closest('.checklist-item');
+  if(cb.checked)label.classList.add('done'); else label.classList.remove('done');
+  const card=cb.closest('.card');
+  const total=card.querySelectorAll('input[type=checkbox]').length;
+  const done=card.querySelectorAll('input[type=checkbox]:checked').length;
+  const bdg=card.querySelector('.bdg');
+  if(bdg)bdg.textContent=`${done}/${total} hoàn thành`;
+  if(done===total)toast(`Checklist ${dept.toUpperCase()} hoàn thành! 🎉`,'t-ok');
+}
+function completeCa(dept){
+  if(!confirm(`Xác nhận kết thúc ca ${dept.toUpperCase()}? Dữ liệu sẽ được lưu.`))return;
+  const ts=new Date().toLocaleString('vi-VN');
+  db.ref(`checklist/${S.user.uid}/${dept}/${Date.now()}`).set({completedAt:ts,by:S.profile?.name||S.user.email});
+  toast(`Đã lưu kết thúc ca ${dept.toUpperCase()} lúc ${ts}`,'t-ok');
 }
 
-// ── TOAST ──
-function toast(msg, type='') {
-  const wrap = document.getElementById('toast-wrap');
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.textContent = msg;
-  wrap.appendChild(el);
-  setTimeout(()=>el.remove(), 3500);
+/* ══════════════════════════════════════════
+   BÁO CÁO
+══════════════════════════════════════════ */
+function rBaoCao(){
+  const tabs=['Tổng hợp','KPI tháng','So sánh','Xuất báo cáo'];
+  const t=S.tab||'Tổng hợp';
+  return`
+<div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Báo cáo</div>
+<div class="sec-hdr"><h1>📊 Báo cáo & Phân tích</h1>
+<div style="display:flex;gap:8px">
+  <select style="max-width:160px"><option>Tháng 6/2026</option><option>Tháng 5/2026</option></select>
+  <button class="btn b-out b-sm">⬇️ Xuất PDF</button>
+  <button class="btn b-pri b-sm">⬇️ Xuất Excel</button>
+</div></div>
+<div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('baocao','${tb}')">${tb}</div>`).join('')}</div>
+<div class="g4" style="margin-bottom:18px">
+  ${kpi('Phiếu QC xử lý','0','phiếu','#0284c7','📋','')}
+  ${kpi('Tổng lỗi phát hiện','0','lỗi','#dc2626','❌','')}
+  ${kpi('Tỉ lệ đạt chuẩn','—','%','#16a34a','✅','')}
+  ${kpi('Đợt kiểm kê','0','đợt','#7c3aed','📦','')}
+</div>
+<div class="g2" style="margin-bottom:16px">
+  <div class="chart-box"><div class="chart-title">📈 KPI tổng hợp 6 tháng</div><div class="chart-wrap"><canvas id="c-bc-kpi"></canvas></div></div>
+  <div class="chart-box"><div class="chart-title">🥧 Phân loại lỗi QC</div><div class="chart-wrap"><canvas id="c-bc-pie"></canvas></div></div>
+</div>
+<div class="chart-box"><div class="chart-title">📊 So sánh KK vs QC theo tháng</div><div class="chart-wrap"><canvas id="c-bc-bar"></canvas></div></div>`;}
+
+/* ══════════════════════════════════════════
+   ĐÀO TẠO
+══════════════════════════════════════════ */
+function rDaoTao(){
+  const cats=[
+    {ic:'📦',lb:'Kiểm kê',color:'#16a34a',bg:'#dcfce7',items:['Quy trình kiểm kê hàng ngày','Checklist cuối tháng','Xử lý chênh lệch kho']},
+    {ic:'🔬',lb:'Kiểm soát CL',color:'#0284c7',bg:'#e0f2fe',items:['Quy trình QC đầu ca','Tiêu chuẩn JAS','Lập phiếu QC']},
+    {ic:'📋',lb:'Quy trình & SOP',color:'#ea580c',bg:'#fff7ed',items:['SOP kiểm tra lô hàng','Quy trình xử lý hàng lỗi','Báo cáo sự cố']},
+    {ic:'👤',lb:'Onboarding',color:'#7c3aed',bg:'#f5f3ff',items:['Giới thiệu công ty','Vai trò phòng KSCL','An toàn lao động']},
+  ];
+  return`
+<div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Đào tạo</div>
+<div class="sec-hdr"><h1>📚 Đào tạo & Học liệu</h1></div>
+<div class="g2">
+  ${cats.map(c=>`<div class="card">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:44px;height:44px;border-radius:10px;background:${c.bg};display:flex;align-items:center;justify-content:center;font-size:22px">${c.ic}</div>
+      <div style="font-weight:700;font-size:15px;color:${c.color}">${c.lb}</div>
+    </div>
+    ${c.items.map(it=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f5f6fa;font-size:13px">
+      <span>📄 ${it}</span>
+      <button class="btn b-out b-sm" onclick="toast('Nội dung đang cập nhật...','t-warn')">Xem</button>
+    </div>`).join('')}
+    <button class="btn" style="width:100%;margin-top:14px;background:${c.bg};color:${c.color}" onclick="toast('Nội dung sẽ được thêm sớm')">+ Thêm tài liệu</button>
+  </div>`).join('')}
+</div>`;}
+
+/* ══════════════════════════════════════════
+   NHÂN SỰ
+══════════════════════════════════════════ */
+function rNhanSu(){
+  if(!isAdmin()&&!canAccess('nhansu'))return`<div class="card"><div class="empty-state"><div class="es-ic">🔒</div><p>Bạn không có quyền truy cập mục này.</p></div></div>`;
+  return`
+<div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Nhân sự QC</div>
+<div class="sec-hdr"><h1>👥 Nhân sự QC</h1><button class="btn b-pri b-sm">+ Thêm nhân viên</button></div>
+<div class="g3" style="margin-bottom:18px">
+  ${kpi('Tổng NV QC','—','người','#0284c7','👥','')}
+  ${kpi('NV Kiểm kê','—','người','#16a34a','📦','')}
+  ${kpi('NV QC','—','người','#dc2626','🔬','')}
+</div>
+<div class="card" style="padding:0"><div class="tw"><table>
+<thead><tr><th>Họ tên</th><th>Bộ phận</th><th>Vai trò hệ thống</th><th>SĐT</th><th>Ca làm việc</th><th>Ngày vào</th><th>Trạng thái</th></tr></thead>
+<tbody id="ns-list"><tr><td colspan="7"><div class="empty-state"><div class="es-ic">👥</div><p>Đang tải dữ liệu nhân sự...</p></div></td></tr></tbody>
+</table></div></div>`;}
+
+/* ══════════════════════════════════════════
+   ADMIN
+══════════════════════════════════════════ */
+function rAdmin(){
+  if(!isAdmin())return`<div class="card"><div class="empty-state"><div class="es-ic">🔒</div><p>Chỉ Admin mới có quyền truy cập.</p></div></div>`;
+  const tabs=['Tài khoản','Phân quyền','Cài đặt KPI'];
+  const t=S.tab||'Tài khoản';
+  return`
+<div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Quản trị</div>
+<div class="sec-hdr"><h1>⚙️ Quản trị hệ thống</h1></div>
+<div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('admin','${tb}')">${tb}</div>`).join('')}</div>
+${t==='Tài khoản'?rUserList():t==='Phân quyền'?rRoleMatrix():rKPISettings()}`;
+}
+function rUserList(){return`
+<div class="toolbar">
+  <input placeholder="Tìm email, tên..." style="max-width:240px">
+  <div class="spacer"></div>
+  <button class="btn b-pri b-sm" onclick="showModal('add-user')">+ Tạo tài khoản mới</button>
+</div>
+<div class="card" style="padding:0"><div class="tw"><table>
+<thead><tr><th>Họ tên</th><th>Email</th><th>Phòng ban</th><th>Vai trò</th><th>Ngày tạo</th><th>Hành động</th></tr></thead>
+<tbody id="ul">
+  <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--t2)">Đang tải...</td></tr>
+</tbody></table></div></div>`;}
+function rRoleMatrix(){
+  const perms=['kk','qc','congviec','baocao','daotao','nhansu','admin'];
+  const pLb={'kk':'Kiểm kê','qc':'QC','congviec':'C.việc','baocao':'Báo cáo','daotao':'Đào tạo','nhansu':'Nhân sự','admin':'Quản trị'};
+  return`<div class="card"><div style="font-weight:700;font-size:14px;margin-bottom:16px">Ma trận phân quyền theo vai trò</div>
+<div class="tw"><table>
+<thead><tr><th>Vai trò</th>${perms.map(p=>`<th style="text-align:center">${pLb[p]}</th>`).join('')}</tr></thead>
+<tbody>${Object.entries(ROLES).map(([k,r])=>`<tr>
+  <td><span class="bdg" style="background:${r.color}18;color:${r.color}">${r.label}</span></td>
+  ${perms.map(p=>`<td style="text-align:center">${(r.all||(r.mods||[]).includes(p))?'<span style="color:#16a34a;font-size:18px">✓</span>':'<span style="color:#e2e8f0;font-size:18px">—</span>'}</td>`).join('')}
+</tr>`).join('')}
+</tbody></table></div></div>`;}
+function rKPISettings(){return`
+<div class="g2">
+  <div class="card"><div style="font-weight:700;font-size:14px;margin-bottom:16px">⚙️ Ngưỡng cảnh báo KPI</div>
+    ${[['Tỉ lệ lỗi QC cảnh báo (%)','3'],['Tỉ lệ lỗi QC nghiêm trọng (%)','5'],['Chênh lệch kho cảnh báo (%)','2'],['Chênh lệch kho nghiêm trọng (%)','5'],['Nhiệt độ cảnh báo (°C)','4'],['Nhiệt độ nghiêm trọng (°C)','7']].map(([lb,v])=>`<div class="fg" style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:4px;display:block">${lb}</label><input type="number" value="${v}" style="max-width:120px"></div>`).join('')}
+    <button class="btn b-pri">💾 Lưu cài đặt</button>
+  </div>
+  <div class="card"><div style="font-weight:700;font-size:14px;margin-bottom:16px">📊 Cài đặt báo cáo</div>
+    <div class="fg" style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:4px;display:block">Email nhận báo cáo tuần</label><input type="email" placeholder="manager@sakuko.vn"></div>
+    <div class="fg" style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:4px;display:block">Gửi lúc (thứ 2 hàng tuần)</label><input type="time" value="08:00"></div>
+    <button class="btn b-pri">💾 Lưu cài đặt</button>
+  </div>
+</div>`;}
+
+/* ══════════════════════════════════════════
+   IMPORT EXCEL
+══════════════════════════════════════════ */
+function rImport(mod){return`
+<div class="card">
+  <div style="font-weight:700;font-size:14px;margin-bottom:16px">📥 Import dữ liệu từ Excel</div>
+  <div class="alert a-ok"><span class="a-ic">📋</span><div class="a-bd"><strong>Hướng dẫn import</strong><p>1. Tải file template → 2. Điền dữ liệu đúng cột → 3. Upload → Biểu đồ & KPI tự cập nhật.</p></div></div>
+  <button class="btn b-out b-sm" style="margin:14px 0">⬇️ Tải template mẫu (.xlsx)</button>
+  <div class="dz" onclick="document.getElementById('fi2').click()" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="doDrop(event,'${mod}')">
+    <div style="font-size:52px">📂</div>
+    <p>Kéo thả file Excel (.xlsx, .xls, .csv) vào đây<br>hoặc <strong>click để chọn file</strong></p>
+  </div>
+  <input type="file" id="fi2" accept=".xlsx,.xls,.csv" style="display:none" onchange="doFile(this,'${mod}')">
+  <div id="ir2" style="margin-top:14px"></div>
+</div>`;}
+
+function showImport(mod){showModal('import',{mod});}
+function doDrop(e,mod){e.preventDefault();e.target.closest('.dz').classList.remove('over');const f=e.dataTransfer.files[0];if(f)processFile(f,mod,'ir2');}
+function doFile(el,mod){if(el.files[0])processFile(el.files[0],mod,'ir2');}
+
+function processFile(file,mod,resId){
+  const res=document.getElementById(resId);
+  if(res)res.innerHTML=`<div class="alert a-info"><span class="a-ic">⏳</span><div class="a-bd"><strong>Đang đọc file...</strong><p>${file.name}</p></div></div>`;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const data=XLSX.utils.sheet_to_json(ws);
+      if(!data.length){if(res)res.innerHTML=`<div class="alert a-warn"><span class="a-ic">⚠️</span><div class="a-bd"><strong>File rỗng</strong><p>Sheet đầu tiên không có dữ liệu.</p></div></div>`;return;}
+      saveImport(mod,data,file.name,res);
+    }catch(err){
+      if(res)res.innerHTML=`<div class="alert a-err"><span class="a-ic">❌</span><div class="a-bd"><strong>Lỗi đọc file</strong><p>${err.message}</p></div></div>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
-// ── ENTER KEY ──
-document.getElementById('l-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
-document.getElementById('l-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('l-pass').focus(); });
+function saveImport(mod,data,fname,resEl){
+  db.ref(`imports/${S.user.uid}/${mod}`).set({data,fname,at:Date.now(),by:S.profile?.name||S.user.email}).then(()=>{
+    S.data[mod]=data;
+    if(resEl)resEl.innerHTML=`<div class="alert a-ok"><span class="a-ic">✅</span><div class="a-bd"><strong>Import thành công: ${data.length} dòng</strong><p>File: ${fname} — Biểu đồ đã cập nhật tự động.</p></div></div>`;
+    toast(`✅ Import ${data.length} dòng thành công`,'t-ok');
+    checkAlerts(mod,data);
+    updateChartFromData(mod,data);
+  }).catch(e=>{
+    if(resEl)resEl.innerHTML=`<div class="alert a-err"><span class="a-ic">❌</span><div class="a-bd"><strong>Lỗi lưu dữ liệu</strong><p>${e.message}</p></div></div>`;
+  });
+}
+
+function checkAlerts(mod,data){
+  const warns=[];
+  data.forEach((row,i)=>{
+    if(mod==='qc'){
+      const temp=parseFloat(row['Nhiệt độ']||row['nhiet_do']||row['temperature']||0);
+      const rate=parseFloat(row['Tỉ lệ lỗi']||row['ti_le_loi']||row['error_rate']||0);
+      if(temp>7)warns.push(`Hàng ${i+2}: Nhiệt độ ${temp}°C — NGHIÊM TRỌNG!`);
+      else if(temp>4)warns.push(`Hàng ${i+2}: Nhiệt độ ${temp}°C — Cảnh báo`);
+      if(rate>5)warns.push(`Hàng ${i+2}: Tỉ lệ lỗi ${rate}% — NGHIÊM TRỌNG!`);
+      else if(rate>2)warns.push(`Hàng ${i+2}: Tỉ lệ lỗi ${rate}% — Cảnh báo`);
+    }
+    if(mod==='kk'){
+      const cl=parseFloat(row['Chênh lệch %']||row['chenh_lech']||0);
+      if(cl>5)warns.push(`Hàng ${i+2}: Chênh lệch ${cl}% — NGHIÊM TRỌNG!`);
+      else if(cl>2)warns.push(`Hàng ${i+2}: Chênh lệch ${cl}% — Cảnh báo`);
+    }
+  });
+  if(warns.length){
+    toast(`⚠️ ${warns.length} cảnh báo vượt ngưỡng!`,'t-warn');
+    db.ref(`alerts/${S.user.uid}/${mod}`).set({warns,at:Date.now()});
+  }
+}
+
+function updateChartFromData(mod,data){
+  // Build month labels & series from imported data if columns match
+  try{
+    const byMonth={};
+    data.forEach(r=>{
+      const d=r['Ngày']||r['ngay']||r['date'];
+      if(!d)return;
+      const m=new Date(d).getMonth();
+      if(isNaN(m))return;
+      const lb=`T${m+1}`;
+      byMonth[lb]=(byMonth[lb]||0)+1;
+    });
+    const labels=Object.keys(byMonth),vals=Object.values(byMonth);
+    const cid=mod==='kk'?'c-kk-bar':mod==='qc'?'c-qc-trend':'c-bc-bar';
+    const ch=S.charts[cid];
+    if(ch&&labels.length){ch.data.labels=labels;ch.data.datasets[0].data=vals;ch.update();}
+  }catch(e){}
+}
+
+/* ══════════════════════════════════════════
+   CHARTS
+══════════════════════════════════════════ */
+const TH=['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
+const CC=['#0066cc','#16a34a','#dc2626','#f59e0b','#7c3aed','#0d9488','#db2777','#ea580c'];
+const Z6=[0,0,0,0,0,0];
+
+function mkC(id,type,labels,datasets,opts={}){
+  const el=document.getElementById(id);if(!el)return;
+  if(S.charts[id])S.charts[id].destroy();
+  S.charts[id]=new Chart(el,{type,
+    data:{labels,datasets:datasets.map((d,i)=>({
+      ...d,
+      borderColor:d.borderColor||CC[i],
+      backgroundColor:d.bg||(type==='line'?CC[i]+'22':(type==='doughnut'||type==='pie'?CC:CC[i])),
+      borderWidth:2,tension:.4,fill:type==='line'&&!d.noFill,pointRadius:3,
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}}},
+      scales:(type==='pie'||type==='doughnut')?{}:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'#f0f2f7'}}},
+      ...opts}
+  });
+}
+
+function afterRender(){
+  loadUsers(); loadNS();
+  const T6=TH.slice(0,6);
+  // Dashboard
+  mkC('c-dash-trend','line',T6,[{label:'Lỗi QC',data:[...Z6],borderColor:CC[2],bg:CC[2]+'22'},{label:'KK chênh lệch',data:[...Z6],borderColor:CC[3],bg:CC[3]+'22'}]);
+  mkC('c-dash-pie','doughnut',['Ngoại quan','Trọng lượng','Bao bì','Vi sinh','Khác'],[{data:[0,0,0,0,0],bg:CC}]);
+  // KK
+  mkC('c-kk-bar','bar',T6,[{label:'Đợt KK',data:[...Z6],bg:CC[1]}]);
+  mkC('c-kk-line','line',T6,[{label:'Tỉ lệ khớp (%)',data:[...Z6],noFill:true}]);
+  mkC('c-kk-cat','bar',['Thịt bò','Gia vị','Bao bì','Phụ liệu','Khác'],[{label:'SKU chênh lệch',data:[0,0,0,0,0],bg:CC[3]}]);
+  // QC
+  mkC('c-qc-week','line',['T2','T3','T4','T5','T6','T7','CN'],[{label:'Số lỗi',data:[0,0,0,0,0,0,0],borderColor:CC[2],bg:CC[2]+'22'}]);
+  mkC('c-qc-cat','doughnut',['Ngoại quan','Trọng lượng','Bao bì','Vi sinh','Khác'],[{data:[0,0,0,0,0],bg:CC}]);
+  mkC('c-qc-trend','line',T6,[{label:'Tổng lỗi',data:[...Z6],borderColor:CC[2]},{label:'Nghiêm trọng',data:[...Z6],borderColor:CC[3]}]);
+  mkC('c-qc-dc','bar',['DC01','DC02','DC03','CH-Q1','CH-Q3','CH-HN'],[{label:'Số lỗi',data:[0,0,0,0,0,0],bg:CC[0]}]);
+  // Báo cáo
+  mkC('c-bc-kpi','line',T6,[{label:'Đạt QC (%)',data:[...Z6],noFill:true},{label:'Khớp KK (%)',data:[...Z6],noFill:true,borderColor:CC[1]}]);
+  mkC('c-bc-pie','doughnut',['Đạt','Không đạt','Cảnh báo'],[{data:[0,0,0],bg:[CC[1],CC[2],CC[3]]}]);
+  mkC('c-bc-bar','bar',T6,[{label:'Đợt KK',data:[...Z6]},{label:'Phiếu QC',data:[...Z6],bg:CC[1]}]);
+  // Load saved import data
+  if(S.user)db.ref(`imports/${S.user.uid}`).get().then(snap=>{if(snap.exists()){const d=snap.val();Object.keys(d).forEach(m=>{S.data[m]=d[m].data;updateChartFromData(m,S.data[m]);});}});
+}
+
+/* ══════════════════════════════════════════
+   MODALS
+══════════════════════════════════════════ */
+function showModal(type,data={}){
+  const mr=document.getElementById('mr');if(!mr)return;
+  let html='';
+  if(type==='first-login'){
+    html=`<div class="ov"><div class="modal">
+      <div class="mhdr"><h3>👋 Chào mừng! Hoàn thiện hồ sơ</h3></div>
+      <div class="mbody">
+        <div class="fg"><label>Họ và tên *</label><input id="fl-n" placeholder="Nguyễn Văn A"></div>
+        <div class="fg"><label>Phòng ban</label><select id="fl-d"><option value="">-- Chọn --</option><option>KSCL – Kiểm kê</option><option>KSCL – QC</option><option>Quản lý</option></select></div>
+        <div class="fg"><label>Số điện thoại</label><input id="fl-p" placeholder="0901xxxxxx"></div>
+      </div>
+      <div class="mfoot"><button class="btn b-pri" onclick="saveFirstLogin()">Vào hệ thống →</button></div>
+    </div></div>`;
+  } else if(type==='add-user'){
+    html=`<div class="ov"><div class="modal">
+      <div class="mhdr"><h3>➕ Tạo tài khoản mới</h3><button class="mclose" onclick="closeModal()">×</button></div>
+      <div class="mbody">
+        <div class="fg"><label>Email *</label><input id="au-e" type="email" placeholder="email@sakuko.vn"></div>
+        <div class="fg"><label>Mật khẩu *</label><input id="au-p" type="password" placeholder="Tối thiểu 6 ký tự"></div>
+        <div class="fg"><label>Họ và tên *</label><input id="au-n" placeholder="Nguyễn Văn A"></div>
+        <div class="fg"><label>Vai trò</label><select id="au-r">${Object.entries(ROLES).map(([k,r])=>`<option value="${k}">${r.label}</option>`).join('')}</select></div>
+        <div class="fg"><label>Phòng ban</label><select id="au-d"><option>KSCL – Kiểm kê</option><option>KSCL – QC</option><option>Quản lý</option></select></div>
+        <div id="au-err"></div>
+      </div>
+      <div class="mfoot">
+        <button class="btn b-out" onclick="closeModal()">Hủy</button>
+        <button class="btn b-pri" onclick="doAddUser()">Tạo tài khoản</button>
+      </div>
+    </div></div>`;
+  } else if(type==='profile'){
+    const p=S.profile||{},r=ROLES[p.role]||ROLES.viewer;
+    const av=(p.name||p.email||'U')[0].toUpperCase();
+    html=`<div class="ov" onclick="if(event.target===this)closeModal()"><div class="modal">
+      <div class="mhdr"><h3>👤 Hồ sơ cá nhân</h3><button class="mclose" onclick="closeModal()">×</button></div>
+      <div class="mbody">
+        <div style="text-align:center;margin-bottom:20px">
+          <div style="width:68px;height:68px;border-radius:50%;background:${r.color};display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:700;margin:0 auto 10px">${av}</div>
+          <strong style="font-size:16px">${p.name||'—'}</strong><br>
+          <span class="bdg" style="background:${r.color}18;color:${r.color};margin-top:6px">${r.label}</span>
+        </div>
+        <div class="fg"><label>Email</label><input value="${p.email||''}" disabled style="background:#f8f9fc"></div>
+        <div class="fg"><label>Họ và tên</label><input id="pr-n" value="${p.name||''}"></div>
+        <div class="fg"><label>Phòng ban</label><input id="pr-d" value="${p.dept||''}"></div>
+        <div class="fg"><label>Số điện thoại</label><input id="pr-p" value="${p.phone||''}"></div>
+      </div>
+      <div class="mfoot">
+        <button class="btn b-out" onclick="closeModal()">Đóng</button>
+        <button class="btn b-pri" onclick="saveProfile()">💾 Lưu</button>
+      </div>
+    </div></div>`;
+  } else if(type==='import'){
+    const mod=data.mod;
+    html=`<div class="ov" onclick="if(event.target===this)closeModal()"><div class="modal">
+      <div class="mhdr"><h3>📥 Import dữ liệu Excel – ${mod.toUpperCase()}</h3><button class="mclose" onclick="closeModal()">×</button></div>
+      <div class="mbody">
+        <div class="alert a-ok"><span class="a-ic">📋</span><div class="a-bd"><strong>Hướng dẫn</strong><p>Tải template → Điền dữ liệu → Upload → Biểu đồ & cảnh báo tự động.</p></div></div>
+        <button class="btn b-out b-sm" style="margin:12px 0 16px">⬇️ Tải template mẫu</button>
+        <div class="dz" onclick="document.getElementById('fi-m').click()" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="doDrop2(event,'${mod}')">
+          <div style="font-size:48px">📂</div>
+          <p>Kéo thả file Excel vào đây hoặc click để chọn</p>
+        </div>
+        <input type="file" id="fi-m" accept=".xlsx,.xls,.csv" style="display:none" onchange="doFile2(this,'${mod}')">
+        <div id="ir-m" style="margin-top:14px"></div>
+      </div>
+      <div class="mfoot"><button class="btn b-out" onclick="closeModal()">Đóng</button></div>
+    </div></div>`;
+  }
+  mr.innerHTML=html;
+}
+function showFirstLogin(){showModal('first-login');}
+function closeModal(){const mr=document.getElementById('mr');if(mr)mr.innerHTML='';}
+function doDrop2(e,mod){e.preventDefault();e.target.closest('.dz').classList.remove('over');const f=e.dataTransfer.files[0];if(f)processFile(f,mod,'ir-m');}
+function doFile2(el,mod){if(el.files[0])processFile(el.files[0],mod,'ir-m');}
+
+/* ══════════════════════════════════════════
+   AUTH ACTIONS
+══════════════════════════════════════════ */
+async function doLogin(){
+  const email=document.getElementById('le')?.value?.trim();
+  const pass=document.getElementById('lp')?.value;
+  const errEl=document.getElementById('lerr');
+  if(!email||!pass){if(errEl)errEl.innerHTML=`<div class="err-box">Vui lòng nhập email và mật khẩu</div>`;return;}
+  try{
+    await auth.signInWithEmailAndPassword(email,pass);
+  }catch(e){
+    const M={'auth/user-not-found':'Email không tồn tại trong hệ thống','auth/wrong-password':'Mật khẩu không đúng','auth/invalid-email':'Email không hợp lệ','auth/too-many-requests':'Quá nhiều lần thử. Vui lòng đợi vài phút.','auth/invalid-credential':'Email hoặc mật khẩu không đúng'};
+    if(errEl)errEl.innerHTML=`<div class="err-box">${M[e.code]||e.message}</div>`;
+  }
+}
+async function doLogout(){await auth.signOut();S.user=null;S.profile=null;S.data={};go('login');}
+
+async function saveFirstLogin(){
+  const name=document.getElementById('fl-n')?.value?.trim();
+  if(!name){toast('Vui lòng nhập họ và tên','t-warn');return;}
+  S.profile.name=name;
+  S.profile.dept=document.getElementById('fl-d')?.value||'';
+  S.profile.phone=document.getElementById('fl-p')?.value||'';
+  await db.ref(`profiles/${S.user.uid}`).set(S.profile);
+  closeModal(); go('dashboard');
+}
+async function saveProfile(){
+  S.profile.name=document.getElementById('pr-n')?.value?.trim()||S.profile.name;
+  S.profile.dept=document.getElementById('pr-d')?.value||S.profile.dept;
+  S.profile.phone=document.getElementById('pr-p')?.value||S.profile.phone;
+  await db.ref(`profiles/${S.user.uid}`).update({name:S.profile.name,dept:S.profile.dept,phone:S.profile.phone});
+  closeModal(); toast('Đã lưu hồ sơ','t-ok'); render();
+}
+
+async function doAddUser(){
+  const email=document.getElementById('au-e')?.value?.trim();
+  const pass=document.getElementById('au-p')?.value;
+  const name=document.getElementById('au-n')?.value?.trim();
+  const role=document.getElementById('au-r')?.value;
+  const dept=document.getElementById('au-d')?.value;
+  const errEl=document.getElementById('au-err');
+  if(!email||!pass||!name){if(errEl)errEl.innerHTML=`<div class="err-box">Vui lòng điền đầy đủ thông tin bắt buộc (*)</div>`;return;}
+  try{
+    const sec=firebase.initializeApp(FB,'sec-'+Date.now());
+    const secAuth=sec.auth();
+    const cred=await secAuth.createUserWithEmailAndPassword(email,pass);
+    await db.ref(`profiles/${cred.user.uid}`).set({name,email,role,dept,phone:'',createdAt:Date.now()});
+    await secAuth.signOut(); sec.delete();
+    closeModal(); toast(`✅ Đã tạo tài khoản: ${name}`,'t-ok'); loadUsers();
+  }catch(e){
+    const M={'auth/email-already-in-use':'Email này đã có tài khoản','auth/weak-password':'Mật khẩu quá yếu (tối thiểu 6 ký tự)'};
+    if(errEl)errEl.innerHTML=`<div class="err-box">${M[e.code]||e.message}</div>`;
+  }
+}
+async function setRole(uid,role){
+  await db.ref(`profiles/${uid}/role`).set(role);
+  toast('Đã cập nhật vai trò','t-ok'); loadUsers();
+}
+async function delUser(uid,name){
+  if(!confirm(`Xóa tài khoản "${name}"? Hành động này không thể hoàn tác.`))return;
+  await db.ref(`profiles/${uid}`).remove();
+  toast(`Đã xóa ${name}`,'t-ok'); loadUsers();
+}
+
+function loadUsers(){
+  const tbody=document.getElementById('ul');if(!tbody||!isAdmin())return;
+  db.ref('profiles').get().then(snap=>{
+    if(!snap.exists()){tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="es-ic">👥</div><p>Chưa có tài khoản nào</p></div></td></tr>`;return;}
+    const users=Object.entries(snap.val());
+    tbody.innerHTML=users.map(([uid,u])=>{
+      const r=ROLES[u.role]||ROLES.viewer;
+      return`<tr>
+        <td><strong>${u.name||'—'}</strong></td>
+        <td style="color:var(--t2);font-size:12px">${u.email||''}</td>
+        <td>${u.dept||'—'}</td>
+        <td><select onchange="setRole('${uid}',this.value)" style="padding:4px 8px;font-size:12px;border-radius:6px">
+          ${Object.entries(ROLES).map(([k,r])=>`<option value="${k}"${u.role===k?' selected':''}>${r.label}</option>`).join('')}
+        </select></td>
+        <td style="color:var(--t2);font-size:12px">${u.createdAt?new Date(u.createdAt).toLocaleDateString('vi-VN'):'—'}</td>
+        <td><button class="btn b-danger b-sm" onclick="delUser('${uid}','${(u.name||u.email||'').replace(/'/g,'').replace(/"/g,'')}')">🗑 Xóa</button></td>
+      </tr>`;
+    }).join('');
+  });
+}
+
+function loadNS(){
+  const tbody=document.getElementById('ns-list');if(!tbody)return;
+  db.ref('profiles').get().then(snap=>{
+    if(!snap.exists()){tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><div class="es-ic">👥</div><p>Chưa có dữ liệu</p></div></td></tr>`;return;}
+    const users=Object.entries(snap.val());
+    tbody.innerHTML=users.map(([uid,u])=>{
+      const r=ROLES[u.role]||ROLES.viewer;
+      return`<tr>
+        <td><strong>${u.name||'—'}</strong></td>
+        <td>${u.dept||'—'}</td>
+        <td><span class="bdg" style="background:${r.color}18;color:${r.color}">${r.label}</span></td>
+        <td style="color:var(--t2);font-size:12px">${u.phone||'—'}</td>
+        <td><span class="bdg b-info">Ca 1</span></td>
+        <td style="color:var(--t2);font-size:12px">${u.createdAt?new Date(u.createdAt).toLocaleDateString('vi-VN'):'—'}</td>
+        <td><span class="bdg b-ok">Đang làm việc</span></td>
+      </tr>`;
+    }).join('');
+  });
+}
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+function toast(msg,cls=''){
+  const el=document.createElement('div');
+  el.className=`toast${cls?' '+cls:''}`;
+  el.textContent=msg;
+  document.getElementById('tw').appendChild(el);
+  setTimeout(()=>el.remove(),3800);
+}
+
+/* ══════════════════════════════════════════
+   KEYBOARD
+══════════════════════════════════════════ */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&S.page==='login')doLogin();
+});
+
+/* ══════════════════════════════════════════
+   INIT
+══════════════════════════════════════════ */
+render();
 </script>
 </body>
 </html>
