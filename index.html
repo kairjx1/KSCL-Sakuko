@@ -187,6 +187,17 @@ tbody tr:last-child{border-bottom:none}
 @keyframes tin{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
 @keyframes tout{to{opacity:0;transform:translateX(20px)}}
 
+/* APP KSCL */
+.app-log{background:#1e1e2e;border-radius:8px;padding:14px 16px;font-family:Consolas,monospace;font-size:12px;max-height:360px;overflow-y:auto;border:1px solid #333}
+.log-l{padding:2px 0;line-height:1.6;color:#c8c8e8;white-space:pre-wrap;word-break:break-all}
+.log-l.ok{color:#4ade80}.log-l.err{color:#f87171}.log-l.warn{color:#fbbf24}.log-l.head{color:#7c6af7;font-weight:700}
+.btn-upload{background:var(--pri-l);color:var(--pri);border:1px dashed var(--pri);border-radius:7px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-upload:hover{background:var(--pri);color:#fff}
+.btn-run{background:#16a34a;color:#fff;border-radius:7px;padding:9px 20px;font-size:13px;font-weight:700;border:none;cursor:pointer;transition:.15s}
+.btn-run:hover{background:#14803a}
+.btn-back{background:#f1f5f9;color:var(--t2);border:1px solid var(--border);border-radius:7px;padding:7px 14px;font-size:13px;cursor:pointer;transition:.15s}
+.btn-back:hover{background:#e2e8f0;color:var(--t1)}
+
 /* TREE EDITOR */
 .tree-ed{border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#fff}
 .te-bar{padding:10px 14px;background:#f8f9fc;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
@@ -247,8 +258,8 @@ const ADMIN_EMAILS=["kairjx1@gmail.com"];
 const ROLES={
   superadmin:{label:'Quản trị viên',color:'#7c3aed',all:true,admin:true},
   admin:      {label:'Admin',color:'#0066cc',all:true,admin:true},
-  manager:    {label:'Quản lý',color:'#059669',mods:['dashboard','kk','qc','congviec','baocao','daotao','nhansu']},
-  staff_kk:   {label:'NV Kiểm kê',color:'#2563eb',mods:['dashboard','kk','congviec','daotao']},
+  manager:    {label:'Quản lý',color:'#059669',mods:['dashboard','kk','qc','congviec','baocao','daotao','nhansu','appkscl']},
+  staff_kk:   {label:'NV Kiểm kê',color:'#2563eb',mods:['dashboard','kk','congviec','daotao','appkscl']},
   staff_qc:   {label:'NV QC',color:'#dc2626',mods:['dashboard','qc','congviec','daotao']},
   viewer:     {label:'Xem',color:'#64748b',mods:['dashboard','daotao']}
 };
@@ -265,6 +276,7 @@ const MODS=[
   {id:'daotao',   ic:'📚',lb:'Đào tạo',    color:'#0d9488',bg:'#ccfbf1',ds:'Học liệu nội bộ'},
   {id:'nhansu',   ic:'👥',lb:'Nhân sự QC', color:'#db2777',bg:'#fce7f3',ds:'Quản lý nhân viên'},
   {id:'admin',    ic:'⚙️',lb:'Quản trị',   color:'#475569',bg:'#f1f5f9',ds:'Cài đặt & phân quyền'},
+  {id:'appkscl',  ic:'🔧',lb:'APP KSCL',   color:'#1e3a5f',bg:'#e8f2ff',ds:'Công cụ xử lý dữ liệu'},
 ];
 
 /* ══════════════════════════════════════════
@@ -407,7 +419,7 @@ function buildSB(){
 }
 
 function rMain(){
-  const fns={dashboard:rDashboard,kk:rKK,qc:rQC,congviec:rCongViec,baocao:rBaoCao,daotao:rDaoTao,nhansu:rNhanSu,admin:rAdmin};
+  const fns={dashboard:rDashboard,kk:rKK,qc:rQC,congviec:rCongViec,baocao:rBaoCao,daotao:rDaoTao,nhansu:rNhanSu,admin:rAdmin,appkscl:rAppKSCL};
   return(fns[S.page]||rDashboard)();
 }
 
@@ -1237,6 +1249,405 @@ function tSection(key){
   },0);
   return`<div id="tree-${key}"><div style="padding:20px;text-align:center;color:var(--t2);font-size:13px">⏳ Đang tải...</div></div>`;
 }
+
+/* ══════════════════════════════════════════
+   APP KSCL
+══════════════════════════════════════════ */
+function rAppKSCL(){
+  const t=S.tab||'';
+  if(t==='navsml')return rNavSml();
+  if(t==='bbkk')return rBBKK();
+  return`
+<div class="sec-hdr"><h1>🔧 APP KSCL</h1><p style="color:var(--t2);font-size:13px">Công cụ xử lý dữ liệu kiểm kê – chạy hoàn toàn trong trình duyệt</p></div>
+<div class="alert a-info" style="margin-bottom:16px"><span class="a-ic">🔒</span><div class="a-bd"><strong>Xử lý offline, bảo mật 100%</strong><br><span style="font-size:12px">Dữ liệu không rời khỏi máy tính. Toàn bộ tính toán chạy trong trình duyệt, không cần cài đặt.</span></div></div>
+<div class="mod-grid">
+  <div class="mc" onclick="go('appkscl','navsml')" style="border-color:#0066cc20">
+    <div class="mc-ic" style="background:#e8f2ff">🔄</div>
+    <div class="mc-lb">1. So sánh NAV vs SML/Hapi</div>
+    <div class="mc-ds">Upload file Excel → tự điền Lý do cho từng mã lệch → tải về</div>
+  </div>
+  <div class="mc" onclick="go('appkscl','bbkk')" style="border-color:#16a34a20">
+    <div class="mc-ic" style="background:#dcfce7">📋</div>
+    <div class="mc-lb">2. Xử lý BBKK Kiểm kê</div>
+    <div class="mc-ds">Phân loại HT/KHT, kiểm tra nhầm mã, đề xuất đền bù → tải về</div>
+  </div>
+</div>`;
+}
+
+function rNavSml(){
+  return`
+<div class="breadcrumb"><span onclick="go('appkscl')">APP KSCL</span> › So sánh NAV vs SML</div>
+<div class="sec-hdr"><h1>🔄 So sánh NAV vs SML/Hapi</h1></div>
+<div class="card" style="padding:20px;margin-bottom:16px">
+  <p style="color:var(--t2);font-size:13px;margin:0 0 14px">Yêu cầu: file Excel có 3 sheet — <strong>So sánh</strong> (tên chứa "so" và "nh"), <strong>NAV</strong>, <strong>SML</strong> hoặc <strong>HAPI</strong><br>
+  Kết quả: cột <em>Lý do</em> sẽ được điền tự động cho từng mã lệch.</p>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <label class="btn-upload" for="ns-file">📂 Chọn file Excel</label>
+    <input type="file" id="ns-file" accept=".xlsx" style="display:none" onchange="document.getElementById('ns-fname').textContent=this.files[0]?.name||''">
+    <span id="ns-fname" style="color:var(--t2);font-size:13px;font-style:italic">Chưa chọn file</span>
+    <button class="btn-run" onclick="nsRun()">▶ Chạy so sánh</button>
+  </div>
+</div>
+<div id="ns-log" class="app-log" style="display:none"></div>`;
+}
+
+function nsLog(lines){
+  const el=document.getElementById('ns-log');
+  if(!el)return;
+  el.style.display='block';
+  el.innerHTML=lines.map(l=>{
+    const c=l.includes('✓')||l.includes('✅')?'ok':l.includes('✗')||l.includes('❌')?'err':l.includes('⚠')?'warn':l.startsWith('═')||l.startsWith('▶')?'head':'';
+    return`<div class="log-l ${c}">${l.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>`;
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+
+function nsRun(){
+  const inp=document.getElementById('ns-file');
+  if(!inp?.files[0]){nsLog(['❌ Chưa chọn file']);return;}
+  const file=inp.files[0];
+  nsLog(['⏳ Đang đọc file...']);
+  const rd=new FileReader();
+  rd.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const res=nsProcess(wb,file.name);
+      nsLog(res.log);
+      if(res.ok){
+        const out=XLSX.write(res.wb,{type:'array',bookType:'xlsx'});
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+        a.download=file.name.replace(/\.xlsx$/i,'_KetQua.xlsx');
+        a.click();
+        nsLog([...res.log,'','✅ Đã tải file kết quả về!']);
+      }
+    }catch(err){nsLog([`❌ Lỗi: ${err.message}`]);}
+  };
+  rd.readAsArrayBuffer(file);
+}
+
+function nsProcess(wb,fname){
+  const log=[`▶  ${fname}`];
+  const sn=wb.SheetNames;
+  const ssName=sn.find(s=>{const l=s.toLowerCase();return l.includes('so')&&l.includes('nh');});
+  const navName=sn.find(s=>/^nav$/i.test(s.trim()));
+  const smlName=sn.find(s=>/^(sml|hapi)$/i.test(s.trim()));
+  if(!ssName||!navName||!smlName)
+    return{ok:false,log:[...log,`✗ Thiếu sheet (có: ${sn.join(', ')}) — cần: So sánh + NAV + SML/HAPI`]};
+
+  const dataSS=XLSX.utils.sheet_to_json(wb.Sheets[ssName],{header:1,defval:null,raw:true});
+  const header=dataSS[0]||[];
+  const findCol=names=>{
+    for(const nm of names){
+      const i=header.findIndex(h=>h&&String(h).toLowerCase().includes(nm.toLowerCase()));
+      if(i>=0)return i;
+    }return null;
+  };
+  const colMaSP=findCol(['mã-sp','ma-sp','mã sp','ma sp']);
+  const colSS=findCol(['ss']);
+  const colLyDo=findCol(['lý do','ly do']);
+  if(colMaSP===null||colLyDo===null)
+    return{ok:false,log:[...log,'✗ Không tìm được cột Mã SP hoặc Lý do trong sheet So sánh']};
+
+  const items=[];
+  for(let r=1;r<dataSS.length;r++){
+    const row=dataSS[r]||[];
+    const ma=String(row[colMaSP]??'').trim();
+    if(!ma||ma==='null'||ma==='undefined')continue;
+    items.push({rowIdx:r+1,maSP:ma,ssQty:colSS!==null&&row[colSS]!=null?parseFloat(row[colSS])||0:0});
+  }
+  const maSet=new Set(items.map(i=>i.maSP));
+  log.push(`   Sheet SS: ${items.length} mã, ${items.filter(i=>i.ssQty!==0).length} có lệch`);
+
+  const dataN=XLSX.utils.sheet_to_json(wb.Sheets[navName],{header:1,defval:null,raw:true});
+  const navHdr=(dataN[0]||[]).map(v=>String(v??'').trim().toLowerCase());
+  const nCol=kws=>{for(const k of kws){const i=navHdr.findIndex(h=>h.includes(k));if(i>=0)return i;}return null;};
+  const niMa=nCol(['mã hàng','ma hang','mã sp','ma sp'])??3;
+  const niQty=nCol(['số lượng','so luong'])??6;
+  const niOrd=nCol(['mã số nhận','ma so nhan','chứng từ','đơn đặt hàng'])??2;
+  const navData={};
+  for(let r=1;r<dataN.length;r++){
+    const row=dataN[r]||[];
+    const ma=String(row[niMa]??'').trim();
+    if(!maSet.has(ma))continue;
+    const ord=String(row[niOrd]??'').trim();
+    if(!navData[ma])navData[ma]={};
+    navData[ma][ord]=(navData[ma][ord]||0)+(parseFloat(row[niQty])||0);
+  }
+
+  const dataS=XLSX.utils.sheet_to_json(wb.Sheets[smlName],{header:1,defval:null,raw:true});
+  const smlData={};
+  for(let r=1;r<dataS.length;r++){
+    const row=dataS[r]||[];
+    const ma=String(row[2]??'').trim();
+    if(!maSet.has(ma))continue;
+    const ord=String(row[6]??'').trim();
+    const qty=parseFloat(row[4])||0;
+    const sign=String(row[7]??'').includes('Xuất')?-1:1;
+    if(!smlData[ma])smlData[ma]={};
+    smlData[ma][ord]=(smlData[ma][ord]||0)+sign*qty;
+  }
+
+  const genLyDo=(ma,ssQty)=>{
+    if(ssQty===0)return'';
+    const navRaw=navData[ma]||{};
+    const smlRaw=smlData[ma]||{};
+    const navOrd=Object.fromEntries(Object.entries(navRaw).filter(([,v])=>Math.abs(v)>0.001));
+    const navZero=new Set(Object.keys(navRaw).filter(k=>Math.abs(navRaw[k])<=0.001));
+    const smlOrd=Object.fromEntries(Object.entries(smlRaw).filter(([,v])=>Math.abs(v)>0.001));
+    const all=new Set([...Object.keys(navOrd),...Object.keys(smlOrd),...navZero]);
+    const reasons=[];
+    for(const ord of [...all].sort()){
+      if(!ord)continue;
+      const nq=navOrd[ord],sq=smlOrd[ord],iz=navZero.has(ord);
+      if(iz&&sq!=null)reasons.push(`NAV có chứng từ ${sq<0?'nhập':'xuất'} ${ord} (${Math.round(Math.abs(sq))} sp) nhưng Hapi không có`);
+      else if(nq==null&&!iz&&sq!=null)reasons.push(`Hapi ${sq>0?'nhập':'xuất'} đơn ${ord} (${Math.round(Math.abs(sq))} sp) nhưng NAV không có chứng từ`);
+      else if(nq!=null&&sq==null)reasons.push(`NAV có chứng từ ${nq>0?'nhập':'xuất'} ${ord} (${Math.round(Math.abs(nq))} sp) nhưng Hapi không có`);
+      else if(nq!=null&&sq!=null){
+        const df=Math.abs(sq)-Math.abs(nq);
+        if(Math.abs(df)>0.001)reasons.push(`Đơn ${ord} lệch: NAV=${Math.round(Math.abs(nq))} sp, Hapi=${Math.round(Math.abs(sq))} sp (${df>0?'Hapi':'NAV'} hơn ${Math.round(Math.abs(df))} sp)`);
+      }
+    }
+    return reasons.length?reasons.join('; '):`Lệch ${Math.round(Math.abs(ssQty))} sp – chưa xác định được chứng từ cụ thể`;
+  };
+
+  const ws=wb.Sheets[ssName];
+  let lech=0,khop=0;
+  for(const item of items){
+    const ld=genLyDo(item.maSP,item.ssQty);
+    ws[XLSX.utils.encode_cell({r:item.rowIdx-1,c:colLyDo})]={v:ld,t:'s'};
+    if(item.ssQty!==0)lech++;else khop++;
+  }
+  log.push(`   ✓ ${khop} mã khớp  |  ${lech} mã lệch`,'═══ HOÀN THÀNH ═══');
+  return{ok:true,log,wb};
+}
+
+function rBBKK(){
+  return`
+<div class="breadcrumb"><span onclick="go('appkscl')">APP KSCL</span> › BBKK Kiểm kê</div>
+<div class="sec-hdr"><h1>📋 Xử lý BBKK Kiểm kê</h1></div>
+<div class="card" style="padding:20px;margin-bottom:16px">
+  <div style="margin-bottom:14px">
+    <label style="font-size:13px;color:var(--t2);display:block;margin-bottom:6px">① File DMHH (danh mục hàng hóa — Sheet0: Hỗ trợ, Sheet1: Không hỗ trợ):</label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label class="btn-upload" for="bbkk-dmhh">📂 Chọn file DMHH</label>
+      <input type="file" id="bbkk-dmhh" accept=".xls,.xlsx" style="display:none" onchange="document.getElementById('bbkk-dnm').textContent=this.files[0]?.name||''">
+      <span id="bbkk-dnm" style="color:var(--t2);font-size:13px;font-style:italic">Chưa chọn</span>
+    </div>
+  </div>
+  <div style="margin-bottom:16px">
+    <label style="font-size:13px;color:var(--t2);display:block;margin-bottom:6px">② File BBKK (sheet tên "BBKK", dữ liệu từ dòng 9):</label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label class="btn-upload" for="bbkk-file">📂 Chọn file BBKK</label>
+      <input type="file" id="bbkk-file" accept=".xlsx" style="display:none" onchange="document.getElementById('bbkk-fnm').textContent=this.files[0]?.name||''">
+      <span id="bbkk-fnm" style="color:var(--t2);font-size:13px;font-style:italic">Chưa chọn</span>
+    </div>
+  </div>
+  <button class="btn-run" onclick="bbkkRun()">▶ Chạy xử lý BBKK</button>
+</div>
+<div id="bbkk-log" class="app-log" style="display:none"></div>`;
+}
+
+function bbLog(lines){
+  const el=document.getElementById('bbkk-log');
+  if(!el)return;
+  el.style.display='block';
+  el.innerHTML=lines.map(l=>{
+    const c=l.includes('✓')||l.includes('✅')?'ok':l.includes('✗')||l.includes('❌')?'err':l.includes('⚠')?'warn':l.startsWith('═')||l.startsWith('▶')?'head':'';
+    return`<div class="log-l ${c}">${l.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>`;
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+
+function bbkkRun(){
+  const inpD=document.getElementById('bbkk-dmhh');
+  const inpF=document.getElementById('bbkk-file');
+  if(!inpD?.files[0]||!inpF?.files[0]){bbLog(['❌ Cần chọn đủ 2 file: DMHH và BBKK']);return;}
+  bbLog(['⏳ Đang đọc file...']);
+  const rdD=new FileReader();
+  rdD.onload=eD=>{
+    const rdF=new FileReader();
+    rdF.onload=eF=>{
+      try{
+        const wbD=XLSX.read(new Uint8Array(eD.target.result),{type:'array'});
+        const wbF=XLSX.read(new Uint8Array(eF.target.result),{type:'array'});
+        const res=bbkkProcess(wbD,wbF,inpF.files[0].name);
+        bbLog(res.log);
+        if(res.ok){
+          const out=XLSX.write(res.wb,{type:'array',bookType:'xlsx'});
+          const a=document.createElement('a');
+          a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+          a.download=inpF.files[0].name.replace(/\.xlsx$/i,'_ketqua.xlsx');
+          a.click();
+          bbLog([...res.log,'','✅ Đã tải file kết quả về!']);
+        }
+      }catch(err){bbLog([`❌ Lỗi: ${err.message}`]);}
+    };
+    rdF.readAsArrayBuffer(inpF.files[0]);
+  };
+  rdD.readAsArrayBuffer(inpD.files[0]);
+}
+
+function bbkkProcess(wbD,wbF,fname){
+  const log=[`▶  ${fname}`];
+  // ── Nạp DMHH ──────────────────────────────────────────────
+  const snD=wbD.SheetNames;
+  if(snD.length<2)return{ok:false,log:[...log,'❌ File DMHH cần ít nhất 2 sheet (HT và KHT)']};
+  const readDM=(sn,skipRows)=>{
+    const raw=XLSX.utils.sheet_to_json(wbD.Sheets[sn],{header:1,defval:null,raw:true});
+    const hdr=raw[skipRows]||[];
+    const cMa=hdr.findIndex(h=>h&&/mã hàng|ma hang/i.test(String(h)));
+    const cTen=hdr.findIndex(h=>h&&/tên sp|ten sp|tên hàng|ten hang/i.test(String(h)));
+    const cNh=hdr.findIndex(h=>h&&/nhóm|nhom/i.test(String(h)));
+    const maSet=new Set(),maToTen={},maToNganh={};
+    for(let r=skipRows+1;r<raw.length;r++){
+      const row=raw[r]||[];
+      if(cMa<0||row[cMa]==null)continue;
+      const ma=String(Math.round(parseFloat(row[cMa]))||'').trim();
+      if(!ma||ma==='NaN'||ma==='0')continue;
+      maSet.add(ma);
+      if(cTen>=0&&row[cTen])maToTen[ma]=String(row[cTen]);
+      if(cNh>=0&&row[cNh])maToNganh[ma]=String(row[cNh]);
+    }
+    return{maSet,maToTen,maToNganh};
+  };
+  const dm0=readDM(snD[0],4);
+  const dm1=readDM(snD[1],0);
+  const maHT=dm0.maSet,maKHT=dm1.maSet;
+  const maToTen={...dm0.maToTen,...dm1.maToTen};
+  const maToNganh={...dm0.maToNganh,...dm1.maToNganh};
+  log.push(`   DMHH: HT ${maHT.size} mã | KHT ${maKHT.size} mã`);
+  const lookup=m=>maKHT.has(m)?'Không hỗ trợ':maHT.has(m)?'Hỗ trợ':'Không tìm thấy';
+
+  // ── Nạp BBKK ──────────────────────────────────────────────
+  const bbName=wbF.SheetNames.find(s=>/bbkk/i.test(s))||wbF.SheetNames[0];
+  if(!bbName)return{ok:false,log:[...log,'❌ Không tìm thấy sheet BBKK']};
+  const rawBB=XLSX.utils.sheet_to_json(wbF.Sheets[bbName],{header:1,defval:null,raw:true});
+  const data=[];
+  for(let r=8;r<rawBB.length;r++){
+    const row=rawBB[r]||[];
+    if(row[2]==null)continue;
+    const ma=String(Math.round(parseFloat(row[2]))||'').trim();
+    if(!ma||ma==='NaN'||ma==='0')continue;
+    const tgt=parseFloat(row[11])||0,tgth=parseFloat(row[13])||0;
+    data.push({
+      origRow:r,excelRow:r+1,
+      LoaiHang:String(row[1]||''),MaSP:ma,
+      Barcode:String(row[3]||'').split('.')[0],
+      TenSP:String(row[4]||''),
+      TGthua:tgt,TGthieu:tgth,CL_net:tgt+tgth,
+      LyDo:String(row[14]||''),
+      HoTro:lookup(ma)
+    });
+  }
+  log.push(`   BBKK: ${data.length} dòng`);
+  const bc2ma={};
+  data.forEach(d=>{if(d.Barcode&&d.Barcode!=='null'&&d.Barcode!=='nan'&&d.Barcode!=='0')bc2ma[d.Barcode]=d.MaSP;});
+
+  // ── Nhầm mã ───────────────────────────────────────────────
+  const kiemTraNham=(maSP,tenSP,lyDo)=>{
+    if(!lyDo||lyDo==='null')return{hopLe:null};
+    const ld=lyDo.trim();
+    const hasKw=/nhầm|bán nhầm|nhầm mã/i.test(ld);
+    const codeOnly=/^[\d\s,;/.\-]+(sl\s*\d+)?$/i.test(ld)&&/\d{5,}/.test(ld);
+    if(!hasKw&&!codeOnly)return{hopLe:null};
+    const maDois=[...new Set((ld.match(/\b(\d{5,6})\b/g)||[]))];
+    (ld.match(/\b(\d{8,14})\b/g)||[]).forEach(bc=>{const mp=bc2ma[bc];if(mp&&!maDois.includes(mp))maDois.push(mp);});
+    if(!maDois.length)return{hopLe:null};
+    const bad=maDois.filter(md=>{
+      const tenDu=maToTen[md]||'';
+      const ng1=maToNganh[maSP]||'',ng2=maToNganh[md]||'';
+      const chung=[...tenSP.toLowerCase().split(/\s+/)].filter(w=>w.length>1&&tenDu.toLowerCase().includes(w));
+      return!(ng1&&ng1===ng2)||chung.length<2;
+    });
+    return bad.length?{hopLe:false,moTa:`Mã đối: ${bad.join(',')} không cùng ngành`}:{hopLe:true};
+  };
+
+  const nhamMap={};
+  let nHL=0,nKHL=0;
+  const warnLines=[];
+  for(const d of data){
+    const res=kiemTraNham(d.MaSP,d.TenSP,d.LyDo);
+    nhamMap[d.origRow]=res;
+    if(res.hopLe===true){nHL++;}
+    if(res.hopLe===false){nKHL++;if(d.HoTro==='Không hỗ trợ')warnLines.push(`   ${d.MaSP} '${d.TenSP.slice(0,30)}' → ${res.moTa||''}`);}
+  }
+
+  const ht=data.filter(d=>d.HoTro==='Hỗ trợ');
+  const kht=data.filter(d=>d.HoTro==='Không hỗ trợ');
+  const ntf=data.filter(d=>d.HoTro==='Không tìm thấy');
+  const htNet=ht.reduce((s,d)=>s+d.CL_net,0);
+  const khtNet=kht.reduce((s,d)=>s+d.CL_net,0);
+  const tongCL=htNet+khtNet;
+  log.push(`   HT: ${ht.length} mã (${vfmt(htNet)}đ) | KHT: ${kht.length} mã (${vfmt(khtNet)}đ) | NTF: ${ntf.length}`);
+  log.push(`   Tổng CL: ${vfmt(tongCL)}đ`);
+  if(warnLines.length){log.push(`   ⚠ ${nKHL} dòng nhầm mã không hợp lệ:`);warnLines.slice(0,8).forEach(l=>log.push(l));}
+  else if(nHL>0)log.push(`   ✓ ${nHL} dòng nhầm mã hợp lệ`);
+
+  // ── Đền bù pool ───────────────────────────────────────────
+  const poolRows=[];
+  for(const d of kht){
+    const{hopLe}=nhamMap[d.origRow]||{};
+    if(hopLe===true){
+      const paired=(d.LyDo.match(/\b(\d{5,6})\b/g)||[]);
+      (d.LyDo.match(/\b(\d{8,14})\b/g)||[]).forEach(bc=>{const mp=bc2ma[bc];if(mp&&!paired.includes(mp))paired.push(mp);});
+      if(!paired.some(pm=>lookup(pm)!=='Hỗ trợ'))continue;
+    }
+    poolRows.push(d);
+  }
+  const catNet={};
+  for(const d of poolRows)catNet[d.LoaiHang]=(catNet[d.LoaiHang]||0)+d.CL_net;
+  const bdSeries=Object.entries(catNet).filter(([,v])=>v<0).sort(([,a],[,b])=>a-b);
+  const denBuTong=bdSeries.reduce((s,[,v])=>s+Math.abs(v),0);
+  if(bdSeries.length){
+    log.push('   Loại Hàng KHT cần đền bù:');
+    bdSeries.forEach(([lh,v])=>log.push(`      ${lh}: ${vfmt(v)}đ → ĐB: ${vfmt(Math.abs(v))}đ`));
+  }
+  log.push(`   → Tổng gợi ý đền bù: ${vfmt(denBuTong)}đ`);
+
+  // ── Ghi workbook ──────────────────────────────────────────
+  const wb2=XLSX.utils.book_new();
+  wbF.SheetNames.forEach(sn=>{
+    const ws2=wbF.Sheets[sn];
+    XLSX.utils.book_append_sheet(wb2,ws2,sn);
+  });
+  const wsBB=wb2.Sheets[bbName];
+  const rng=XLSX.utils.decode_range(wsBB['!ref']||'A1:P100');
+  if(rng.e.c<18)rng.e.c=18;
+  wsBB['!ref']=XLSX.utils.encode_range(rng);
+  // Header row 6 (index 5)
+  ['Check','Nhầm mã','Đề xuất ĐB'].forEach((v,i)=>{
+    wsBB[XLSX.utils.encode_cell({r:5,c:16+i})]={v,t:'s'};
+  });
+  for(const d of data){
+    const er=d.excelRow-1;
+    wsBB[XLSX.utils.encode_cell({r:er,c:16})]={v:d.HoTro,t:'s'};
+    const{hopLe}=nhamMap[d.origRow]||{};
+    if(hopLe===true)wsBB[XLSX.utils.encode_cell({r:er,c:17})]={v:'✓ Hợp lệ',t:'s'};
+    else if(hopLe===false)wsBB[XLSX.utils.encode_cell({r:er,c:17})]={v:'✗ Không hợp lệ',t:'s'};
+    if(d.HoTro==='Không hỗ trợ'&&d.CL_net<0)
+      wsBB[XLSX.utils.encode_cell({r:er,c:18})]={v:Math.abs(d.CL_net),t:'n'};
+  }
+  // Ghi vào sheet Đề xuất
+  const dxName=wbF.SheetNames.find(s=>s.trim()==='Đề xuất');
+  if(dxName){
+    const wsDX=wb2.Sheets[dxName];
+    const ksclText=`[KSCL KIỂM TRA]\nHT: ${vfmt(htNet)}đ | KHT: ${vfmt(khtNet)}đ | Tổng CL: ${vfmt(tongCL)}đ\nLoại Hàng KHT NET âm:\n${bdSeries.map(([l,v])=>`  ${l}: ${vfmt(v)}đ → ĐB: ${vfmt(Math.abs(v))}đ`).join('\n')||'  (Không có)'}\n→ TỔNG GỢI Ý ĐỀN BÙ: ${vfmt(denBuTong)}đ${nHL?`\nNhầm mã: ${nHL} hợp lệ${nKHL?' / '+nKHL+' KHL':''}`:''}`  ;
+    const dxRng=XLSX.utils.decode_range(wsDX['!ref']||'A1:A1');
+    const lr=dxRng.e.r+2;
+    wsDX[XLSX.utils.encode_cell({r:lr,c:0})]={v:ksclText,t:'s'};
+    dxRng.e.r=lr;
+    wsDX['!ref']=XLSX.utils.encode_range(dxRng);
+  }
+  if(ntf.length){
+    log.push(`   ⚠ ${ntf.length} mã không có trong DMHH`);
+    ntf.slice(0,5).forEach(d=>log.push(`      ${d.MaSP}  ${d.TenSP.slice(0,50)}`));
+  }
+  log.push('═══ HOÀN THÀNH ═══');
+  return{ok:true,log,wb:wb2};
+}
+
+function vfmt(n){return(Math.round(n)||0).toLocaleString('vi-VN');}
 
 /* ══════════════════════════════════════════
    INIT
