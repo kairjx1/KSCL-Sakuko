@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KSCL Academy – Kiểm soát chất lượng Sakuko</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --primary:#1565C0;--primary-dark:#0D47A1;--primary-light:#E3F2FD;
+  --secondary:#00897B;--accent:#FF6F00;
+  --bg:#F5F7FA;--surface:#fff;--text:#212121;--text2:#757575;
+  --border:#E0E0E0;--success:#2E7D32;--warn:#F57F17;--error:#C62828;
+  --sw:260px
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+.hidden{display:none!important}
+
+/* ── LOADING ── */
+.loading-page{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--primary-dark),var(--primary) 55%,var(--secondary));
+  flex-direction:column;gap:16px;color:#fff}
+.spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── LOGIN ── */
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--primary-dark),var(--primary) 55%,var(--secondary))}
+.login-card{background:#fff;border-radius:16px;padding:44px 40px;width:100%;max-width:420px;
+  box-shadow:0 24px 64px rgba(0,0,0,.3)}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-logo .logo-icon{font-size:48px;margin-bottom:8px}
+.login-logo h1{color:var(--primary);font-size:26px;font-weight:700}
+.login-logo p{color:var(--text2);font-size:13px;margin-top:4px}
+.login-logo .chip{display:inline-block;background:var(--primary-light);color:var(--primary);
+  padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;margin-top:8px}
+.fg{margin-bottom:18px}
+.fg label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.fg input{width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:8px;
+  font-size:15px;outline:none;transition:border-color .2s}
+.fg input:focus{border-color:var(--primary)}
+.err{color:var(--error);font-size:12px;margin-top:4px;display:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 22px;border-radius:8px;font-size:14px;font-weight:600;
+  cursor:pointer;border:none;transition:all .2s}
+.btn-primary{background:var(--primary);color:#fff;width:100%}
+.btn-primary:hover{background:var(--primary-dark);transform:translateY(-1px);box-shadow:0 4px 14px rgba(21,101,192,.4)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.btn-sm{padding:7px 14px;font-size:13px}
+.btn-outline{background:transparent;color:var(--primary);border:2px solid var(--primary)}
+.btn-outline:hover{background:var(--primary-light)}
+.btn-success{background:var(--success);color:#fff}
+.btn-success:hover{background:#1B5E20}
+.btn-danger{background:var(--error);color:#fff;width:auto}
+.btn-danger:hover{background:#B71C1C}
+
+/* ── SETUP MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;
+  display:flex;align-items:center;justify-content:center}
+.modal{background:#fff;border-radius:16px;padding:36px 32px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal h2{font-size:20px;font-weight:700;margin-bottom:8px}
+.modal p{color:var(--text2);font-size:13px;margin-bottom:22px}
+
+/* ── APP SHELL ── */
+.app{display:flex;min-height:100vh}
+.sidebar{width:var(--sw);background:var(--primary-dark);color:#fff;
+  display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;
+  z-index:100;overflow-y:auto}
+.s-logo{padding:20px 18px;border-bottom:1px solid rgba(255,255,255,.1)}
+.s-logo h2{font-size:17px;font-weight:700}
+.s-logo p{font-size:11px;opacity:.6;margin-top:2px}
+.s-user{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px}
+.s-avatar{width:38px;height:38px;border-radius:50%;background:var(--secondary);
+  display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
+.s-uname{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-urole{font-size:11px;opacity:.65;margin-top:2px}
+.s-nav{padding:10px 0;flex:1}
+.s-sec{padding:8px 18px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:.45}
+.s-item{display:flex;align-items:center;gap:12px;padding:10px 18px;font-size:13.5px;
+  cursor:pointer;color:rgba(255,255,255,.8);border-left:3px solid transparent;transition:all .18s}
+.s-item:hover{background:rgba(255,255,255,.1);color:#fff}
+.s-item.active{background:rgba(255,255,255,.15);color:#fff;border-left-color:var(--accent);font-weight:600}
+.s-icon{font-size:17px;width:22px;text-align:center;flex-shrink:0}
+.s-foot{padding:14px 18px;border-top:1px solid rgba(255,255,255,.1)}
+.s-logout{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.65);
+  font-size:13px;cursor:pointer;padding:6px 0}
+.s-logout:hover{color:#fff}
+
+/* ── MAIN ── */
+.main{margin-left:var(--sw);flex:1;padding:28px 32px;min-height:100vh}
+.ph{margin-bottom:26px}
+.ph h1{font-size:24px;font-weight:700}
+.ph p{color:var(--text2);margin-top:4px;font-size:14px}
+.bc{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);margin-bottom:18px}
+.bc a{color:var(--primary);cursor:pointer}
+.bc a:hover{text-decoration:underline}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border-radius:12px;padding:22px 24px;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:26px}
+.stat{background:var(--surface);border-radius:12px;padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.06);
+  display:flex;align-items:center;gap:14px}
+.stat-ic{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;
+  justify-content:center;font-size:22px;flex-shrink:0}
+.ic-blue{background:var(--primary-light)}.ic-green{background:#E8F5E9}
+.ic-orange{background:#FFF3E0}.ic-teal{background:#E0F2F1}
+.stat-v{font-size:26px;font-weight:700;line-height:1}
+.stat-l{font-size:12px;color:var(--text2);margin-top:3px}
+
+/* ── MODULE CARDS ── */
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px}
+.mc{background:var(--surface);border-radius:12px;overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);cursor:pointer;transition:all .2s;border:2px solid transparent}
+.mc:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.14);border-color:var(--primary)}
+.mc-head{padding:22px;color:#fff}
+.mc-head .mc-icon{font-size:34px;margin-bottom:10px}
+.mc-head h3{font-size:15px;font-weight:700}
+.mc-head p{font-size:12px;opacity:.85;margin-top:3px}
+.mc-body{padding:14px 18px}
+.pbar-wrap{height:6px;background:var(--border);border-radius:3px;margin:8px 0}
+.pbar{height:100%;border-radius:3px;background:var(--primary);transition:width .5s}
+.mc-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-top:6px}
+.chip{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600}
+.chip-blue{background:var(--primary-light);color:var(--primary)}
+.chip-green{background:#E8F5E9;color:var(--success)}
+.chip-warn{background:#FFF3E0;color:var(--warn)}
+
+/* ── LESSON LIST ── */
+.ll{display:flex;flex-direction:column;gap:8px}
+.li{display:flex;align-items:center;gap:14px;padding:14px 18px;
+  background:var(--surface);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);
+  cursor:pointer;border:2px solid transparent;transition:all .18s}
+.li:hover{border-color:var(--primary);background:var(--primary-light)}
+.li.done{border-color:var(--success)}
+.li-num{width:34px;height:34px;border-radius:50%;background:var(--bg);
+  border:2px solid var(--border);display:flex;align-items:center;
+  justify-content:center;font-size:12px;font-weight:700;color:var(--text2);flex-shrink:0}
+.li.done .li-num{background:var(--success);border-color:var(--success);color:#fff}
+.li-info{flex:1}
+.li-info h4{font-size:14px;font-weight:600}
+.li-info p{font-size:12px;color:var(--text2);margin-top:2px}
+.li-dur{font-size:12px;color:var(--text2);flex-shrink:0}
+
+/* ── LESSON CONTENT ── */
+.lc{max-width:800px}
+.lc h1{font-size:22px;margin-bottom:6px}
+.lc-meta{display:flex;gap:14px;color:var(--text2);font-size:13px;margin-bottom:22px;flex-wrap:wrap}
+.body{line-height:1.85;font-size:15px}
+.body h2{font-size:17px;font-weight:700;margin:26px 0 10px;color:var(--primary-dark)}
+.body h3{font-size:15px;font-weight:700;margin:18px 0 7px}
+.body p{margin-bottom:12px}
+.body ul,.body ol{padding-left:22px;margin-bottom:12px}
+.body li{margin-bottom:5px}
+.hbox{background:var(--primary-light);border-left:4px solid var(--primary);padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0}
+.wbox{background:#FFF8E1;border-left:4px solid var(--warn);padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0}
+.sbox{background:#E8F5E9;border-left:4px solid var(--success);padding:14px 18px;border-radius:0 8px 8px 0;margin:14px 0}
+.body table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+.body th{background:var(--primary);color:#fff;padding:9px 13px;text-align:left}
+.body td{padding:9px 13px;border-bottom:1px solid var(--border)}
+.body tr:nth-child(even) td{background:var(--bg)}
+.ln{display:flex;gap:10px;margin-top:28px;flex-wrap:wrap}
+
+/* ── QUIZ ── */
+.qc{max-width:680px}
+.qprog{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;font-size:13px;color:var(--text2)}
+.qq{font-size:17px;font-weight:600;margin-bottom:18px;line-height:1.6}
+.qopts{display:flex;flex-direction:column;gap:9px}
+.qopt{padding:13px 16px;border-radius:8px;border:2px solid var(--border);cursor:pointer;transition:all .2s;font-size:14px}
+.qopt:hover:not(.dis){border-color:var(--primary);background:var(--primary-light)}
+.qopt.sel{border-color:var(--primary);background:var(--primary-light)}
+.qopt.ok{border-color:var(--success);background:#E8F5E9}
+.qopt.bad{border-color:var(--error);background:#FFEBEE}
+.qopt.dis{cursor:default}
+.qfeed{margin-top:14px;padding:11px 15px;border-radius:8px;font-size:14px}
+.qfeed.ok{background:#E8F5E9;color:var(--success)}
+.qfeed.bad{background:#FFEBEE;color:var(--error)}
+.qres{text-align:center;padding:40px 20px}
+.qscore{font-size:60px;font-weight:700;color:var(--primary)}
+.qscore-l{font-size:15px;color:var(--text2);margin-top:4px}
+
+/* ── ADMIN TABLE ── */
+.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.tbl th{background:var(--bg);padding:11px 14px;text-align:left;font-size:11px;
+  text-transform:uppercase;letter-spacing:.5px;color:var(--text2);border-bottom:2px solid var(--border)}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:hover td{background:var(--bg)}
+
+/* ── CHECKLIST ── */
+.clitem{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--border)}
+.clitem input[type=checkbox]{width:17px;height:17px;margin-top:2px;cursor:pointer;accent-color:var(--primary)}
+.clitem label{cursor:pointer;flex:1;font-size:14px}
+.clitem.chk label{text-decoration:line-through;color:var(--text2)}
+
+/* ── TREE / ACCORDION ── */
+.tree{display:flex;flex-direction:column;gap:6px}
+.tree-folder{border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.tree-header{display:flex;align-items:center;gap:10px;padding:14px 18px;
+  cursor:pointer;user-select:none;font-weight:600;font-size:14px;
+  background:var(--surface);border-left:4px solid transparent;transition:background .15s}
+.tree-header:hover{background:var(--bg)}
+.tree-header.open{border-left-color:var(--accent)}
+.tree-arrow{font-size:11px;color:var(--text2);transition:transform .2s;width:14px;flex-shrink:0}
+.tree-header.open .tree-arrow{transform:rotate(90deg)}
+.tree-icon{font-size:20px;flex-shrink:0}
+.tree-label{flex:1}
+.tree-count{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;
+  background:var(--bg);color:var(--text2)}
+.tree-body{display:none;background:#FAFBFD;border-top:1px solid var(--border)}
+.tree-body.open{display:block}
+.tree-item{display:flex;align-items:center;gap:10px;padding:11px 18px 11px 46px;
+  font-size:13.5px;cursor:pointer;border-bottom:1px solid var(--border);
+  transition:background .15s;color:var(--text)}
+.tree-item:last-child{border-bottom:none}
+.tree-item:hover{background:var(--primary-light);color:var(--primary)}
+.tree-item-icon{font-size:15px;flex-shrink:0;color:var(--text2)}
+.tree-item:hover .tree-item-icon{color:var(--primary)}
+.tree-empty{padding:20px 46px;font-size:13px;color:var(--text2);font-style:italic}
+/* ── TOAST ── */
+.toast-wrap{position:fixed;top:18px;right:18px;z-index:9999;display:flex;flex-direction:column;gap:7px}
+.toast{background:var(--text);color:#fff;padding:11px 18px;border-radius:8px;
+  font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.2);animation:toastIn .3s ease;max-width:300px}
+.toast.ok{background:var(--success)}.toast.err{background:var(--error)}
+@keyframes toastIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── MISC ── */
+.divider{height:1px;background:var(--border);margin:20px 0}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.mt16{margin-top:16px}.mt24{margin-top:24px}
+.text2{color:var(--text2)}
+
+@media(max-width:768px){
+  :root{--sw:58px}
+  .s-logo p,.s-uname,.s-urole,.s-item span,.s-sec,.s-foot span{display:none}
+  .s-item{justify-content:center;padding:13px}
+  .main{padding:16px}
+  .stats{grid-template-columns:1fr 1fr}
+  .mgrid{grid-template-columns:1fr}
+  .login-card{margin:16px;padding:32px 24px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="p-loading" class="loading-page">
+  <div class="spinner"></div>
+  <p style="font-size:14px;opacity:.8">Đang kết nối...</p>
+</div>
+
+<!-- LOGIN -->
+<div id="p-login" class="login-page hidden">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon">🏭</div>
+      <h1>KSCL Academy</h1>
+      <p>Cổng học tập – Phòng Kiểm soát chất lượng</p>
+      <span class="chip">SAKUKO VIỆT NAM</span>
+    </div>
+    <div class="fg">
+      <label>Email</label>
+      <input id="l-email" type="email" placeholder="email@sakuko.com" autocomplete="username">
+    </div>
+    <div class="fg">
+      <label>Mật khẩu</label>
+      <input id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+      <div class="err" id="l-err">Email hoặc mật khẩu không đúng</div>
+    </div>
+    <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Đăng nhập</button>
+  </div>
+</div>
+
+<!-- SETUP MODAL (first login) -->
+<div id="p-setup" class="modal-overlay hidden">
+  <div class="modal">
+    <h2>👋 Chào mừng!</h2>
+    <p>Vui lòng điền thông tin để hoàn tất hồ sơ của bạn.</p>
+    <div class="fg"><label>Họ và tên</label><input id="s-name" type="text" placeholder="Nguyễn Thị Lan"></div>
+    <div class="fg">
+      <label>Phòng ban</label>
+      <input id="s-dept" type="text" placeholder="KSCL" value="KSCL">
+    </div>
+    <button class="btn btn-primary" onclick="saveProfile()">Lưu và bắt đầu →</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="p-app" class="app hidden">
+  <nav class="sidebar">
+    <div class="s-logo"><h2>🏭 KSCL Academy</h2><p>Sakuko Việt Nam</p></div>
+    <div class="s-user" id="s-user"></div>
+    <div class="s-nav">
+      <div class="s-sec">Học tập</div>
+      <div class="s-item" id="nav-dashboard" onclick="go('dashboard')"><span class="s-icon">🏠</span><span>Tổng quan</span></div>
+      <div class="s-item" id="nav-modules" onclick="go('modules')"><span class="s-icon">📚</span><span>Modules học</span></div>
+      <div class="s-item" id="nav-congviec" onclick="go('congviec')"><span class="s-icon">💼</span><span>Công việc</span></div>
+      <div class="s-item" id="nav-baocao" onclick="go('baocao')"><span class="s-icon">📊</span><span>Báo cáo</span></div>
+      <div class="s-item" id="nav-checklist" onclick="go('checklist')"><span class="s-icon">✅</span><span>Checklist ca</span></div>
+      <div class="s-sec">Tài khoản</div>
+      <div class="s-item" id="nav-profile" onclick="go('profile')"><span class="s-icon">👤</span><span>Hồ sơ cá nhân</span></div>
+      <div class="s-item hidden" id="nav-admin" onclick="go('admin')"><span class="s-icon">⚙️</span><span>Quản trị</span></div>
+    </div>
+    <div class="s-foot"><div class="s-logout" onclick="doLogout()"><span>🚪</span><span>Đăng xuất</span></div></div>
+  </nav>
+  <main class="main" id="main-content"></main>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<script>
+// ════════════════════════════════════════════════
+//  ⚙️  CẤU HÌNH FIREBASE  –  ĐIỀN VÀO ĐÂY
+// ════════════════════════════════════════════════
+const FB_CONFIG = {
+  apiKey:            "AIzaSyBeeAx7dJ6x5TS-MyoB-IH3NY-eiFsCOzk",
+  authDomain:        "kscl---sakuko.firebaseapp.com",
+  databaseURL:       "https://kscl---sakuko-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "kscl---sakuko",
+  storageBucket:     "kscl---sakuko.firebasestorage.app",
+  messagingSenderId: "341527530481",
+  appId:             "1:341527530481:web:084ac4e25294ba52f85250"
+};
+
+// Email admin (có quyền xem toàn bộ tiến độ team)
+const ADMIN_EMAILS = [
+  "kairjx1@gmail.com"
+];
+// ════════════════════════════════════════════════
+
+firebase.initializeApp(FB_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.database();
+
+// ══════════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════════
+const CATEGORIES = [
+  {id:'kk', title:'Kiểm kê', icon:'📦', color:'#2E7D32',
+   desc:'Nghiệp vụ và quy trình kiểm kê hàng hóa', modules:[]},
+  {id:'qc', title:'QC – Kiểm soát chất lượng', icon:'🔍', color:'#1565C0',
+   desc:'Tiêu chuẩn, quy trình và nghiệp vụ kiểm soát chất lượng', modules:['m1','m2','m3','m4']},
+];
+
+const MODULES = [
+  {id:'m1',title:'Quy trình Kiểm soát chất lượng',desc:'Nắm vững quy trình KCS từ nhập kho đến xuất hàng',icon:'🔍',color:'#1565C0',lessons:4},
+  {id:'m2',title:'Đào tạo & Onboarding nhân sự',desc:'Hướng dẫn dành cho nhân viên mới phòng KSCL',icon:'👥',color:'#00897B',lessons:3},
+  {id:'m3',title:'Báo cáo & KPI chất lượng',desc:'Đọc hiểu chỉ số, phân tích báo cáo và cải tiến',icon:'📊',color:'#6A1B9A',lessons:3},
+  {id:'m4',title:'Công việc & Checklist hàng ngày',desc:'Quy trình ca làm, bàn giao và phân công nhiệm vụ',icon:'📋',color:'#E65100',lessons:3},
+];
+
+function getCatModules(catId) {
+  const cat = CATEGORIES.find(c=>c.id===catId);
+  if (!cat) return [];
+  return cat.modules.map(mid=>MODULES.find(m=>m.id===mid)).filter(Boolean);
+}
+function getModuleCat(modId) {
+  return CATEGORIES.find(c=>c.modules.includes(modId));
+}
+
+const LESSONS = {
+  m1:[
+    {id:'m1l1',title:'Tổng quan về KSCL tại Sakuko',dur:'10 phút',summary:'Vai trò, mục tiêu và cơ cấu phòng KSCL',
+     content:`<h2>1. Phòng KSCL là gì?</h2>
+<p>Phòng Kiểm soát chất lượng (KSCL) chịu trách nhiệm đảm bảo tất cả sản phẩm nhập về kho và trưng bày tại các cửa hàng đều đáp ứng tiêu chuẩn chất lượng đã quy định.</p>
+<div class="hbox"><strong>📌 Sứ mệnh:</strong> Bảo vệ khách hàng khỏi hàng hóa kém chất lượng và bảo vệ thương hiệu Sakuko thông qua kiểm soát nghiêm ngặt từng công đoạn.</div>
+<h2>2. Cơ cấu tổ chức</h2>
+<table><tr><th>Vị trí</th><th>Trách nhiệm chính</th><th>Số lượng</th></tr>
+<tr><td>Trưởng phòng KSCL</td><td>Phê duyệt, định hướng toàn bộ hoạt động KSCL</td><td>1</td></tr>
+<tr><td>Kiểm soát viên cấp cao</td><td>Kiểm tra hàng đặc biệt, báo cáo lên Ban giám đốc</td><td>2</td></tr>
+<tr><td>Nhân viên KSCL</td><td>Thực hiện kiểm tra hàng hóa hàng ngày</td><td>8–12</td></tr>
+<tr><td>Nhân viên hành chính KSCL</td><td>Lưu trữ hồ sơ, tổng hợp báo cáo</td><td>2</td></tr></table>
+<h2>3. Quy trình tổng quát</h2>
+<ol>
+<li><strong>Tiếp nhận thông tin hàng về</strong> – Phòng kho thông báo lịch nhập hàng trước 24 giờ.</li>
+<li><strong>Cử nhân viên KSCL</strong> – Trưởng ca phân công nhân viên phù hợp.</li>
+<li><strong>Kiểm tra thực tế</strong> – Thực hiện kiểm tra theo bộ tiêu chuẩn SVN-KSCL-001.</li>
+<li><strong>Phân loại kết quả</strong> – Đạt / Không đạt / Cần xem xét thêm.</li>
+<li><strong>Ghi nhận & Báo cáo</strong> – Cập nhật hệ thống và lưu phiếu kiểm tra vật lý.</li>
+</ol>
+<div class="sbox"><strong>✅ Kết quả mong đợi:</strong> Tỷ lệ hàng đạt chất lượng khi xuất bán ≥ 98%.</div>`},
+    {id:'m1l2',title:'Quy trình kiểm tra hàng nhập kho',dur:'15 phút',summary:'Các bước KCS khi hàng về đến kho',
+     content:`<h2>1. Chuẩn bị trước khi hàng về</h2>
+<ul><li>Nhận thông báo từ phòng mua hàng: số lô, nhà cung cấp, số lượng, loại hàng.</li>
+<li>Chuẩn bị dụng cụ: thước đo, cân, đèn soi, form KCS (mẫu BM-KSCL-001).</li>
+<li>Xác nhận khu vực kiểm tra sạch sẽ, đủ ánh sáng.</li></ul>
+<h2>2. Các bước kiểm tra</h2>
+<table><tr><th>Bước</th><th>Nội dung</th><th>Công cụ</th></tr>
+<tr><td>B1</td><td>Kiểm đếm số lượng kiện/thùng so với phiếu vận chuyển</td><td>Phiếu giao hàng</td></tr>
+<tr><td>B2</td><td>Kiểm tra bao bì bên ngoài: rách, ẩm, móp méo</td><td>Mắt thường</td></tr>
+<tr><td>B3</td><td>Mở ngẫu nhiên ≥10% số kiện để kiểm tra bên trong</td><td>Dao rọc, găng tay</td></tr>
+<tr><td>B4</td><td>Đo/cân kiểm tra thực tế so với thông số kỹ thuật</td><td>Thước, cân điện tử</td></tr>
+<tr><td>B5</td><td>Kiểm tra hạn sử dụng, nhãn mác, mã vạch</td><td>Máy quét mã vạch</td></tr>
+<tr><td>B6</td><td>Ghi kết quả vào form BM-KSCL-001, ký xác nhận</td><td>Form giấy/Lark</td></tr></table>
+<div class="wbox"><strong>⚠️ Lưu ý:</strong> Không bao giờ ký xác nhận trước khi hoàn thành đủ 6 bước.</div>
+<h2>3. Phân loại sau kiểm tra</h2>
+<ul><li><strong>ĐẠT:</strong> Dán nhãn xanh → chuyển vào khu vực lưu trữ đã phê duyệt.</li>
+<li><strong>CẦN XEM XÉT:</strong> Dán nhãn vàng → giữ ở khu cách ly, báo kiểm soát viên cấp cao.</li>
+<li><strong>KHÔNG ĐẠT:</strong> Dán nhãn đỏ → cách ly ngay, lập biên bản, thông báo phòng mua hàng.</li></ul>`},
+    {id:'m1l3',title:'Tiêu chuẩn đánh giá sản phẩm',dur:'12 phút',summary:'Bộ tiêu chuẩn SVN-KSCL-001 và cách áp dụng',
+     content:`<h2>1. Bộ tiêu chuẩn SVN-KSCL-001</h2>
+<p>Tài liệu nền tảng của phòng KSCL, được ban hành bởi Ban Giám đốc và cập nhật định kỳ mỗi năm.</p>
+<h2>2. Các nhóm tiêu chí</h2>
+<table><tr><th>Nhóm</th><th>Tiêu chí</th><th>Mức chấp nhận</th></tr>
+<tr><td>Ngoại quan</td><td>Màu sắc, hình dạng, bề mặt</td><td>Không có lỗi nhìn thấy rõ ở khoảng cách 30cm</td></tr>
+<tr><td>Kích thước</td><td>Chiều dài, rộng, cao, trọng lượng</td><td>Sai số ≤ ±3% so với thông số</td></tr>
+<tr><td>Nhãn mác</td><td>Tên sản phẩm, hạn SD, mã vạch</td><td>Phải có đủ, rõ ràng, đúng ngôn ngữ tiếng Việt</td></tr>
+<tr><td>Vệ sinh</td><td>Không mốc, không mùi lạ, không dị vật</td><td>Zero tolerance – không chấp nhận bất kỳ vi phạm</td></tr>
+<tr><td>Đóng gói</td><td>Niêm phong, số lượng trong gói</td><td>Nguyên vẹn, đúng số lượng ghi trên nhãn</td></tr></table>
+<h2>3. Cách tính điểm đánh giá</h2>
+<div class="hbox">Mỗi lô hàng được đánh giá theo thang điểm 100:<br>
+• 90–100 điểm: ĐẠT – xuất kho bình thường<br>
+• 70–89 điểm: CẦN XEM XÉT – đợi phê duyệt cấp cao<br>
+• Dưới 70 điểm: KHÔNG ĐẠT – từ chối nhận lô</div>`},
+    {id:'m1l4',title:'Xử lý hàng không đạt chất lượng',dur:'10 phút',summary:'Quy trình cách ly, báo cáo và xử lý hàng lỗi',
+     content:`<h2>1. Nhận biết hàng không đạt</h2>
+<ul><li>Lỗi nhìn thấy rõ về ngoại quan (rách, vỡ, méo)</li>
+<li>Không đạt tiêu chuẩn kích thước (sai số &gt; ±3%)</li>
+<li>Hết hạn sử dụng hoặc hạn sử dụng còn dưới 30 ngày</li>
+<li>Thiếu nhãn tiếng Việt hoặc thông tin không khớp</li>
+<li>Phát hiện dị vật, mốc, mùi lạ</li></ul>
+<h2>2. Quy trình xử lý 6 bước</h2>
+<ol><li><strong>DỪNG NGAY</strong> – Không tiếp tục nhập kho lô hàng đó.</li>
+<li><strong>CÁCH LY</strong> – Chuyển về khu Quarantine Zone, dán nhãn đỏ.</li>
+<li><strong>CHỤP ẢNH</strong> – Ghi lại ít nhất 3 ảnh: tổng thể, chi tiết lỗi, nhãn mác.</li>
+<li><strong>LẬP BIÊN BẢN</strong> – Điền đầy đủ mẫu BB-KSCL-002.</li>
+<li><strong>THÔNG BÁO</strong> – Báo cáo trưởng ca và phòng Mua hàng trong vòng 30 phút.</li>
+<li><strong>THEO DÕI</strong> – Ghi nhận quyết định cuối: trả NCC / tiêu hủy / giảm giá xử lý.</li></ol>
+<div class="sbox"><strong>✅ Thời hạn xử lý:</strong> Tối đa 5 ngày làm việc kể từ ngày phát hiện.</div>`},
+  ],
+  m2:[
+    {id:'m2l1',title:'Onboarding nhân viên mới KSCL',dur:'15 phút',summary:'Quy trình tiếp nhận và định hướng nhân viên mới',
+     content:`<h2>1. Chương trình 5 ngày định hướng</h2>
+<table><tr><th>Ngày</th><th>Nội dung</th><th>Người hướng dẫn</th></tr>
+<tr><td>Ngày 1</td><td>Làm quen phòng ban, đọc nội quy, nhận dụng cụ</td><td>HR + Trưởng phòng</td></tr>
+<tr><td>Ngày 2</td><td>Học tài liệu SVN-KSCL-001 và các form mẫu</td><td>Kiểm soát viên cấp cao</td></tr>
+<tr><td>Ngày 3–4</td><td>Thực hành kiểm tra hàng dưới sự giám sát</td><td>Buddy được phân công</td></tr>
+<tr><td>Ngày 5</td><td>Bài kiểm tra đánh giá kiến thức + thực hành</td><td>Trưởng phòng KSCL</td></tr></table>
+<h2>2. Hồ sơ cần nộp</h2>
+<ul><li>CCCD bản photo</li><li>Bằng cấp/chứng chỉ liên quan</li>
+<li>Ảnh 3×4 (2 tấm)</li><li>Ký biên bản cam kết bảo mật thông tin</li></ul>
+<h2>3. Tiêu chuẩn thông qua thử việc</h2>
+<div class="hbox">Sau 2 tháng thử việc cần đạt:<br>
+• Bài kiểm tra lý thuyết: ≥ 80 điểm<br>
+• Tốc độ kiểm tra: ≥ 80% so với nhân viên chính thức<br>
+• Không có lỗi bỏ qua hàng không đạt nào</div>`},
+    {id:'m2l2',title:'Hướng dẫn sử dụng công cụ kiểm tra',dur:'10 phút',summary:'Sử dụng đúng các thiết bị và form KCS',
+     content:`<h2>1. Thiết bị đo lường</h2>
+<table><tr><th>Thiết bị</th><th>Công dụng</th><th>Tần suất hiệu chuẩn</th></tr>
+<tr><td>Cân điện tử</td><td>Kiểm tra trọng lượng sản phẩm</td><td>Hàng tháng</td></tr>
+<tr><td>Thước kẹp Vernier</td><td>Đo kích thước chính xác</td><td>Quý</td></tr>
+<tr><td>Máy quét mã vạch</td><td>Xác minh mã vạch và thông tin sản phẩm</td><td>Khi có sự cố</td></tr>
+<tr><td>Đèn UV soi kiểm</td><td>Phát hiện lỗi bề mặt ẩn</td><td>Hàng tuần</td></tr>
+<tr><td>Máy đo độ ẩm</td><td>Kiểm tra độ ẩm môi trường kho</td><td>Hàng ngày</td></tr></table>
+<h2>2. Hệ thống form KCS</h2>
+<div class="hbox"><strong>BM-KSCL-001:</strong> Phiếu kiểm tra hàng nhập<br>
+<strong>BM-KSCL-002:</strong> Biên bản hàng không đạt<br>
+<strong>BM-KSCL-003:</strong> Báo cáo tổng hợp tuần (nộp thứ Sáu 17h)<br>
+<strong>BM-KSCL-004:</strong> Phiếu bàn giao ca</div>`},
+    {id:'m2l3',title:'Quy tắc an toàn & vệ sinh lao động',dur:'12 phút',summary:'An toàn tại khu vực kho và kiểm tra',
+     content:`<h2>1. Trang phục bảo hộ bắt buộc</h2>
+<ul><li><strong>Áo bảo hộ KSCL</strong> (màu xanh navy) – trong giờ làm việc</li>
+<li><strong>Giày mũi sắt</strong> – khi vào khu vực kho</li>
+<li><strong>Găng tay nitrile</strong> – khi tiếp xúc trực tiếp hàng hóa</li>
+<li><strong>Khẩu trang y tế</strong> – trong khu vực kiểm tra thực phẩm</li></ul>
+<div class="wbox"><strong>⚠️ Không mặc trang phục bảo hộ</strong> là vi phạm nội quy: nhắc nhở lần 1, cảnh cáo lần 2, kỷ luật lần 3.</div>
+<h2>2. Quy tắc an toàn trong kho</h2>
+<ul><li>Không chạy trong khu vực kho</li>
+<li>Luôn nhìn hai chiều gần lối xe nâng</li>
+<li>Không bốc xếp quá 20kg một mình – yêu cầu hỗ trợ</li>
+<li>Biết vị trí bình chữa cháy và lối thoát hiểm gần nhất</li></ul>`},
+  ],
+  m3:[
+    {id:'m3l1',title:'KPI chính của phòng KSCL',dur:'10 phút',summary:'Các chỉ số đo lường hiệu suất KSCL',
+     content:`<h2>1. Bộ KPI tháng</h2>
+<table><tr><th>KPI</th><th>Mục tiêu</th><th>Đo lường</th></tr>
+<tr><td>Tỷ lệ hàng đạt chất lượng</td><td>≥ 98%</td><td>Số lô đạt / Tổng lô kiểm tra</td></tr>
+<tr><td>Phát hiện lỗi trước xuất hàng</td><td>≥ 99.5%</td><td>Lỗi phát hiện / Tổng lỗi</td></tr>
+<tr><td>Thời gian kiểm tra TB/lô</td><td>≤ 45 phút</td><td>Tổng thời gian / Số lô</td></tr>
+<tr><td>Biên bản nộp đúng hạn</td><td>100%</td><td>Biên bản đúng hạn / Tổng biên bản</td></tr>
+<tr><td>Khiếu nại từ khách hàng</td><td>≤ 3 vụ/tháng</td><td>Dữ liệu từ phòng CS</td></tr></table>
+<div class="hbox"><strong>Tỷ lệ hàng đạt ≥ 98%</strong> – 2% còn lại là ngưỡng kiểm tra lại, không phải cho phép bán hàng lỗi.</div>`},
+    {id:'m3l2',title:'Đọc hiểu báo cáo chất lượng',dur:'15 phút',summary:'Phân tích báo cáo tuần, tháng và xu hướng lỗi',
+     content:`<h2>1. Cấu trúc báo cáo tuần KSCL (BM-KSCL-003)</h2>
+<ol><li>Tóm tắt tổng quan: Số lô kiểm tra, đạt/không đạt</li>
+<li>Chi tiết từng nhà cung cấp: Bảng điểm NCC</li>
+<li>Phân tích loại lỗi: Lỗi phổ biến nhất trong tuần</li>
+<li>So sánh với tuần trước: Tốt hơn hay tệ hơn</li>
+<li>Kiến nghị: Đề xuất cải thiện</li></ol>
+<h2>2. Phân tích mẫu lỗi</h2>
+<table><tr><th>Loại lỗi</th><th>Số lần</th><th>%</th><th>Xu hướng</th></tr>
+<tr><td>Lỗi nhãn mác/hạn SD</td><td>12</td><td>48%</td><td>↑ Tăng</td></tr>
+<tr><td>Lỗi ngoại quan</td><td>7</td><td>28%</td><td>→ Ổn định</td></tr>
+<tr><td>Lỗi kích thước/trọng lượng</td><td>4</td><td>16%</td><td>↓ Giảm</td></tr>
+<tr><td>Lỗi khác</td><td>2</td><td>8%</td><td>→ Ổn định</td></tr></table>
+<h2>3. Nguyên tắc Pareto (80/20)</h2>
+<p>20% loại lỗi gây ra 80% vấn đề. Tập trung vào TOP 2-3 loại lỗi phổ biến để đạt hiệu quả cao nhất.</p>`},
+    {id:'m3l3',title:'Cải tiến liên tục – Kaizen & PDCA',dur:'12 phút',summary:'Áp dụng Kaizen vào công việc KSCL',
+     content:`<h2>1. Kaizen là gì?</h2>
+<p>Kaizen (改善) – cải tiến liên tục, nhỏ nhưng đều đặn. Tại Sakuko: mỗi tuần cải thiện ít nhất một điểm trong quy trình.</p>
+<h2>2. Vòng PDCA</h2>
+<table><tr><th>Bước</th><th>Ý nghĩa</th><th>Áp dụng KSCL</th></tr>
+<tr><td><strong>P</strong>lan</td><td>Lập kế hoạch</td><td>Xác định lỗi phổ biến, đặt mục tiêu cải thiện</td></tr>
+<tr><td><strong>D</strong>o</td><td>Thực hiện</td><td>Thay đổi quy trình kiểm tra, thử nghiệm 2 tuần</td></tr>
+<tr><td><strong>C</strong>heck</td><td>Kiểm tra</td><td>So sánh tỷ lệ lỗi trước/sau thay đổi</td></tr>
+<tr><td><strong>A</strong>ct</td><td>Hành động</td><td>Nếu tốt → chuẩn hóa; nếu không → thử cách khác</td></tr></table>
+<div class="sbox"><strong>Ví dụ thực tế:</strong> Tạo checklist in sẵn điểm kiểm tra nhãn → giảm 30% thời gian kiểm tra, tỷ lệ bỏ sót giảm về 0%.</div>`},
+  ],
+  m4:[
+    {id:'m4l1',title:'Checklist đầu ca và cuối ca',dur:'8 phút',summary:'Các việc cần làm khi bắt đầu và kết thúc ca',
+     content:`<h2>1. Checklist đầu ca (15 phút đầu)</h2>
+<ul><li>Điểm danh nhân sự, báo trưởng ca nếu thiếu người</li>
+<li>Nhận bàn giao từ ca trước: tình trạng tồn đọng, hàng đang cách ly</li>
+<li>Kiểm tra thiết bị đo lường: cân, thước, máy quét</li>
+<li>Xem lịch hàng về trong ca, ưu tiên theo thứ tự NCC</li>
+<li>Chuẩn bị form KCS đủ số lượng</li>
+<li>Đảm bảo khu vực kiểm tra sạch sẽ, đủ ánh sáng</li></ul>
+<h2>2. Checklist cuối ca (15 phút cuối)</h2>
+<ul><li>Hoàn thành và nộp tất cả form KCS vào hộp lưu trữ</li>
+<li>Cập nhật trạng thái hàng đang xử lý vào hệ thống</li>
+<li>Dọn dẹp dụng cụ, trả về đúng vị trí</li>
+<li>Kiểm tra khu cách ly: hàng đủ nhãn, không có hàng mới chưa ghi nhận</li>
+<li>Điền Phiếu bàn giao ca BM-KSCL-004</li></ul>
+<div class="wbox"><strong>⚠️ Không rời vị trí</strong> khi chưa hoàn thành bàn giao ca.</div>`},
+    {id:'m4l2',title:'Quy trình bàn giao ca làm việc',dur:'10 phút',summary:'Cách bàn giao chính xác và đầy đủ giữa các ca',
+     content:`<h2>1. Tại sao bàn giao ca quan trọng?</h2>
+<p>Bàn giao ca kém là nguyên nhân hàng đầu gây ra lỗi "rơi" trong KSCL – hàng xử lý dở bị bỏ quên, hoặc ca sau không biết có lô đặc biệt cần xử lý.</p>
+<h2>2. Nội dung bàn giao (BM-KSCL-004)</h2>
+<table><tr><th>Mục</th><th>Nội dung cần ghi</th></tr>
+<tr><td>Lô hàng đã xong</td><td>Số lô, kết quả, vị trí lưu trữ</td></tr>
+<tr><td>Lô đang dở</td><td>Tiến độ đã làm đến đâu, còn lại bao nhiêu %</td></tr>
+<tr><td>Hàng trong Quarantine</td><td>Số lô, lý do, đang chờ quyết định gì</td></tr>
+<tr><td>Thiết bị cần lưu ý</td><td>Thiết bị nào đang gặp vấn đề</td></tr>
+<tr><td>Thông báo đặc biệt</td><td>Hàng VIP, NCC mới, yêu cầu từ cấp trên</td></tr></table>
+<div class="hbox">Cả 2 người phải ký vào BM-KSCL-004. Đây là căn cứ pháp lý xác định trách nhiệm.</div>`},
+    {id:'m4l3',title:'Phân công và theo dõi nhiệm vụ nhóm',dur:'10 phút',summary:'Cách trưởng ca phân công và nhân viên nhận việc hiệu quả',
+     content:`<h2>1. Nguyên tắc phân công của trưởng ca</h2>
+<ul><li><strong>Phù hợp năng lực:</strong> Hàng phức tạp / lô VIP → nhân viên kinh nghiệm</li>
+<li><strong>Cân bằng khối lượng:</strong> Không để 1 người ôm quá nhiều lô</li>
+<li><strong>Rotation:</strong> Luân phiên để nhân viên học được nhiều danh mục</li>
+<li><strong>Dự phòng:</strong> Luôn có 1 người rảnh để xử lý tình huống phát sinh</li></ul>
+<h2>2. Bảng theo dõi nhiệm vụ ca</h2>
+<table><tr><th>Lô hàng</th><th>NCC</th><th>Nhân viên</th><th>Thời gian</th><th>Trạng thái</th></tr>
+<tr><td>LOT-240601</td><td>NCC Hà Nội</td><td>Nguyễn Lan</td><td>8:00–9:00</td><td>✅ Đạt</td></tr>
+<tr><td>LOT-240602</td><td>NCC TP.HCM</td><td>Trần Minh</td><td>9:00–10:30</td><td>⏳ Đang kiểm</td></tr>
+<tr><td>LOT-240603</td><td>NCC Osaka</td><td>Phạm Hoa</td><td>10:30–11:30</td><td>🔴 Chưa bắt đầu</td></tr></table>`},
+  ],
+};
+
+const QUIZZES = {
+  m1:{title:'Kiểm tra – Module 1',questions:[
+    {q:'Bước đầu tiên khi nhận hàng nhập kho là gì?',opts:['Kiểm đếm số lượng kiện/thùng so với phiếu vận chuyển','Mở bao bì bên trong để kiểm tra ngay','Ký biên bản nhận hàng trước','Thông báo cho cấp trên'],ans:0,exp:'Bước B1: kiểm đếm số lượng so với phiếu giao hàng trước khi làm bất kỳ việc gì khác.'},
+    {q:'Khi phát hiện hàng không đạt, việc đầu tiên cần làm là gì?',opts:['Lập biên bản ngay','Cách ly hàng và dán nhãn đỏ "Không đạt"','Trả lại hàng cho nhà cung cấp ngay','Tiếp tục nhập kho phần còn lại'],ans:1,exp:'DỪNG và CÁCH LY là ưu tiên số 1 để tránh hàng lỗi lẫn vào kho.'},
+    {q:'Mức sai số kích thước cho phép theo SVN-KSCL-001 là bao nhiêu?',opts:['±1%','±3%','±5%','±10%'],ans:1,exp:'Tiêu chuẩn quy định sai số ≤ ±3% so với thông số kỹ thuật.'},
+    {q:'Hàng trong Quarantine Zone được di chuyển ra ngoài khi nào?',opts:['Khi KSCL đã kiểm tra xong','Khi trưởng ca cho phép bằng lời','Khi có quyết định bằng văn bản từ Trưởng phòng KSCL','Sau 48 giờ cách ly'],ans:2,exp:'Bắt buộc có văn bản phê duyệt từ người có thẩm quyền trước khi di chuyển.'},
+    {q:'Thời hạn xử lý dứt điểm hàng không đạt là bao lâu?',opts:['24 giờ','2 ngày làm việc','5 ngày làm việc','10 ngày làm việc'],ans:2,exp:'5 ngày làm việc để đảm bảo kho không bị tắc nghẽn tại Quarantine Zone.'},
+  ]},
+  m2:{title:'Kiểm tra – Module 2',questions:[
+    {q:'Chương trình định hướng nhân viên mới kéo dài mấy ngày?',opts:['3 ngày','5 ngày','7 ngày','10 ngày'],ans:1,exp:'5 ngày: lý thuyết, thực hành có giám sát và bài kiểm tra đánh giá.'},
+    {q:'Cân điện tử cần hiệu chuẩn tần suất như thế nào?',opts:['Hàng ngày','Hàng tuần','Hàng tháng','Hàng quý'],ans:2,exp:'Cân điện tử hiệu chuẩn hàng tháng để đảm bảo độ chính xác.'},
+    {q:'Trang bị tối thiểu khi vào khu vực kho là gì?',opts:['Chỉ áo bảo hộ','Áo bảo hộ và giày mũi sắt','Chỉ giày mũi sắt và khẩu trang','Áo, giày, găng tay, khẩu trang đầy đủ'],ans:1,exp:'Tối thiểu phải có áo bảo hộ và giày mũi sắt. Găng tay bắt buộc khi tiếp xúc hàng.'},
+    {q:'Form báo cáo tổng hợp tuần nộp thứ Sáu là form nào?',opts:['BM-KSCL-001','BM-KSCL-002','BM-KSCL-003','BM-KSCL-004'],ans:2,exp:'BM-KSCL-003 là báo cáo tổng hợp tuần, nộp trước 17h thứ Sáu.'},
+  ]},
+  m3:{title:'Kiểm tra – Module 3',questions:[
+    {q:'Mục tiêu tỷ lệ hàng đạt chất lượng của phòng KSCL là bao nhiêu?',opts:['≥ 90%','≥ 95%','≥ 98%','100%'],ans:2,exp:'KPI tỷ lệ hàng đạt là ≥ 98%.'},
+    {q:'Nguyên tắc Pareto 80/20 trong KSCL có nghĩa là gì?',opts:['80% nhân viên làm 20% công việc','20% loại lỗi gây ra 80% vấn đề','80% hàng đạt tiêu chuẩn','20% NCC gây ra 80% lỗi'],ans:1,exp:'Tập trung vào 20% lỗi phổ biến nhất sẽ giải quyết 80% vấn đề chất lượng.'},
+    {q:'Trong PDCA, sau bước "Do" là bước nào?',opts:['Plan','Act','Check','Repeat'],ans:2,exp:'PDCA: Plan → Do → Check → Act. Sau thực hiện cần kiểm tra kết quả.'},
+    {q:'KPI nào đo lường tính kỷ luật hành chính của KSCL?',opts:['Tỷ lệ hàng đạt','Thời gian kiểm tra TB','Tỷ lệ biên bản đúng hạn','Số khiếu nại khách hàng'],ans:2,exp:'Tỷ lệ biên bản nộp đúng hạn (mục tiêu 100%) đo lường kỷ luật hành chính.'},
+  ]},
+  m4:{title:'Kiểm tra – Module 4',questions:[
+    {q:'Phiếu bàn giao ca là form nào?',opts:['BM-KSCL-001','BM-KSCL-002','BM-KSCL-003','BM-KSCL-004'],ans:3,exp:'BM-KSCL-004 là phiếu bàn giao ca, phải có chữ ký 2 bên.'},
+    {q:'Khi khối lượng công việc được giao quá lớn, nhân viên cần làm gì?',opts:['Cố làm nhanh nhất có thể','Phản hồi ngay với trưởng ca','Tự bỏ bớt một số bước','Nhờ đồng nghiệp không báo trưởng ca'],ans:1,exp:'Phản hồi ngay để trưởng ca điều chỉnh phân công, không để chất lượng bị ảnh hưởng.'},
+    {q:'Hậu quả phổ biến nhất của bàn giao ca kém là gì?',opts:['Thiết bị hỏng nhanh hơn','Lô hàng đang xử lý bị bỏ quên','Nhân viên đi làm muộn','Chi phí vận hành tăng'],ans:1,exp:'Lô hàng "rơi" – không được bàn giao rõ ràng – là hậu quả phổ biến nhất.'},
+    {q:'Trong checklist đầu ca, việc nào thuộc 15 phút đầu tiên?',opts:['Nộp tất cả form KCS','Điền phiếu bàn giao cuối ca','Nhận bàn giao từ ca trước và kiểm tra thiết bị','Báo cáo bất thường cho ca tiếp theo'],ans:2,exp:'15 phút đầu ca: điểm danh, nhận bàn giao, kiểm tra thiết bị, xem lịch hàng về.'},
+  ]},
+};
+
+// ══════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════
+let S = {
+  user: null,       // Firebase user object
+  profile: null,    // { name, dept, role }
+  page: 'dashboard',
+  cat: null, mod: null, lesson: null, quiz: null,
+  quizIdx: 0, quizAnswered: false, quizScore: 0, quizDone: false,
+  progress: { lessons: [], scores: {} },
+  allProgress: {},  // for admin
+  allProfiles: {},  // for admin
+};
+
+// ══════════════════════════════════════════════════
+//  FIREBASE AUTH OBSERVER
+// ══════════════════════════════════════════════════
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    // Load profile
+    const snap = await db.ref(`profiles/${user.uid}`).once('value');
+    const profile = snap.val();
+    if (!profile) {
+      // First login – show profile setup
+      show('p-setup');
+      // Keep reference to user for setup
+      S.user = user;
+      return;
+    }
+    S.user = user;
+    S.profile = profile;
+    // Subscribe to own progress (real-time)
+    db.ref(`progress/${user.uid}`).on('value', snap => {
+      S.progress = snap.val() || { lessons: [], scores: {} };
+      if (S.page !== 'dashboard' && document.getElementById('p-app') && !document.getElementById('p-app').classList.contains('hidden')) {
+        // silently update stats
+      }
+    });
+    showApp();
+  } else {
+    show('p-login');
+  }
+});
+
+// ══════════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════════
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pass = document.getElementById('l-pass').value;
+  const errEl = document.getElementById('l-err');
+  const btn = document.getElementById('login-btn');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Đang đăng nhập...';
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    errEl.style.display = 'block';
+    errEl.textContent = e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential'
+      ? 'Email hoặc mật khẩu không đúng'
+      : e.code === 'auth/wrong-password' ? 'Mật khẩu không đúng'
+      : e.code === 'auth/too-many-requests' ? 'Quá nhiều lần thử. Vui lòng thử lại sau.'
+      : 'Lỗi đăng nhập: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Đăng nhập';
+  }
+}
+
+async function doLogout() {
+  db.ref(`progress/${S.user.uid}`).off();
+  S.user = null; S.profile = null; S.progress = { lessons: [], scores: {} };
+  await auth.signOut();
+}
+
+async function saveProfile() {
+  const name = document.getElementById('s-name').value.trim();
+  const dept = document.getElementById('s-dept').value.trim();
+  if (!name) { toast('Vui lòng nhập họ tên', 'err'); return; }
+  const isAdmin = ADMIN_EMAILS.includes(S.user.email);
+  const profile = { name, dept: dept||'KSCL', role: isAdmin ? 'admin' : 'staff', joined: new Date().toISOString().split('T')[0] };
+  await db.ref(`profiles/${S.user.uid}`).set(profile);
+  S.profile = profile;
+  hide('p-setup');
+  db.ref(`progress/${S.user.uid}`).on('value', snap => {
+    S.progress = snap.val() || { lessons: [], scores: {} };
+  });
+  showApp();
+}
+
+// ══════════════════════════════════════════════════
+//  ADMIN – ADD USER
+// ══════════════════════════════════════════════════
+async function adminAddUser() {
+  const name = document.getElementById('au-name').value.trim();
+  const email = document.getElementById('au-email').value.trim();
+  const pass = document.getElementById('au-pass').value;
+  const dept = document.getElementById('au-dept').value.trim() || 'KSCL';
+  if (!name || !email || !pass) { toast('Điền đầy đủ thông tin', 'err'); return; }
+  if (pass.length < 6) { toast('Mật khẩu tối thiểu 6 ký tự', 'err'); return; }
+
+  // We use a secondary Firebase App to avoid signing out current admin
+  const secondaryApp = firebase.initializeApp(FB_CONFIG, 'secondary-' + Date.now());
+  const secondaryAuth = secondaryApp.auth();
+  try {
+    const cred = await secondaryAuth.createUserWithEmailAndPassword(email, pass);
+    await db.ref(`profiles/${cred.user.uid}`).set({
+      name, email, dept, role: 'staff',
+      joined: new Date().toISOString().split('T')[0]
+    });
+    await secondaryAuth.signOut();
+    secondaryApp.delete();
+    toast('✅ Đã tạo tài khoản: ' + email, 'ok');
+    document.getElementById('au-name').value = '';
+    document.getElementById('au-email').value = '';
+    document.getElementById('au-pass').value = '';
+    loadAdminData(); // refresh
+  } catch(e) {
+    secondaryApp.delete();
+    toast(e.code === 'auth/email-already-in-use' ? 'Email đã tồn tại' : 'Lỗi: ' + e.message, 'err');
+  }
+}
+
+async function deleteUser(uid, name) {
+  if (!confirm(`Xóa tài khoản "${name}"? Toàn bộ tiến độ học sẽ bị xóa.`)) return;
+  await db.ref(`profiles/${uid}`).remove();
+  await db.ref(`progress/${uid}`).remove();
+  toast('Đã xóa hồ sơ: ' + name, 'ok');
+  loadAdminData();
+}
+
+async function loadAdminData() {
+  const [profSnap, progSnap] = await Promise.all([
+    db.ref('profiles').once('value'),
+    db.ref('progress').once('value'),
+  ]);
+  S.allProfiles = profSnap.val() || {};
+  S.allProgress = progSnap.val() || {};
+  render();
+}
+
+// ══════════════════════════════════════════════════
+//  PROGRESS (writes to Firebase)
+// ══════════════════════════════════════════════════
+function markDone(lid) {
+  if (!S.progress.lessons) S.progress.lessons = [];
+  if (!S.progress.lessons.includes(lid)) {
+    S.progress.lessons.push(lid);
+    db.ref(`progress/${S.user.uid}/lessons`).set(S.progress.lessons);
+  }
+}
+
+function setScore(mid, score) {
+  if (!S.progress.scores) S.progress.scores = {};
+  const newScore = Math.max(score, S.progress.scores[mid] || 0);
+  S.progress.scores[mid] = newScore;
+  db.ref(`progress/${S.user.uid}/scores/${mid}`).set(newScore);
+}
+
+function getUP() { return S.progress || { lessons: [], scores: {} }; }
+
+function modProgress(mid) {
+  const up = getUP();
+  const total = LESSONS[mid].length;
+  const done = LESSONS[mid].filter(l => (up.lessons||[]).includes(l.id)).length;
+  return { done, total, pct: Math.round(done/total*100) };
+}
+
+function totalDone() {
+  return Object.values(LESSONS).flat().filter(l => (getUP().lessons||[]).includes(l.id)).length;
+}
+
+// ══════════════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════════════
+function show(id) {
+  ['p-loading','p-login','p-app','p-setup'].forEach(p => {
+    const el = document.getElementById(p);
+    if (el) el.classList.toggle('hidden', p !== id);
+  });
+}
+function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
+
+function showApp() {
+  show('p-app');
+  const u = S.profile;
+  const isAdmin = ADMIN_EMAILS.includes(S.user.email) || u?.role === 'admin';
+  document.getElementById('s-user').innerHTML = `
+    <div class="s-avatar">${(u?.name||'?')[0]}</div>
+    <div><div class="s-uname">${u?.name||'Người dùng'}</div>
+    <div class="s-urole">${u?.dept||''} · ${isAdmin?'Quản trị viên':'Nhân viên'}</div></div>`;
+  if (isAdmin) document.getElementById('nav-admin').classList.remove('hidden');
+  go('dashboard');
+}
+
+function roleLabel(r) { return r==='admin'?'Quản trị viên':r==='staff'?'Nhân viên KCS':'Học viên'; }
+
+// ══════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════
+function go(page, params={}) {
+  S.page = page;
+  if (params.cat !== undefined) S.cat = params.cat;
+  if (params.mod !== undefined) S.mod = params.mod;
+  if (params.lesson !== undefined) S.lesson = params.lesson;
+  if (params.quiz !== undefined) {
+    S.quiz = params.quiz; S.quizIdx = 0;
+    S.quizAnswered = false; S.quizScore = 0; S.quizDone = false;
+  }
+  ['dashboard','modules','congviec','baocao','checklist','profile','admin'].forEach(n => {
+    document.getElementById('nav-'+n)?.classList.toggle('active', page===n);
+  });
+  if (['category','module','lesson','quiz'].includes(page))
+    document.getElementById('nav-modules').classList.add('active');
+  if (page === 'admin') loadAdminData(); else render();
+}
+
+// ══════════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════════
+function render() {
+  const mc = document.getElementById('main-content');
+  if (!mc) return;
+  switch(S.page) {
+    case 'dashboard':  mc.innerHTML = renderDashboard(); break;
+    case 'modules':    mc.innerHTML = renderCategories(); break;
+    case 'category':   mc.innerHTML = renderCategory();  break;
+    case 'module':     mc.innerHTML = renderModule();    break;
+    case 'lesson':     mc.innerHTML = renderLesson();    break;
+    case 'quiz':       mc.innerHTML = renderQuiz();      break;
+    case 'congviec':   mc.innerHTML = renderCongViec();  break;
+    case 'baocao':     mc.innerHTML = renderBaoCao();    break;
+    case 'checklist':  mc.innerHTML = renderChecklist(); break;
+    case 'profile':    mc.innerHTML = renderProfile();   break;
+    case 'admin':      mc.innerHTML = renderAdmin();     break;
+  }
+}
+
+function renderDashboard() {
+  const total = Object.values(LESSONS).flat().length;
+  const done = totalDone();
+  const up = getUP();
+  const scores = Object.values(up.scores || {});
+  const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : 0;
+  return `
+<div class="ph"><h1>Xin chào, ${S.profile?.name||'bạn'} 👋</h1>
+  <p>${new Date().toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</p></div>
+<div class="stats">
+  <div class="stat"><div class="stat-ic ic-blue">📚</div><div><div class="stat-v">${done}/${total}</div><div class="stat-l">Bài đã hoàn thành</div></div></div>
+  <div class="stat"><div class="stat-ic ic-green">🏆</div><div><div class="stat-v">${avg||'–'}${avg?'%':''}</div><div class="stat-l">Điểm quiz trung bình</div></div></div>
+  <div class="stat"><div class="stat-ic ic-orange">🔥</div><div><div class="stat-v">${MODULES.filter(m=>modProgress(m.id).pct===100).length}</div><div class="stat-l">Module hoàn thành</div></div></div>
+  <div class="stat"><div class="stat-ic ic-teal">📋</div><div><div class="stat-v">${CATEGORIES.length}</div><div class="stat-l">Thư mục</div></div></div>
+</div>
+<div class="card mt24">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h3 style="font-size:16px;font-weight:700">Thư mục học tập</h3>
+    <button class="btn btn-sm btn-outline" onclick="go('modules')">Xem tất cả →</button>
+  </div>
+  <div class="mgrid">${CATEGORIES.map(c => categoryCard(c)).join('')}</div>
+</div>`;
+}
+
+function moduleCard(m, catId) {
+  const p = modProgress(m.id);
+  const score = (getUP().scores||{})[m.id];
+  return `<div class="mc" onclick="go('module',{cat:'${catId}',mod:'${m.id}'})">
+    <div class="mc-head" style="background:${m.color}">
+      <div class="mc-icon">${m.icon}</div><h3>${m.title}</h3><p>${m.desc}</p>
+    </div>
+    <div class="mc-body">
+      <div class="pbar-wrap"><div class="pbar" style="width:${p.pct}%;background:${m.color}"></div></div>
+      <div class="mc-meta"><span>${p.done}/${p.total} bài</span>
+        ${score!=null?`<span class="chip chip-green">Quiz: ${score}%</span>`:`<span class="chip chip-blue">${p.pct}%</span>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+function categoryCard(cat) {
+  const mods = getCatModules(cat.id);
+  const totalL = mods.reduce((s,m)=>s+(LESSONS[m.id]?.length||0),0);
+  const doneL  = mods.reduce((s,m)=>s+modProgress(m.id).done,0);
+  const pct = totalL ? Math.round(doneL/totalL*100) : 0;
+  return `<div class="mc" onclick="go('category',{cat:'${cat.id}'})">
+    <div class="mc-head" style="background:${cat.color}">
+      <div class="mc-icon">${cat.icon}</div><h3>${cat.title}</h3><p>${cat.desc}</p>
+    </div>
+    <div class="mc-body">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:6px">${mods.length} modules · ${totalL} bài học</div>
+      <div class="pbar-wrap"><div class="pbar" style="width:${pct}%;background:${cat.color}"></div></div>
+      <div class="mc-meta"><span>${doneL}/${totalL} bài hoàn thành</span>
+        <span class="chip chip-blue">${pct}%</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderCategories() {
+  return `<div class="ph"><h1>📚 Thư mục học tập</h1><p>Chọn thư mục để xem nội dung</p></div>
+<div class="mgrid">${CATEGORIES.map(c => categoryCard(c)).join('')}</div>`;
+}
+
+function renderCategory() {
+  const cat = CATEGORIES.find(c=>c.id===S.cat);
+  if (!cat) return '<p>Không tìm thấy thư mục</p>';
+  const mods = getCatModules(cat.id);
+  return `
+<div class="bc"><a onclick="go('modules')">📚 Thư mục</a><span>›</span><span>${cat.title}</span></div>
+<div class="ph"><h1>${cat.icon} ${cat.title}</h1><p>${cat.desc}</p></div>
+${mods.length===0
+  ? `<div class="card" style="text-align:center;padding:48px 24px">
+      <div style="font-size:48px;margin-bottom:16px">🚧</div>
+      <h3 style="font-size:18px;margin-bottom:8px">Nội dung đang được cập nhật</h3>
+      <p style="color:var(--text2)">Tài liệu học tập cho thư mục <strong>${cat.title}</strong> sẽ sớm được bổ sung.</p>
+    </div>`
+  : `<div class="mgrid">${mods.map(m => moduleCard(m, cat.id)).join('')}</div>`
+}`;
+}
+
+function renderModule() {
+  const m = MODULES.find(x=>x.id===S.mod);
+  if (!m) return '<p>Module không tồn tại</p>';
+  const lessons = LESSONS[m.id];
+  const up = getUP();
+  const p = modProgress(m.id);
+  const score = (up.scores||{})[m.id];
+  const allDone = p.pct === 100;
+  return `
+<div class="bc"><a onclick="go('modules')">📚</a><span>›</span><a onclick="go('category',{cat:'${S.cat||getModuleCat(m.id)?.id}'})">
+  ${(S.cat?CATEGORIES.find(c=>c.id===S.cat):getModuleCat(m.id))?.title||'Thư mục'}</a><span>›</span><span>${m.title}</span></div>
+<div class="ph"><h1>${m.icon} ${m.title}</h1><p>${m.desc} · ${lessons.length} bài học</p></div>
+<div class="card" style="margin-bottom:20px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <span style="font-size:14px;font-weight:600">Tiến độ</span>
+    <span style="font-size:13px;color:var(--text2)">${p.done}/${p.total} bài · ${p.pct}%</span>
+  </div>
+  <div class="pbar-wrap" style="height:10px"><div class="pbar" style="width:${p.pct}%;background:${m.color}"></div></div>
+  ${score!=null?`<p style="font-size:13px;color:var(--success);margin-top:8px">✅ Quiz: <strong>${score}%</strong></p>`:''}
+</div>
+<div class="ll">
+  ${lessons.map((l,i) => {
+    const done = (up.lessons||[]).includes(l.id);
+    return `<div class="li ${done?'done':''}" onclick="go('lesson',{mod:'${m.id}',lesson:'${l.id}'})">
+      <div class="li-num">${done?'✓':(i+1)}</div>
+      <div class="li-info"><h4>${l.title}</h4><p>${l.summary}</p></div>
+      <div class="li-dur">⏱ ${l.dur}</div>
+    </div>`;
+  }).join('')}
+  <div class="li ${allDone?'done':''}" onclick="${allDone?`go('quiz',{quiz:'${m.id}'})`:`toast('Hoàn thành tất cả bài học để làm quiz','err')`}"
+    style="background:${allDone?'#E8F5E9':'var(--bg)'};border-color:${allDone?'var(--success)':'var(--border)'}">
+    <div class="li-num" style="background:${allDone?'var(--success)':'var(--border)'};color:${allDone?'#fff':'var(--text2)'}">📝</div>
+    <div class="li-info"><h4>Bài kiểm tra Module</h4>
+      <p>${allDone?'Sẵn sàng làm bài kiểm tra!':'Hoàn thành tất cả bài học để mở khóa'}</p></div>
+    <div class="li-dur">${score!=null?`✅ ${score}%`:allDone?'Làm ngay →':'🔒'}</div>
+  </div>
+</div>`;
+}
+
+function renderLesson() {
+  const lessons = LESSONS[S.mod]||[];
+  const lesson = lessons.find(l=>l.id===S.lesson);
+  if (!lesson) return '<p>Không tìm thấy bài học</p>';
+  const m = MODULES.find(x=>x.id===S.mod);
+  const idx = lessons.indexOf(lesson);
+  markDone(lesson.id);
+  return `
+<div class="bc"><a onclick="go('modules')">📚</a><span>›</span>
+  <a onclick="go('category',{cat:'${S.cat||getModuleCat(S.mod)?.id}'})">
+    ${(S.cat?CATEGORIES.find(c=>c.id===S.cat):getModuleCat(S.mod))?.title||'Thư mục'}</a><span>›</span>
+  <a onclick="go('module',{cat:'${S.cat}',mod:'${S.mod}'})">${m.title}</a><span>›</span><span>${lesson.title}</span></div>
+<div class="lc">
+  <h1>${lesson.title}</h1>
+  <div class="lc-meta"><span>⏱ ${lesson.dur}</span><span class="chip chip-green">✅ Đã học</span></div>
+  <div class="card"><div class="body">${lesson.content}</div></div>
+  <div class="ln">
+    ${idx>0?`<button class="btn btn-outline" onclick="go('lesson',{mod:'${S.mod}',lesson:'${lessons[idx-1].id}'})">← Bài trước</button>`:''}
+    <button class="btn btn-secondary btn-sm" onclick="go('module',{mod:'${S.mod}'})">Danh sách</button>
+    ${idx<lessons.length-1
+      ?`<button class="btn btn-primary" onclick="go('lesson',{mod:'${S.mod}',lesson:'${lessons[idx+1].id}'})">Bài tiếp →</button>`
+      :`<button class="btn btn-success" onclick="go('quiz',{quiz:'${S.mod}'})">Làm bài kiểm tra 📝</button>`}
+  </div>
+</div>`;
+}
+
+function renderQuiz() {
+  const qdata = QUIZZES[S.quiz];
+  const m = MODULES.find(x=>x.id===S.quiz);
+  if (S.quizDone) {
+    const pct = Math.round(S.quizScore/qdata.questions.length*100);
+    setScore(S.quiz, pct);
+    const pass = pct >= 70;
+    return `
+<div class="card qc">
+  <div class="qres">
+    <div class="qscore">${pct}%</div>
+    <div class="qscore-l">${S.quizScore}/${qdata.questions.length} câu đúng</div>
+    <div style="font-size:28px;margin:16px 0">${pass?'🎉':'😓'}</div>
+    <h2 style="font-size:20px;margin-bottom:8px">${pass?'Xuất sắc! Đã qua bài kiểm tra':'Chưa đạt – ôn lại và thử lại'}</h2>
+    <p style="color:var(--text2);font-size:14px;margin-bottom:24px">Điểm đạt: 70% · Điểm của bạn: ${pct}%</p>
+    <div class="row" style="justify-content:center">
+      <button class="btn btn-outline" onclick="go('module',{mod:'${S.quiz}'})">Về danh sách</button>
+      <button class="btn btn-primary" onclick="go('quiz',{quiz:'${S.quiz}'})">Làm lại</button>
+      ${pass?`<button class="btn btn-success" onclick="go('modules')">Module tiếp →</button>`:''}
+    </div>
+  </div>
+</div>`;
+  }
+  const q = qdata.questions[S.quizIdx];
+  return `
+<div class="card qc">
+  <div class="qprog"><span>Câu ${S.quizIdx+1}/${qdata.questions.length}</span><span>${S.quizScore} đúng</span></div>
+  <div class="pbar-wrap"><div class="pbar" style="width:${S.quizIdx/qdata.questions.length*100}%"></div></div>
+  <div class="qq" style="margin-top:20px">${q.q}</div>
+  <div class="qopts" id="qopts">
+    ${q.opts.map((o,i)=>`<div class="qopt" id="qo${i}" onclick="answerQuiz(${i})">${String.fromCharCode(65+i)}. ${o}</div>`).join('')}
+  </div>
+  <div id="qfeed"></div>
+  <div id="qnext" class="hidden" style="margin-top:16px">
+    <button class="btn btn-primary" onclick="nextQuestion()">${S.quizIdx<qdata.questions.length-1?'Câu tiếp →':'Xem kết quả 🏆'}</button>
+  </div>
+</div>`;
+}
+
+function answerQuiz(idx) {
+  if (S.quizAnswered) return;
+  S.quizAnswered = true;
+  const q = QUIZZES[S.quiz].questions[S.quizIdx];
+  const correct = idx === q.ans;
+  if (correct) S.quizScore++;
+  document.querySelectorAll('.qopt').forEach((el,i) => {
+    el.classList.add('dis');
+    if (i===q.ans) el.classList.add('ok');
+    else if (i===idx&&!correct) el.classList.add('bad');
+  });
+  const feed = document.getElementById('qfeed');
+  feed.className = `qfeed ${correct?'ok':'bad'}`;
+  feed.innerHTML = `${correct?'✅ Đúng rồi!':'❌ Chưa đúng.'} ${q.exp}`;
+  document.getElementById('qnext').classList.remove('hidden');
+}
+
+function nextQuestion() {
+  if (S.quizIdx < QUIZZES[S.quiz].questions.length-1) {
+    S.quizIdx++; S.quizAnswered = false; render();
+  } else { S.quizDone = true; render(); }
+}
+
+// Dữ liệu công việc – điền nội dung vào đây khi có
+const CV_DATA = {
+  kk: [], // VD: {icon:'📄', title:'Công việc kiểm kê hàng ngày', content:'...'}
+  qc: [], // VD: {icon:'📄', title:'Quy trình kiểm tra đầu ca', content:'...'}
+};
+
+const BC_DATA = {
+  kk: [], // VD: {icon:'📋', title:'Báo cáo kiểm kê tuần', content:'...'}
+  qc: [], // VD: {icon:'📋', title:'Báo cáo lỗi hàng hóa', content:'...'}
+};
+
+function treeFolder(id, icon, color, label, items, emptyText) {
+  const cnt = items.length;
+  const bodyItems = cnt === 0
+    ? `<div class="tree-empty">🚧 ${emptyText}</div>`
+    : items.map((it,i) => `
+        <div class="tree-item" onclick="openTreeItem('${id}',${i})">
+          <span class="tree-item-icon">${it.icon||'📄'}</span>
+          <span>${it.title}</span>
+        </div>`).join('');
+  return `
+<div class="tree-folder">
+  <div class="tree-header" id="hdr-${id}" onclick="toggleTree('${id}')">
+    <span class="tree-arrow">▶</span>
+    <span class="tree-icon">${icon}</span>
+    <span class="tree-label">${label}</span>
+    <span class="tree-count" style="background:${color}22;color:${color}">${cnt} mục</span>
+  </div>
+  <div class="tree-body" id="body-${id}">${bodyItems}</div>
+</div>`;
+}
+
+function toggleTree(id) {
+  const hdr  = document.getElementById('hdr-'+id);
+  const body = document.getElementById('body-'+id);
+  hdr.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+// Placeholder – sẽ mở trang nội dung khi có dữ liệu
+function openTreeItem(folderId, idx) {
+  toast('Chức năng xem nội dung sắp ra mắt', '');
+}
+
+function renderCongViec() {
+  return `
+<div class="ph"><h1>💼 Công việc</h1><p>Danh sách công việc theo từng bộ phận – click để mở rộng</p></div>
+<div class="tree">
+  ${treeFolder('cv-kk','📦','#2E7D32','Kiểm kê', CV_DATA.kk, 'Nội dung công việc KK đang được cập nhật')}
+  ${treeFolder('cv-qc','🔍','#1565C0','QC – Kiểm soát chất lượng', CV_DATA.qc, 'Nội dung công việc QC đang được cập nhật')}
+</div>`;
+}
+
+function renderBaoCao() {
+  return `
+<div class="ph"><h1>📊 Báo cáo</h1><p>Biểu mẫu và hướng dẫn báo cáo theo từng bộ phận – click để mở rộng</p></div>
+<div class="tree">
+  ${treeFolder('bc-kk','📦','#2E7D32','Kiểm kê', BC_DATA.kk, 'Biểu mẫu báo cáo KK đang được cập nhật')}
+  ${treeFolder('bc-qc','🔍','#1565C0','QC – Kiểm soát chất lượng', BC_DATA.qc, 'Biểu mẫu báo cáo QC đang được cập nhật')}
+</div>`;
+
+function renderChecklist() {
+  const start = [
+    {id:'c1',t:'Điểm danh nhân sự ca làm việc'},
+    {id:'c2',t:'Nhận bàn giao từ ca trước (BM-KSCL-004)'},
+    {id:'c3',t:'Kiểm tra cân điện tử – reset về 0'},
+    {id:'c4',t:'Kiểm tra máy quét mã vạch – pin đầy đủ'},
+    {id:'c5',t:'Xem lịch hàng về trong ca hôm nay'},
+    {id:'c6',t:'Chuẩn bị đủ form BM-KSCL-001 cho ca'},
+    {id:'c7',t:'Đảm bảo khu vực kiểm tra sạch sẽ, đủ ánh sáng'},
+    {id:'c8',t:'Mặc đầy đủ trang phục bảo hộ'},
+  ];
+  const end = [
+    {id:'e1',t:'Hoàn thành và nộp tất cả form KCS'},
+    {id:'e2',t:'Cập nhật trạng thái hàng đang xử lý vào hệ thống'},
+    {id:'e3',t:'Dọn dẹp dụng cụ – trả về đúng vị trí'},
+    {id:'e4',t:'Kiểm tra Quarantine Zone lần cuối'},
+    {id:'e5',t:'Điền đầy đủ Phiếu bàn giao ca BM-KSCL-004'},
+    {id:'e6',t:'Báo cáo bất thường (nếu có) cho ca tiếp theo'},
+  ];
+  const clRow = it => `<div class="clitem" id="row-${it.id}">
+    <input type="checkbox" id="${it.id}" onchange="toggleCl('${it.id}')">
+    <label for="${it.id}">${it.t}</label></div>`;
+  return `
+<div class="ph"><h1>✅ Checklist công việc</h1>
+  <p>Đánh dấu các mục đã hoàn thành trong ca làm việc</p></div>
+<div class="row" style="margin-bottom:20px">
+  <button class="btn btn-sm btn-outline" onclick="resetChecklist()">🔄 Reset tất cả</button>
+  <span id="cl-count" style="font-size:13px;color:var(--text2)">0/${start.length+end.length} mục</span>
+</div>
+<div class="card" style="margin-bottom:16px">
+  <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">📋 Checklist đầu ca</h3>
+  ${start.map(clRow).join('')}
+</div>
+<div class="card">
+  <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">🌙 Checklist cuối ca</h3>
+  ${end.map(clRow).join('')}
+</div>`;
+}
+
+function toggleCl(id) {
+  document.getElementById('row-'+id).classList.toggle('chk', document.getElementById(id).checked);
+  const all = document.querySelectorAll('.clitem input[type=checkbox]');
+  document.getElementById('cl-count').textContent =
+    `Đã hoàn thành: ${[...all].filter(c=>c.checked).length}/${all.length} mục`;
+}
+function resetChecklist() {
+  document.querySelectorAll('.clitem input').forEach(c=>c.checked=false);
+  document.querySelectorAll('.clitem').forEach(r=>r.classList.remove('chk'));
+  const all = document.querySelectorAll('.clitem input[type=checkbox]');
+  document.getElementById('cl-count').textContent = `0/${all.length} mục`;
+}
+
+function renderProfile() {
+  const total = Object.values(LESSONS).flat().length;
+  const done = totalDone();
+  const up = getUP();
+  const scores = Object.values(up.scores||{});
+  const avg = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null;
+  return `
+<div class="ph"><h1>👤 Hồ sơ cá nhân</h1></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:800px">
+  <div class="card">
+    <div style="text-align:center;padding:16px 0">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--primary);display:flex;
+        align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff;margin:0 auto 14px">
+        ${(S.profile?.name||'?')[0]}</div>
+      <h2 style="font-size:18px;font-weight:700">${S.profile?.name}</h2>
+      <p style="color:var(--text2);font-size:13px;margin-top:4px">${S.user?.email}</p>
+      <div style="margin-top:10px"><span class="chip chip-blue">${roleLabel(S.profile?.role)}</span>&nbsp;<span class="chip chip-green">${S.profile?.dept}</span></div>
+    </div>
+    <div class="divider"></div>
+    <table style="width:100%;font-size:13px">
+      <tr><td style="color:var(--text2);padding:6px 0">Phòng ban</td><td style="font-weight:600">${S.profile?.dept}</td></tr>
+      <tr><td style="color:var(--text2);padding:6px 0">Vai trò</td><td style="font-weight:600">${roleLabel(S.profile?.role)}</td></tr>
+      <tr><td style="color:var(--text2);padding:6px 0">Ngày tham gia</td><td style="font-weight:600">${S.profile?.joined}</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3 style="font-size:15px;font-weight:700;margin-bottom:16px">📊 Tiến độ học tập</h3>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
+        <span>Tổng tiến độ</span><span>${done}/${total}</span></div>
+        <div class="pbar-wrap"><div class="pbar" style="width:${Math.round(done/total*100)}%"></div></div>
+      </div>
+      ${MODULES.map(m=>{const p=modProgress(m.id);const sc=(up.scores||{})[m.id];
+        return `<div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+          <span>${m.icon} ${m.title.substring(0,22)}...</span>
+          <span>${sc!=null?sc+'%':p.pct+'%'}</span></div>
+          <div class="pbar-wrap" style="height:5px"><div class="pbar" style="width:${p.pct}%;background:${m.color}"></div></div>
+        </div>`;}).join('')}
+    </div>
+    ${avg!=null?`<div class="sbox" style="margin-top:16px">🏆 Quiz trung bình: <strong>${avg}%</strong></div>`
+      :'<div class="hbox" style="margin-top:16px">Hoàn thành bài học và làm quiz để xem điểm!</div>'}
+  </div>
+</div>`;
+}
+
+function renderAdmin() {
+  const profiles = S.allProfiles;
+  const progress = S.allProgress;
+  const uids = Object.keys(profiles);
+  const totalLessons = Object.values(LESSONS).flat().length;
+  return `
+<div class="ph"><h1>⚙️ Quản trị</h1><p>Theo dõi tiến độ toàn phòng KSCL</p></div>
+
+<!-- Add user -->
+<div class="card" style="margin-bottom:20px">
+  <h3 style="font-size:15px;font-weight:700;margin-bottom:16px">➕ Thêm tài khoản nhân viên</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+    <div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Họ tên</label>
+      <input id="au-name" type="text" placeholder="Nguyễn Thị An" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;outline:none"></div>
+    <div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Email</label>
+      <input id="au-email" type="email" placeholder="an.nt@sakuko.com" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;outline:none"></div>
+    <div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Mật khẩu</label>
+      <input id="au-pass" type="text" placeholder="Kscl@2024" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;outline:none"></div>
+    <div><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Phòng ban</label>
+      <input id="au-dept" type="text" placeholder="KSCL" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;outline:none"></div>
+    <button class="btn btn-success btn-sm" onclick="adminAddUser()">Tạo</button>
+  </div>
+</div>
+
+<!-- Progress table -->
+<div class="card">
+  <h3 style="font-size:15px;font-weight:700;margin-bottom:16px">👥 Tiến độ học tập (${uids.length} thành viên)</h3>
+  <div style="overflow-x:auto">
+  <table class="tbl">
+    <thead><tr>
+      <th>Họ tên</th><th>Email</th><th>Phòng ban</th>
+      ${MODULES.map(m=>`<th>${m.icon} ${m.title.split(' ')[0]}</th>`).join('')}
+      <th>Tổng</th><th></th>
+    </tr></thead>
+    <tbody>
+      ${uids.length===0?`<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:24px">Chưa có thành viên nào</td></tr>`
+      :uids.map(uid=>{
+        const p = profiles[uid];
+        const prog = progress[uid]||{lessons:[],scores:{}};
+        const done = Object.values(LESSONS).flat().filter(l=>(prog.lessons||[]).includes(l.id)).length;
+        return `<tr>
+          <td><strong>${p.name}</strong></td>
+          <td style="color:var(--text2);font-size:12px">${p.email||''}</td>
+          <td>${p.dept||''}</td>
+          ${MODULES.map(m=>{
+            const mp = LESSONS[m.id].filter(l=>(prog.lessons||[]).includes(l.id)).length;
+            const sc = (prog.scores||{})[m.id];
+            return `<td>${sc!=null?`<span class="chip chip-green">${sc}%</span>`:mp>0?`${mp}/${LESSONS[m.id].length}`:'–'}</td>`;
+          }).join('')}
+          <td>
+            <div style="display:flex;align-items:center;gap:6px">
+              <div class="pbar-wrap" style="width:70px"><div class="pbar" style="width:${Math.round(done/totalLessons*100)}%"></div></div>
+              <span style="font-size:12px">${done}/${totalLessons}</span>
+            </div>
+          </td>
+          <td><button class="btn btn-sm btn-danger" onclick="deleteUser('${uid}','${p.name}')">Xóa</button></td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>
+  </div>
+</div>`;
+}
+
+// ── TOAST ──
+function toast(msg, type='') {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(), 3500);
+}
+
+// ── ENTER KEY ──
+document.getElementById('l-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('l-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('l-pass').focus(); });
+</script>
+</body>
+</html>
