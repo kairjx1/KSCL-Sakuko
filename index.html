@@ -187,6 +187,25 @@ tbody tr:last-child{border-bottom:none}
 @keyframes tin{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
 @keyframes tout{to{opacity:0;transform:translateX(20px)}}
 
+/* TREE EDITOR */
+.tree-ed{border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#fff}
+.te-bar{padding:10px 14px;background:#f8f9fc;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
+.te-row{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:7px;margin:2px 4px;transition:.15s;cursor:pointer}
+.te-row:hover{background:#f0f2ff}
+.te-arr{font-size:10px;color:var(--t2);width:16px;text-align:center;transition:transform .15s;flex-shrink:0}
+.te-arr.o{transform:rotate(90deg)}.te-arr.h{visibility:hidden}
+.te-ico{font-size:16px;flex-shrink:0}
+.te-lbl{flex:1;font-size:13.5px;color:var(--t1)}
+.te-act{display:flex;gap:3px;opacity:0;transition:opacity .15s;flex-shrink:0}
+.te-row:hover .te-act{opacity:1}
+.ta-btn{width:26px;height:26px;border-radius:6px;font-size:13px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:.15s}
+.ta-add{background:#dcfce7;color:#16a34a}.ta-add:hover{background:#bbf7d0}
+.ta-del{background:#fee2e2;color:#dc2626}.ta-del:hover{background:#fecaca}
+.ta-ren{background:#e0f2fe;color:#0284c7}.ta-ren:hover{background:#bae6fd}
+.te-children{padding-left:20px;border-left:2px dashed #e8f2ff;margin-left:14px}
+.te-empty-node{padding:10px 16px;color:var(--t3);font-size:12px;font-style:italic}
+.te-leaf-content{padding:10px 16px 10px 46px;font-size:13px;color:var(--t2);border-top:1px solid #f5f6fa}
+
 /* MISC */
 .divider{height:1px;background:var(--border);margin:18px 0}
 .empty-state{text-align:center;padding:40px 20px;color:var(--t2)}
@@ -588,13 +607,16 @@ function rQCStd(){return`
    CÔNG VIỆC
 ══════════════════════════════════════════ */
 function rCongViec(){
-  const tabs=['Checklist ca','Việc hôm nay','Phân công','Tất cả'];
+  const tabs=['Checklist ca','Kiểm kê','QC','Việc hôm nay'];
   const t=S.tab||'Checklist ca';
+  const adminNote=isAdmin()&&(t==='Kiểm kê'||t==='QC')?`<div class="alert a-info" style="margin-bottom:14px"><span class="a-ic">💡</span><div class="a-bd"><strong>Chế độ Admin – có thể chỉnh sửa cấu trúc</strong><p>Di chuột vào mục → hiện nút ✏️ đổi tên / 🗑 xóa / 📁📄 thêm con.</p></div></div>`:'';
+  const key=t==='Kiểm kê'?'cv_kk':t==='QC'?'cv_qc':null;
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Công việc</div>
 <div class="sec-hdr"><h1>✅ Công việc & Checklist</h1><button class="btn b-pri b-sm">+ Thêm việc</button></div>
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('congviec','${tb}')">${tb}</div>`).join('')}</div>
-${t==='Checklist ca'?rChecklistCa():rTodayTasks()}`;
+${adminNote}
+${key?`<div class="card">${tSection(key)}</div>`:t==='Checklist ca'?rChecklistCa():rTodayTasks()}`;
 }
 function rChecklistCa(){
   const kkItems=['Điểm danh nhân sự đầu ca','Nhận bàn giao từ ca trước (BM-KSCL-004)','Kiểm tra cân điện tử – reset về 0','Kiểm tra máy quét mã vạch – pin đủ','Xem lịch hàng về trong ca','Kiểm tra khu vực làm việc – sạch sẽ','Xác nhận lịch kiểm kê theo kế hoạch'];
@@ -644,7 +666,7 @@ function completeCa(dept){
    BÁO CÁO
 ══════════════════════════════════════════ */
 function rBaoCao(){
-  const tabs=['Tổng hợp','KPI tháng','So sánh','Xuất báo cáo'];
+  const tabs=['Tổng hợp','KPI tháng','Kiểm kê','QC','Xuất báo cáo'];
   const t=S.tab||'Tổng hợp';
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Báo cáo</div>
@@ -655,6 +677,10 @@ function rBaoCao(){
   <button class="btn b-pri b-sm">⬇️ Xuất Excel</button>
 </div></div>
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('baocao','${tb}')">${tb}</div>`).join('')}</div>
+${(t==='Kiểm kê'||t==='QC')?`
+  ${isAdmin()?`<div class="alert a-info" style="margin-bottom:14px"><span class="a-ic">💡</span><div class="a-bd"><strong>Chế độ Admin – có thể chỉnh sửa cấu trúc</strong><p>Di chuột vào mục → hiện nút ✏️ đổi tên / 🗑 xóa / 📁📄 thêm con.</p></div></div>`:''}
+  <div class="card">${tSection(t==='Kiểm kê'?'bc_kk':'bc_qc')}</div>
+`:`
 <div class="g4" style="margin-bottom:18px">
   ${kpi('Phiếu QC xử lý','0','phiếu','#0284c7','📋','')}
   ${kpi('Tổng lỗi phát hiện','0','lỗi','#dc2626','❌','')}
@@ -665,33 +691,33 @@ function rBaoCao(){
   <div class="chart-box"><div class="chart-title">📈 KPI tổng hợp 6 tháng</div><div class="chart-wrap"><canvas id="c-bc-kpi"></canvas></div></div>
   <div class="chart-box"><div class="chart-title">🥧 Phân loại lỗi QC</div><div class="chart-wrap"><canvas id="c-bc-pie"></canvas></div></div>
 </div>
-<div class="chart-box"><div class="chart-title">📊 So sánh KK vs QC theo tháng</div><div class="chart-wrap"><canvas id="c-bc-bar"></canvas></div></div>`;}
+<div class="chart-box"><div class="chart-title">📊 So sánh KK vs QC theo tháng</div><div class="chart-wrap"><canvas id="c-bc-bar"></canvas></div></div>
+`}`;}
 
 /* ══════════════════════════════════════════
    ĐÀO TẠO
 ══════════════════════════════════════════ */
 function rDaoTao(){
-  const cats=[
-    {ic:'📦',lb:'Kiểm kê',color:'#16a34a',bg:'#dcfce7',items:['Quy trình kiểm kê hàng ngày','Checklist cuối tháng','Xử lý chênh lệch kho']},
-    {ic:'🔬',lb:'Kiểm soát CL',color:'#0284c7',bg:'#e0f2fe',items:['Quy trình QC đầu ca','Tiêu chuẩn JAS','Lập phiếu QC']},
-    {ic:'📋',lb:'Quy trình & SOP',color:'#ea580c',bg:'#fff7ed',items:['SOP kiểm tra lô hàng','Quy trình xử lý hàng lỗi','Báo cáo sự cố']},
-    {ic:'👤',lb:'Onboarding',color:'#7c3aed',bg:'#f5f3ff',items:['Giới thiệu công ty','Vai trò phòng KSCL','An toàn lao động']},
-  ];
+  const adminNote=isAdmin()?`<div class="alert a-info" style="margin-bottom:16px"><span class="a-ic">💡</span><div class="a-bd"><strong>Chế độ Admin</strong><p>Bấm <b>📁 + Thư mục</b> hoặc <b>📄 + Mục</b> để thêm. Di chuột vào mỗi mục để thấy nút ✏️ đổi tên và 🗑 xóa.</p></div></div>`:'' ;
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Đào tạo</div>
 <div class="sec-hdr"><h1>📚 Đào tạo & Học liệu</h1></div>
+${adminNote}
 <div class="g2">
-  ${cats.map(c=>`<div class="card">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-      <div style="width:44px;height:44px;border-radius:10px;background:${c.bg};display:flex;align-items:center;justify-content:center;font-size:22px">${c.ic}</div>
-      <div style="font-weight:700;font-size:15px;color:${c.color}">${c.lb}</div>
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="width:40px;height:40px;border-radius:10px;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:20px">📦</div>
+      <span style="font-weight:700;font-size:15px;color:#16a34a">Kiểm kê</span>
     </div>
-    ${c.items.map(it=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f5f6fa;font-size:13px">
-      <span>📄 ${it}</span>
-      <button class="btn b-out b-sm" onclick="toast('Nội dung đang cập nhật...','t-warn')">Xem</button>
-    </div>`).join('')}
-    <button class="btn" style="width:100%;margin-top:14px;background:${c.bg};color:${c.color}" onclick="toast('Nội dung sẽ được thêm sớm')">+ Thêm tài liệu</button>
-  </div>`).join('')}
+    ${tSection('dt_kk')}
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="width:40px;height:40px;border-radius:10px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:20px">🔬</div>
+      <span style="font-weight:700;font-size:15px;color:#0284c7">QC – Kiểm soát chất lượng</span>
+    </div>
+    ${tSection('dt_qc')}
+  </div>
 </div>`;}
 
 /* ══════════════════════════════════════════
@@ -1098,6 +1124,119 @@ function toast(msg,cls=''){
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&S.page==='login')doLogin();
 });
+
+/* ══════════════════════════════════════════
+   TREE EDITOR ENGINE
+══════════════════════════════════════════ */
+let TC={};   // cache: key → nodes[]
+let TO={};   // open state: nodeId → bool
+
+function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+async function tLoad(key){
+  const snap=await db.ref(`trees/${key}`).get();
+  TC[key]=snap.exists()?(snap.val()||[]):[];
+  return TC[key];
+}
+async function tSave(key){await db.ref(`trees/${key}`).set(TC[key]||[]);}
+
+function tRender(key,nodes,editable){
+  function level(pid){
+    const items=(nodes||[]).filter(n=>(n.pid||null)===pid).sort((a,b)=>a.ord-b.ord);
+    if(!items.length)return editable?`<div class="te-empty-node">📂 Thư mục rỗng – dùng nút + để thêm</div>`:`<div class="te-empty-node">Chưa có nội dung</div>`;
+    return items.map(n=>{
+      const isF=n.t==='f';
+      const open=TO[n.id];
+      const hasKids=nodes.some(x=>x.pid===n.id);
+      const ic=isF?(open?'📂':'📁'):(n.ic||'📄');
+      return`<div>
+        <div class="te-row" onclick="tToggle('${key}','${n.id}',${isF})">
+          <span class="te-arr ${(!isF||!hasKids)?'h':''} ${open?'o':''}">▶</span>
+          <span class="te-ico">${ic}</span>
+          <span class="te-lbl">${escH(n.lb)}</span>
+          ${editable?`<div class="te-act" onclick="event.stopPropagation()">
+            ${isF?`<button class="ta-btn ta-add" title="Thêm thư mục con" onclick="tAdd('${key}','${n.id}','f')">📁</button>
+                   <button class="ta-btn ta-add" title="Thêm mục" onclick="tAdd('${key}','${n.id}','i')">📄</button>`:''}
+            <button class="ta-btn ta-ren" title="Đổi tên" onclick="tRen('${key}','${n.id}')">✏️</button>
+            <button class="ta-btn ta-del" title="Xóa" onclick="tDel('${key}','${n.id}')">🗑</button>
+          </div>`:''}
+        </div>
+        ${isF&&open?`<div class="te-children">${level(n.id)}</div>`:''}
+        ${!isF&&open&&n.content?`<div class="te-leaf-content">${escH(n.content)}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+  return`<div class="tree-ed">
+    ${editable?`<div class="te-bar">
+      <span style="font-size:12px;font-weight:700;color:var(--t2);align-self:center">Admin:</span>
+      <button class="btn b-ok2 b-sm" onclick="tAdd('${key}',null,'f')">📁 + Thư mục</button>
+      <button class="btn b-pri b-sm" onclick="tAdd('${key}',null,'i')">📄 + Mục</button>
+    </div>`:''}
+    <div style="padding:6px" id="tree-inner-${key}">${level(null)}</div>
+  </div>`;
+}
+
+function tReRender(key){
+  const el=document.getElementById(`tree-${key}`);
+  if(el)el.innerHTML=tRender(key,TC[key]||[],isAdmin());
+}
+
+function tToggle(key,id,isF){
+  if(!isF)return;
+  TO[id]=!TO[id];
+  tReRender(key);
+}
+
+function tAdd(key,pid,type){
+  const prompt_text=type==='f'?'Tên thư mục mới:':'Tên mục mới:';
+  const lb=prompt(prompt_text,'');
+  if(!lb||!lb.trim())return;
+  const nodes=TC[key]||[];
+  const siblings=nodes.filter(n=>(n.pid||null)===(pid||null));
+  nodes.push({id:'n'+Date.now(),lb:lb.trim(),ic:type==='f'?'📁':'📄',t:type,pid:pid||null,ord:siblings.length,content:''});
+  TC[key]=nodes;
+  if(pid)TO[pid]=true;
+  tSave(key).then(()=>{tReRender(key);toast(`✅ Đã thêm: ${lb.trim()}`,'t-ok');});
+}
+
+function tDel(key,id){
+  const nodes=TC[key]||[];
+  const node=nodes.find(n=>n.id===id);
+  if(!node)return;
+  const hasKids=nodes.some(n=>n.pid===id);
+  const msg=hasKids?`Xóa "${node.lb}" và toàn bộ mục con?`:`Xóa "${node.lb}"?`;
+  if(!confirm(msg))return;
+  const rm=new Set([id]);
+  let changed=true;
+  while(changed){changed=false;nodes.forEach(n=>{if(rm.has(n.pid)&&!rm.has(n.id)){rm.add(n.id);changed=true;}});}
+  TC[key]=nodes.filter(n=>!rm.has(n.id));
+  tSave(key).then(()=>{tReRender(key);toast(`Đã xóa: ${node.lb}`,'t-ok');});
+}
+
+function tRen(key,id){
+  const nodes=TC[key]||[];
+  const node=nodes.find(n=>n.id===id);
+  if(!node)return;
+  const newLb=prompt('Đổi tên:',node.lb);
+  if(!newLb||newLb===node.lb)return;
+  node.lb=newLb.trim();
+  tSave(key).then(()=>{tReRender(key);toast(`Đã đổi tên: ${newLb}`,'t-ok');});
+}
+
+// Wrapper: render tree section, auto-load if not cached
+function tSection(key){
+  if(TC[key]!==undefined){
+    return`<div id="tree-${key}">${tRender(key,TC[key],isAdmin())}</div>`;
+  }
+  // async load then inject
+  setTimeout(()=>{
+    tLoad(key).then(nodes=>{
+      const el=document.getElementById(`tree-${key}`);
+      if(el)el.innerHTML=tRender(key,nodes,isAdmin());
+    });
+  },0);
+  return`<div id="tree-${key}"><div style="padding:20px;text-align:center;color:var(--t2);font-size:13px">⏳ Đang tải...</div></div>`;
+}
 
 /* ══════════════════════════════════════════
    INIT
