@@ -1539,16 +1539,33 @@ async function bbkkRun(){
   const inpD=document.getElementById('bbkk-dmhh');
   const inpF=document.getElementById('bbkk-file');
   if(!inpD?.files[0]||!inpF?.files[0]){bbLog(['❌ Cần chọn đủ 2 file: DMHH và BBKK']);return;}
-  bbLog(['⏳ Đang đọc file... [v20260626-3]']);
+  // Log tích lũy — không replace để dễ debug
+  const LOG=['⏳ Đang đọc file... [v20260626-4]'];bbLog(LOG);
   try{
-    const [bufD,bufF]=await Promise.all([inpD.files[0].arrayBuffer(),inpF.files[0].arrayBuffer()]);
+    const [bufD,bufFRaw]=await Promise.all([inpD.files[0].arrayBuffer(),inpF.files[0].arrayBuffer()]);
+    // Xóa metadata.xml (Excel 365 Dynamic Array) khỏi file input trước khi SheetJS đọc
+    // Nếu để nguyên: SheetJS copy metadata.xml sang output nhưng bỏ cm= attribute → Excel crash
+    let bufF=bufFRaw;
+    try{
+      const inZip=await JSZip.loadAsync(bufFRaw);
+      if(inZip.file('xl/metadata.xml')){
+        inZip.remove('xl/metadata.xml');
+        const rp='xl/_rels/workbook.xml.rels';
+        if(inZip.file(rp)){
+          let rels=await inZip.file(rp).async('text');
+          rels=rels.replace(/<Relationship[^>]*sheetMetadata[^>]*\/>/g,'');
+          inZip.file(rp,rels);
+        }
+        bufF=await inZip.generateAsync({type:'arraybuffer'});
+        LOG.push('🔧 Đã xóa Dynamic Array metadata khỏi file gốc');bbLog(LOG);
+      }
+    }catch(me){LOG.push(`⚠ Không xử lý được metadata: ${me.message}`);bbLog(LOG);}
     const wbD=XLSX.read(new Uint8Array(bufD),{type:'array'});
     const wbF=XLSX.read(new Uint8Array(bufF),{type:'array'});
     const res=bbkkProcess(wbD,wbF,inpF.files[0].name);
-    bbLog(res.log);
+    for(const l of res.log){LOG.push(l);}bbLog(LOG);
     if(res.ok){
-      bbLog([`📋 Sheets: ${wbF.SheetNames.join(' | ')}`,`📦 File gốc: ${(bufF.byteLength/1024).toFixed(0)} KB`]);
-      // Fix !ref bằng cách đếm cell key thực tế — tránh trường hợp !ref=A1:S1048576
+      // Fix !ref bằng cách đếm cell key thực tế — tránh !ref=A1:S1048576
       function fixRef(ws,updates){
         for(const u of updates)ws[XLSX.utils.encode_cell({r:u.r,c:u.c})]={v:u.v,t:u.t};
         let maxR=0,maxC=0;
@@ -1560,39 +1577,23 @@ async function bbkkRun(){
         return ws['!ref'];
       }
       const bbRef=fixRef(wbF.Sheets[res.bbName],res.bbUpdates);
-      bbLog([`📐 BBKK !ref: ${bbRef}`]);
+      LOG.push(`📐 BBKK !ref: ${bbRef}`);bbLog(LOG);
       if(res.dxName&&res.dxUpdates.length){
         const dxRef=fixRef(wbF.Sheets[res.dxName],res.dxUpdates);
-        bbLog([`📐 DX !ref: ${dxRef}`]);
+        LOG.push(`📐 DX !ref: ${dxRef}`);bbLog(LOG);
       }
-      bbLog(['⏳ Đang tạo file xlsx...']);
+      LOG.push('⏳ Đang tạo file xlsx...');bbLog(LOG);
       let out;
-      try{out=XLSX.write(wbF,{type:'array',bookType:'xlsx',compression:true});}
-      catch(we){bbLog([`❌ SheetJS write lỗi: ${we.message}`]);return;}
-      // SheetJS giữ metadata.xml (Excel 365 Dynamic Array) nhưng xóa cm= attrs khỏi cells
-      // → Excel crash "not enough memory". Xóa metadata.xml + relationship để fix.
-      try{
-        const outZip=await JSZip.loadAsync(out);
-        if(outZip.file('xl/metadata.xml')){
-          outZip.remove('xl/metadata.xml');
-          const rp='xl/_rels/workbook.xml.rels';
-          if(outZip.file(rp)){
-            let rels=await outZip.file(rp).async('text');
-            rels=rels.replace(/<Relationship[^>]*sheetMetadata[^>]*\/>/g,'');
-            outZip.file(rp,rels);
-          }
-          out=await outZip.generateAsync({type:'arraybuffer',compression:'DEFLATE',compressionOptions:{level:6}});
-          bbLog(['🔧 Đã xóa Dynamic Array metadata (Excel 365)']);
-        }
-      }catch(me){bbLog([`⚠ Strip metadata: ${me.message}`]);}
-      bbLog([`✅ File output: ${(out.byteLength/1024).toFixed(0)} KB`]);
+      try{out=XLSX.write(wbF,{type:'array',bookType:'xlsx'});}
+      catch(we){LOG.push(`❌ SheetJS write lỗi: ${we.message}`);bbLog(LOG);return;}
+      LOG.push(`✅ File output: ${(out.byteLength/1024).toFixed(0)} KB — Đang tải về...`);bbLog(LOG);
       const a=document.createElement('a');
       a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
       a.download=inpF.files[0].name.replace(/\.xlsx$/i,'_ketqua.xlsx');
       a.click();
-      bbLog(['✅ Đã tải file kết quả về!']);
+      LOG.push('✅ Đã tải file kết quả về!');bbLog(LOG);
     }
-  }catch(err){bbLog([`❌ Lỗi: ${err.message}`]);}
+  }catch(err){LOG.push(`❌ Lỗi: ${err.message}`);bbLog(LOG);}
 }
 
 function bbkkProcess(wbD,wbF,fname){
