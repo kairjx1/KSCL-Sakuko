@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>KSCL System – Sakuko Vietnam</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -1536,7 +1539,7 @@ async function bbkkRun(){
   const inpD=document.getElementById('bbkk-dmhh');
   const inpF=document.getElementById('bbkk-file');
   if(!inpD?.files[0]||!inpF?.files[0]){bbLog(['❌ Cần chọn đủ 2 file: DMHH và BBKK']);return;}
-  bbLog(['⏳ Đang đọc file...']);
+  bbLog(['⏳ Đang đọc file... [v20260626-3]']);
   try{
     const [bufD,bufF]=await Promise.all([inpD.files[0].arrayBuffer(),inpF.files[0].arrayBuffer()]);
     const wbD=XLSX.read(new Uint8Array(bufD),{type:'array'});
