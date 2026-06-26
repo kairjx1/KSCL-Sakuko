@@ -294,17 +294,25 @@ const auth=firebase.auth(), db=firebase.database();
 auth.onAuthStateChanged(async u=>{
   if(u){
     S.user=u;
-    const snap=await db.ref(`profiles/${u.uid}`).get();
-    if(snap.exists()){
-      S.profile=snap.val();
-      if(!S.profile.role){
-        S.profile.role=ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer';
-        db.ref(`profiles/${u.uid}/role`).set(S.profile.role);
+    try{
+      const snap=await db.ref(`profiles/${u.uid}`).get();
+      if(snap.exists()){
+        S.profile=snap.val();
+        if(!S.profile.role){
+          S.profile.role=ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer';
+          db.ref(`profiles/${u.uid}/role`).set(S.profile.role);
+        }
+        go('dashboard');
+      } else {
+        S.profile={name:'',email:u.email,role:ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer',dept:'',phone:'',createdAt:Date.now()};
+        render(); showFirstLogin();
       }
-      go('dashboard');
-    } else {
+    }catch(e){
+      // DB rules chưa cấu hình hoặc mạng lỗi — vẫn cho vào với quyền tối thiểu
       S.profile={name:'',email:u.email,role:ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer',dept:'',phone:'',createdAt:Date.now()};
-      render(); showFirstLogin();
+      render();
+      toast('Không thể kết nối database. Vui lòng liên hệ Admin.','t-err');
+      if(ADMIN_EMAILS.includes(u.email))go('dashboard');
     }
   } else go('login');
 });
