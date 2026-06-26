@@ -1283,14 +1283,26 @@ function _xlSetCell(xml,rowIdx,colIdx,value,type){
   const cell=type==='n'
     ?`<c r="${ref}"><v>${value}</v></c>`
     :`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${_ex(String(value))}</t></is></c>`;
-  // Replace existing cell
-  const cRe=new RegExp(`<c\\s+r="${ref}"(?:\\s[^>]*)?>(?:[\\s\\S]*?</c>|/>)`);
-  if(cRe.test(xml))return xml.replace(cRe,cell);
+  // Find and replace existing cell using string ops (regex bị lỗi với self-closing cells)
+  const refPos=xml.indexOf(`r="${ref}"`);
+  if(refPos>=0){
+    const cs=xml.lastIndexOf('<c',refPos);
+    if(cs>=0){
+      const tagEnd=xml.indexOf('>',cs);
+      if(tagEnd>=0){
+        const isSelf=xml[tagEnd-1]==='/';
+        const ce=isSelf?tagEnd+1:xml.indexOf('</c>',tagEnd)+4;
+        if(ce>0)return xml.slice(0,cs)+cell+xml.slice(ce);
+      }
+    }
+  }
   // Append to existing row
-  const rRe=new RegExp(`(<row\\b[^>]*\\br="${r}"[^>]*>)([\\s\\S]*?)(</row>)`);
-  const rm=xml.match(rRe);
-  if(rm)return xml.replace(rRe,rm[1]+rm[2]+cell+rm[3]);
-  // Insert new row before </sheetData>
+  const rowStart=xml.indexOf(`<row r="${r}"`);
+  if(rowStart>=0){
+    const rowEnd=xml.indexOf('</row>',rowStart);
+    if(rowEnd>=0)return xml.slice(0,rowEnd)+cell+xml.slice(rowEnd);
+  }
+  // Insert new row
   return xml.replace('</sheetData>',`<row r="${r}">${cell}</row></sheetData>`);
 }
 
