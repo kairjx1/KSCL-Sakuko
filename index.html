@@ -1284,7 +1284,7 @@ function _xlSetCell(xml,rowIdx,colIdx,value,type){
     ?`<c r="${ref}"><v>${value}</v></c>`
     :`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${_ex(String(value))}</t></is></c>`;
   // Replace existing cell
-  const cRe=new RegExp(`<c\\s+r="${ref}"(?:\\s[^>]*)?>(?:[\\s\\S]*?</c>|/>`);
+  const cRe=new RegExp(`<c\\s+r="${ref}"(?:\\s[^>]*)?>(?:[\\s\\S]*?</c>|/>)`);
   if(cRe.test(xml))return xml.replace(cRe,cell);
   // Append to existing row
   const rRe=new RegExp(`(<row\\b[^>]*\\br="${r}"[^>]*>)([\\s\\S]*?)(</row>)`);
