@@ -235,6 +235,16 @@ tbody tr:last-child{border-bottom:none}
 .stat-row:last-child{border:none}
 .stat-row .label{color:var(--t2)}
 .stat-row .value{font-weight:700;color:var(--t1)}
+/* ONBOARDING ACCORDION */
+.ob-acc-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.ob-acc-body.open{max-height:9999px}
+.ob-chevron{transition:transform .25s;display:inline-block}
+.ob-acc-btn.open .ob-chevron{transform:rotate(180deg)}
+.ob-role-btn{transition:all .18s;cursor:pointer;border:2px solid var(--border)}
+.ob-role-btn:hover{border-color:var(--pri);background:#eff6ff}
+.ob-role-btn.on{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border-color:#2563eb;box-shadow:0 4px 14px rgba(37,99,235,.28)}
+.ob-task-row{transition:background .12s}
+.ob-task-row:hover{background:#f0f7ff}
 </style>
 <body>
 <div id="app"></div>
@@ -722,10 +732,16 @@ ${(t==='Kiểm kê'||t==='QC')?`
    ĐÀO TẠO
 ══════════════════════════════════════════ */
 function rDaoTao(){
+  const t=S.tab||'hoclieu';
+  if(t==='onboarding')return rOnboarding();
   const adminNote=isAdmin()?`<div class="alert a-info" style="margin-bottom:16px"><span class="a-ic">💡</span><div class="a-bd"><strong>Chế độ Admin</strong><p>Bấm <b>📁 + Thư mục</b> hoặc <b>📄 + Mục</b> để thêm. Di chuột vào mỗi mục để thấy nút ✏️ đổi tên và 🗑 xóa.</p></div></div>`:'' ;
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Đào tạo</div>
 <div class="sec-hdr"><h1>📚 Đào tạo & Học liệu</h1></div>
+<div class="tabs" style="margin-bottom:20px">
+  <div class="tab ${t==='hoclieu'?'on':''}" onclick="go('daotao','hoclieu')">📁 Học liệu</div>
+  <div class="tab ${t==='onboarding'?'on':''}" onclick="go('daotao','onboarding')">🗂️ Checklist Onboarding</div>
+</div>
 ${adminNote}
 <div class="g2">
   <div class="card">
@@ -742,6 +758,163 @@ ${adminNote}
     </div>
     ${tSection('dt_qc')}
   </div>
+</div>`;}
+
+function rOnboarding(){
+const OB_DATA=[
+{id:'qc',ic:'🛡️',title:'QC',sub:'Kiểm soát Chất lượng',desc:'Giám sát, kiểm soát chất lượng dịch vụ toàn chuỗi. Phát hiện và xử lý sai phạm.',stat:'17 đầu việc',time:'~169h/tháng',col:'#7c3aed',
+groups:[
+{ic:'👁️',lb:'Giám sát hàng ngày',tasks:[
+{n:'Chấm điểm siêu thị',d:'Check cam, soi lỗi, chấm điểm dịch vụ hàng ngày, nhắc nhở các ST thực hiện đúng nội quy.',kpi:'Chấm đủ 2 lần/ST/tháng',freq:'24×/tháng',tags:['daily','imp']},
+{n:'Check hình ảnh kho',d:'Check cam, nhắc nhở kho đảm bảo vệ sinh đầu ca và cuối ca.',kpi:'Kho không bừa bãi, luôn sạch sẽ',freq:'24×/tháng',tags:['daily']},
+{n:'Check lịch làm việc ST',d:'Check giờ làm nhân viên siêu thị, phát hiện các trường hợp sai phạm.',kpi:'2 siêu thị/tuần',freq:'8×/tháng',tags:['period']},
+{n:'Check tích/tiêu điểm KH',d:'Check việc tích, tiêu điểm khách hàng của các siêu thị.',kpi:'2 siêu thị/tuần',freq:'8×/tháng',tags:['period']},
+]},
+{ic:'🔍',lb:'Kiểm soát gian lận',tasks:[
+{n:'Check giao dịch đổi trả',d:'Check lại các giao dịch đổi trả, kiểm soát gian lận.',kpi:'Đủ các GD, kiểm soát gian lận',freq:'8×/tháng',tags:['imp','period']},
+{n:'Check gian lận định kỳ',d:'Check lại các giao dịch trong ngày của các siêu thị.',kpi:'2 siêu thị/tuần',freq:'8×/tháng',tags:['imp','period']},
+{n:'Check giao dịch CTKM',d:'Check các giao dịch trong danh mục chương trình khuyến mãi.',kpi:'2 siêu thị/tuần',freq:'8×/tháng',tags:['period']},
+{n:'Kiểm soát đơn TMĐT',d:'Tra cứu đơn TMĐT, làm việc với đội ngũ TMĐT, không để đơn treo.',kpi:'1 lần/tuần',freq:'4×/tháng',tags:['period']},
+]},
+{ic:'⚙️',lb:'Xử lý nghiệp vụ',tasks:[
+{n:'Xử lý chênh lệch hàng hóa',d:'Check cam, xử lý minh bạch các vụ chênh lệch HH khi chuyển từ kho lên ST.',kpi:'Đúng deadline N+3',freq:'8×/tháng',tags:['imp','period']},
+{n:'Nhận và bán hàng thanh lý',d:'Nhận hàng thanh lý, kiểm đếm, đăng bán hàng lên các đội nhóm.',kpi:'Đăng bán thường xuyên, giảm tồn',freq:'1×/tháng',tags:['period']},
+{n:'Nhận và xuất hủy hàng date',d:'Nhận hàng xuất hủy, kiểm số lượng và tiến hành hủy theo quy định.',kpi:'Xuất hủy đủ số lượng',freq:'1×/tháng',tags:['period']},
+{n:'Lập biên bản vi phạm',d:'Lập biên bản, trình ký, upload lên hệ thống ghi nhận.',kpi:'Xử lý đầy đủ các trường hợp',freq:'2×/tháng',tags:['imp']},
+{n:'Chia tem đổi code',d:'Chia tem đổi code cho các siêu thị — làm đầu tháng.',kpi:'Chia đủ, chính xác số lượng',freq:'1×/tháng',tags:['period']},
+]},
+{ic:'📊',lb:'Báo cáo tháng',tasks:[
+{n:'Báo cáo chấm điểm dịch vụ',d:'Tổng hợp, check số liệu, viết báo cáo, gửi mail tới các ST.',kpi:'Trước mùng 6 hàng tháng',freq:'1×/tháng',tags:['imp','period']},
+{n:'Báo cáo đổi trả',d:'Tổng hợp, check số liệu, viết báo cáo, bắn bot tới các ST.',kpi:'Trước mùng 5 tháng N+1',freq:'1×/tháng',tags:['period']},
+{n:'Báo cáo chấm điểm CTKM',d:'Chấm điểm, tổng hợp, check số liệu, viết báo cáo gửi ST.',kpi:'Trước mùng 5 tháng N+1',freq:'1×/tháng',tags:['period']},
+{n:'Phát sinh theo yêu cầu',d:'Các công việc khác theo yêu cầu quản lý, đơn vị liên quan.',kpi:'Không trễ deadline cam kết',freq:'Phát sinh',tags:['adhoc']},
+]},
+]},
+{id:'nvkk',ic:'📦',title:'NV Kiểm Kê',sub:'Nhân viên Kiểm kê',desc:'Thực hiện kiểm kê thực tế tại siêu thị, đối chiếu tồn kho hệ thống, xử lý chênh lệch.',stat:'12 đầu việc',time:'~189h/tháng',col:'#2563eb',
+groups:[
+{ic:'📋',lb:'Kiểm kê thực địa',tasks:[
+{n:'Kiểm kê ngành / tổng',d:'Kiểm kê số lượng HH thực tế tại ST, so sánh tồn hệ thống, xử lý số liệu.',kpi:'9 siêu thị/tháng',freq:'9×/tháng',tags:['imp','daily']},
+{n:'Kiểm kê đột xuất',d:'Kiểm kê HH thực tế theo lịch đột xuất, đối chiếu tồn hệ thống.',kpi:'4 siêu thị/tháng',freq:'4×/tháng',tags:['imp','period']},
+{n:'Kiểm kê đổi code',d:'Kiểm tra các hàng hóa cận date để đổi code.',kpi:'3 siêu thị/tháng',freq:'1×/tháng',tags:['period']},
+{n:'Kiểm kê Fifo',d:'Kiểm tra date HH trưng bày và trong kho có đúng quy định (phối hợp KK ngành).',kpi:'3 siêu thị/tháng',freq:'1×/tháng',tags:['period']},
+{n:'Kiểm kê chốt cont',d:'Xác nhận số lượng thực tế và dự kiến của cont hàng từ cảng về kho.',kpi:'Đúng deadline N+3',freq:'2×/tháng',tags:['period']},
+]},
+{ic:'⚠️',lb:'Xử lý tồn & nghiệp vụ',tasks:[
+{n:'Xử lý tồn âm siêu thị',d:'Xử lý các mã hàng bán âm của các siêu thị HN, kịp kết ca hệ thống.',kpi:'24 lần/tháng, đúng hạn N+2',freq:'24×/tháng',tags:['imp','daily']},
+{n:'Kiểm soát đơn TO',d:'Giám sát và xử lý các đơn điều chuyển nội bộ giữa các siêu thị đúng quy định.',kpi:'Đơn điều chuyển trong N+2',freq:'12×/tháng',tags:['daily']},
+{n:'Nhận và xuất hủy hàng date',d:'Nhận hàng xuất hủy, kiểm số lượng và tiến hành hủy theo quy định.',kpi:'Xuất hủy đủ số lượng',freq:'1×/tháng',tags:['period']},
+{n:'Chia tem đổi code',d:'Chia tem đổi code cho các siêu thị theo đúng số lượng.',kpi:'Chia đủ, chính xác',freq:'1×/tháng',tags:['period']},
+]},
+{ic:'📈',lb:'Báo cáo & Chấm điểm',tasks:[
+{n:'Chấm điểm hình ảnh tại KK',d:'Chấm điểm hình ảnh dịch vụ, nhắc nhở ST đúng nội quy, xử lý sai phạm.',kpi:'Chấm đủ các ST có mặt KK',freq:'14×/tháng',tags:['daily']},
+{n:'Báo cáo tồn âm cảnh báo',d:'Tổng hợp và gửi báo cáo tồn âm cảnh báo.',kpi:'Gửi trước ngày 05 hàng tháng',freq:'1×/tháng',tags:['period']},
+{n:'Phát sinh theo yêu cầu',d:'Các công việc khác theo yêu cầu quản lý.',kpi:'Không trễ deadline',freq:'Phát sinh',tags:['adhoc']},
+]},
+]},
+{id:'cvkk',ic:'👔',title:'CV Kiểm Kê',sub:'Chuyên viên Kiểm kê',desc:'Điều phối, giám sát toàn bộ hoạt động kiểm kê đa địa điểm: siêu thị, nhà hàng, kho, BPP.',stat:'21 đầu việc',time:'~192h+/tháng',col:'#059669',
+groups:[
+{ic:'🏪',lb:'Kiểm kê tại siêu thị',tasks:[
+{n:'Kiểm kê ngành siêu thị',d:'Kiểm kê ngành hàng bất kỳ tại ST dựa vào chỉ số bất ổn trong đo lường báo cáo.',kpi:'Theo chỉ định',freq:'Theo KH',tags:['imp']},
+{n:'Kiểm kê tổng siêu thị',d:'Kiểm kê tất cả hàng hoá tại cửa hàng theo chỉ định, xử lý số liệu sau KK.',kpi:'8 cửa hàng/tháng',freq:'8×/tháng',tags:['imp','daily']},
+{n:'Kiểm kê đột xuất ST',d:'Thực hiện kiểm kê đột xuất tại siêu thị theo yêu cầu.',kpi:'1 lần/tháng',freq:'1×/tháng',tags:['period']},
+{n:'Kiểm kê hàng đổi code',d:'Kiểm kê hàng chuyển đổi cận date tại 3 siêu thị bất kỳ.',kpi:'3 siêu thị/tháng',freq:'1×/tháng',tags:['period']},
+{n:'Kiểm kê online ngành FC+ST',d:'Hàng tuần gửi danh sách kiểm kê cho toàn bộ FC và ST.',kpi:'Đúng lịch hàng tuần',freq:'4×/tháng',tags:['daily']},
+{n:'Kiểm kê Fifo',d:'Kiểm tra date HH trưng bày và trong kho có đúng quy định.',kpi:'1 lần/tháng',freq:'1×/tháng',tags:['period']},
+]},
+{ic:'🍽️',lb:'Kiểm kê nhà hàng & BPP',tasks:[
+{n:'Kiểm kê tổng nhà hàng',d:'Kiểm kê tổng nhà hàng chuỗi Waji, 39 Beef.',kpi:'1 lần/tháng',freq:'1×/tháng',tags:['period']},
+{n:'Xử lý số liệu nhà hàng',d:'Xác nhận GT, chốt kết quả, tính công nợ, báo cáo hao hụt.',kpi:'Đúng deadline',freq:'1×/tháng',tags:['imp','period']},
+{n:'Kiểm kê tổng BPP',d:'Kiểm kê hàng hoá toàn bộ cửa hàng BearPapa theo lịch cố định.',kpi:'1 lần/tháng',freq:'1×/tháng',tags:['period']},
+{n:'Xử lý số liệu BPP',d:'Xác nhận GT, chốt kết quả, tính công nợ, báo cáo hao hụt.',kpi:'Đúng deadline',freq:'1×/tháng',tags:['imp','period']},
+]},
+{ic:'🏭',lb:'Kiểm kê kho',tasks:[
+{n:'Kiểm ngành kho LTT',d:'Kiểm kê ngành hàng tại kho Lương Thế Tổ theo kế hoạch.',kpi:'1 lần/tháng',freq:'1×/tháng',tags:['period']},
+{n:'Chốt cont về kho LTT',d:'Kiểm chốt số lượng cont hàng về kho LTT.',kpi:'2 lần/tháng',freq:'2×/tháng',tags:['period']},
+{n:'Kiểm kê kho BO',d:'Kiểm kê kho: W1088, W1096, W1050, TMĐT...',kpi:'1 lần/tháng',freq:'1×/tháng',tags:['period']},
+{n:'Xử lý hàng quá hạn/lỗi hỏng',d:'Xử lý hàng quá hạn sử dụng, hàng lỗi hỏng trong kho.',kpi:'Xử lý dứt điểm',freq:'1×/tháng',tags:['period']},
+]},
+{ic:'📊',lb:'Quản lý & Báo cáo',tasks:[
+{n:'Đảm bảo TO/SO đúng quy định',d:'Báo cáo, rà soát quá trình thực hiện TO khối ST (N+1), đơn SO khối FC (N+3).',kpi:'TO trong N+1 · SO trong N+3',freq:'1×/tháng',tags:['imp']},
+{n:'Kiểm kê tài sản cửa hàng',d:'Kiểm kê tài sản tại cửa hàng theo định kỳ.',kpi:'1 lần/tháng',freq:'1×/tháng',tags:['period']},
+{n:'Chấm điểm hình ảnh KK',d:'Chấm điểm hình ảnh dịch vụ tại thời điểm KK, nhắc nhở và xử lý sai phạm.',kpi:'Chấm đủ các ST có mặt',freq:'9×/tháng',tags:['daily']},
+{n:'Chia tem đổi code',d:'Chia tem đổi code cho các siêu thị theo đúng số lượng.',kpi:'Chia đủ, chính xác',freq:'1×/tháng',tags:['period']},
+{n:'Báo cáo tồn âm cảnh báo',d:'Gửi báo cáo tồn âm cảnh báo đầu tháng.',kpi:'Trước ngày 05 hàng tháng',freq:'1×/tháng',tags:['period']},
+{n:'Phát sinh khác',d:'Các công việc khác theo yêu cầu quản lý, đơn vị liên quan.',kpi:'Không trễ deadline',freq:'Phát sinh',tags:['adhoc']},
+]},
+]},
+];
+const TAG_CFG={imp:{lb:'Quan trọng',bg:'#fee2e2',fg:'#b91c1c'},daily:{lb:'Hàng ngày',bg:'#dbeafe',fg:'#1d4ed8'},period:{lb:'Định kỳ',bg:'#d1fae5',fg:'#065f46'},adhoc:{lb:'Phát sinh',bg:'#f1f5f9',fg:'#64748b'}};
+let obRole=0;
+function obTagHtml(tags){return tags.map(k=>TAG_CFG[k]?`<span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:${TAG_CFG[k].bg};color:${TAG_CFG[k].fg}">${TAG_CFG[k].lb}</span>`:'').join('');}
+function obRender(){
+  const r=OB_DATA[obRole];
+  const totalTasks=r.groups.reduce((s,g)=>s+g.tasks.length,0);
+  document.getElementById('ob-roles').innerHTML=OB_DATA.map((d,i)=>`
+    <div class="ob-role-btn" onclick="obSetRole(${i})" style="border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;${i===obRole?'background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;border-color:#2563eb;box-shadow:0 4px 14px rgba(37,99,235,.28)':'background:#fff;color:var(--t1)'}">
+      <div style="width:40px;height:40px;border-radius:10px;background:${i===obRole?'rgba(255,255,255,.2)':d.col+'18'};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${d.ic}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:14px">${d.title}</div>
+        <div style="font-size:12px;opacity:${i===obRole?'.8':'.6'};margin-top:1px">${d.sub}</div>
+      </div>
+    </div>`).join('');
+  document.getElementById('ob-content').innerHTML=`
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+      <div style="width:46px;height:46px;border-radius:12px;background:${r.col}18;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${r.ic}</div>
+      <div style="flex:1;min-width:160px">
+        <div style="font-weight:700;font-size:16px;color:var(--t1)">${r.sub}</div>
+        <div style="font-size:13px;color:var(--t2);margin-top:3px">${r.desc}</div>
+      </div>
+      <div style="display:flex;gap:20px;text-align:center">
+        <div><div style="font-size:22px;font-weight:800;color:var(--t1)">${totalTasks}</div><div style="font-size:11px;color:var(--t2)">đầu việc</div></div>
+        <div style="width:1px;background:var(--border)"></div>
+        <div><div style="font-size:15px;font-weight:700;color:#2563eb">${r.time}</div><div style="font-size:11px;color:var(--t2)">trung bình</div></div>
+      </div>
+    </div>
+    ${r.groups.map((g,gi)=>`
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px">
+      <button class="ob-acc-btn${gi===0?' open':''}" onclick="obToggle(this)" style="width:100%;display:flex;align-items:center;gap:10px;padding:13px 16px;background:none;border:none;cursor:pointer;text-align:left">
+        <div style="width:34px;height:34px;border-radius:9px;background:${r.col}15;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${g.ic}</div>
+        <div style="flex:1"><span style="font-weight:700;font-size:14px;color:var(--t1)">${g.lb}</span><span style="font-size:12px;color:var(--t2);margin-left:8px">${g.tasks.length} việc</span></div>
+        <span class="ob-chevron" style="font-size:12px;color:var(--t2)">▼</span>
+      </button>
+      <div class="ob-acc-body${gi===0?' open':''}">
+        <div style="border-top:1px solid var(--border)">
+          ${g.tasks.map((t,ti)=>`
+          <div class="ob-task-row" style="display:flex;gap:12px;padding:12px 16px;${ti>0?'border-top:1px solid #f1f5f9':''}">
+            <div style="width:24px;height:24px;border-radius:50%;background:${r.col};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">${ti+1}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:13.5px;color:var(--t1)">${t.n}</div>
+              <div style="font-size:12px;color:var(--t2);margin-top:3px;line-height:1.5">${t.d}</div>
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px">
+                <span style="font-size:11.5px;color:#64748b">🎯 ${t.kpi}</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;min-width:72px">
+              ${obTagHtml(t.tags)}
+              <span style="font-size:11px;color:var(--t2);margin-top:auto">${t.freq}</span>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>`).join('')}
+    <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+      <span style="font-size:12px;font-weight:600;color:var(--t2);margin-right:4px">Chú thích:</span>
+      ${Object.values(TAG_CFG).map(t=>`<span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:${t.bg};color:${t.fg}">${t.lb}</span>`).join('')}
+    </div>`;
+}
+window.obSetRole=function(i){obRole=i;obRender();};
+window.obToggle=function(btn){const body=btn.nextElementSibling;const op=body.classList.contains('open');btn.classList.toggle('open',!op);body.classList.toggle('open',!op);};
+setTimeout(obRender,50);
+return`
+<div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › <span onclick="go('daotao')">Đào tạo</span> › Checklist Onboarding</div>
+<div class="sec-hdr"><h1>🗂️ Checklist Công Việc Onboarding</h1><p style="color:var(--t2);font-size:13px">Tài liệu hướng dẫn công việc cho nhân viên mới theo từng vị trí</p></div>
+<div class="tabs" style="margin-bottom:20px">
+  <div class="tab" onclick="go('daotao','hoclieu')">📁 Học liệu</div>
+  <div class="tab on">🗂️ Checklist Onboarding</div>
+</div>
+<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+  <div style="display:flex;flex-direction:column;gap:8px;width:200px;flex-shrink:0" id="ob-roles"></div>
+  <div style="flex:1;min-width:0" id="ob-content"></div>
 </div>`;}
 
 /* ══════════════════════════════════════════
