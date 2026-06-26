@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -1251,6 +1252,54 @@ function tSection(key){
 }
 
 /* ══════════════════════════════════════════
+   JSZip xlsx helpers — viết trực tiếp vào XML
+   giữ nguyên 100% style/border/merge gốc
+══════════════════════════════════════════ */
+function _xlCol(n){let r='';n++;while(n>0){n--;r=String.fromCharCode(65+n%26)+r;n=Math.floor(n/26);}return r;}
+function _ex(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+async function _xlSheetPath(zip,name){
+  const wb=await zip.file('xl/workbook.xml').async('text');
+  const rl=await zip.file('xl/_rels/workbook.xml.rels').async('text');
+  const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/&/g,'&amp;');
+  const nm=wb.match(new RegExp(`<sheet[^>]+name="${escaped}"[^>]+r:id="([^"]+)"`));
+  if(!nm)return null;
+  const fm=rl.match(new RegExp(`<Relationship[^>]+Id="${nm[1]}"[^>]+Target="([^"]+)"`));
+  if(!fm)return null;
+  const t=fm[1];
+  return t.startsWith('/')?t.slice(1):t.startsWith('worksheets/')?`xl/${t}`:`xl/worksheets/${t}`;
+}
+
+function _xlSetCell(xml,rowIdx,colIdx,value,type){
+  const r=rowIdx+1, c=_xlCol(colIdx), ref=c+r;
+  const cell=type==='n'
+    ?`<c r="${ref}"><v>${value}</v></c>`
+    :`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${_ex(String(value))}</t></is></c>`;
+  // Replace existing cell
+  const cRe=new RegExp(`<c\\s+r="${ref}"(?:\\s[^>]*)?>(?:[\\s\\S]*?</c>|/>`);
+  if(cRe.test(xml))return xml.replace(cRe,cell);
+  // Append to existing row
+  const rRe=new RegExp(`(<row\\b[^>]*\\br="${r}"[^>]*>)([\\s\\S]*?)(</row>)`);
+  const rm=xml.match(rRe);
+  if(rm)return xml.replace(rRe,rm[1]+rm[2]+cell+rm[3]);
+  // Insert new row before </sheetData>
+  return xml.replace('</sheetData>',`<row r="${r}">${cell}</row></sheetData>`);
+}
+
+async function _xlApply(origBuf,sheetUpdates){
+  // sheetUpdates: [{name, updates:[{r,c,v,t}]}]
+  const zip=await JSZip.loadAsync(origBuf);
+  for(const su of sheetUpdates){
+    const path=await _xlSheetPath(zip,su.name);
+    if(!path){console.warn('Sheet not found:',su.name);continue;}
+    let xml=await zip.file(path).async('text');
+    for(const u of su.updates)xml=_xlSetCell(xml,u.r,u.c,u.v,u.t||'s');
+    zip.file(path,xml);
+  }
+  return zip.generateAsync({type:'arraybuffer',compression:'DEFLATE',compressionOptions:{level:1}});
+}
+
+/* ══════════════════════════════════════════
    APP KSCL
 ══════════════════════════════════════════ */
 function rAppKSCL(){
@@ -1302,28 +1351,26 @@ function nsLog(lines){
   el.scrollTop=el.scrollHeight;
 }
 
-function nsRun(){
+async function nsRun(){
   const inp=document.getElementById('ns-file');
   if(!inp?.files[0]){nsLog(['❌ Chưa chọn file']);return;}
   const file=inp.files[0];
   nsLog(['⏳ Đang đọc file...']);
-  const rd=new FileReader();
-  rd.onload=e=>{
-    try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellStyles:true,cellNF:true});
-      const res=nsProcess(wb,file.name);
-      nsLog(res.log);
-      if(res.ok){
-        const out=XLSX.write(res.wb,{type:'array',bookType:'xlsx',cellStyles:true});
-        const a=document.createElement('a');
-        a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
-        a.download=file.name.replace(/\.xlsx$/i,'_KetQua.xlsx');
-        a.click();
-        nsLog([...res.log,'','✅ Đã tải file kết quả về!']);
-      }
-    }catch(err){nsLog([`❌ Lỗi: ${err.message}`]);}
-  };
-  rd.readAsArrayBuffer(file);
+  const buf=await file.arrayBuffer();
+  try{
+    const wb=XLSX.read(new Uint8Array(buf),{type:'array'});
+    const res=nsProcess(wb,file.name);
+    nsLog(res.log);
+    if(res.ok){
+      nsLog([...res.log,'⏳ Đang tạo file...']);
+      const out=await _xlApply(buf,[{name:res.ssName,updates:res.updates}]);
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+      a.download=file.name.replace(/\.xlsx$/i,'_KetQua.xlsx');
+      a.click();
+      nsLog([...res.log,'','✅ Đã tải file kết quả về!']);
+    }
+  }catch(err){nsLog([`❌ Lỗi: ${err.message}`]);}
 }
 
 function nsProcess(wb,fname){
@@ -1411,15 +1458,15 @@ function nsProcess(wb,fname){
     return reasons.length?reasons.join('; '):`Lệch ${Math.round(Math.abs(ssQty))} sp – chưa xác định được chứng từ cụ thể`;
   };
 
-  const ws=wb.Sheets[ssName];
+  const updates=[];
   let lech=0,khop=0;
   for(const item of items){
     const ld=genLyDo(item.maSP,item.ssQty);
-    ws[XLSX.utils.encode_cell({r:item.rowIdx-1,c:colLyDo})]={v:ld,t:'s'};
+    updates.push({r:item.rowIdx-1,c:colLyDo,v:ld,t:'s'});
     if(item.ssQty!==0)lech++;else khop++;
   }
   log.push(`   ✓ ${khop} mã khớp  |  ${lech} mã lệch`,'═══ HOÀN THÀNH ═══');
-  return{ok:true,log,wb};
+  return{ok:true,log,ssName,updates};
 }
 
 function rBBKK(){
@@ -1459,33 +1506,29 @@ function bbLog(lines){
   el.scrollTop=el.scrollHeight;
 }
 
-function bbkkRun(){
+async function bbkkRun(){
   const inpD=document.getElementById('bbkk-dmhh');
   const inpF=document.getElementById('bbkk-file');
   if(!inpD?.files[0]||!inpF?.files[0]){bbLog(['❌ Cần chọn đủ 2 file: DMHH và BBKK']);return;}
   bbLog(['⏳ Đang đọc file...']);
-  const rdD=new FileReader();
-  rdD.onload=eD=>{
-    const rdF=new FileReader();
-    rdF.onload=eF=>{
-      try{
-        const wbD=XLSX.read(new Uint8Array(eD.target.result),{type:'array',cellStyles:true,cellNF:true});
-        const wbF=XLSX.read(new Uint8Array(eF.target.result),{type:'array',cellStyles:true,cellNF:true});
-        const res=bbkkProcess(wbD,wbF,inpF.files[0].name);
-        bbLog(res.log);
-        if(res.ok){
-          const out=XLSX.write(res.wb,{type:'array',bookType:'xlsx',cellStyles:true});
-          const a=document.createElement('a');
-          a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
-          a.download=inpF.files[0].name.replace(/\.xlsx$/i,'_ketqua.xlsx');
-          a.click();
-          bbLog([...res.log,'','✅ Đã tải file kết quả về!']);
-        }
-      }catch(err){bbLog([`❌ Lỗi: ${err.message}`]);}
-    };
-    rdF.readAsArrayBuffer(inpF.files[0]);
-  };
-  rdD.readAsArrayBuffer(inpD.files[0]);
+  try{
+    const [bufD,bufF]=await Promise.all([inpD.files[0].arrayBuffer(),inpF.files[0].arrayBuffer()]);
+    const wbD=XLSX.read(new Uint8Array(bufD),{type:'array'});
+    const wbF=XLSX.read(new Uint8Array(bufF),{type:'array'});
+    const res=bbkkProcess(wbD,wbF,inpF.files[0].name);
+    bbLog(res.log);
+    if(res.ok){
+      bbLog([...res.log,'⏳ Đang tạo file...']);
+      const sheetUpd=[{name:res.bbName,updates:res.bbUpdates}];
+      if(res.dxName&&res.dxUpdates.length)sheetUpd.push({name:res.dxName,updates:res.dxUpdates});
+      const out=await _xlApply(bufF,sheetUpd);
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+      a.download=inpF.files[0].name.replace(/\.xlsx$/i,'_ketqua.xlsx');
+      a.click();
+      bbLog([...res.log,'','✅ Đã tải file kết quả về!']);
+    }
+  }catch(err){bbLog([`❌ Lỗi: ${err.message}`]);}
 }
 
 function bbkkProcess(wbD,wbF,fname){
@@ -1605,32 +1648,25 @@ function bbkkProcess(wbD,wbF,fname){
   }
   log.push(`   → Tổng gợi ý đền bù: ${vfmt(denBuTong)}đ`);
 
-  // ── Ghi trực tiếp vào wbF (giữ toàn bộ style/border gốc) ─────
-  const wsBB=wbF.Sheets[bbName];
-  const rng=XLSX.utils.decode_range(wsBB['!ref']||'A1:P100');
-  if(rng.e.c<18)rng.e.c=18;
-  wsBB['!ref']=XLSX.utils.encode_range(rng);
-  // Header labels (row index 5 = dòng 6)
-  ['Check','Nhầm mã','Đề xuất ĐB'].forEach((v,i)=>{
-    wsBB[XLSX.utils.encode_cell({r:5,c:16+i})]={v,t:'s'};
-  });
+  // ── Build update lists (không chỉnh workbook — dùng JSZip để write) ──
+  const bbUpdates=[];
+  // Header dòng 6 (index 5)
+  ['Check','Nhầm mã','Đề xuất ĐB'].forEach((v,i)=>bbUpdates.push({r:5,c:16+i,v,t:'s'}));
   for(const d of data){
     const er=d.excelRow-1;
-    wsBB[XLSX.utils.encode_cell({r:er,c:16})]={v:d.HoTro,t:'s'};
+    bbUpdates.push({r:er,c:16,v:d.HoTro,t:'s'});
     const{hopLe}=nhamMap[d.origRow]||{};
-    if(hopLe===true)wsBB[XLSX.utils.encode_cell({r:er,c:17})]={v:'✓ Hợp lệ',t:'s'};
-    else if(hopLe===false)wsBB[XLSX.utils.encode_cell({r:er,c:17})]={v:'✗ Không hợp lệ',t:'s'};
-    if(d.HoTro==='Không hỗ trợ'&&d.CL_net<0)
-      wsBB[XLSX.utils.encode_cell({r:er,c:18})]={v:Math.abs(d.CL_net),t:'n'};
+    if(hopLe===true)bbUpdates.push({r:er,c:17,v:'✓ Hợp lệ',t:'s'});
+    else if(hopLe===false)bbUpdates.push({r:er,c:17,v:'✗ Không hợp lệ',t:'s'});
+    if(d.HoTro==='Không hỗ trợ'&&d.CL_net<0)bbUpdates.push({r:er,c:18,v:Math.abs(d.CL_net),t:'n'});
   }
 
-  // ── Ghi vào sheet Đề xuất ─────────────────────────────────────
+  // ── Đề xuất sheet ──────────────────────────────────────────────
   const dxName=wbF.SheetNames.find(s=>s.trim()==='Đề xuất');
+  const dxUpdates=[];
   if(dxName){
-    const wsDX=wbF.Sheets[dxName];
     const ksclText=`[KSCL KIỂM TRA]\nHT: ${vfmt(htNet)}đ | KHT: ${vfmt(khtNet)}đ | Tổng CL: ${vfmt(tongCL)}đ\nLoại Hàng KHT NET âm:\n${bdSeries.map(([l,v])=>`  ${l}: ${vfmt(v)}đ → ĐB: ${vfmt(Math.abs(v))}đ`).join('\n')||'  (Không có)'}\n→ TỔNG GỢI Ý ĐỀN BÙ: ${vfmt(denBuTong)}đ${nHL?`\nNhầm mã: ${nHL} hợp lệ${nKHL?' / '+nKHL+' KHL':''}`:''}`  ;
-    // Tìm header "Check" trong 20 dòng đầu (giống Python gốc)
-    const rawDX=XLSX.utils.sheet_to_json(wsDX,{header:1,defval:null,raw:true});
+    const rawDX=XLSX.utils.sheet_to_json(wbF.Sheets[dxName],{header:1,defval:null,raw:true});
     let chkR=-1,chkC=-1;
     for(let r=0;r<Math.min(rawDX.length,20)&&chkR<0;r++){
       const row=rawDX[r]||[];
@@ -1639,20 +1675,16 @@ function bbkkProcess(wbD,wbF,fname){
       }
     }
     if(chkR>=0){
-      // Type A: điền ngay dưới header Check
-      wsDX[XLSX.utils.encode_cell({r:chkR+1,c:chkC})]={v:ksclText,t:'s'};
-      log.push(`   ✓ Đã ghi KSCL vào ô Check (dòng ${chkR+2})`);
+      dxUpdates.push({r:chkR+1,c:chkC,v:ksclText,t:'s'});
+      log.push(`   ✓ Ghi KSCL vào ô Check (dòng ${chkR+2}, cột ${_xlCol(chkC)})`);
     } else {
-      // Type B: tìm dòng "Tổng" rồi chèn sau
       let tongR=-1;
       for(let r=0;r<rawDX.length;r++){
         if((rawDX[r]||[]).some(c=>/^tổng$|^tong$/i.test(String(c||'').trim()))){tongR=r;break;}
       }
-      const insR=tongR>=0?tongR+1:(XLSX.utils.decode_range(wsDX['!ref']||'A1').e.r+2);
-      wsDX[XLSX.utils.encode_cell({r:insR,c:0})]={v:ksclText,t:'s'};
-      const dr=XLSX.utils.decode_range(wsDX['!ref']||'A1:A1');
-      if(insR>dr.e.r){dr.e.r=insR;wsDX['!ref']=XLSX.utils.encode_range(dr);}
-      log.push(`   ✓ Đã ghi KSCL vào Đề xuất (dòng ${insR+1})`);
+      const insR=tongR>=0?tongR+1:(XLSX.utils.decode_range(wbF.Sheets[dxName]['!ref']||'A1').e.r+2);
+      dxUpdates.push({r:insR,c:0,v:ksclText,t:'s'});
+      log.push(`   ✓ Ghi KSCL vào Đề xuất (dòng ${insR+1})`);
     }
   }
 
@@ -1661,7 +1693,7 @@ function bbkkProcess(wbD,wbF,fname){
     ntf.slice(0,5).forEach(d=>log.push(`      ${d.MaSP}  ${d.TenSP.slice(0,50)}`));
   }
   log.push('═══ HOÀN THÀNH ═══');
-  return{ok:true,log,wb:wbF};
+  return{ok:true,log,bbName,bbUpdates,dxName:dxName||null,dxUpdates};
 }
 
 function vfmt(n){return(Math.round(n)||0).toLocaleString('vi-VN');}
