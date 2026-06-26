@@ -202,6 +202,21 @@ tbody tr:last-child{border-bottom:none}
 .btn-back{background:#f1f5f9;color:var(--t2);border:1px solid var(--border);border-radius:7px;padding:7px 14px;font-size:13px;cursor:pointer;transition:.15s}
 .btn-back:hover{background:#e2e8f0;color:var(--t1)}
 
+/* GUIDE ACCORDION */
+.guide-acc{border:1px solid #dde5ff;border-radius:10px;margin-bottom:16px;overflow:hidden}
+.guide-tog{display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 16px;background:#f0f4ff;border:none;cursor:pointer;font-size:13.5px;font-weight:600;color:#3730a3;text-align:left;gap:8px}
+.guide-tog:hover{background:#e8eeff}
+.guide-body{padding:16px 18px;background:#fff;border-top:1px solid #dde5ff}
+.guide-step{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start}
+.guide-num{min-width:22px;height:22px;border-radius:50%;background:#4f46e5;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.guide-img{max-width:100%;border:1px solid var(--border);border-radius:8px;display:block;margin:8px 0}
+.guide-img-ph{border:2px dashed #c7d2fe;border-radius:8px;padding:18px;text-align:center;color:#818cf8;font-size:12.5px;margin:8px 0;background:#fafbff}
+.guide-dl{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-size:13px;font-weight:500;text-decoration:none;border:1px solid #bfdbfe;margin:4px 4px 0 0}
+.guide-dl:hover{background:#dbeafe;color:#1e40af}
+.guide-note{background:#fefce8;border-left:3px solid #fcd34d;padding:8px 12px;border-radius:0 6px 6px 0;font-size:12.5px;color:#92400e;margin:10px 0}
+.guide-sep{height:1px;background:#e8eeff;margin:12px 0}
+.guide-tag{display:inline-block;background:#e0e7ff;color:#3730a3;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;margin-right:4px}
+
 /* TREE EDITOR */
 .tree-ed{border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#fff}
 .te-bar{padding:10px 14px;background:#f8f9fc;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
@@ -1537,6 +1552,15 @@ function rAppKSCL(){
 </div>`;
 }
 
+function toggleGuide(id){
+  const b=document.getElementById('guide-body-'+id);
+  const c=document.getElementById('guide-chv-'+id);
+  if(!b)return;
+  const open=b.style.display==='none';
+  b.style.display=open?'block':'none';
+  if(c)c.style.transform=open?'rotate(180deg)':'rotate(0deg)';
+}
+
 /* ── KIỂM KÊ ĐỘT XUẤT ──────────────────────────────────────────── */
 let _kkdxRawWb=null,_kkdxNavRaw=null,_kkdxNavWb=null;
 const NGANH_ABBR={'CHĂM SÓC SẮC ĐẸP':'CSSĐ','CHĂM SÓC SỨC KHỎE':'CSSK','CHĂM SÓC HÀNG NGÀY':'CSHN','THỰC PHẨM':'TP','BỈM':'Bỉm','SỮA':'Sữa','ĐỒ CHO MẸ BÉ':'MB','NHÀ CỬA ĐỜI SỐNG':'NCĐS','THỜI TRANG':'TT','VĂN PHÒNG PHẨM':'VPP','NGÀNH KHÁC':'Khác'};
@@ -1544,6 +1568,61 @@ const NGANH_ABBR={'CHĂM SÓC SẮC ĐẸP':'CSSĐ','CHĂM SÓC SỨC KHỎE':'C
 function rKKDX(){return`
 <div class="breadcrumb"><span onclick="go('appkscl')">APP KSCL</span> › Kiểm kê đột xuất</div>
 <div class="sec-hdr"><h1>🔍 Kiểm kê đột xuất</h1></div>
+
+<div class="guide-acc">
+  <button class="guide-tog" onclick="toggleGuide('kkdx')">
+    <span>📖 Hướng dẫn sử dụng</span>
+    <span id="guide-chv-kkdx" style="font-size:11px;transition:transform .25s">▼</span>
+  </button>
+  <div id="guide-body-kkdx" style="display:none">
+    <div class="guide-body">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           VÙNG NỘI DUNG — chỉnh sửa trực tiếp tại đây
+           • Thêm văn bản:  viết vào thẻ <p> hoặc <div>
+           • Thêm ảnh:      <img src="guides/hinh.png" class="guide-img" alt="mô tả">
+           • Thêm file:     <a href="guides/file.xlsx" class="guide-dl" download>📥 Tên file</a>
+           ════════════════════════════════════════════════════════ -->
+
+      <div class="guide-step">
+        <div class="guide-num">1</div>
+        <div><strong>File thô (bắn hàng)</strong> — Excel xuất từ máy bắn hàng<br>
+          <span style="font-size:12.5px;color:var(--t2)">Sheet tên <span class="guide-tag">Data</span> · Cột <span class="guide-tag">MaVach</span> (barcode) · Cột <span class="guide-tag">SoLuongKiem</span> (số lượng đếm)</span>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">2</div>
+        <div><strong>File tồn HT (NAV)</strong> — báo cáo tồn kho từ hệ thống<br>
+          <span style="font-size:12.5px;color:var(--t2)">Tiêu đề ở <strong>dòng 6</strong> · Cần cột: <span class="guide-tag">Ngành</span> <span class="guide-tag">Mã kho</span> <span class="guide-tag">Barcode</span> <span class="guide-tag">Mã SP</span> <span class="guide-tag">Tên SP</span> <span class="guide-tag">Giá BL</span> <span class="guide-tag">Accounting Inventory</span> <span class="guide-tag">Qty On POS Sold Not Posted</span></span>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">3</div>
+        <div><strong>Chọn ngành</strong> → nhấn <em>Chạy kiểm kê</em><br>
+          <span style="font-size:12.5px;color:var(--t2)">Phần mềm tự khớp kho theo barcode, chỉ giữ lại các mã có <strong>chênh lệch ≠ 0</strong>. Hàng <span class="guide-tag">TT=0</span> (chưa bắn) nằm cuối, cột Ghi chú đã đánh dấu.</span>
+        </div>
+      </div>
+      <div class="guide-note">⚠ Đảm bảo file thô có sheet đúng tên <strong>Data</strong> (phân biệt hoa thường).</div>
+
+      <div class="guide-sep"></div>
+
+      <!-- FILE MẪU — thêm file vào thư mục guides/ trong repo rồi điền href bên dưới -->
+      <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--t2)">📎 File mẫu tham khảo:</div>
+      <!-- <a href="guides/mau-file-tho.xlsx" class="guide-dl" download>📥 File thô mẫu</a> -->
+      <!-- <a href="guides/mau-file-HT.xlsx" class="guide-dl" download>📥 File HT mẫu</a> -->
+      <div class="guide-img-ph">Chưa có file mẫu — xóa dòng chú thích phía trên và thêm link file vào thư mục <code>guides/</code></div>
+
+      <div class="guide-sep"></div>
+
+      <!-- HÌNH ẢNH — upload ảnh vào guides/ rồi bỏ chú thích thẻ img bên dưới -->
+      <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--t2)">🖼️ Hình ảnh hướng dẫn:</div>
+      <!-- <img src="guides/hdsd-kkdx.png" class="guide-img" alt="Hướng dẫn Kiểm kê đột xuất"> -->
+      <div class="guide-img-ph">Chưa có ảnh — upload ảnh vào <code>guides/</code> và bỏ comment thẻ &lt;img&gt; phía trên</div>
+
+    </div>
+  </div>
+</div>
+
 <div class="card" style="padding:20px;margin-bottom:16px">
   <div style="margin-bottom:14px">
     <label style="font-size:13px;color:var(--t2);display:block;margin-bottom:6px">① File thô (bắn hàng) — sheet "Data", cột MaVach + SoLuongKiem:</label>
@@ -1713,6 +1792,56 @@ function rNavSml(){
   return`
 <div class="breadcrumb"><span onclick="go('appkscl')">APP KSCL</span> › So sánh NAV vs SML</div>
 <div class="sec-hdr"><h1>🔄 So sánh NAV vs SML/Hapi</h1></div>
+
+<div class="guide-acc">
+  <button class="guide-tog" onclick="toggleGuide('navsml')">
+    <span>📖 Hướng dẫn sử dụng</span>
+    <span id="guide-chv-navsml" style="font-size:11px;transition:transform .25s">▼</span>
+  </button>
+  <div id="guide-body-navsml" style="display:none">
+    <div class="guide-body">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           VÙNG NỘI DUNG — chỉnh sửa trực tiếp tại đây
+           • Thêm văn bản:  viết vào thẻ <p> hoặc <div>
+           • Thêm ảnh:      <img src="guides/hinh.png" class="guide-img" alt="mô tả">
+           • Thêm file:     <a href="guides/file.xlsx" class="guide-dl" download>📥 Tên file</a>
+           ════════════════════════════════════════════════════════ -->
+
+      <div class="guide-step">
+        <div class="guide-num">1</div>
+        <div><strong>File Excel cần có đúng 3 sheet:</strong><br>
+          <ul style="margin:6px 0 0 0;padding-left:18px;font-size:12.5px;color:var(--t2);line-height:1.9">
+            <li><span class="guide-tag">So sánh nhập</span> (tên sheet có chứa "so" và "nh") — cột <strong>Mã SP</strong>, <strong>SS</strong> (số lệch), <strong>Lý do</strong></li>
+            <li><span class="guide-tag">NAV</span> — cột Mã hàng, Số lượng, Mã số nhận / Chứng từ</li>
+            <li><span class="guide-tag">SML</span> hoặc <span class="guide-tag">HAPI</span> — cột 3: Mã hàng · cột 5: Số lượng · cột 7: Mã đơn · cột 8: Loại (Xuất/Nhập)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">2</div>
+        <div><strong>Upload file → nhấn Chạy so sánh</strong><br>
+          <span style="font-size:12.5px;color:var(--t2)">Cột <em>Lý do</em> trong sheet So sánh sẽ được điền tự động. File tải về là bản gốc đã cập nhật, không mất định dạng.</span>
+        </div>
+      </div>
+      <div class="guide-note">⚠ Cột <strong>SS</strong> phải chứa số lệch (≠ 0) thì mới sinh lý do. Mã SP có SS = 0 sẽ bỏ qua.</div>
+
+      <div class="guide-sep"></div>
+
+      <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--t2)">📎 File mẫu tham khảo:</div>
+      <!-- <a href="guides/mau-navsml.xlsx" class="guide-dl" download>📥 File mẫu So sánh NAV-SML</a> -->
+      <div class="guide-img-ph">Chưa có file mẫu — xóa dòng chú thích phía trên và thêm link file vào thư mục <code>guides/</code></div>
+
+      <div class="guide-sep"></div>
+
+      <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--t2)">🖼️ Hình ảnh hướng dẫn:</div>
+      <!-- <img src="guides/hdsd-navsml.png" class="guide-img" alt="Hướng dẫn So sánh NAV vs SML"> -->
+      <div class="guide-img-ph">Chưa có ảnh — upload ảnh vào <code>guides/</code> và bỏ comment thẻ &lt;img&gt; phía trên</div>
+
+    </div>
+  </div>
+</div>
+
 <div class="card" style="padding:20px;margin-bottom:16px">
   <p style="color:var(--t2);font-size:13px;margin:0 0 14px">Yêu cầu: file Excel có 3 sheet — <strong>So sánh</strong> (tên chứa "so" và "nh"), <strong>NAV</strong>, <strong>SML</strong> hoặc <strong>HAPI</strong><br>
   Kết quả: cột <em>Lý do</em> sẽ được điền tự động cho từng mã lệch.</p>
@@ -1864,6 +1993,67 @@ function rBBKK(){
   return`
 <div class="breadcrumb"><span onclick="go('appkscl')">APP KSCL</span> › BBKK Kiểm kê</div>
 <div class="sec-hdr"><h1>📋 Xử lý BBKK Kiểm kê</h1></div>
+
+<div class="guide-acc">
+  <button class="guide-tog" onclick="toggleGuide('bbkk')">
+    <span>📖 Hướng dẫn sử dụng</span>
+    <span id="guide-chv-bbkk" style="font-size:11px;transition:transform .25s">▼</span>
+  </button>
+  <div id="guide-body-bbkk" style="display:none">
+    <div class="guide-body">
+
+      <!-- ═══════════════════════════════════════════════════════════
+           VÙNG NỘI DUNG — chỉnh sửa trực tiếp tại đây
+           • Thêm văn bản:  viết vào thẻ <p> hoặc <div>
+           • Thêm ảnh:      <img src="guides/hinh.png" class="guide-img" alt="mô tả">
+           • Thêm file:     <a href="guides/file.xlsx" class="guide-dl" download>📥 Tên file</a>
+           ════════════════════════════════════════════════════════ -->
+
+      <div class="guide-step">
+        <div class="guide-num">1</div>
+        <div><strong>File DMHH</strong> (Danh mục hàng hóa)<br>
+          <ul style="margin:6px 0 0 0;padding-left:18px;font-size:12.5px;color:var(--t2);line-height:1.9">
+            <li><span class="guide-tag">Sheet0</span> — danh sách mã <strong>Hỗ trợ (HT)</strong> · tiêu đề ở dòng 5 · cột <strong>Mã hàng</strong> bắt buộc</li>
+            <li><span class="guide-tag">Sheet1</span> — danh sách mã <strong>Không hỗ trợ (KHT)</strong> · tiêu đề ở dòng 1 · cột <strong>Mã hàng</strong> bắt buộc</li>
+          </ul>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">2</div>
+        <div><strong>File BBKK</strong> (Biên bản kiểm kê)<br>
+          <span style="font-size:12.5px;color:var(--t2)">Sheet tên <span class="guide-tag">BBKK</span> · Dữ liệu từ <strong>dòng 9</strong> · 16 cột A→P:</span>
+          <div style="margin-top:6px;font-size:11.5px;color:var(--t2);background:#f8f9fc;border-radius:6px;padding:8px 10px;line-height:2">
+            A: STT &nbsp;·&nbsp; B: Loại Hàng &nbsp;·&nbsp; C: Mã SP &nbsp;·&nbsp; D: Barcode &nbsp;·&nbsp; E: Tên SP &nbsp;·&nbsp; F: Giá<br>
+            G: SL PM &nbsp;·&nbsp; H: SL TT &nbsp;·&nbsp; I: Trước KK &nbsp;·&nbsp; J: KK &nbsp;·&nbsp; K: SL Thừa &nbsp;·&nbsp; L: TG Thừa<br>
+            M: SL Thiếu &nbsp;·&nbsp; N: TG Thiếu &nbsp;·&nbsp; <strong>O: Lý Do</strong> &nbsp;·&nbsp; P: Ngày ĐC
+          </div>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">3</div>
+        <div><strong>Kết quả</strong> — 3 cột Q/R/S được thêm vào file gốc:<br>
+          <span style="font-size:12.5px;color:var(--t2)"><span class="guide-tag">Q</span> Check (HT/KHT) &nbsp;·&nbsp; <span class="guide-tag">R</span> Nhầm mã (hợp lệ/không) &nbsp;·&nbsp; <span class="guide-tag">S</span> Đề xuất đền bù &nbsp;·&nbsp; Sheet <span class="guide-tag">Đề xuất</span> được điền tóm tắt KSCL</span>
+        </div>
+      </div>
+      <div class="guide-note">⚠ Cột Lý do (O): ghi "<strong>bán nhầm sang mã 153746</strong>" hoặc barcode — phần mềm tự kiểm tra tính hợp lệ của mã đối ứng.</div>
+
+      <div class="guide-sep"></div>
+
+      <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--t2)">📎 File mẫu tham khảo:</div>
+      <!-- <a href="guides/mau-DMHH.xlsx" class="guide-dl" download>📥 File DMHH mẫu</a> -->
+      <!-- <a href="guides/mau-BBKK.xlsx" class="guide-dl" download>📥 File BBKK mẫu</a> -->
+      <div class="guide-img-ph">Chưa có file mẫu — xóa dòng chú thích phía trên và thêm link file vào thư mục <code>guides/</code></div>
+
+      <div class="guide-sep"></div>
+
+      <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--t2)">🖼️ Hình ảnh hướng dẫn:</div>
+      <!-- <img src="guides/hdsd-bbkk.png" class="guide-img" alt="Hướng dẫn BBKK Kiểm kê"> -->
+      <div class="guide-img-ph">Chưa có ảnh — upload ảnh vào <code>guides/</code> và bỏ comment thẻ &lt;img&gt; phía trên</div>
+
+    </div>
+  </div>
+</div>
+
 <div class="card" style="padding:20px;margin-bottom:16px">
   <div style="margin-bottom:14px">
     <label style="font-size:13px;color:var(--t2);display:block;margin-bottom:6px">① File DMHH (danh mục hàng hóa — Sheet0: Hỗ trợ, Sheet1: Không hỗ trợ):</label>
