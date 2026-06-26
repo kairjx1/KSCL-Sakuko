@@ -2358,5 +2358,235 @@ function vfmt(n){return(Math.round(n)||0).toLocaleString('vi-VN');}
 ══════════════════════════════════════════ */
 render();
 </script>
+
+<!-- ══════════════════════════════════════════════════════════
+     KSCL TEAM CHAT — Firebase Realtime Database
+══════════════════════════════════════════════════════════ -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+#chat-fab{position:fixed;bottom:24px;right:24px;width:54px;height:54px;border-radius:50%;background:#4f46e5;color:#fff;border:none;cursor:pointer;font-size:22px;display:none;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(79,70,229,.45);z-index:9000;transition:transform .15s}
+#chat-fab:hover{transform:scale(1.1)}
+#chat-badge{position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:10px;font-weight:700;border-radius:50%;min-width:18px;height:18px;padding:0 3px;display:none;align-items:center;justify-content:center;line-height:1}
+#chat-panel{position:fixed;bottom:90px;right:24px;width:320px;height:460px;border-radius:16px;background:#fff;border:1px solid #c7d2fe;box-shadow:0 8px 32px rgba(79,70,229,.2);z-index:8999;display:none;flex-direction:column;overflow:hidden}
+#chat-hdr{background:#4f46e5;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+#chat-hdr-info{line-height:1.4}
+#chat-hdr-title{font-size:14px;font-weight:700}
+#chat-hdr-sub{font-size:11px;opacity:.75}
+#chat-close-btn{background:none;border:none;color:#fff;cursor:pointer;font-size:20px;padding:0;line-height:1;opacity:.8}
+#chat-close-btn:hover{opacity:1}
+#chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth}
+#chat-msgs::-webkit-scrollbar{width:4px}
+#chat-msgs::-webkit-scrollbar-thumb{background:#c7d2fe;border-radius:2px}
+.cht-row-me{display:flex;justify-content:flex-end}
+.cht-row-other{display:flex;gap:7px;align-items:flex-end}
+.cht-av{width:26px;height:26px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#3730a3;flex-shrink:0}
+.cht-bub-me{background:#4f46e5;color:#fff;padding:7px 12px;border-radius:14px 14px 3px 14px;font-size:12.5px;max-width:210px;line-height:1.55;word-break:break-word}
+.cht-bub-other{background:#f0f4ff;color:#1e1b4b;padding:7px 12px;border-radius:14px 14px 14px 3px;font-size:12.5px;max-width:210px;line-height:1.55;word-break:break-word}
+.cht-meta-me{font-size:10px;color:#94a3b8;text-align:right;margin-top:2px}
+.cht-name{font-size:10px;font-weight:700;color:#6366f1;margin-bottom:2px}
+.cht-meta-other{font-size:10px;color:#94a3b8;margin-top:2px}
+.cht-date-sep{text-align:center;font-size:10.5px;color:#94a3b8;margin:6px 0;flex-shrink:0}
+#chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#94a3b8;font-size:12.5px;text-align:center;padding:16px}
+#chat-bottom{padding:10px;border-top:1px solid #e0e7ff;display:flex;gap:8px;flex-shrink:0;align-items:center}
+#chat-inp{flex:1;border:1.5px solid #c7d2fe;border-radius:20px;padding:8px 14px;font-size:13px;outline:none;font-family:inherit;line-height:1.4}
+#chat-inp:focus{border-color:#4f46e5}
+#chat-send-btn{width:36px;height:36px;border-radius:50%;background:#4f46e5;color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
+#chat-send-btn:hover{background:#3730a3}
+#chat-name-dlg{position:absolute;inset:0;background:rgba(255,255,255,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px;text-align:center;z-index:10}
+#chat-name-dlg p{font-size:14px;font-weight:600;color:#1e1b4b;margin:0}
+#chat-name-dlg small{font-size:12px;color:#6b7280;margin-top:-8px}
+#chat-name-input{width:100%;border:1.5px solid #c7d2fe;border-radius:8px;padding:10px 14px;font-size:14px;outline:none;text-align:center;font-family:inherit;box-sizing:border-box}
+#chat-name-input:focus{border-color:#4f46e5}
+#chat-name-ok{width:100%;padding:11px;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+#chat-name-ok:hover{background:#3730a3}
+</style>
+
+<!-- FAB button -->
+<button id="chat-fab" onclick="chatToggle()" title="Team Chat">
+  <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <span id="chat-badge"></span>
+</button>
+
+<!-- Chat panel -->
+<div id="chat-panel">
+  <div id="chat-hdr">
+    <div id="chat-hdr-info">
+      <div id="chat-hdr-title">💬 KSCL Team Chat</div>
+      <div id="chat-hdr-sub">Chat nội bộ nhóm KSCL</div>
+    </div>
+    <button id="chat-close-btn" onclick="chatToggle()">✕</button>
+  </div>
+  <div id="chat-msgs">
+    <div id="chat-empty">
+      <span style="font-size:36px">💬</span>
+      <span>Chưa có tin nhắn nào.<br>Hãy bắt đầu cuộc trò chuyện!</span>
+    </div>
+  </div>
+  <div id="chat-bottom">
+    <input id="chat-inp" type="text" placeholder="Nhập tin nhắn..." maxlength="500" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend()}">
+    <button id="chat-send-btn" onclick="chatSend()" title="Gửi">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>
+  <!-- Name setup dialog (shown first time) -->
+  <div id="chat-name-dlg">
+    <span style="font-size:40px">👋</span>
+    <p>Nhập tên của bạn để chat</p>
+    <small>Tên sẽ hiển thị với mọi người trong nhóm</small>
+    <input id="chat-name-input" type="text" placeholder="Tên hiển thị..." maxlength="30"
+      onkeydown="if(event.key==='Enter')chatSaveName()">
+    <button id="chat-name-ok" onclick="chatSaveName()">Bắt đầu chat →</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const FB = {
+    apiKey:"AIzaSyBetoDgdhDgfVQsvNZVlpoNs_2CWvYZs6A",
+    authDomain:"kscl-chat.firebaseapp.com",
+    databaseURL:"https://kscl-chat-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:"kscl-chat",
+    storageBucket:"kscl-chat.firebasestorage.app",
+    messagingSenderId:"6881095822",
+    appId:"1:6881095822:web:613bd09724ed74564419df"
+  };
+
+  let db=null, msgsRef=null, fbInited=false;
+  let panelOpen=false, unread=0;
+
+  const myUid=(()=>{
+    let id=localStorage.getItem('kscl_uid');
+    if(!id){id='u'+Math.random().toString(36).slice(2,9);localStorage.setItem('kscl_uid',id);}
+    return id;
+  })();
+  let myName=localStorage.getItem('kscl_name')||'';
+
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  function fmtTime(ts){
+    const d=new Date(ts);
+    return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+  }
+  function fmtDate(ts){
+    const d=new Date(ts),t=new Date();
+    if(d.toDateString()===t.toDateString())return 'Hôm nay';
+    const y=d.getFullYear(),m=d.getMonth()+1,day=d.getDate();
+    if(y===t.getFullYear())return `${day} tháng ${m}`;
+    return `${day}/${m}/${y}`;
+  }
+
+  let lastDateLabel='';
+  function renderMsg(msg){
+    const box=document.getElementById('chat-msgs');
+    const empty=document.getElementById('chat-empty');
+    if(empty)empty.remove();
+
+    const dateLabel=fmtDate(msg.ts||Date.now());
+    if(dateLabel!==lastDateLabel){
+      lastDateLabel=dateLabel;
+      const sep=document.createElement('div');
+      sep.className='cht-date-sep';
+      sep.textContent='— '+dateLabel+' —';
+      box.appendChild(sep);
+    }
+
+    const isMine=msg.uid===myUid;
+    const row=document.createElement('div');
+    if(isMine){
+      row.className='cht-row-me';
+      row.innerHTML=`<div>
+        <div class="cht-bub-me">${esc(msg.text)}</div>
+        <div class="cht-meta-me">${fmtTime(msg.ts||Date.now())}</div>
+      </div>`;
+    } else {
+      const init=(msg.name||'?').charAt(0).toUpperCase();
+      row.className='cht-row-other';
+      row.innerHTML=`<div class="cht-av">${esc(init)}</div><div>
+        <div class="cht-name">${esc(msg.name||'Ẩn danh')}</div>
+        <div class="cht-bub-other">${esc(msg.text)}</div>
+        <div class="cht-meta-other">${fmtTime(msg.ts||Date.now())}</div>
+      </div>`;
+    }
+    box.appendChild(row);
+    box.scrollTop=box.scrollHeight;
+  }
+
+  function initFb(){
+    if(fbInited)return;
+    fbInited=true;
+    try{
+      if(!firebase.apps.length)firebase.initializeApp(FB);
+      db=firebase.database();
+      msgsRef=db.ref('messages');
+      let firstLoad=true;
+      msgsRef.limitToLast(60).on('child_added',snap=>{
+        const msg=snap.val();
+        if(!msg)return;
+        if(!firstLoad&&!panelOpen&&msg.uid!==myUid){
+          unread++;
+          updateBadge();
+        }
+        renderMsg(msg);
+      });
+      // after initial batch, allow unread counting
+      setTimeout(()=>{firstLoad=false;},1500);
+    } catch(e){console.warn('Chat init error:',e);}
+  }
+
+  function updateBadge(){
+    const b=document.getElementById('chat-badge');
+    if(!b)return;
+    b.style.display=unread>0?'flex':'none';
+    b.textContent=unread>9?'9+':String(unread);
+  }
+
+  window.chatToggle=function(){
+    panelOpen=!panelOpen;
+    const panel=document.getElementById('chat-panel');
+    panel.style.display=panelOpen?'flex':'none';
+    if(panelOpen){
+      unread=0;updateBadge();
+      const box=document.getElementById('chat-msgs');
+      setTimeout(()=>{box.scrollTop=box.scrollHeight;},50);
+      if(myName){
+        const dlg=document.getElementById('chat-name-dlg');
+        if(dlg)dlg.style.display='none';
+        document.getElementById('chat-inp')?.focus();
+        initFb();
+      } else {
+        document.getElementById('chat-name-input')?.focus();
+      }
+    }
+  };
+
+  window.chatSaveName=function(){
+    const inp=document.getElementById('chat-name-input');
+    const n=(inp?.value||'').trim();
+    if(!n)return;
+    myName=n;
+    localStorage.setItem('kscl_name',n);
+    const dlg=document.getElementById('chat-name-dlg');
+    if(dlg)dlg.style.display='none';
+    document.getElementById('chat-inp')?.focus();
+    initFb();
+  };
+
+  window.chatSend=function(){
+    const inp=document.getElementById('chat-inp');
+    const text=(inp?.value||'').trim();
+    if(!text||!msgsRef)return;
+    msgsRef.push({uid:myUid,name:myName||'Ẩn danh',text,ts:Date.now()});
+    inp.value='';
+  };
+
+  // Show FAB after load
+  window.addEventListener('load',()=>{
+    const fab=document.getElementById('chat-fab');
+    if(fab)fab.style.display='flex';
+  });
+})();
+</script>
 </body>
 </html>
