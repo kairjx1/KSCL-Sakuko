@@ -1383,8 +1383,13 @@ async function nsRun(){
     const res=nsProcess(wb,file.name);
     nsLog(res.log);
     if(res.ok){
-      nsLog([...res.log,'⏳ Đang tạo file...']);
-      const out=await _xlApply(buf,[{name:res.ssName,updates:res.updates}]);
+      // Ghi cell trực tiếp vào workbook rồi write (không dùng cellStyles để tránh lỗi Excel)
+      const ws=wb.Sheets[res.ssName];
+      for(const u of res.updates){
+        const addr=XLSX.utils.encode_cell({r:u.r,c:u.c});
+        ws[addr]={v:u.v,t:u.t};
+      }
+      const out=XLSX.write(wb,{type:'array',bookType:'xlsx'});
       const a=document.createElement('a');
       a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
       a.download=file.name.replace(/\.xlsx$/i,'_KetQua.xlsx');
@@ -1539,10 +1544,20 @@ async function bbkkRun(){
     const res=bbkkProcess(wbD,wbF,inpF.files[0].name);
     bbLog(res.log);
     if(res.ok){
-      bbLog([...res.log,'⏳ Đang tạo file...']);
-      const sheetUpd=[{name:res.bbName,updates:res.bbUpdates}];
-      if(res.dxName&&res.dxUpdates.length)sheetUpd.push({name:res.dxName,updates:res.dxUpdates});
-      const out=await _xlApply(bufF,sheetUpd);
+      // Ghi cell trực tiếp vào workbook (không dùng cellStyles để tránh lỗi Excel)
+      const wsBB=wbF.Sheets[res.bbName];
+      for(const u of res.bbUpdates){
+        const addr=XLSX.utils.encode_cell({r:u.r,c:u.c});
+        wsBB[addr]={v:u.v,t:u.t};
+      }
+      if(res.dxName&&res.dxUpdates.length){
+        const wsDX=wbF.Sheets[res.dxName];
+        for(const u of res.dxUpdates){
+          const addr=XLSX.utils.encode_cell({r:u.r,c:u.c});
+          wsDX[addr]={v:u.v,t:u.t};
+        }
+      }
+      const out=XLSX.write(wbF,{type:'array',bookType:'xlsx'});
       const a=document.createElement('a');
       a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
       a.download=inpF.files[0].name.replace(/\.xlsx$/i,'_ketqua.xlsx');
