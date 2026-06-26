@@ -298,7 +298,7 @@ auth.onAuthStateChanged(async u=>{
       const snap=await db.ref(`profiles/${u.uid}`).get();
       if(snap.exists()){
         S.profile=snap.val();
-        if(!S.profile.role){
+        if(!S.profile.role||!ROLES[S.profile.role]){
           S.profile.role=ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer';
           db.ref(`profiles/${u.uid}/role`).set(S.profile.role);
         }
