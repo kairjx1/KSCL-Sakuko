@@ -1544,30 +1544,25 @@ async function bbkkRun(){
     const res=bbkkProcess(wbD,wbF,inpF.files[0].name);
     bbLog(res.log);
     if(res.ok){
-      bbLog([...res.log,`📋 Sheets: ${wbF.SheetNames.join(' | ')}`]);
-      // Ghi cell trực tiếp vào workbook (không dùng cellStyles để tránh lỗi Excel)
-      const wsBB=wbF.Sheets[res.bbName];
-      const rngBB=XLSX.utils.decode_range(wsBB['!ref']||'A1');
-      for(const u of res.bbUpdates){
-        const addr=XLSX.utils.encode_cell({r:u.r,c:u.c});
-        wsBB[addr]={v:u.v,t:u.t};
-        if(u.r>rngBB.e.r)rngBB.e.r=u.r;
-        if(u.c>rngBB.e.c)rngBB.e.c=u.c;
-      }
-      wsBB['!ref']=XLSX.utils.encode_range(rngBB);
-      bbLog([`📐 BBKK !ref: ${wsBB['!ref']}`]);
-      if(res.dxName&&res.dxUpdates.length){
-        const wsDX=wbF.Sheets[res.dxName];
-        const rngDX=XLSX.utils.decode_range(wsDX['!ref']||'A1');
-        for(const u of res.dxUpdates){
-          const addr=XLSX.utils.encode_cell({r:u.r,c:u.c});
-          wsDX[addr]={v:u.v,t:u.t};
-          if(u.r>rngDX.e.r)rngDX.e.r=u.r;
-          if(u.c>rngDX.e.c)rngDX.e.c=u.c;
+      bbLog([`📋 Sheets: ${wbF.SheetNames.join(' | ')}`,`📦 File gốc: ${(bufF.byteLength/1024).toFixed(0)} KB`]);
+      // Fix !ref bằng cách đếm cell key thực tế — tránh trường hợp !ref=A1:S1048576
+      function fixRef(ws,updates){
+        for(const u of updates)ws[XLSX.utils.encode_cell({r:u.r,c:u.c})]={v:u.v,t:u.t};
+        let maxR=0,maxC=0;
+        for(const k of Object.keys(ws)){
+          if(k[0]==='!')continue;
+          try{const d=XLSX.utils.decode_cell(k);if(d.r>maxR)maxR=d.r;if(d.c>maxC)maxC=d.c;}catch(e){}
         }
-        wsDX['!ref']=XLSX.utils.encode_range(rngDX);
+        ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:maxR,c:maxC}});
+        return ws['!ref'];
       }
-      bbLog([`📦 File gốc: ${(bufF.byteLength/1024).toFixed(0)} KB`,'⏳ Đang tạo file xlsx...']);
+      const bbRef=fixRef(wbF.Sheets[res.bbName],res.bbUpdates);
+      bbLog([`📐 BBKK !ref: ${bbRef}`]);
+      if(res.dxName&&res.dxUpdates.length){
+        const dxRef=fixRef(wbF.Sheets[res.dxName],res.dxUpdates);
+        bbLog([`📐 DX !ref: ${dxRef}`]);
+      }
+      bbLog(['⏳ Đang tạo file xlsx...']);
       let out;
       try{out=XLSX.write(wbF,{type:'array',bookType:'xlsx',compression:true});}
       catch(we){bbLog([`❌ SheetJS write lỗi: ${we.message}`]);return;}
@@ -1576,7 +1571,7 @@ async function bbkkRun(){
       a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
       a.download=inpF.files[0].name.replace(/\.xlsx$/i,'_ketqua.xlsx');
       a.click();
-      bbLog([...res.log,'','✅ Đã tải file kết quả về!']);
+      bbLog(['✅ Đã tải file kết quả về!']);
     }
   }catch(err){bbLog([`❌ Lỗi: ${err.message}`]);}
 }
