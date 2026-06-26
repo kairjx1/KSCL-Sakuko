@@ -1539,53 +1539,23 @@ async function bbkkRun(){
   const inpD=document.getElementById('bbkk-dmhh');
   const inpF=document.getElementById('bbkk-file');
   if(!inpD?.files[0]||!inpF?.files[0]){bbLog(['❌ Cần chọn đủ 2 file: DMHH và BBKK']);return;}
-  // Log tích lũy — không replace để dễ debug
-  const LOG=['⏳ Đang đọc file... [v20260626-4]'];bbLog(LOG);
+  const LOG=['⏳ Đang đọc file... [v20260626-5]'];bbLog(LOG);
   try{
     const [bufD,bufFRaw]=await Promise.all([inpD.files[0].arrayBuffer(),inpF.files[0].arrayBuffer()]);
-    // Xóa metadata.xml (Excel 365 Dynamic Array) khỏi file input trước khi SheetJS đọc
-    // Nếu để nguyên: SheetJS copy metadata.xml sang output nhưng bỏ cm= attribute → Excel crash
-    let bufF=bufFRaw;
-    try{
-      const inZip=await JSZip.loadAsync(bufFRaw);
-      if(inZip.file('xl/metadata.xml')){
-        inZip.remove('xl/metadata.xml');
-        const rp='xl/_rels/workbook.xml.rels';
-        if(inZip.file(rp)){
-          let rels=await inZip.file(rp).async('text');
-          rels=rels.replace(/<Relationship[^>]*sheetMetadata[^>]*\/>/g,'');
-          inZip.file(rp,rels);
-        }
-        bufF=await inZip.generateAsync({type:'arraybuffer'});
-        LOG.push('🔧 Đã xóa Dynamic Array metadata khỏi file gốc');bbLog(LOG);
-      }
-    }catch(me){LOG.push(`⚠ Không xử lý được metadata: ${me.message}`);bbLog(LOG);}
+    // SheetJS chỉ dùng để ĐỌC dữ liệu — KHÔNG dùng để ghi
+    // Ghi file dùng _xlApply (JSZip) để giữ nguyên cấu trúc file gốc → tránh "not enough memory"
     const wbD=XLSX.read(new Uint8Array(bufD),{type:'array'});
-    const wbF=XLSX.read(new Uint8Array(bufF),{type:'array'});
+    const wbF=XLSX.read(new Uint8Array(bufFRaw),{type:'array'});
     const res=bbkkProcess(wbD,wbF,inpF.files[0].name);
     for(const l of res.log){LOG.push(l);}bbLog(LOG);
     if(res.ok){
-      // Fix !ref bằng cách đếm cell key thực tế — tránh !ref=A1:S1048576
-      function fixRef(ws,updates){
-        for(const u of updates)ws[XLSX.utils.encode_cell({r:u.r,c:u.c})]={v:u.v,t:u.t};
-        let maxR=0,maxC=0;
-        for(const k of Object.keys(ws)){
-          if(k[0]==='!')continue;
-          try{const d=XLSX.utils.decode_cell(k);if(d.r>maxR)maxR=d.r;if(d.c>maxC)maxC=d.c;}catch(e){}
-        }
-        ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:maxR,c:maxC}});
-        return ws['!ref'];
-      }
-      const bbRef=fixRef(wbF.Sheets[res.bbName],res.bbUpdates);
-      LOG.push(`📐 BBKK !ref: ${bbRef}`);bbLog(LOG);
-      if(res.dxName&&res.dxUpdates.length){
-        const dxRef=fixRef(wbF.Sheets[res.dxName],res.dxUpdates);
-        LOG.push(`📐 DX !ref: ${dxRef}`);bbLog(LOG);
-      }
-      LOG.push('⏳ Đang tạo file xlsx...');bbLog(LOG);
+      LOG.push(`📋 Cần ghi ${res.bbUpdates.length} cell vào sheet "${res.bbName}"...`);bbLog(LOG);
+      const sheets=[{name:res.bbName,updates:res.bbUpdates}];
+      if(res.dxName&&res.dxUpdates.length)sheets.push({name:res.dxName,updates:res.dxUpdates});
+      LOG.push('⏳ Đang ghi dữ liệu vào file gốc (JSZip)...');bbLog(LOG);
       let out;
-      try{out=XLSX.write(wbF,{type:'array',bookType:'xlsx'});}
-      catch(we){LOG.push(`❌ SheetJS write lỗi: ${we.message}`);bbLog(LOG);return;}
+      try{out=await _xlApply(bufFRaw,sheets);}
+      catch(we){LOG.push(`❌ Lỗi ghi file: ${we.message}`);bbLog(LOG);return;}
       LOG.push(`✅ File output: ${(out.byteLength/1024).toFixed(0)} KB — Đang tải về...`);bbLog(LOG);
       const a=document.createElement('a');
       a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
