@@ -1281,17 +1281,23 @@ async function _xlSheetPath(zip,name){
   return t.startsWith('/')?t.slice(1):t.startsWith('worksheets/')?`xl/${t}`:`xl/worksheets/${t}`;
 }
 
+function _xlColIdx(s){let n=0;for(let i=0;i<s.length;i++)n=n*26+(s.charCodeAt(i)-64);return n-1;}
 function _xlSetCell(xml,rowIdx,colIdx,value,type){
   const r=rowIdx+1, c=_xlCol(colIdx), ref=c+r;
   const cell=type==='n'
     ?`<c r="${ref}"><v>${value}</v></c>`
     :`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${_ex(String(value))}</t></is></c>`;
-  // Find and replace existing cell using string ops
-  // Dùng '<c ' (có space) để tránh match <cols>, <colors>, v.v.
-  const refPos=xml.indexOf(`r="${ref}"`);
-  if(refPos>=0){
-    const cs=xml.lastIndexOf('<c ',refPos);
-    if(cs>=0){
+  const rowStart=xml.indexOf(`<row r="${r}"`);
+  if(rowStart<0)return xml.replace('</sheetData>',`<row r="${r}">${cell}</row></sheetData>`);
+  const rowEnd=xml.indexOf('</row>',rowStart);
+  if(rowEnd<0)return xml;
+  const rowSlice=xml.slice(rowStart,rowEnd);
+  // Nếu cell đã tồn tại trong row — replace
+  const cellPos=rowSlice.indexOf(`r="${ref}"`);
+  if(cellPos>=0){
+    const absPos=rowStart+cellPos;
+    const cs=xml.lastIndexOf('<c ',absPos);
+    if(cs>=rowStart){
       const tagEnd=xml.indexOf('>',cs);
       if(tagEnd>=0){
         const isSelf=xml[tagEnd-1]==='/';
@@ -1300,14 +1306,19 @@ function _xlSetCell(xml,rowIdx,colIdx,value,type){
       }
     }
   }
-  // Append to existing row
-  const rowStart=xml.indexOf(`<row r="${r}"`);
-  if(rowStart>=0){
-    const rowEnd=xml.indexOf('</row>',rowStart);
-    if(rowEnd>=0)return xml.slice(0,rowEnd)+cell+xml.slice(rowEnd);
+  // Cell chưa tồn tại — insert đúng vị trí theo thứ tự cột tăng dần
+  const pat=/<c r="([A-Z]+)\d+"/g;
+  let insertAt=rowEnd;
+  let m;
+  while((m=pat.exec(rowSlice))!==null){
+    if(_xlColIdx(m[1])>colIdx){
+      const abs=rowStart+m.index;
+      const cs=xml.lastIndexOf('<c ',abs);
+      if(cs>=rowStart){insertAt=cs;}
+      break;
+    }
   }
-  // Insert new row
-  return xml.replace('</sheetData>',`<row r="${r}">${cell}</row></sheetData>`);
+  return xml.slice(0,insertAt)+cell+xml.slice(insertAt);
 }
 
 async function _xlApply(origBuf,sheetUpdates){
@@ -1539,7 +1550,7 @@ async function bbkkRun(){
   const inpD=document.getElementById('bbkk-dmhh');
   const inpF=document.getElementById('bbkk-file');
   if(!inpD?.files[0]||!inpF?.files[0]){bbLog(['❌ Cần chọn đủ 2 file: DMHH và BBKK']);return;}
-  const LOG=['⏳ Đang đọc file... [v20260626-6]'];bbLog(LOG);
+  const LOG=['⏳ Đang đọc file... [v20260626-7]'];bbLog(LOG);
   try{
     const [bufD,bufFRaw]=await Promise.all([inpD.files[0].arrayBuffer(),inpF.files[0].arrayBuffer()]);
     const wbD=XLSX.read(new Uint8Array(bufD),{type:'array'});
@@ -1547,24 +1558,13 @@ async function bbkkRun(){
     const res=bbkkProcess(wbD,wbF,inpF.files[0].name);
     for(const l of res.log){LOG.push(l);}bbLog(LOG);
     if(res.ok){
-      // Ghi kết quả vào các sheet trong bộ nhớ
-      for(const u of res.bbUpdates)wbF.Sheets[res.bbName][XLSX.utils.encode_cell({r:u.r,c:u.c})]={v:u.v,t:u.t};
-      if(res.dxName&&res.dxUpdates.length)for(const u of res.dxUpdates)wbF.Sheets[res.dxName][XLSX.utils.encode_cell({r:u.r,c:u.c})]={v:u.v,t:u.t};
-      // Chỉ xuất 2 sheet kết quả — tránh vấn đề bộ nhớ khi mở file 33 sheet trên Excel 32-bit
-      const newWb=XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(newWb,wbF.Sheets[res.bbName],res.bbName);
-      if(res.dxName&&wbF.Sheets[res.dxName])XLSX.utils.book_append_sheet(newWb,wbF.Sheets[res.dxName],res.dxName);
-      // Cập nhật !ref cho đúng vùng dữ liệu
-      for(const [sn,ws] of Object.entries(newWb.Sheets)){
-        let maxR=0,maxC=0;
-        for(const k of Object.keys(ws)){if(k[0]==='!')continue;try{const d=XLSX.utils.decode_cell(k);if(d.r>maxR)maxR=d.r;if(d.c>maxC)maxC=d.c;}catch(e){}}
-        ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:maxR,c:maxC}});
-      }
-      LOG.push('⏳ Đang tạo file kết quả (2 sheet)...');bbLog(LOG);
+      LOG.push(`📋 Ghi ${res.bbUpdates.length} cell → JSZip patch file gốc...`);bbLog(LOG);
+      const sheets=[{name:res.bbName,updates:res.bbUpdates}];
+      if(res.dxName&&res.dxUpdates.length)sheets.push({name:res.dxName,updates:res.dxUpdates});
       let out;
-      try{out=XLSX.write(newWb,{type:'array',bookType:'xlsx',bookSST:true});}
-      catch(we){LOG.push(`❌ SheetJS write lỗi: ${we.message}`);bbLog(LOG);return;}
-      LOG.push(`✅ File output: ${(out.byteLength/1024).toFixed(0)} KB — Đang tải về...`);bbLog(LOG);
+      try{out=await _xlApply(bufFRaw,sheets);}
+      catch(we){LOG.push(`❌ Lỗi ghi file: ${we.message}`);bbLog(LOG);return;}
+      LOG.push(`✅ ${(out.byteLength/1024).toFixed(0)} KB — Đang tải về...`);bbLog(LOG);
       const a=document.createElement('a');
       a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
       a.download=inpF.files[0].name.replace(/\.xlsx$/i,'_ketqua.xlsx');
