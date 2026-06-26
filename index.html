@@ -1791,7 +1791,7 @@ function bbkkProcess(wbD,wbF,fname){
     const tgt=parseFloat(row[11])||0,tgth=parseFloat(row[13])||0;
     data.push({
       origRow:r,excelRow:r+1,
-      LoaiHang:String(row[1]||''),MaSP:ma,
+      LoaiHang:String(row[1]||'').trim().toUpperCase(),MaSP:ma,
       Barcode:String(row[3]||'').split('.')[0],
       TenSP:String(row[4]||''),
       TGthua:tgt,TGthieu:tgth,CL_net:tgt+tgth,
@@ -1817,7 +1817,7 @@ function bbkkProcess(wbD,wbF,fname){
       const tenDu=maToTen[md]||'';
       const ng1=maToNganh[maSP]||'',ng2=maToNganh[md]||'';
       const chung=[...tenSP.toLowerCase().split(/\s+/)].filter(w=>w.length>1&&tenDu.toLowerCase().includes(w));
-      return!(ng1&&ng1===ng2)||chung.length<2;
+      return!(ng1&&ng1===ng2)&&chung.length<2;
     });
     return bad.length?{hopLe:false,moTa:`Mã đối: ${bad.join(',')} không cùng ngành`}:{hopLe:true};
   };
@@ -1881,7 +1881,25 @@ function bbkkProcess(wbD,wbF,fname){
   const dxName=wbF.SheetNames.find(s=>s.trim()==='Đề xuất');
   const dxUpdates=[];
   if(dxName){
-    const ksclText=`[KSCL KIỂM TRA]\nHT: ${vfmt(htNet)}đ | KHT: ${vfmt(khtNet)}đ | Tổng CL: ${vfmt(tongCL)}đ\nLoại Hàng KHT NET âm:\n${bdSeries.map(([l,v])=>`  ${l}: ${vfmt(v)}đ → ĐB: ${vfmt(Math.abs(v))}đ`).join('\n')||'  (Không có)'}\n→ TỔNG GỢI Ý ĐỀN BÙ: ${vfmt(denBuTong)}đ${nHL?`\nNhầm mã: ${nHL} hợp lệ${nKHL?' / '+nKHL+' KHL':''}`:''}`  ;
+    // reason_tag cho từng Loại Hàng trong pool KHT âm
+    const khtAmPool=poolRows.filter(d=>d.CL_net<0);
+    const reasonTag=lh=>{
+      const grp=khtAmPool.filter(d=>d.LoaiHang===lh);
+      const tags=[];
+      if(grp.some(d=>/không rõ|chưa rõ/i.test(d.LyDo)))tags.push('không rõ NN');
+      const khl=grp.filter(d=>nhamMap[d.origRow]?.hopLe===false);
+      if(khl.length)tags.push(`bán nhầm KHL(${khl.length})`);
+      const hl=grp.filter(d=>nhamMap[d.origRow]?.hopLe===true);
+      if(hl.length)tags.push(`bán nhầm HL(${hl.length}), NET âm`);
+      return tags.join(' | ');
+    };
+    const caseNote=tongCL>=0
+      ?`CL DƯƠNG (${vfmt(tongCL)}đ) — KHT dương bù âm trong cùng loại hàng`
+      :Math.abs(tongCL)>=Math.abs(khtNet)
+        ?`CL ÂM (${vfmt(tongCL)}đ) — Cân nhắc đền bù 100% tổng CL`
+        :`KHT âm (${vfmt(khtNet)}đ) lớn hơn tổng CL — Sàn đền bù tối thiểu = |KHT|`;
+    const nhamSummary=nHL||nKHL?`Nhầm mã: ${nHL} hợp lệ${nKHL?' / '+nKHL+' KHÔNG hợp lệ':''}`:'';
+    const ksclText=`[KSCL KIỂM TRA]\nHT: ${vfmt(htNet)}đ | KHT: ${vfmt(khtNet)}đ | Tổng CL: ${vfmt(tongCL)}đ\nLoại Hàng KHT có NET âm cần đền bù:\n${bdSeries.map(([l,v])=>{const tag=reasonTag(l);return`  ${l}: ${vfmt(v)}đ → Đền bù: ${vfmt(Math.abs(v))}đ`+(tag?`  [${tag}]`:'');}).join('\n')||'  (Không có)'}\n→ TỔNG GỢI Ý ĐỀN BÙ: ${vfmt(denBuTong)}đ\n${caseNote}${nhamSummary?'\n'+nhamSummary:''}`;
     const rawDX=XLSX.utils.sheet_to_json(wbF.Sheets[dxName],{header:1,defval:null,raw:true});
     let chkR=-1,chkC=-1;
     for(let r=0;r<Math.min(rawDX.length,20)&&chkR<0;r++){
