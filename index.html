@@ -1283,10 +1283,11 @@ function _xlSetCell(xml,rowIdx,colIdx,value,type){
   const cell=type==='n'
     ?`<c r="${ref}"><v>${value}</v></c>`
     :`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${_ex(String(value))}</t></is></c>`;
-  // Find and replace existing cell using string ops (regex bị lỗi với self-closing cells)
+  // Find and replace existing cell using string ops
+  // Dùng '<c ' (có space) để tránh match <cols>, <colors>, v.v.
   const refPos=xml.indexOf(`r="${ref}"`);
   if(refPos>=0){
-    const cs=xml.lastIndexOf('<c',refPos);
+    const cs=xml.lastIndexOf('<c ',refPos);
     if(cs>=0){
       const tagEnd=xml.indexOf('>',cs);
       if(tagEnd>=0){
