@@ -1566,6 +1566,22 @@ async function bbkkRun(){
       let out;
       try{out=XLSX.write(wbF,{type:'array',bookType:'xlsx',compression:true});}
       catch(we){bbLog([`❌ SheetJS write lỗi: ${we.message}`]);return;}
+      // SheetJS giữ metadata.xml (Excel 365 Dynamic Array) nhưng xóa cm= attrs khỏi cells
+      // → Excel crash "not enough memory". Xóa metadata.xml + relationship để fix.
+      try{
+        const outZip=await JSZip.loadAsync(out);
+        if(outZip.file('xl/metadata.xml')){
+          outZip.remove('xl/metadata.xml');
+          const rp='xl/_rels/workbook.xml.rels';
+          if(outZip.file(rp)){
+            let rels=await outZip.file(rp).async('text');
+            rels=rels.replace(/<Relationship[^>]*sheetMetadata[^>]*\/>/g,'');
+            outZip.file(rp,rels);
+          }
+          out=await outZip.generateAsync({type:'arraybuffer',compression:'DEFLATE',compressionOptions:{level:6}});
+          bbLog(['🔧 Đã xóa Dynamic Array metadata (Excel 365)']);
+        }
+      }catch(me){bbLog([`⚠ Strip metadata: ${me.message}`]);}
       bbLog([`✅ File output: ${(out.byteLength/1024).toFixed(0)} KB`]);
       const a=document.createElement('a');
       a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
