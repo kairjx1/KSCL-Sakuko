@@ -1539,23 +1539,31 @@ async function bbkkRun(){
   const inpD=document.getElementById('bbkk-dmhh');
   const inpF=document.getElementById('bbkk-file');
   if(!inpD?.files[0]||!inpF?.files[0]){bbLog(['❌ Cần chọn đủ 2 file: DMHH và BBKK']);return;}
-  const LOG=['⏳ Đang đọc file... [v20260626-5]'];bbLog(LOG);
+  const LOG=['⏳ Đang đọc file... [v20260626-6]'];bbLog(LOG);
   try{
     const [bufD,bufFRaw]=await Promise.all([inpD.files[0].arrayBuffer(),inpF.files[0].arrayBuffer()]);
-    // SheetJS chỉ dùng để ĐỌC dữ liệu — KHÔNG dùng để ghi
-    // Ghi file dùng _xlApply (JSZip) để giữ nguyên cấu trúc file gốc → tránh "not enough memory"
     const wbD=XLSX.read(new Uint8Array(bufD),{type:'array'});
     const wbF=XLSX.read(new Uint8Array(bufFRaw),{type:'array'});
     const res=bbkkProcess(wbD,wbF,inpF.files[0].name);
     for(const l of res.log){LOG.push(l);}bbLog(LOG);
     if(res.ok){
-      LOG.push(`📋 Cần ghi ${res.bbUpdates.length} cell vào sheet "${res.bbName}"...`);bbLog(LOG);
-      const sheets=[{name:res.bbName,updates:res.bbUpdates}];
-      if(res.dxName&&res.dxUpdates.length)sheets.push({name:res.dxName,updates:res.dxUpdates});
-      LOG.push('⏳ Đang ghi dữ liệu vào file gốc (JSZip)...');bbLog(LOG);
+      // Ghi kết quả vào các sheet trong bộ nhớ
+      for(const u of res.bbUpdates)wbF.Sheets[res.bbName][XLSX.utils.encode_cell({r:u.r,c:u.c})]={v:u.v,t:u.t};
+      if(res.dxName&&res.dxUpdates.length)for(const u of res.dxUpdates)wbF.Sheets[res.dxName][XLSX.utils.encode_cell({r:u.r,c:u.c})]={v:u.v,t:u.t};
+      // Chỉ xuất 2 sheet kết quả — tránh vấn đề bộ nhớ khi mở file 33 sheet trên Excel 32-bit
+      const newWb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(newWb,wbF.Sheets[res.bbName],res.bbName);
+      if(res.dxName&&wbF.Sheets[res.dxName])XLSX.utils.book_append_sheet(newWb,wbF.Sheets[res.dxName],res.dxName);
+      // Cập nhật !ref cho đúng vùng dữ liệu
+      for(const [sn,ws] of Object.entries(newWb.Sheets)){
+        let maxR=0,maxC=0;
+        for(const k of Object.keys(ws)){if(k[0]==='!')continue;try{const d=XLSX.utils.decode_cell(k);if(d.r>maxR)maxR=d.r;if(d.c>maxC)maxC=d.c;}catch(e){}}
+        ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:maxR,c:maxC}});
+      }
+      LOG.push('⏳ Đang tạo file kết quả (2 sheet)...');bbLog(LOG);
       let out;
-      try{out=await _xlApply(bufFRaw,sheets);}
-      catch(we){LOG.push(`❌ Lỗi ghi file: ${we.message}`);bbLog(LOG);return;}
+      try{out=XLSX.write(newWb,{type:'array',bookType:'xlsx',bookSST:true});}
+      catch(we){LOG.push(`❌ SheetJS write lỗi: ${we.message}`);bbLog(LOG);return;}
       LOG.push(`✅ File output: ${(out.byteLength/1024).toFixed(0)} KB — Đang tải về...`);bbLog(LOG);
       const a=document.createElement('a');
       a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
