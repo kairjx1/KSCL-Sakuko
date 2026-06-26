@@ -1567,11 +1567,11 @@ async function bbkkRun(){
         }
         wsDX['!ref']=XLSX.utils.encode_range(rngDX);
       }
-      bbLog(['⏳ Đang tạo file xlsx...']);
+      bbLog([`📦 File gốc: ${(bufF.byteLength/1024).toFixed(0)} KB`,'⏳ Đang tạo file xlsx...']);
       let out;
-      try{out=XLSX.write(wbF,{type:'array',bookType:'xlsx'});}
+      try{out=XLSX.write(wbF,{type:'array',bookType:'xlsx',compression:true});}
       catch(we){bbLog([`❌ SheetJS write lỗi: ${we.message}`]);return;}
-      bbLog([`✅ File tạo xong — kích thước: ${(out.byteLength/1024).toFixed(0)} KB`]);
+      bbLog([`✅ File output: ${(out.byteLength/1024).toFixed(0)} KB`]);
       const a=document.createElement('a');
       a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
       a.download=inpF.files[0].name.replace(/\.xlsx$/i,'_ketqua.xlsx');
