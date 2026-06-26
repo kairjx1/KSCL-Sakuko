@@ -2048,53 +2048,60 @@ function rBBKK(){
   <div id="guide-body-bbkk" style="display:none">
     <div class="guide-body">
 
-      <!-- ═══════════════════════════════════════════════════════════
-           VÙNG NỘI DUNG — chỉnh sửa trực tiếp tại đây
-           • Thêm văn bản:  viết vào thẻ <p> hoặc <div>
-           • Thêm ảnh:      <img src="guides/hinh.png" class="guide-img" alt="mô tả">
-           • Thêm file:     <a href="guides/file.xlsx" class="guide-dl" download>📥 Tên file</a>
-           ════════════════════════════════════════════════════════ -->
+      <p style="margin:0 0 14px;color:var(--t2);font-size:13px">Quy trình gồm <strong>3 bước</strong> — chuẩn bị 2 file đầu vào, chạy APP, nhận kết quả phân loại và gợi ý đền bù.</p>
 
+      <!-- BƯỚC 1 -->
       <div class="guide-step">
         <div class="guide-num">1</div>
-        <div><strong>File DMHH</strong> (Danh mục hàng hóa)<br>
-          <ul style="margin:6px 0 0 0;padding-left:18px;font-size:12.5px;color:var(--t2);line-height:1.9">
-            <li><span class="guide-tag">Sheet0</span> — danh sách mã <strong>Hỗ trợ (HT)</strong> · tiêu đề ở dòng 5 · cột <strong>Mã hàng</strong> bắt buộc</li>
-            <li><span class="guide-tag">Sheet1</span> — danh sách mã <strong>Không hỗ trợ (KHT)</strong> · tiêu đề ở dòng 1 · cột <strong>Mã hàng</strong> bắt buộc</li>
-          </ul>
+        <div style="flex:1">
+          <strong>Chuẩn bị File DMHH</strong> (Danh mục hàng hóa — xuất từ report NAV)<br>
+          <div style="margin:8px 0;font-size:12px;background:#f0f4ff;border-radius:6px;padding:10px 12px;line-height:2">
+            <span class="guide-tag">Sheet0</span> — Danh sách mã <strong>Hỗ trợ (HT)</strong> &nbsp;·&nbsp; Tiêu đề ở <strong>dòng 5</strong> &nbsp;·&nbsp; Cột <strong>Mã hàng</strong> bắt buộc &nbsp;·&nbsp; Cột <strong>Tên SP</strong>, <strong>Nhóm</strong> nếu có<br>
+            <span class="guide-tag">Sheet1</span> — Danh sách mã <strong>Không hỗ trợ (KHT)</strong> &nbsp;·&nbsp; Tiêu đề ở <strong>dòng 1</strong> &nbsp;·&nbsp; Cột <strong>Mã hàng</strong> bắt buộc
+          </div>
+          <div class="guide-note" style="margin-top:4px">⚠ Các mã không hỗ trợ theo quy trình hiện hành — cập nhật file DMHH trước mỗi đợt kiểm kê.</div>
         </div>
       </div>
+
+      <!-- BƯỚC 2 -->
       <div class="guide-step">
         <div class="guide-num">2</div>
-        <div><strong>File BBKK</strong> (Biên bản kiểm kê)<br>
-          <span style="font-size:12.5px;color:var(--t2)">Sheet tên <span class="guide-tag">BBKK</span> · Dữ liệu từ <strong>dòng 9</strong> · 16 cột A→P:</span>
-          <div style="margin-top:6px;font-size:11.5px;color:var(--t2);background:#f8f9fc;border-radius:6px;padding:8px 10px;line-height:2">
-            A: STT &nbsp;·&nbsp; B: Loại Hàng &nbsp;·&nbsp; C: Mã SP &nbsp;·&nbsp; D: Barcode &nbsp;·&nbsp; E: Tên SP &nbsp;·&nbsp; F: Giá<br>
-            G: SL PM &nbsp;·&nbsp; H: SL TT &nbsp;·&nbsp; I: Trước KK &nbsp;·&nbsp; J: KK &nbsp;·&nbsp; K: SL Thừa &nbsp;·&nbsp; L: TG Thừa<br>
-            M: SL Thiếu &nbsp;·&nbsp; N: TG Thiếu &nbsp;·&nbsp; <strong>O: Lý Do</strong> &nbsp;·&nbsp; P: Ngày ĐC
+        <div style="flex:1">
+          <strong>Chuẩn bị File BBKK</strong> (Biên bản kiểm kê — file gốc của đợt kiểm kê)<br>
+          <span style="font-size:12.5px;color:var(--t2)">File cần có 2 phần chính:</span>
+          <div style="margin:8px 0;font-size:12px;background:#f0f4ff;border-radius:6px;padding:10px 12px;line-height:2">
+            <span class="guide-tag">Sheet BBKK</span> — Dữ liệu từ <strong>dòng 9</strong> · 16 cột A→P:<br>
+            <span style="padding-left:8px">A: STT &nbsp;·&nbsp; B: Loại Hàng &nbsp;·&nbsp; C: Mã SP &nbsp;·&nbsp; D: Barcode &nbsp;·&nbsp; E: Tên SP &nbsp;·&nbsp; F: Giá</span><br>
+            <span style="padding-left:8px">G: SL PM &nbsp;·&nbsp; H: SL TT &nbsp;·&nbsp; I: Trước KK &nbsp;·&nbsp; J: KK &nbsp;·&nbsp; K: SL Thừa &nbsp;·&nbsp; L: TG Thừa</span><br>
+            <span style="padding-left:8px">M: SL Thiếu &nbsp;·&nbsp; N: TG Thiếu &nbsp;·&nbsp; <strong>O: Lý Do</strong> &nbsp;·&nbsp; P: Ngày ĐC</span><br>
+            <span class="guide-tag">Sheet Đề xuất</span> — Đơn đề xuất hỗ trợ/đền bù (APP sẽ điền tóm tắt KSCL vào đây)
           </div>
+          <img src="guides/bbkk-b2-file-bbkk.png" class="guide-img" alt="File BBKK gốc trước khi xử lý">
         </div>
       </div>
+
+      <!-- BƯỚC 3 -->
       <div class="guide-step">
         <div class="guide-num">3</div>
-        <div><strong>Kết quả</strong> — 3 cột Q/R/S được thêm vào file gốc:<br>
-          <span style="font-size:12.5px;color:var(--t2)"><span class="guide-tag">Q</span> Check (HT/KHT) &nbsp;·&nbsp; <span class="guide-tag">R</span> Nhầm mã (hợp lệ/không) &nbsp;·&nbsp; <span class="guide-tag">S</span> Đề xuất đền bù &nbsp;·&nbsp; Sheet <span class="guide-tag">Đề xuất</span> được điền tóm tắt KSCL</span>
+        <div style="flex:1">
+          <strong>Upload 2 file → Chạy xử lý → Tải kết quả về</strong><br>
+          <span style="font-size:12.5px;color:var(--t2)">APP thêm <strong>3 cột Q/R/S</strong> vào sheet BBKK và điền tóm tắt KSCL vào sheet Đề xuất:</span>
+          <div style="margin:8px 0;font-size:12px;background:#f0f4ff;border-radius:6px;padding:10px 12px;line-height:2.1">
+            <span class="guide-tag" style="background:#dcfce7;color:#166534">Q — Check</span> &nbsp;Phân loại từng mã: <strong>Hỗ trợ</strong> (xanh) hoặc <strong>Không hỗ trợ</strong> (đỏ)<br>
+            <span class="guide-tag" style="background:#fef3c7;color:#92400e">R — Nhầm mã</span> &nbsp;Kiểm tra cột Lý do: <strong>✓ Hợp lệ</strong> / <strong>✗ Không hợp lệ</strong> (mã đối ứng không cùng ngành)<br>
+            <span class="guide-tag" style="background:#fee2e2;color:#991b1b">S — Đề xuất ĐB</span> &nbsp;Số tiền đền bù gợi ý cho từng mã KHT âm
+          </div>
+          <img src="guides/bbkk-b3-ket-qua-bbkk.png" class="guide-img" alt="Kết quả BBKK sau khi APP xử lý">
+          <div style="margin:10px 0 6px;font-size:12.5px;color:var(--t2);font-weight:600">Sheet Đề xuất — trước và sau khi APP điền:</div>
+          <img src="guides/bbkk-b3-de-xuat-truoc.png" class="guide-img" alt="Sheet Đề xuất trước khi xử lý">
+          <img src="guides/bbkk-b3-de-xuat-sau.png" class="guide-img" alt="Sheet Đề xuất sau khi APP điền tóm tắt KSCL">
+          <div class="guide-note" style="margin-top:8px">✅ Ô <strong>Check</strong> trong Đề xuất được APP điền tự động: tổng HT/KHT · chênh lệch tiền · gợi ý đền bù theo Loại Hàng → chuyển sang bộ phận đền bù.</div>
         </div>
       </div>
-      <div class="guide-note">⚠ Cột Lý do (O): ghi "<strong>bán nhầm sang mã 153746</strong>" hoặc barcode — phần mềm tự kiểm tra tính hợp lệ của mã đối ứng.</div>
 
       <div class="guide-sep"></div>
-
       <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--t2)">📎 File mẫu tham khảo:</div>
-      <!-- <a href="guides/mau-DMHH.xlsx" class="guide-dl" download>📥 File DMHH mẫu</a> -->
-      <!-- <a href="guides/mau-BBKK.xlsx" class="guide-dl" download>📥 File BBKK mẫu</a> -->
-      <div class="guide-img-ph">Chưa có file mẫu — xóa dòng chú thích phía trên và thêm link file vào thư mục <code>guides/</code></div>
-
-      <div class="guide-sep"></div>
-
-      <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--t2)">🖼️ Hình ảnh hướng dẫn:</div>
-      <!-- <img src="guides/hdsd-bbkk.png" class="guide-img" alt="Hướng dẫn BBKK Kiểm kê"> -->
-      <div class="guide-img-ph">Chưa có ảnh — upload ảnh vào <code>guides/</code> và bỏ comment thẻ &lt;img&gt; phía trên</div>
+      <a href="guides/mau-bbkk.xlsx" class="guide-dl" download>📥 File BBKK mẫu (TĐN 13.05.26)</a>
 
     </div>
   </div>
