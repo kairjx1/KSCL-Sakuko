@@ -1310,11 +1310,11 @@ function nsRun(){
   const rd=new FileReader();
   rd.onload=e=>{
     try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellStyles:true,cellNF:true});
       const res=nsProcess(wb,file.name);
       nsLog(res.log);
       if(res.ok){
-        const out=XLSX.write(res.wb,{type:'array',bookType:'xlsx'});
+        const out=XLSX.write(res.wb,{type:'array',bookType:'xlsx',cellStyles:true});
         const a=document.createElement('a');
         a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
         a.download=file.name.replace(/\.xlsx$/i,'_KetQua.xlsx');
@@ -1469,12 +1469,12 @@ function bbkkRun(){
     const rdF=new FileReader();
     rdF.onload=eF=>{
       try{
-        const wbD=XLSX.read(new Uint8Array(eD.target.result),{type:'array'});
-        const wbF=XLSX.read(new Uint8Array(eF.target.result),{type:'array'});
+        const wbD=XLSX.read(new Uint8Array(eD.target.result),{type:'array',cellStyles:true,cellNF:true});
+        const wbF=XLSX.read(new Uint8Array(eF.target.result),{type:'array',cellStyles:true,cellNF:true});
         const res=bbkkProcess(wbD,wbF,inpF.files[0].name);
         bbLog(res.log);
         if(res.ok){
-          const out=XLSX.write(res.wb,{type:'array',bookType:'xlsx'});
+          const out=XLSX.write(res.wb,{type:'array',bookType:'xlsx',cellStyles:true});
           const a=document.createElement('a');
           a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
           a.download=inpF.files[0].name.replace(/\.xlsx$/i,'_ketqua.xlsx');
