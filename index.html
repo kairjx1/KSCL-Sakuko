@@ -1801,42 +1801,88 @@ function rNavSml(){
   <div id="guide-body-navsml" style="display:none">
     <div class="guide-body">
 
-      <!-- ═══════════════════════════════════════════════════════════
-           VÙNG NỘI DUNG — chỉnh sửa trực tiếp tại đây
-           • Thêm văn bản:  viết vào thẻ <p> hoặc <div>
-           • Thêm ảnh:      <img src="guides/hinh.png" class="guide-img" alt="mô tả">
-           • Thêm file:     <a href="guides/file.xlsx" class="guide-dl" download>📥 Tên file</a>
-           ════════════════════════════════════════════════════════ -->
+      <p style="margin:0 0 14px;color:var(--t2);font-size:13px">Quy trình gồm <strong>6 bước</strong> — từ xuất dữ liệu hệ thống đến đưa vào APP để điền lý do tự động.</p>
 
+      <!-- BƯỚC 1 -->
       <div class="guide-step">
         <div class="guide-num">1</div>
-        <div><strong>File Excel cần có đúng 3 sheet:</strong><br>
-          <ul style="margin:6px 0 0 0;padding-left:18px;font-size:12.5px;color:var(--t2);line-height:1.9">
-            <li><span class="guide-tag">So sánh nhập</span> (tên sheet có chứa "so" và "nh") — cột <strong>Mã SP</strong>, <strong>SS</strong> (số lệch), <strong>Lý do</strong></li>
-            <li><span class="guide-tag">NAV</span> — cột Mã hàng, Số lượng, Mã số nhận / Chứng từ</li>
-            <li><span class="guide-tag">SML</span> hoặc <span class="guide-tag">HAPI</span> — cột 3: Mã hàng · cột 5: Số lượng · cột 7: Mã đơn · cột 8: Loại (Xuất/Nhập)</li>
-          </ul>
+        <div style="flex:1">
+          <strong>Xuất Danh mục hàng hóa từ NAV</strong><br>
+          <span style="font-size:12.5px;color:var(--t2)">Vào NAV → <em>Sakuko NAV Report → 1. Danh mục hàng hóa</em> → chạy report <strong>"Danh muc hang hoa NAV"</strong> (label: DMHH_noCost3) → xuất file Excel</span>
+          <img src="guides/ss-b1-nav-dmhh.png" class="guide-img" alt="Bước 1 - NAV Danh mục hàng hóa">
         </div>
       </div>
+
+      <!-- BƯỚC 2 -->
       <div class="guide-step">
         <div class="guide-num">2</div>
-        <div><strong>Upload file → nhấn Chạy so sánh</strong><br>
-          <span style="font-size:12.5px;color:var(--t2)">Cột <em>Lý do</em> trong sheet So sánh sẽ được điền tự động. File tải về là bản gốc đã cập nhật, không mất định dạng.</span>
+        <div style="flex:1">
+          <strong>Xuất tồn kho cuối ngày từ NAV</strong><br>
+          <span style="font-size:12.5px;color:var(--t2)">Chạy report <strong>"Báo cáo tồn kho cuối ngày"</strong>, chọn các kho liên quan:</span>
+          <div style="margin:6px 0;font-size:12px;background:#f0f4ff;border-radius:6px;padding:8px 10px;line-height:1.9">
+            <strong>Kho LTT:</strong> <span class="guide-tag">W1099</span> <span class="guide-tag">W1082</span> <span class="guide-tag">W1084</span> <span class="guide-tag">W1086</span> <span class="guide-tag">W1066</span> <span class="guide-tag">W1067</span> (và các kho phát sinh thêm)<br>
+            <strong>Kho TMĐT:</strong> <span class="guide-tag">W1050</span>
+          </div>
+          <img src="guides/ss-b2-nav-tonkho.png" class="guide-img" alt="Bước 2 - NAV tồn kho cuối ngày">
         </div>
       </div>
-      <div class="guide-note">⚠ Cột <strong>SS</strong> phải chứa số lệch (≠ 0) thì mới sinh lý do. Mã SP có SS = 0 sẽ bỏ qua.</div>
+
+      <!-- BƯỚC 3 -->
+      <div class="guide-step">
+        <div class="guide-num">3</div>
+        <div style="flex:1">
+          <strong>Xuất tồn kho tại kho tổng từ Smartlog</strong><br>
+          <span style="font-size:12.5px;color:var(--t2)">Vào Smartlog → menu <em>Tồn → DS Tồn Kho</em> → xuất danh sách tồn kho hiện tại</span>
+          <img src="guides/ss-b3-sml-tonkho.png" class="guide-img" alt="Bước 3 - Smartlog DS Tồn kho">
+        </div>
+      </div>
+
+      <!-- BƯỚC 4 -->
+      <div class="guide-step">
+        <div class="guide-num">4</div>
+        <div style="flex:1">
+          <strong>Đưa vào file chênh lệch — xác định các mã lệch</strong><br>
+          <span style="font-size:12.5px;color:var(--t2)">Dán dữ liệu vào file chênh lệch (gồm cả DMHH và tồn kho các kho). File tổng hợp sẽ tự tính các mã có chênh lệch ở sheet <strong>DS Xử lý LTT</strong> và <strong>DS Xử lý TMĐT</strong>.</span>
+          <img src="guides/ss-b4-file-chenhlech.png" class="guide-img" alt="Bước 4 - File chênh lệch">
+        </div>
+      </div>
+
+      <!-- BƯỚC 5 -->
+      <div class="guide-step">
+        <div class="guide-num">5</div>
+        <div style="flex:1">
+          <strong>Xuất dữ liệu giao dịch từ NAV và Smartlog</strong><br>
+          <span style="font-size:12.5px;color:var(--t2)">Chỉ xuất cho các <strong>mã đang lệch</strong> (từ bước 4):</span>
+          <ul style="margin:6px 0 6px 0;padding-left:18px;font-size:12px;color:var(--t2);line-height:1.9">
+            <li><strong>NAV:</strong> Vào <em>8. Warehouse Reports → "Bang ke chi tiet giao dich - Kiem ke"</em> (NAV_BKCT_KK)</li>
+            <li><strong>Smartlog:</strong> Xuất lịch sử giao dịch (Inbound/Outbound) các mã lệch</li>
+          </ul>
+          <img src="guides/ss-b5-nav-giaodich.png" class="guide-img" alt="Bước 5a - NAV giao dịch chi tiết">
+          <img src="guides/ss-b5-sml-giaodich.png" class="guide-img" alt="Bước 5b - Smartlog giao dịch">
+        </div>
+      </div>
+
+      <!-- BƯỚC 6 -->
+      <div class="guide-step">
+        <div class="guide-num">6</div>
+        <div style="flex:1">
+          <strong>Đưa vào file So sánh → chạy APP để điền Lý do tự động</strong><br>
+          <span style="font-size:12.5px;color:var(--t2)">Dán dữ liệu giao dịch vào file So sánh đúng theo cấu trúc 3 sheet:</span>
+          <div style="margin:6px 0;font-size:12px;background:#f0f4ff;border-radius:6px;padding:8px 10px;line-height:2">
+            Sheet <span class="guide-tag">So sánh</span> — cột <strong>Mã SP</strong>, <strong>SS</strong> (số lệch), <strong>Lý do</strong> (để trống)<br>
+            Sheet <span class="guide-tag">NAV</span> — dữ liệu từ NAV_BKCT_KK: Mã số nhận, Mã hàng, Số lượng<br>
+            Sheet <span class="guide-tag">SML</span> — dữ liệu từ Smartlog: cột 3 Mã hàng · cột 5 Số lượng · cột 7 Mã đơn · cột 8 Loại (Xuất/Nhập)
+          </div>
+          <img src="guides/ss-b6-sheet-sosanh.png" class="guide-img" alt="Bước 6 - Sheet So sánh">
+          <img src="guides/ss-b6-sheet-nav.png" class="guide-img" alt="Bước 6 - Sheet NAV">
+          <img src="guides/ss-b6-sheet-sml.png" class="guide-img" alt="Bước 6 - Sheet SML">
+          <div class="guide-note" style="margin-top:8px">✅ Upload file lên APP → nhấn <strong>Chạy so sánh</strong> → cột Lý do sẽ được điền tự động cho tất cả mã lệch → tải file về.</div>
+        </div>
+      </div>
 
       <div class="guide-sep"></div>
-
       <div style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--t2)">📎 File mẫu tham khảo:</div>
-      <!-- <a href="guides/mau-navsml.xlsx" class="guide-dl" download>📥 File mẫu So sánh NAV-SML</a> -->
-      <div class="guide-img-ph">Chưa có file mẫu — xóa dòng chú thích phía trên và thêm link file vào thư mục <code>guides/</code></div>
-
-      <div class="guide-sep"></div>
-
-      <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--t2)">🖼️ Hình ảnh hướng dẫn:</div>
-      <!-- <img src="guides/hdsd-navsml.png" class="guide-img" alt="Hướng dẫn So sánh NAV vs SML"> -->
-      <div class="guide-img-ph">Chưa có ảnh — upload ảnh vào <code>guides/</code> và bỏ comment thẻ &lt;img&gt; phía trên</div>
+      <a href="guides/mau-navsml.xlsx" class="guide-dl" download>📥 File So sánh mẫu (W1099)</a>
 
     </div>
   </div>
