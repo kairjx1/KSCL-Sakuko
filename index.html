@@ -1605,17 +1605,12 @@ function bbkkProcess(wbD,wbF,fname){
   }
   log.push(`   → Tổng gợi ý đền bù: ${vfmt(denBuTong)}đ`);
 
-  // ── Ghi workbook ──────────────────────────────────────────
-  const wb2=XLSX.utils.book_new();
-  wbF.SheetNames.forEach(sn=>{
-    const ws2=wbF.Sheets[sn];
-    XLSX.utils.book_append_sheet(wb2,ws2,sn);
-  });
-  const wsBB=wb2.Sheets[bbName];
+  // ── Ghi trực tiếp vào wbF (giữ toàn bộ style/border gốc) ─────
+  const wsBB=wbF.Sheets[bbName];
   const rng=XLSX.utils.decode_range(wsBB['!ref']||'A1:P100');
   if(rng.e.c<18)rng.e.c=18;
   wsBB['!ref']=XLSX.utils.encode_range(rng);
-  // Header row 6 (index 5)
+  // Header labels (row index 5 = dòng 6)
   ['Check','Nhầm mã','Đề xuất ĐB'].forEach((v,i)=>{
     wsBB[XLSX.utils.encode_cell({r:5,c:16+i})]={v,t:'s'};
   });
@@ -1628,23 +1623,45 @@ function bbkkProcess(wbD,wbF,fname){
     if(d.HoTro==='Không hỗ trợ'&&d.CL_net<0)
       wsBB[XLSX.utils.encode_cell({r:er,c:18})]={v:Math.abs(d.CL_net),t:'n'};
   }
-  // Ghi vào sheet Đề xuất
+
+  // ── Ghi vào sheet Đề xuất ─────────────────────────────────────
   const dxName=wbF.SheetNames.find(s=>s.trim()==='Đề xuất');
   if(dxName){
-    const wsDX=wb2.Sheets[dxName];
+    const wsDX=wbF.Sheets[dxName];
     const ksclText=`[KSCL KIỂM TRA]\nHT: ${vfmt(htNet)}đ | KHT: ${vfmt(khtNet)}đ | Tổng CL: ${vfmt(tongCL)}đ\nLoại Hàng KHT NET âm:\n${bdSeries.map(([l,v])=>`  ${l}: ${vfmt(v)}đ → ĐB: ${vfmt(Math.abs(v))}đ`).join('\n')||'  (Không có)'}\n→ TỔNG GỢI Ý ĐỀN BÙ: ${vfmt(denBuTong)}đ${nHL?`\nNhầm mã: ${nHL} hợp lệ${nKHL?' / '+nKHL+' KHL':''}`:''}`  ;
-    const dxRng=XLSX.utils.decode_range(wsDX['!ref']||'A1:A1');
-    const lr=dxRng.e.r+2;
-    wsDX[XLSX.utils.encode_cell({r:lr,c:0})]={v:ksclText,t:'s'};
-    dxRng.e.r=lr;
-    wsDX['!ref']=XLSX.utils.encode_range(dxRng);
+    // Tìm header "Check" trong 20 dòng đầu (giống Python gốc)
+    const rawDX=XLSX.utils.sheet_to_json(wsDX,{header:1,defval:null,raw:true});
+    let chkR=-1,chkC=-1;
+    for(let r=0;r<Math.min(rawDX.length,20)&&chkR<0;r++){
+      const row=rawDX[r]||[];
+      for(let c=0;c<row.length;c++){
+        if(String(row[c]||'').trim().toLowerCase()==='check'){chkR=r;chkC=c;break;}
+      }
+    }
+    if(chkR>=0){
+      // Type A: điền ngay dưới header Check
+      wsDX[XLSX.utils.encode_cell({r:chkR+1,c:chkC})]={v:ksclText,t:'s'};
+      log.push(`   ✓ Đã ghi KSCL vào ô Check (dòng ${chkR+2})`);
+    } else {
+      // Type B: tìm dòng "Tổng" rồi chèn sau
+      let tongR=-1;
+      for(let r=0;r<rawDX.length;r++){
+        if((rawDX[r]||[]).some(c=>/^tổng$|^tong$/i.test(String(c||'').trim()))){tongR=r;break;}
+      }
+      const insR=tongR>=0?tongR+1:(XLSX.utils.decode_range(wsDX['!ref']||'A1').e.r+2);
+      wsDX[XLSX.utils.encode_cell({r:insR,c:0})]={v:ksclText,t:'s'};
+      const dr=XLSX.utils.decode_range(wsDX['!ref']||'A1:A1');
+      if(insR>dr.e.r){dr.e.r=insR;wsDX['!ref']=XLSX.utils.encode_range(dr);}
+      log.push(`   ✓ Đã ghi KSCL vào Đề xuất (dòng ${insR+1})`);
+    }
   }
+
   if(ntf.length){
     log.push(`   ⚠ ${ntf.length} mã không có trong DMHH`);
     ntf.slice(0,5).forEach(d=>log.push(`      ${d.MaSP}  ${d.TenSP.slice(0,50)}`));
   }
   log.push('═══ HOÀN THÀNH ═══');
-  return{ok:true,log,wb:wb2};
+  return{ok:true,log,wb:wbF};
 }
 
 function vfmt(n){return(Math.round(n)||0).toLocaleString('vi-VN');}
