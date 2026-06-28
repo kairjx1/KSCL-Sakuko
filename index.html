@@ -884,20 +884,28 @@ ${t==='Executive QC'?`
       <div><label class="fi-lbl">Tổng lượt QC thực hiện</label><input id="s1-tongluot" type="number" class="fi" placeholder="Vd: 44"></div>
       <div><label class="fi-lbl">Điểm trung bình toàn chuỗi (%)</label><input id="s1-diemtb" type="number" step="0.01" class="fi" placeholder="Vd: 93.17"></div>
     </div>
-    <label class="fi-lbl" style="margin-bottom:8px">Bảng điểm từng siêu thị</label>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <label class="fi-lbl" style="margin:0">Bảng điểm từng siêu thị</label>
+      <div style="display:flex;gap:8px">
+        <label class="btn b-out b-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px" title="Tải file Excel có 3 cột: Tên ST · Điểm tháng trước · Điểm tháng này">
+          📊 Import Excel
+          <input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="qcImportExcel(this)">
+        </label>
+        <button onclick="qcAddStore()" class="btn b-out b-sm">➕ Thêm ST</button>
+      </div>
+    </div>
+    <div style="font-size:11.5px;color:#6366f1;background:#eef2ff;border-radius:6px;padding:7px 12px;margin-bottom:10px">
+      💡 File Excel cần có 3 cột: <strong>Tên siêu thị</strong> · <strong>Điểm tháng trước (%)</strong> · <strong>Điểm tháng này (%)</strong> (hàng đầu có thể là tiêu đề)
+    </div>
     <div style="overflow-x:auto;margin-bottom:16px">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:#f0f0ff">
           <th style="text-align:left;padding:8px 12px;border:1px solid #e0e7ff;font-weight:700;color:#4f46e5">Siêu thị</th>
           <th style="text-align:center;padding:8px 12px;border:1px solid #e0e7ff;color:#6b7280;font-weight:600">Tháng trước (%)</th>
           <th style="text-align:center;padding:8px 12px;border:1px solid #e0e7ff;color:#4f46e5;font-weight:600">Tháng này (%)</th>
+          <th style="width:36px;border:1px solid #e0e7ff;background:#f0f0ff"></th>
         </tr></thead>
-        <tbody>${['Nguyễn Tuân','T6 Timecity','Bạch Mai','Nguyễn Du','Ecohome 3','Green Bay','Sài Đồng','Văn Phú','Đội Cấn','Linh Đàm','Thái Hà','Hàng Bông'].map((st,i)=>`
-          <tr>
-            <td style="padding:7px 12px;border:1px solid #e0e7ff;font-weight:600">${st}</td>
-            <td style="padding:5px 8px;border:1px solid #e0e7ff;text-align:center"><input type="number" id="s1-st${i}-prev" class="fi fi-sm" placeholder="—"></td>
-            <td style="padding:5px 8px;border:1px solid #e0e7ff;text-align:center"><input type="number" id="s1-st${i}-curr" class="fi fi-sm" placeholder="—"></td>
-          </tr>`).join('')}</tbody>
+        <tbody id="s1-stores-body"><tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;font-size:13px">⏳ Đang tải danh sách siêu thị...</td></tr></tbody>
       </table>
     </div>
     <label class="fi-lbl" style="margin-bottom:8px">Top lỗi phổ biến nhất</label>
@@ -1366,17 +1374,84 @@ function getQCDB(){
   try{return(firebase.apps.length?firebase.app():firebase.initializeApp({apiKey:'AIzaSyBetoDgdhDgfVQsvNZVlpoNs_2CWvYZs6A',databaseURL:'https://kscl-chat-default-rtdb.asia-southeast1.firebasedatabase.app',projectId:'kscl-chat'})).database();}
   catch(e){return null;}
 }
+let qcStoreList=['Nguyễn Tuân','T6 Timecity','Bạch Mai','Nguyễn Du','Ecohome 3','Green Bay','Sài Đồng','Văn Phú','Đội Cấn','Linh Đàm','Thái Hà','Hàng Bông'];
+function qcLoadStores(cb){
+  const qcdb=getQCDB();
+  if(!qcdb){qcRenderStoreTable();if(cb)cb();return;}
+  qcdb.ref('qc_config/stores').get().then(snap=>{
+    if(snap.exists()&&Array.isArray(snap.val()))qcStoreList=snap.val();
+    qcRenderStoreTable();if(cb)cb();
+  }).catch(()=>{qcRenderStoreTable();if(cb)cb();});
+}
+function qcSaveStoreConfig(){
+  const qcdb=getQCDB();
+  if(qcdb)qcdb.ref('qc_config/stores').set(qcStoreList);
+}
+function qcRenderStoreTable(){
+  const tbody=document.getElementById('s1-stores-body');if(!tbody)return;
+  if(!qcStoreList.length){tbody.innerHTML='<tr><td colspan="4" style="padding:16px;text-align:center;color:#94a3b8">Chưa có siêu thị. Bấm ➕ Thêm ST hoặc Import Excel.</td></tr>';return;}
+  tbody.innerHTML=qcStoreList.map((st,i)=>`<tr>
+    <td style="padding:7px 12px;border:1px solid #e0e7ff;font-weight:600">${st}</td>
+    <td style="padding:5px 8px;border:1px solid #e0e7ff;text-align:center"><input type="number" id="s1-st${i}-prev" class="fi fi-sm" placeholder="—"></td>
+    <td style="padding:5px 8px;border:1px solid #e0e7ff;text-align:center"><input type="number" id="s1-st${i}-curr" class="fi fi-sm" placeholder="—"></td>
+    <td style="padding:5px;border:1px solid #e0e7ff;text-align:center"><button onclick="qcRemoveStore(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;line-height:1" title="Xóa">🗑</button></td>
+  </tr>`).join('');
+}
+function qcAddStore(){
+  const name=prompt('Nhập tên siêu thị mới:');
+  if(!name||!name.trim())return;
+  qcStoreList.push(name.trim());
+  qcSaveStoreConfig();qcRenderStoreTable();
+}
+function qcRemoveStore(i){
+  if(!confirm(`Xóa "${qcStoreList[i]}" khỏi danh sách?`))return;
+  qcStoreList.splice(i,1);
+  qcSaveStoreConfig();qcRenderStoreTable();
+}
+function qcImportExcel(input){
+  const file=input.files[0];if(!file)return;
+  input.value='';
+  const run=()=>qcParseExcel(file);
+  if(!window.XLSX){const s=document.createElement('script');s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';s.onload=run;document.head.appendChild(s);}
+  else run();
+}
+function qcParseExcel(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''}).filter(r=>r[0]&&String(r[0]).trim());
+      if(!rows.length){alert('Không tìm thấy dữ liệu trong file!');return;}
+      const start=isNaN(parseFloat(rows[0][1]))?1:0;
+      const data=rows.slice(start);
+      if(!data.length){alert('File chỉ có hàng tiêu đề, không có dữ liệu!');return;}
+      qcStoreList=data.map(r=>String(r[0]).trim());
+      qcSaveStoreConfig();qcRenderStoreTable();
+      setTimeout(()=>{
+        data.forEach((r,i)=>{
+          const p=document.getElementById(`s1-st${i}-prev`);
+          const c=document.getElementById(`s1-st${i}-curr`);
+          if(p&&r[1]!=='')p.value=r[1];
+          if(c&&r[2]!=='')c.value=r[2];
+        });
+      },60);
+      alert(`✅ Đã nhập ${data.length} siêu thị từ file Excel!`);
+    }catch(err){alert('Lỗi đọc file: '+err.message);}
+  };
+  reader.readAsBinaryString(file);
+}
 function qcDataSave(btn){
   const month=document.getElementById('qc-month')?.value,year=document.getElementById('qc-year')?.value;
   if(!month||!year){alert('Chọn tháng/năm trước!');return;}
-  const STORES=['Nguyễn Tuân','T6 Timecity','Bạch Mai','Nguyễn Du','Ecohome 3','Green Bay','Sài Đồng','Văn Phú','Đội Cấn','Linh Đàm','Thái Hà','Hàng Bông'];
   const stores={};
-  STORES.forEach((st,i)=>{const prev=document.getElementById(`s1-st${i}-prev`)?.value;const curr=document.getElementById(`s1-st${i}-curr`)?.value;stores[`st${i}`]={name:st,prev:prev!==''?parseFloat(prev):null,curr:curr!==''?parseFloat(curr):null};});
+  qcStoreList.forEach((st,i)=>{const prev=document.getElementById(`s1-st${i}-prev`)?.value;const curr=document.getElementById(`s1-st${i}-curr`)?.value;stores[`st${i}`]={name:st,prev:prev!==''?parseFloat(prev):null,curr:curr!==''?parseFloat(curr):null};});
   const loi=[];for(let i=1;i<=3;i++){const ten=(document.getElementById(`s1-loi${i}-ten`)?.value||'').trim();const soST=parseInt(document.getElementById(`s1-loi${i}-soST`)?.value)||0;if(ten)loi.push({ten,soST});}
   const topST=[];for(let i=1;i<=3;i++){const name=(document.getElementById(`s2-top${i}-name`)?.value||'').trim();const count=parseInt(document.getElementById(`s2-top${i}-count`)?.value)||0;if(name)topST.push({name,count});}
   const n=parseInt(document.getElementById('s3-soSTLoi')?.value)||0;
   const stLoi=[];for(let i=0;i<n;i++){const name=(document.getElementById(`s3-st${i}-name`)?.value||'').trim();const loiT=(document.getElementById(`s3-st${i}-loi`)?.value||'').trim();if(name)stLoi.push({name,loi:loiT});}
   const data={
+    s1_storeNames:qcStoreList.slice(),
     s1_tongluot:parseInt(document.getElementById('s1-tongluot')?.value)||0,
     s1_diemtb:parseFloat(document.getElementById('s1-diemtb')?.value)||0,
     s1_stores:stores,s1_loi:loi,s1_note:document.getElementById('s1-note')?.value||'',
@@ -1405,6 +1480,9 @@ function qcDataLoad(){
     if(!snap.exists()){alert(`Chưa có dữ liệu tháng ${month}/${year}`);return;}
     const d=snap.val();
     const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;};
+    if(d.s1_storeNames&&Array.isArray(d.s1_storeNames)&&d.s1_storeNames.length){
+      qcStoreList=d.s1_storeNames;qcSaveStoreConfig();qcRenderStoreTable();
+    }
     set('s1-tongluot',d.s1_tongluot);set('s1-diemtb',d.s1_diemtb);set('s1-note',d.s1_note);
     if(d.s1_stores)Object.values(d.s1_stores).forEach((v,i)=>{set(`s1-st${i}-prev`,v.prev!=null?v.prev:'');set(`s1-st${i}-curr`,v.curr!=null?v.curr:'');});
     if(d.s1_loi)d.s1_loi.forEach((l,i)=>{set(`s1-loi${i+1}-ten`,l.ten);set(`s1-loi${i+1}-soST`,l.soST);});
@@ -1471,6 +1549,8 @@ function afterRender(){
   ],{scales:{y:{min:70,max:105,ticks:{callback:v=>v+'%'},grid:{color:'#f0f2f7'}},x:{grid:{display:false}}}});
   mkC('c-exec-doitra','doughnut',['Do khách hàng','Do siêu thị','Nguyên nhân khác'],[{data:[72.31,21.54,6.15],bg:['#6366f1','#dc2626','#94a3b8']}]);
 
+  // Init dynamic store table on Nhập liệu tab
+  if(S.page==='baocao'&&S.tab==='Nhập liệu')qcLoadStores();
   // Load saved import data
   if(S.user)db.ref(`imports/${S.user.uid}`).get().then(snap=>{if(snap.exists()){const d=snap.val();Object.keys(d).forEach(m=>{S.data[m]=d[m].data;updateChartFromData(m,S.data[m]);});}});
 }
