@@ -736,7 +736,8 @@ function rBaoCao(){
     tongDoitra:hasQD?qd.s2_tongdon:195,
     pctKhach:hasQD?+(qd.s2_pct_khach||0):72.31,
     pctST:hasQD?+(qd.s2_pct_st||0):21.54,
-    pctKhac:hasQD?+(qd.s2_pct_khac||0):6.15,
+    pctHT:hasQD?(qd.s2_pct_ht!=null?+(qd.s2_pct_ht):null):4.10,
+    pctKhac:hasQD?+(qd.s2_pct_khac||0):2.05,
     soKiemTra:hasQD?qd.s3_tongST:11,
     soSTLoi:hasQD?qd.s3_soSTLoi:4,
     tongLuot:hasQD?qd.s1_tongluot:44,
@@ -802,21 +803,29 @@ ${t==='Executive QC'?`
     </tr></thead>
     <tbody>
       ${[
-        {st:'ST Hàng Bông',       t4:94, t5:81,  loi:'Vệ sinh, Diện mạo',  thaoTac:false, doitra:16, risk:'red'},
-        {st:'ST Thái Hà',         t4:83, t5:85,  loi:'Tem giá',            thaoTac:false, doitra:0,  risk:'yellow'},
-        {st:'ST Đội Cấn',         t4:85, t5:88,  loi:'Vệ sinh',            thaoTac:true,  doitra:21, risk:'yellow'},
-        {st:'ST Linh Đàm',        t4:84, t5:88,  loi:'Tem giá',            thaoTac:false, doitra:0,  risk:'yellow'},
-        {st:'ST Nguyễn Khuyến',   t4:86, t5:90,  loi:'Diện mạo',          thaoTac:true,  doitra:0,  risk:'yellow'},
-        {st:'ST Vũ Phạm Hàm',     t4:87, t5:90,  loi:'Vệ sinh',            thaoTac:true,  doitra:0,  risk:'yellow'},
-        {st:'ST Ngoại Giao Đoàn', t4:88, t5:90,  loi:'Vệ sinh',            thaoTac:true,  doitra:0,  risk:'yellow'},
-        {st:'ST Văn Phú',         t4:86, t5:90,  loi:'Tem giá',            thaoTac:false, doitra:0,  risk:'green'},
-        {st:'ST Sài Đồng',        t4:88, t5:90,  loi:'Diện mạo',          thaoTac:false, doitra:0,  risk:'green'},
-        {st:'ST Green Bay',       t4:87, t5:90,  loi:'Vệ sinh',            thaoTac:false, doitra:0,  risk:'green'},
-        {st:'ST Nguyễn Du',       t4:95, t5:98,  loi:'—',                  thaoTac:false, doitra:0,  risk:'green'},
-        {st:'ST Ecohome 3',       t4:96, t5:98,  loi:'—',                  thaoTac:false, doitra:0,  risk:'green'},
-        {st:'ST Bạch Mai',        t4:98, t5:100, loi:'—',                  thaoTac:false, doitra:0,  risk:'green'},
-        {st:'ST T6 Timecity',     t4:97, t5:100, loi:'—',                  thaoTac:false, doitra:0,  risk:'green'},
-        {st:'ST Nguyễn Tuân',     t4:98, t5:100, loi:'—',                  thaoTac:false, doitra:0,  risk:'green'},
+        {st:'ST Hàng Bông',       t4:94,  t5:81,  loi:'Vệ sinh, Diện mạo',  thaoTac:false, doitra:16, risk:'red'},
+        {st:'ST Hàm Nghi',        t4:92,  t5:84,  loi:'Diện mạo',           thaoTac:false, doitra:8,  risk:'yellow'},
+        {st:'ST Thái Hà',         t4:85,  t5:85,  loi:'Tem giá',            thaoTac:false, doitra:13, risk:'yellow'},
+        {st:'ST Đội Cấn',         t4:88,  t5:88,  loi:'Vệ sinh',            thaoTac:true,  doitra:21, risk:'yellow'},
+        {st:'ST Linh Đàm',        t4:83,  t5:88,  loi:'Tem giá',            thaoTac:false, doitra:8,  risk:'yellow'},
+        {st:'ST Vũ Phạm Hàm',     t4:89,  t5:88,  loi:'Vệ sinh',            thaoTac:true,  doitra:4,  risk:'yellow'},
+        {st:'ST Đỗ Quang',        t4:96,  t5:90,  loi:'Vệ sinh',            thaoTac:false, doitra:3,  risk:'green'},
+        {st:'ST Văn Phú',         t4:86,  t5:90,  loi:'Tem giá',            thaoTac:false, doitra:7,  risk:'green'},
+        {st:'ST Sài Đồng',        t4:84,  t5:90,  loi:'Tem giá',            thaoTac:false, doitra:4,  risk:'green'},
+        {st:'ST Green Bay',       t4:88,  t5:90,  loi:'Vệ sinh',            thaoTac:false, doitra:5,  risk:'green'},
+        {st:'ST Xuân La',         t4:80,  t5:90,  loi:'Vệ sinh',            thaoTac:false, doitra:9,  risk:'green'},
+        {st:'ST Mandarin C1',     t4:85,  t5:91,  loi:'Vệ sinh',            thaoTac:false, doitra:6,  risk:'green'},
+        {st:'ST Trần Duy Hưng',   t4:91,  t5:92,  loi:'—',                  thaoTac:false, doitra:11, risk:'green'},
+        {st:'ST Trần Đăng Ninh',  t4:84,  t5:94,  loi:'—',                  thaoTac:false, doitra:30, risk:'green'},
+        {st:'ST Ngoại Giao Đoàn', t4:94,  t5:94,  loi:'Vệ sinh',            thaoTac:true,  doitra:6,  risk:'green'},
+        {st:'ST Bắc Ninh 02',     t4:94,  t5:94,  loi:'—',                  thaoTac:false, doitra:14, risk:'green'},
+        {st:'ST Nguyễn Khuyến',   t4:97,  t5:97,  loi:'—',                  thaoTac:true,  doitra:2,  risk:'green'},
+        {st:'ST Nguyễn Văn Lộc',  t4:97,  t5:97,  loi:'—',                  thaoTac:false, doitra:4,  risk:'green'},
+        {st:'ST Nguyễn Du',       t4:84,  t5:98,  loi:'—',                  thaoTac:false, doitra:2,  risk:'green'},
+        {st:'ST Ecohome 3',       t4:98,  t5:98,  loi:'—',                  thaoTac:false, doitra:2,  risk:'green'},
+        {st:'ST Nguyễn Tuân',     t4:94,  t5:100, loi:'—',                  thaoTac:false, doitra:8,  risk:'green'},
+        {st:'ST T6 Timecity',     t4:100, t5:100, loi:'—',                  thaoTac:false, doitra:8,  risk:'green'},
+        {st:'ST Bạch Mai',        t4:91,  t5:100, loi:'—',                  thaoTac:false, doitra:4,  risk:'green'},
       ].map(r=>{
         const delta=r.t5-r.t4;
         const crossRisk=r.thaoTac&&r.doitra>15;
@@ -848,7 +857,7 @@ ${t==='Executive QC'?`
 <div class="g2">
   <div class="card" style="padding:18px">
     <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:16px">📉 Top 3 nhóm lỗi phổ biến nhất — T${eM}/${eY}</div>
-    ${exec.topLoi.map((l,i)=>{const lb=l.ten||l.lb;const n=l.soST||l.n||0;const clr=loiClrs[i]||'#94a3b8';const tot=exec.fbStores?exec.fbStores.length:12;const pct=Math.round(n/tot*100);return`<div style="margin-bottom:16px">
+    ${exec.topLoi.map((l,i)=>{const lb=l.ten||l.lb;const n=l.soST||l.n||0;const clr=loiClrs[i]||'#94a3b8';const tot=exec.fbStores?exec.fbStores.length:23;const pct=Math.round(n/tot*100);return`<div style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:6px">
         <span style="font-weight:600">${lb}</span><span style="font-weight:700;color:${clr}">${n}/${tot} ST</span>
       </div>
@@ -1491,7 +1500,7 @@ function qcLoadExecAndRefresh(year,month){
     }
   }).catch(e=>{console.error(e);alert('Lỗi tải dữ liệu: '+e.message);});
 }
-let qcStoreList=['Nguyễn Tuân','T6 Timecity','Bạch Mai','Nguyễn Du','Ecohome 3','Green Bay','Sài Đồng','Văn Phú','Đội Cấn','Linh Đàm','Thái Hà','Hàng Bông'];
+let qcStoreList=['Đỗ Quang','Đội Cấn','Linh Đàm','Mandarin C1','Thái Hà','Trần Đăng Ninh','Nguyễn Du','Hàng Bông','Văn Phú','Hàm Nghi','Nguyễn Tuân','Ngoại Giao Đoàn','Trần Duy Hưng','Nguyễn Văn Lộc','T6 Timecity','Ecohome 3','Green Bay','Xuân La','Bắc Ninh 02','Nguyễn Khuyến','Sài Đồng','Bạch Mai','Vũ Phạm Hàm'];
 function qcLoadStores(cb){
   const qcdb=getQCDB();
   if(!qcdb){qcRenderStoreTable();if(cb)cb();return;}
@@ -1671,20 +1680,27 @@ function afterRender(){
         {label:'Tháng trước',data:prev,bg:'rgba(99,102,241,.25)',borderColor:'#6366f1'},
         {label:`T${eM}/${eY}`,data:curr,bg:curr.map(v=>v>=90?'rgba(22,163,74,.7)':v>=80?'rgba(217,119,6,.7)':'rgba(220,38,38,.7)'),borderColor:curr.map(v=>v>=90?'#16a34a':v>=80?'#d97706':'#dc2626')}
       ];
-      const dtData=[{data:[qd.s2_pct_khach||0,qd.s2_pct_st||0,qd.s2_pct_khac||0],bg:['#6366f1','#dc2626','#94a3b8']}];
+      const hasHT=qd.s2_pct_ht!=null;
+      const dtLbls=hasHT?['Do khách hàng','Do siêu thị','Lỗi hệ thống','Lý do khác']:['Do khách hàng','Do siêu thị','Khác'];
+      const dtVals=hasHT?[qd.s2_pct_khach||0,qd.s2_pct_st||0,+(qd.s2_pct_ht),qd.s2_pct_khac||0]:[qd.s2_pct_khach||0,qd.s2_pct_st||0,qd.s2_pct_khac||0];
+      const dtBg=hasHT?['#6366f1','#dc2626','#f59e0b','#94a3b8']:['#6366f1','#dc2626','#94a3b8'];
+      const dtData=[{data:dtVals,bg:dtBg}];
       mkC('c-exec-bar','bar',lbls,barData,scaleOpts);
-      mkC('c-exec-doitra','doughnut',['Do khách hàng','Do siêu thị','Khác'],dtData);
+      mkC('c-exec-doitra','doughnut',dtLbls,dtData);
       mkC('c-ebit-bar','bar',lbls,barData,{...scaleOpts,plugins:{legend:{labels:{color:'#fff',font:{size:11}}}}});
-      mkC('c-ebit-doitra','doughnut',['Do khách hàng','Do siêu thị','Khác'],[{...dtData[0],bg:['#6366f1','#c8102e','#4b5563']}]);
+      mkC('c-ebit-doitra','doughnut',dtLbls,[{...dtData[0],bg:hasHT?['#6366f1','#c8102e','#d97706','#4b5563']:['#6366f1','#c8102e','#4b5563']}]);
     }else{
-      const ST=['N.Tuân','T6TC','Bạch Mai','N.Du','Eco3','G.Bay','S.Đồng','V.Phú','Đ.Cấn','L.Đàm','T.Hà','H.Bông'];
-      const p4=[98,97,98,95,96,87,88,86,85,84,83,94];
-      const p5=[100,100,100,98,98,90,90,90,88,88,85,81];
-      mkC('c-exec-bar','bar',ST,[
+      const ST=['Đ.Q','Đ.Cấn','L.Đàm','Man.','T.Hà','T.Đ.Ninh','N.Du','H.Bông','V.Phú','H.Nghi','N.Tuân','NGĐ','T.D.Hưng','N.V.Lộc','T6TC','Eco3','G.Bay','Xuân La','BN02','N.Khuyến','S.Đồng','B.Mai','V.P.Hàm'];
+      const p4=[96,88,83,85,85,84,84,94,86,92,94,94,91,97,100,98,88,80,94,97,84,91,89];
+      const p5=[90,88,88,91,85,94,98,81,90,84,100,94,92,97,100,98,90,90,94,97,90,100,88];
+      const fbD=[
         {label:'T4/2026',data:p4,bg:'rgba(99,102,241,.25)',borderColor:'#6366f1'},
         {label:'T5/2026',data:p5,bg:p5.map(v=>v>=90?'rgba(22,163,74,.7)':v>=80?'rgba(217,119,6,.7)':'rgba(220,38,38,.7)'),borderColor:p5.map(v=>v>=90?'#16a34a':v>=80?'#d97706':'#dc2626')}
-      ],scaleOpts);
-      mkC('c-exec-doitra','doughnut',['Do khách hàng','Do siêu thị','Nguyên nhân khác'],[{data:[72.31,21.54,6.15],bg:['#6366f1','#dc2626','#94a3b8']}]);
+      ];
+      mkC('c-exec-bar','bar',ST,fbD,scaleOpts);
+      mkC('c-exec-doitra','doughnut',['Do khách hàng','Do siêu thị','Lỗi hệ thống','Lý do khác'],[{data:[72.31,21.54,4.10,2.05],bg:['#6366f1','#dc2626','#f59e0b','#94a3b8']}]);
+      mkC('c-ebit-bar','bar',ST,fbD,{...scaleOpts,plugins:{legend:{labels:{color:'#fff',font:{size:11}}}}});
+      mkC('c-ebit-doitra','doughnut',['Do khách hàng','Do siêu thị','Lỗi hệ thống','Lý do khác'],[{data:[72.31,21.54,4.10,2.05],bg:['#6366f1','#c8102e','#d97706','#4b5563']}]);
     }
   }
 
