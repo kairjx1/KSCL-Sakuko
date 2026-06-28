@@ -745,7 +745,14 @@ ${t==='Executive QC'?`
 </div>
 <div class="g2" style="margin-bottom:16px">
   <div class="chart-box"><div class="chart-title">📊 Điểm dịch vụ siêu thị — T4 vs T5/2026</div><div class="chart-wrap" style="height:220px"><canvas id="c-exec-bar"></canvas></div></div>
-  <div class="chart-box"><div class="chart-title">🔴 Nguyên nhân đổi trả tháng 5</div><div class="chart-wrap" style="height:220px"><canvas id="c-exec-doitra"></canvas></div></div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="chart-box" style="flex:0 0 auto"><div class="chart-title">🔴 Nguyên nhân đổi trả tháng 5</div><div class="chart-wrap" style="height:145px"><canvas id="c-exec-doitra"></canvas></div></div>
+    <div class="card" style="padding:14px 16px;flex:1">
+      <div style="font-size:13px;font-weight:700;color:#be123c;margin-bottom:11px">🔥 Điểm nóng đổi trả — Top 3 ST</div>
+      ${[{n:'Trần Đăng Ninh',v:30,clr:'#dc2626'},{n:'ST Đội Cấn',v:21,clr:'#d97706'},{n:'ST Hàng Bông',v:16,clr:'#f59e0b'}].map(s=>`<div style="margin-bottom:11px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">${s.n}</span><span style="color:${s.clr};font-weight:700">${s.v} đơn</span></div><div style="height:10px;background:#fef2f2;border-radius:5px;overflow:hidden"><div style="height:100%;width:${Math.round(s.v/30*100)}%;background:${s.clr};border-radius:5px"></div></div></div>`).join('')}
+      <div style="font-size:11px;color:#94a3b8;border-top:1px solid #f0f2f7;padding-top:6px;margin-top:2px">Tổng 195 đơn · Do ST: 42 đơn (21.54%)</div>
+    </div>
+  </div>
 </div>
 
 <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
@@ -760,38 +767,46 @@ ${t==='Executive QC'?`
       <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Điểm T5</th>
       <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Tốc độ</th>
       <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Lỗi QC</th>
+      <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Đổi trả</th>
       <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Thao tác</th>
       <th style="padding:10px 14px;text-align:left;color:#3730a3;font-weight:600">Hành động</th>
     </tr></thead>
     <tbody>
       ${[
-        {st:'ST Hàng Bông',       t4:94, t5:81,  loi:'Vệ sinh, Diện mạo',  thaoTac:false, risk:'red'},
-        {st:'ST Thái Hà',         t4:83, t5:85,  loi:'Tem giá',            thaoTac:false, risk:'yellow'},
-        {st:'ST Đội Cấn',         t4:85, t5:88,  loi:'Vệ sinh',            thaoTac:true,  risk:'yellow'},
-        {st:'ST Linh Đàm',        t4:84, t5:88,  loi:'Tem giá',            thaoTac:false, risk:'yellow'},
-        {st:'ST Nguyễn Khuyến',   t4:86, t5:90,  loi:'Diện mạo',          thaoTac:true,  risk:'yellow'},
-        {st:'ST Vũ Phạm Hàm',     t4:87, t5:90,  loi:'Vệ sinh',            thaoTac:true,  risk:'yellow'},
-        {st:'ST Ngoại Giao Đoàn', t4:88, t5:90,  loi:'Vệ sinh',            thaoTac:true,  risk:'yellow'},
-        {st:'ST Văn Phú',         t4:86, t5:90,  loi:'Tem giá',            thaoTac:false, risk:'green'},
-        {st:'ST Sài Đồng',        t4:88, t5:90,  loi:'Diện mạo',          thaoTac:false, risk:'green'},
-        {st:'ST Green Bay',       t4:87, t5:90,  loi:'Vệ sinh',            thaoTac:false, risk:'green'},
-        {st:'ST Nguyễn Du',       t4:95, t5:98,  loi:'—',                  thaoTac:false, risk:'green'},
-        {st:'ST Ecohome 3',       t4:96, t5:98,  loi:'—',                  thaoTac:false, risk:'green'},
-        {st:'ST Bạch Mai',        t4:98, t5:100, loi:'—',                  thaoTac:false, risk:'green'},
-        {st:'ST T6 Timecity',     t4:97, t5:100, loi:'—',                  thaoTac:false, risk:'green'},
-        {st:'ST Nguyễn Tuân',     t4:98, t5:100, loi:'—',                  thaoTac:false, risk:'green'},
+        {st:'ST Hàng Bông',       t4:94, t5:81,  loi:'Vệ sinh, Diện mạo',  thaoTac:false, doitra:16, risk:'red'},
+        {st:'ST Thái Hà',         t4:83, t5:85,  loi:'Tem giá',            thaoTac:false, doitra:0,  risk:'yellow'},
+        {st:'ST Đội Cấn',         t4:85, t5:88,  loi:'Vệ sinh',            thaoTac:true,  doitra:21, risk:'yellow'},
+        {st:'ST Linh Đàm',        t4:84, t5:88,  loi:'Tem giá',            thaoTac:false, doitra:0,  risk:'yellow'},
+        {st:'ST Nguyễn Khuyến',   t4:86, t5:90,  loi:'Diện mạo',          thaoTac:true,  doitra:0,  risk:'yellow'},
+        {st:'ST Vũ Phạm Hàm',     t4:87, t5:90,  loi:'Vệ sinh',            thaoTac:true,  doitra:0,  risk:'yellow'},
+        {st:'ST Ngoại Giao Đoàn', t4:88, t5:90,  loi:'Vệ sinh',            thaoTac:true,  doitra:0,  risk:'yellow'},
+        {st:'ST Văn Phú',         t4:86, t5:90,  loi:'Tem giá',            thaoTac:false, doitra:0,  risk:'green'},
+        {st:'ST Sài Đồng',        t4:88, t5:90,  loi:'Diện mạo',          thaoTac:false, doitra:0,  risk:'green'},
+        {st:'ST Green Bay',       t4:87, t5:90,  loi:'Vệ sinh',            thaoTac:false, doitra:0,  risk:'green'},
+        {st:'ST Nguyễn Du',       t4:95, t5:98,  loi:'—',                  thaoTac:false, doitra:0,  risk:'green'},
+        {st:'ST Ecohome 3',       t4:96, t5:98,  loi:'—',                  thaoTac:false, doitra:0,  risk:'green'},
+        {st:'ST Bạch Mai',        t4:98, t5:100, loi:'—',                  thaoTac:false, doitra:0,  risk:'green'},
+        {st:'ST T6 Timecity',     t4:97, t5:100, loi:'—',                  thaoTac:false, doitra:0,  risk:'green'},
+        {st:'ST Nguyễn Tuân',     t4:98, t5:100, loi:'—',                  thaoTac:false, doitra:0,  risk:'green'},
       ].map(r=>{
         const delta=r.t5-r.t4;
-        const riskBg=r.risk==='red'?'#fef2f2':r.risk==='yellow'?'#fffbeb':'#f0fdf4';
-        const scoreClr=r.risk==='red'?'#dc2626':r.risk==='yellow'?'#d97706':'#16a34a';
-        const vel=delta>0?`<span style="color:#16a34a;font-weight:700">▲+${delta} 📈 Tiến bộ</span>`:delta<0?`<span style="color:#dc2626;font-weight:700">▼${delta} 🚨 Cảnh báo</span>`:`<span style="color:#6b7280">→ Ổn định</span>`;
+        const crossRisk=r.thaoTac&&r.doitra>15;
+        const riskBg=crossRisk?'#ffe4e6':r.risk==='red'?'#fef2f2':r.risk==='yellow'?'#fffbeb':'#f0fdf4';
+        const scoreClr=r.t5>=90?'#16a34a':r.t5>=80?'#d97706':'#dc2626';
+        const velClr=delta>0?(r.t5>=90?'#16a34a':'#d97706'):delta<0?'#dc2626':'#6b7280';
+        const velTxt=delta>0?(r.t5>=90?`▲+${delta} 📈 Tiến bộ`:`▲+${delta} 📊 Cải thiện dần`):delta<0?`▼${delta} 🚨 Cảnh báo`:`→ Ổn định`;
+        const vel=`<span style="color:${velClr};font-weight:700">${velTxt}</span>`;
         const thaoTacBadge=r.thaoTac?`<span style="background:#fee2e2;color:#dc2626;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600">Có lỗi</span>`:`<span style="background:#dcfce7;color:#16a34a;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600">OK</span>`;
-        const alertBtn=r.risk!=='green'?`<button onclick="execAlert('${r.st}','${r.loi}',${r.t5},${r.thaoTac})" style="font-size:11px;padding:4px 10px;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;cursor:pointer;font-weight:600">📨 Gửi cảnh báo</button>`:`<span style="color:#94a3b8;font-size:12px">✓ Không cần</span>`;
-        return`<tr style="background:${riskBg};border-bottom:1px solid #f0f4ff">
-          <td style="padding:10px 14px;font-weight:600">${r.st}</td>
+        const doitraClr=r.doitra>15?'#dc2626':r.doitra>0?'#d97706':'#94a3b8';
+        const doitraTd=`<td style="padding:10px 14px;text-align:center;font-weight:700;color:${doitraClr}">${r.doitra>0?r.doitra+'đ':'—'}</td>`;
+        const crossBadge=crossRisk?`<div style="font-size:10px;font-weight:700;color:#be123c;background:#ffe4e6;border:1px solid #fca5a5;border-radius:4px;padding:1px 6px;margin-top:3px;display:inline-block">🚨 CẢNH BÁO GIAN LẬN</div>`:'';
+        const alertBtn=(r.risk!=='green'||crossRisk)?`<button onclick="execAlert('${r.st}','${r.loi}',${r.t5},${r.thaoTac})" style="font-size:11px;padding:4px 10px;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;cursor:pointer;font-weight:600">📨 Gửi cảnh báo</button>`:`<span style="color:#94a3b8;font-size:12px">✓ Không cần</span>`;
+        return`<tr style="background:${riskBg};border-bottom:1px solid #f0f4ff${crossRisk?';border-left:4px solid #dc2626':''}">
+          <td style="padding:10px 14px;font-weight:600">${r.st}${crossBadge}</td>
           <td style="padding:10px 14px;text-align:center;font-weight:700;color:${scoreClr}">${r.t5}%</td>
           <td style="padding:10px 14px;text-align:center">${vel}</td>
           <td style="padding:10px 14px;color:#64748b;font-size:12px">${r.loi}</td>
+          ${doitraTd}
           <td style="padding:10px 14px;text-align:center">${thaoTacBadge}</td>
           <td style="padding:10px 14px">${alertBtn}</td>
         </tr>`;
@@ -802,7 +817,20 @@ ${t==='Executive QC'?`
 </div>
 
 <div class="g2">
-  <div class="chart-box"><div class="chart-title">📉 Top 3 nhóm lỗi phổ biến nhất</div><div class="chart-wrap" style="height:200px"><canvas id="c-exec-loi"></canvas></div></div>
+  <div class="card" style="padding:18px">
+    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:16px">📉 Top 3 nhóm lỗi phổ biến nhất — T5/2026</div>
+    ${[{lb:'Vệ sinh',n:9,clr:'#dc2626'},{lb:'Tem giá',n:6,clr:'#d97706'},{lb:'Diện mạo',n:4,clr:'#6366f1'}].map(l=>`<div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:6px">
+        <span style="font-weight:600">${l.lb}</span><span style="font-weight:700;color:${l.clr}">${l.n}/12 ST</span>
+      </div>
+      <div style="height:16px;background:#f0f2f7;border-radius:8px;overflow:hidden">
+        <div style="height:100%;width:${Math.round(l.n/12*100)}%;background:${l.clr};border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px">
+          <span style="font-size:10px;color:#fff;font-weight:700">${Math.round(l.n/12*100)}%</span>
+        </div>
+      </div>
+    </div>`).join('')}
+    <div style="font-size:11px;color:#94a3b8;border-top:1px solid #f0f2f7;padding-top:10px">Nhiều ST mắc lỗi cùng lúc — tổng hợp theo nhóm phổ biến nhất trong tháng</div>
+  </div>
   <div class="card" style="padding:16px">
     <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">📋 Tóm tắt Compliance Check</div>
     <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px">
@@ -1442,7 +1470,7 @@ function afterRender(){
     {label:'T5/2026',data:pts5,bg:pts5.map(v=>v>=90?'rgba(22,163,74,.7)':v>=80?'rgba(217,119,6,.7)':'rgba(220,38,38,.7)'),borderColor:pts5.map(v=>v>=90?'#16a34a':v>=80?'#d97706':'#dc2626')}
   ],{scales:{y:{min:70,max:105,ticks:{callback:v=>v+'%'},grid:{color:'#f0f2f7'}},x:{grid:{display:false}}}});
   mkC('c-exec-doitra','doughnut',['Do khách hàng','Do siêu thị','Nguyên nhân khác'],[{data:[72.31,21.54,6.15],bg:['#6366f1','#dc2626','#94a3b8']}]);
-  mkC('c-exec-loi','bar',['Vệ sinh (9 ST)','Tem giá (6 ST)','Diện mạo (4 ST)'],[{label:'Số ST mắc lỗi',data:[9,6,4],bg:['rgba(220,38,38,.7)','rgba(217,119,6,.7)','rgba(99,102,241,.7)']}],{indexAxis:'h',scales:{x:{beginAtZero:true,max:12,grid:{color:'#f0f2f7'}},y:{grid:{display:false}}}});
+
   // Load saved import data
   if(S.user)db.ref(`imports/${S.user.uid}`).get().then(snap=>{if(snap.exists()){const d=snap.val();Object.keys(d).forEach(m=>{S.data[m]=d[m].data;updateChartFromData(m,S.data[m]);});}});
 }
