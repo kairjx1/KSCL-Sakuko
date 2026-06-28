@@ -715,18 +715,110 @@ function completeCa(dept){
    BÁO CÁO
 ══════════════════════════════════════════ */
 function rBaoCao(){
-  const tabs=['Tổng hợp','KPI tháng','Kiểm kê','QC','Xuất báo cáo'];
-  const t=S.tab||'Tổng hợp';
+  const tabs=['Executive QC','Tổng hợp','KPI tháng','Kiểm kê','QC','Xuất báo cáo'];
+  const t=S.tab||'Executive QC';
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Báo cáo</div>
 <div class="sec-hdr"><h1>📊 Báo cáo & Phân tích</h1>
 <div style="display:flex;gap:8px">
-  <select style="max-width:160px"><option>Tháng 6/2026</option><option>Tháng 5/2026</option></select>
-  <button class="btn b-out b-sm">⬇️ Xuất PDF</button>
+  <select style="max-width:160px"><option>Tháng 5/2026</option><option>Tháng 4/2026</option></select>
+  <a href="ebit-t5-2026.html" target="_blank" class="btn b-out b-sm">📋 Báo cáo EBIT</a>
   <button class="btn b-pri b-sm">⬇️ Xuất Excel</button>
 </div></div>
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('baocao','${tb}')">${tb}</div>`).join('')}</div>
-${(t==='Kiểm kê'||t==='QC')?`
+${t==='Executive QC'?`
+<div class="g4 g-sm2" style="margin-bottom:16px">
+  ${kpi('Điểm DV TB','93.17%','Tháng 5/2026','#16a34a','⭐','+3.48% vs T4')}
+  ${kpi('Ca đổi trả','195','tháng 5','#0284c7','🔄','Do ST: 21.54%')}
+  ${kpi('ST lỗi thao tác','4/11','đã kiểm tra','#dc2626','⚠️','Cần theo dõi T6')}
+  ${kpi('ST dưới 80%','0','siêu thị','#16a34a','✅','Cải thiện hoàn toàn')}
+</div>
+<div class="g2" style="margin-bottom:16px">
+  <div class="chart-box"><div class="chart-title">📊 Điểm dịch vụ siêu thị — T4 vs T5/2026</div><div class="chart-wrap" style="height:220px"><canvas id="c-exec-bar"></canvas></div></div>
+  <div class="chart-box"><div class="chart-title">🔴 Nguyên nhân đổi trả tháng 5</div><div class="chart-wrap" style="height:220px"><canvas id="c-exec-doitra"></canvas></div></div>
+</div>
+
+<div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
+  <div style="padding:14px 18px;background:linear-gradient(90deg,#1e1b4b,#312e81);display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:14px;font-weight:700;color:#fff">🗺️ Bản đồ rủi ro siêu thị — Tháng 5/2026</span>
+    <span style="font-size:11px;color:#c7d2fe">Xanh ≥90% · Vàng 80–89% · Đỏ &lt;80%</span>
+  </div>
+  <div style="overflow-x:auto">
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="background:#f0f4ff">
+      <th style="padding:10px 14px;text-align:left;color:#3730a3;font-weight:600">Siêu thị</th>
+      <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Điểm T5</th>
+      <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Tốc độ</th>
+      <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Lỗi QC</th>
+      <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Thao tác</th>
+      <th style="padding:10px 14px;text-align:left;color:#3730a3;font-weight:600">Hành động</th>
+    </tr></thead>
+    <tbody>
+      ${[
+        {st:'ST Hàng Bông',       t4:94, t5:81,  loi:'Vệ sinh, Diện mạo',  thaoTac:false, risk:'red'},
+        {st:'ST Thái Hà',         t4:83, t5:85,  loi:'Tem giá',            thaoTac:false, risk:'yellow'},
+        {st:'ST Đội Cấn',         t4:85, t5:88,  loi:'Vệ sinh',            thaoTac:true,  risk:'yellow'},
+        {st:'ST Linh Đàm',        t4:84, t5:88,  loi:'Tem giá',            thaoTac:false, risk:'yellow'},
+        {st:'ST Nguyễn Khuyến',   t4:86, t5:90,  loi:'Diện mạo',          thaoTac:true,  risk:'yellow'},
+        {st:'ST Vũ Phạm Hàm',     t4:87, t5:90,  loi:'Vệ sinh',            thaoTac:true,  risk:'yellow'},
+        {st:'ST Ngoại Giao Đoàn', t4:88, t5:90,  loi:'Vệ sinh',            thaoTac:true,  risk:'yellow'},
+        {st:'ST Văn Phú',         t4:86, t5:90,  loi:'Tem giá',            thaoTac:false, risk:'green'},
+        {st:'ST Sài Đồng',        t4:88, t5:90,  loi:'Diện mạo',          thaoTac:false, risk:'green'},
+        {st:'ST Green Bay',       t4:87, t5:90,  loi:'Vệ sinh',            thaoTac:false, risk:'green'},
+        {st:'ST Nguyễn Du',       t4:95, t5:98,  loi:'—',                  thaoTac:false, risk:'green'},
+        {st:'ST Ecohome 3',       t4:96, t5:98,  loi:'—',                  thaoTac:false, risk:'green'},
+        {st:'ST Bạch Mai',        t4:98, t5:100, loi:'—',                  thaoTac:false, risk:'green'},
+        {st:'ST T6 Timecity',     t4:97, t5:100, loi:'—',                  thaoTac:false, risk:'green'},
+        {st:'ST Nguyễn Tuân',     t4:98, t5:100, loi:'—',                  thaoTac:false, risk:'green'},
+      ].map(r=>{
+        const delta=r.t5-r.t4;
+        const riskBg=r.risk==='red'?'#fef2f2':r.risk==='yellow'?'#fffbeb':'#f0fdf4';
+        const scoreClr=r.risk==='red'?'#dc2626':r.risk==='yellow'?'#d97706':'#16a34a';
+        const vel=delta>0?`<span style="color:#16a34a;font-weight:700">▲+${delta} 📈 Tiến bộ</span>`:delta<0?`<span style="color:#dc2626;font-weight:700">▼${delta} 🚨 Cảnh báo</span>`:`<span style="color:#6b7280">→ Ổn định</span>`;
+        const thaoTacBadge=r.thaoTac?`<span style="background:#fee2e2;color:#dc2626;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600">Có lỗi</span>`:`<span style="background:#dcfce7;color:#16a34a;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600">OK</span>`;
+        const alertBtn=r.risk!=='green'?`<button onclick="execAlert('${r.st}','${r.loi}',${r.t5},${r.thaoTac})" style="font-size:11px;padding:4px 10px;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;cursor:pointer;font-weight:600">📨 Gửi cảnh báo</button>`:`<span style="color:#94a3b8;font-size:12px">✓ Không cần</span>`;
+        return`<tr style="background:${riskBg};border-bottom:1px solid #f0f4ff">
+          <td style="padding:10px 14px;font-weight:600">${r.st}</td>
+          <td style="padding:10px 14px;text-align:center;font-weight:700;color:${scoreClr}">${r.t5}%</td>
+          <td style="padding:10px 14px;text-align:center">${vel}</td>
+          <td style="padding:10px 14px;color:#64748b;font-size:12px">${r.loi}</td>
+          <td style="padding:10px 14px;text-align:center">${thaoTacBadge}</td>
+          <td style="padding:10px 14px">${alertBtn}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="g2">
+  <div class="chart-box"><div class="chart-title">📉 Top 3 nhóm lỗi phổ biến nhất</div><div class="chart-wrap" style="height:200px"><canvas id="c-exec-loi"></canvas></div></div>
+  <div class="card" style="padding:16px">
+    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">📋 Tóm tắt Compliance Check</div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px">
+      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f0fdf4;border-radius:6px;border-left:3px solid #16a34a"><span>ST không có vi phạm</span><strong style="color:#16a34a">7 / 11</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#fef2f2;border-radius:6px;border-left:3px solid #dc2626"><span>ST có lỗi thao tác</span><strong style="color:#dc2626">4 / 11</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#fffbeb;border-radius:6px;border-left:3px solid #d97706"><span>Loại lỗi: Không ra bill</span><strong>Đội Cấn, NKhuyến</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#fffbeb;border-radius:6px;border-left:3px solid #d97706"><span>Loại lỗi: QR cá nhân / PT sai</span><strong>VPHàm, NGĐoàn</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f0fdf4;border-radius:6px;border-left:3px solid #16a34a"><span>Phát hiện gian lận tài chính</span><strong style="color:#16a34a">0 vụ ✓</strong></div>
+    </div>
+    <div style="margin-top:12px;padding:10px;background:#eff6ff;border-radius:6px;font-size:12px;color:#1d4ed8">
+      💡 <strong>Tác động EBIT:</strong> 4 ST lỗi thao tác đã được nhắc nhở — đưa vào diện theo dõi T6. Nếu tái phạm → lập biên bản xử lý vi phạm hành chính.
+    </div>
+  </div>
+</div>
+
+<div id="exec-alert-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:5000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:24px;max-width:500px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-bottom:12px">📨 Soạn cảnh báo gửi Quản lý ST</div>
+    <textarea id="exec-alert-txt" style="width:100%;height:180px;border:1.5px solid #c7d2fe;border-radius:8px;padding:12px;font-size:13px;font-family:inherit;resize:none;outline:none" onfocus="this.style.borderColor='#4f46e5'" onblur="this.style.borderColor='#c7d2fe'"></textarea>
+    <div style="display:flex;gap:10px;margin-top:14px;justify-content:flex-end">
+      <button onclick="document.getElementById('exec-alert-modal').style.display='none'" style="padding:9px 18px;border:1.5px solid #e2e8f0;border-radius:7px;background:#fff;cursor:pointer;font-size:13px">Đóng</button>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('exec-alert-txt').value).then(()=>{this.textContent='✓ Đã copy';setTimeout(()=>this.textContent='📋 Copy nội dung',1500)})" style="padding:9px 18px;background:#4f46e5;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600">📋 Copy nội dung</button>
+    </div>
+  </div>
+</div>
+`:(t==='Kiểm kê'||t==='QC')?`
   ${isAdmin()?`<div class="alert a-info" style="margin-bottom:14px"><span class="a-ic">💡</span><div class="a-bd"><strong>Chế độ Admin – có thể chỉnh sửa cấu trúc</strong><p>Di chuột vào mục → hiện nút ✏️ đổi tên / 🗑 xóa / 📁📄 thêm con.</p></div></div>`:''}
   <div class="card">${tSection(t==='Kiểm kê'?'bc_kk':'bc_qc')}</div>
 `:`
@@ -1114,6 +1206,31 @@ function mkC(id,type,labels,datasets,opts={}){
   });
 }
 
+function execAlert(st,loi,diem,thaoTac){
+  const loiList=loi!=='—'?`\n• Lỗi QC: ${loi}`:'';
+  const thaoTacLine=thaoTac?`\n• ⚠️ Có lỗi thao tác vận hành (không ra bill / QR cá nhân / sai PT thanh toán)`:'';
+  const txt=`[KSCL – CẢNH BÁO CHẤT LƯỢNG]
+
+Kính gửi Quản lý ${st},
+
+Qua đợt kiểm tra QC tháng 5/2026, ${st} ghi nhận một số vấn đề cần khắc phục ngay:
+
+📊 Điểm dịch vụ hiện tại: ${diem}% (${diem<85?'Cần cải thiện khẩn':'Dưới mục tiêu 90%'})${loiList}${thaoTacLine}
+
+📋 Yêu cầu:
+• Kiểm tra và khắc phục ngay các lỗi nêu trên trước cuối tuần này
+• Báo cáo tình trạng khắc phục về KSCL trước thứ 6
+• Tăng cường kiểm tra nội bộ định kỳ trong ngày
+
+⏰ Lưu ý: Nếu điểm không cải thiện trong tháng 6, KSCL sẽ tăng cường kiểm tra đột xuất và lập biên bản xử lý vi phạm.
+
+Trân trọng,
+Phòng Kiểm soát Chất lượng – Sakuko Vietnam`;
+  const modal=document.getElementById('exec-alert-modal');
+  document.getElementById('exec-alert-txt').value=txt;
+  if(modal)modal.style.display='flex';
+}
+
 function afterRender(){
   loadUsers(); loadNS();
   const T6=TH.slice(0,6);
@@ -1133,6 +1250,16 @@ function afterRender(){
   mkC('c-bc-kpi','line',T6,[{label:'Đạt QC (%)',data:[...Z6],noFill:true},{label:'Khớp KK (%)',data:[...Z6],noFill:true,borderColor:CC[1]}]);
   mkC('c-bc-pie','doughnut',['Đạt','Không đạt','Cảnh báo'],[{data:[0,0,0],bg:[CC[1],CC[2],CC[3]]}]);
   mkC('c-bc-bar','bar',T6,[{label:'Đợt KK',data:[...Z6]},{label:'Phiếu QC',data:[...Z6],bg:CC[1]}]);
+  // Executive QC Dashboard
+  const ST15=['N.Tuân','T6TC','Bạch Mai','N.Du','Eco3','G.Bay','S.Đồng','V.Phú','Đ.Cấn','L.Đàm','T.Hà','H.Bông'];
+  const pts4=[98,97,98,95,96,87,88,86,85,84,83,94];
+  const pts5=[100,100,100,98,98,90,90,90,88,88,85,81];
+  mkC('c-exec-bar','bar',ST15,[
+    {label:'T4/2026',data:pts4,bg:'rgba(99,102,241,.25)',borderColor:'#6366f1'},
+    {label:'T5/2026',data:pts5,bg:pts5.map(v=>v>=90?'rgba(22,163,74,.7)':v>=80?'rgba(217,119,6,.7)':'rgba(220,38,38,.7)'),borderColor:pts5.map(v=>v>=90?'#16a34a':v>=80?'#d97706':'#dc2626')}
+  ],{scales:{y:{min:70,max:105,ticks:{callback:v=>v+'%'},grid:{color:'#f0f2f7'}},x:{grid:{display:false}}}});
+  mkC('c-exec-doitra','doughnut',['Do khách hàng','Do siêu thị','Nguyên nhân khác'],[{data:[72.31,21.54,6.15],bg:['#6366f1','#dc2626','#94a3b8']}]);
+  mkC('c-exec-loi','bar',['Vệ sinh (9 ST)','Tem giá (6 ST)','Diện mạo (4 ST)'],[{label:'Số ST mắc lỗi',data:[9,6,4],bg:['rgba(220,38,38,.7)','rgba(217,119,6,.7)','rgba(99,102,241,.7)']}],{indexAxis:'h',scales:{x:{beginAtZero:true,max:12,grid:{color:'#f0f2f7'}},y:{grid:{display:false}}}});
   // Load saved import data
   if(S.user)db.ref(`imports/${S.user.uid}`).get().then(snap=>{if(snap.exists()){const d=snap.val();Object.keys(d).forEach(m=>{S.data[m]=d[m].data;updateChartFromData(m,S.data[m]);});}});
 }
