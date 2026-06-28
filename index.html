@@ -215,6 +215,16 @@ tbody tr:last-child{border-bottom:none}
 .guide-dl:hover{background:#dbeafe;color:#1e40af}
 .guide-note{background:#fefce8;border-left:3px solid #fcd34d;padding:8px 12px;border-radius:0 6px 6px 0;font-size:12.5px;color:#92400e;margin:10px 0}
 .guide-sep{height:1px;background:#e8eeff;margin:12px 0}
+.fi{width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;background:#fff;color:var(--t1)}
+.fi:focus{border-color:#4f46e5}
+.fi-sm{width:80px;text-align:center}
+.fi-lbl{font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block}
+.qcd-sec-hdr{background:linear-gradient(90deg,#4f46e5,#6366f1);color:#fff;padding:12px 18px;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-radius:10px 10px 0 0}
+.qcd-sec-hdr:hover{background:linear-gradient(90deg,#4338ca,#4f46e5)}
+.qcd-sec-body{padding:18px 20px;background:#fff;border:1px solid #e0e7ff;border-top:none;border-radius:0 0 10px 10px}
+.qcd-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.qcd-num{min-width:22px;height:22px;border-radius:50%;background:#4f46e5;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.qcd-saved{background:#dcfce7;border:1px solid #86efac;color:#15803d;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;display:none}
 .guide-tag{display:inline-block;background:#e0e7ff;color:#3730a3;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;margin-right:4px}
 
 /* TREE EDITOR */
@@ -715,7 +725,7 @@ function completeCa(dept){
    BÁO CÁO
 ══════════════════════════════════════════ */
 function rBaoCao(){
-  const tabs=['Executive QC','Tổng hợp','KPI tháng','Kiểm kê','QC','Xuất báo cáo'];
+  const tabs=['Executive QC','Nhập liệu','Tổng hợp','KPI tháng','Kiểm kê','QC','Xuất báo cáo'];
   const t=S.tab||'Executive QC';
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Báo cáo</div>
@@ -817,6 +827,99 @@ ${t==='Executive QC'?`
       <button onclick="navigator.clipboard.writeText(document.getElementById('exec-alert-txt').value).then(()=>{this.textContent='✓ Đã copy';setTimeout(()=>this.textContent='📋 Copy nội dung',1500)})" style="padding:9px 18px;background:#4f46e5;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600">📋 Copy nội dung</button>
     </div>
   </div>
+</div>
+`:t==='Nhập liệu'?`
+<div class="card" style="padding:20px;margin-bottom:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+    <div>
+      <h2 style="font-size:16px;font-weight:700;color:var(--t1);margin:0">📝 Nhập liệu QC tháng</h2>
+      <p style="font-size:12px;color:var(--t2);margin:4px 0 0">Điền số liệu để cập nhật dashboard tự động · Lưu lên Firebase real-time</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <label class="fi-lbl" style="margin:0">Tháng</label>
+        <select id="qc-month" class="fi" style="width:70px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${m===6?' selected':''}>T${m}</option>`).join('')}</select>
+        <label class="fi-lbl" style="margin:0">Năm</label>
+        <select id="qc-year" class="fi" style="width:85px"><option value="2026" selected>2026</option><option value="2025">2025</option></select>
+      </div>
+      <button onclick="qcDataLoad()" class="btn b-out b-sm">⬇️ Tải dữ liệu</button>
+      <button onclick="qcDataSave(this)" class="btn b-pri b-sm">💾 Lưu & Cập nhật</button>
+    </div>
+  </div>
+  <div id="qcd-saved" class="qcd-saved">✅ Đã lưu thành công! Dashboard sẽ tự cập nhật.</div>
+</div>
+
+<div style="margin-bottom:12px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('qcd-s1')"><span>📊 I. Báo cáo đánh giá chấm điểm dịch vụ siêu thị</span><span id="qcd-s1-ico">▼</span></div>
+  <div id="qcd-s1" class="qcd-sec-body">
+    <div class="g2" style="gap:12px;margin-bottom:16px">
+      <div><label class="fi-lbl">Tổng lượt QC thực hiện</label><input id="s1-tongluot" type="number" class="fi" placeholder="Vd: 44"></div>
+      <div><label class="fi-lbl">Điểm trung bình toàn chuỗi (%)</label><input id="s1-diemtb" type="number" step="0.01" class="fi" placeholder="Vd: 93.17"></div>
+    </div>
+    <label class="fi-lbl" style="margin-bottom:8px">Bảng điểm từng siêu thị</label>
+    <div style="overflow-x:auto;margin-bottom:16px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#f0f0ff">
+          <th style="text-align:left;padding:8px 12px;border:1px solid #e0e7ff;font-weight:700;color:#4f46e5">Siêu thị</th>
+          <th style="text-align:center;padding:8px 12px;border:1px solid #e0e7ff;color:#6b7280;font-weight:600">Tháng trước (%)</th>
+          <th style="text-align:center;padding:8px 12px;border:1px solid #e0e7ff;color:#4f46e5;font-weight:600">Tháng này (%)</th>
+        </tr></thead>
+        <tbody>${['Nguyễn Tuân','T6 Timecity','Bạch Mai','Nguyễn Du','Ecohome 3','Green Bay','Sài Đồng','Văn Phú','Đội Cấn','Linh Đàm','Thái Hà','Hàng Bông'].map((st,i)=>`
+          <tr>
+            <td style="padding:7px 12px;border:1px solid #e0e7ff;font-weight:600">${st}</td>
+            <td style="padding:5px 8px;border:1px solid #e0e7ff;text-align:center"><input type="number" id="s1-st${i}-prev" class="fi fi-sm" placeholder="—"></td>
+            <td style="padding:5px 8px;border:1px solid #e0e7ff;text-align:center"><input type="number" id="s1-st${i}-curr" class="fi fi-sm" placeholder="—"></td>
+          </tr>`).join('')}</tbody>
+      </table>
+    </div>
+    <label class="fi-lbl" style="margin-bottom:8px">Top lỗi phổ biến nhất</label>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">${[1,2,3].map(i=>`
+      <div class="qcd-row"><div class="qcd-num">${i}</div>
+        <input type="text" id="s1-loi${i}-ten" class="fi" placeholder="Tên nhóm lỗi (Vd: Vệ sinh khu vực)" style="flex:1">
+        <input type="number" id="s1-loi${i}-soST" class="fi" style="width:90px" placeholder="Số ST">
+      </div>`).join('')}</div>
+    <label class="fi-lbl">Ghi chú / Nhận xét</label>
+    <textarea id="s1-note" class="fi" rows="3" style="resize:vertical" placeholder="Nhận xét tổng quan về chấm điểm dịch vụ tháng này..."></textarea>
+  </div>
+</div>
+
+<div style="margin-bottom:12px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('qcd-s2')"><span>🔄 II. Kiểm soát hoạt động đổi trả – tháng</span><span id="qcd-s2-ico">▼</span></div>
+  <div id="qcd-s2" class="qcd-sec-body">
+    <div class="g2" style="gap:12px;margin-bottom:16px">
+      <div><label class="fi-lbl">Tổng số đơn đổi trả</label><input id="s2-tongdon" type="number" class="fi" placeholder="Vd: 195"></div>
+      <div><label class="fi-lbl">% Do khách hàng</label><input id="s2-pct-khach" type="number" step="0.01" class="fi" placeholder="Vd: 72.31" oninput="qcCalcKhac()"></div>
+      <div><label class="fi-lbl">% Do siêu thị</label><input id="s2-pct-st" type="number" step="0.01" class="fi" placeholder="Vd: 21.54" oninput="qcCalcKhac()"></div>
+      <div><label class="fi-lbl">% Nguyên nhân khác (tự tính)</label><input id="s2-pct-khac" type="number" step="0.01" class="fi" placeholder="Tự tính" readonly style="background:#f8f9fc;color:#6b7280"></div>
+    </div>
+    <label class="fi-lbl" style="margin-bottom:8px">Top ST có nhiều đổi trả nhất</label>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">${[1,2,3].map(i=>`
+      <div class="qcd-row"><div class="qcd-num">${i}</div>
+        <input type="text" id="s2-top${i}-name" class="fi" placeholder="Tên siêu thị" style="flex:1">
+        <input type="number" id="s2-top${i}-count" class="fi" style="width:90px" placeholder="Số đơn">
+      </div>`).join('')}</div>
+    <label class="fi-lbl">Ghi chú / Nhận xét</label>
+    <textarea id="s2-note" class="fi" rows="3" style="resize:vertical" placeholder="Nhận xét về tình hình đổi trả tháng này..."></textarea>
+  </div>
+</div>
+
+<div style="margin-bottom:16px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('qcd-s3')"><span>🔍 III. Check gian lận định kỳ + phát sinh – tháng</span><span id="qcd-s3-ico">▼</span></div>
+  <div id="qcd-s3" class="qcd-sec-body">
+    <div class="g2" style="gap:12px;margin-bottom:16px">
+      <div><label class="fi-lbl">Số ST đã kiểm tra</label><input id="s3-tongST" type="number" class="fi" placeholder="Vd: 11"></div>
+      <div><label class="fi-lbl">Số ST có lỗi thao tác</label><input id="s3-soSTLoi" type="number" class="fi" placeholder="Vd: 4" oninput="qcRenderSTLoi(this.value)"></div>
+    </div>
+    <label class="fi-lbl" style="margin-bottom:8px">Danh sách ST có lỗi</label>
+    <div id="s3-stloi-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <div style="color:var(--t2);font-size:13px;text-align:center;padding:12px;border:1px dashed #e2e8f0;border-radius:8px">Nhập số ST có lỗi ở trên để thêm danh sách</div>
+    </div>
+    <label class="fi-lbl">Ghi chú / Nhận xét</label>
+    <textarea id="s3-note" class="fi" rows="3" style="resize:vertical" placeholder="Nhận xét về tình hình gian lận tháng này..."></textarea>
+  </div>
+</div>
+<div style="text-align:right;padding-bottom:8px">
+  <button onclick="qcDataSave(this)" class="btn b-pri">💾 Lưu tất cả & Cập nhật Dashboard</button>
 </div>
 `:(t==='Kiểm kê'||t==='QC')?`
   ${isAdmin()?`<div class="alert a-info" style="margin-bottom:14px"><span class="a-ic">💡</span><div class="a-bd"><strong>Chế độ Admin – có thể chỉnh sửa cấu trúc</strong><p>Di chuột vào mục → hiện nút ✏️ đổi tên / 🗑 xóa / 📁📄 thêm con.</p></div></div>`:''}
@@ -1206,6 +1309,86 @@ function mkC(id,type,labels,datasets,opts={}){
   });
 }
 
+function qcToggleSec(id){
+  const el=document.getElementById(id),ico=document.getElementById(id+'-ico');
+  if(!el)return;
+  const open=el.style.display!=='none';
+  el.style.display=open?'none':'block';
+  if(ico)ico.textContent=open?'▶':'▼';
+}
+function qcCalcKhac(){
+  const k=parseFloat(document.getElementById('s2-pct-khach')?.value)||0;
+  const s=parseFloat(document.getElementById('s2-pct-st')?.value)||0;
+  const el=document.getElementById('s2-pct-khac');
+  if(el)el.value=Math.max(0,100-k-s).toFixed(2);
+}
+function qcRenderSTLoi(n){
+  const list=document.getElementById('s3-stloi-list');if(!list)return;
+  n=parseInt(n)||0;
+  if(n<=0){list.innerHTML='<div style="color:var(--t2);font-size:13px;text-align:center;padding:12px;border:1px dashed #e2e8f0;border-radius:8px">Nhập số ST có lỗi ở trên để thêm danh sách</div>';return;}
+  const rows=[];
+  for(let i=0;i<n;i++){
+    const pn=document.getElementById(`s3-st${i}-name`)?.value||'';
+    const pl=document.getElementById(`s3-st${i}-loi`)?.value||'';
+    rows.push(`<div class="qcd-row"><div class="qcd-num">${i+1}</div><input type="text" id="s3-st${i}-name" class="fi" placeholder="Tên siêu thị" style="flex:1" value="${pn}"><input type="text" id="s3-st${i}-loi" class="fi" placeholder="Loại lỗi (Vd: Không ra bill)" style="flex:2" value="${pl}"></div>`);
+  }
+  list.innerHTML=rows.join('');
+}
+function getQCDB(){
+  try{return(firebase.apps.length?firebase.app():firebase.initializeApp({apiKey:'AIzaSyBetoDgdhDgfVQsvNZVlpoNs_2CWvYZs6A',databaseURL:'https://kscl-chat-default-rtdb.asia-southeast1.firebasedatabase.app',projectId:'kscl-chat'})).database();}
+  catch(e){return null;}
+}
+function qcDataSave(btn){
+  const month=document.getElementById('qc-month')?.value,year=document.getElementById('qc-year')?.value;
+  if(!month||!year){alert('Chọn tháng/năm trước!');return;}
+  const STORES=['Nguyễn Tuân','T6 Timecity','Bạch Mai','Nguyễn Du','Ecohome 3','Green Bay','Sài Đồng','Văn Phú','Đội Cấn','Linh Đàm','Thái Hà','Hàng Bông'];
+  const stores={};
+  STORES.forEach((st,i)=>{const prev=document.getElementById(`s1-st${i}-prev`)?.value;const curr=document.getElementById(`s1-st${i}-curr`)?.value;stores[`st${i}`]={name:st,prev:prev!==''?parseFloat(prev):null,curr:curr!==''?parseFloat(curr):null};});
+  const loi=[];for(let i=1;i<=3;i++){const ten=(document.getElementById(`s1-loi${i}-ten`)?.value||'').trim();const soST=parseInt(document.getElementById(`s1-loi${i}-soST`)?.value)||0;if(ten)loi.push({ten,soST});}
+  const topST=[];for(let i=1;i<=3;i++){const name=(document.getElementById(`s2-top${i}-name`)?.value||'').trim();const count=parseInt(document.getElementById(`s2-top${i}-count`)?.value)||0;if(name)topST.push({name,count});}
+  const n=parseInt(document.getElementById('s3-soSTLoi')?.value)||0;
+  const stLoi=[];for(let i=0;i<n;i++){const name=(document.getElementById(`s3-st${i}-name`)?.value||'').trim();const loiT=(document.getElementById(`s3-st${i}-loi`)?.value||'').trim();if(name)stLoi.push({name,loi:loiT});}
+  const data={
+    s1_tongluot:parseInt(document.getElementById('s1-tongluot')?.value)||0,
+    s1_diemtb:parseFloat(document.getElementById('s1-diemtb')?.value)||0,
+    s1_stores:stores,s1_loi:loi,s1_note:document.getElementById('s1-note')?.value||'',
+    s2_tongdon:parseInt(document.getElementById('s2-tongdon')?.value)||0,
+    s2_pct_khach:parseFloat(document.getElementById('s2-pct-khach')?.value)||0,
+    s2_pct_st:parseFloat(document.getElementById('s2-pct-st')?.value)||0,
+    s2_pct_khac:parseFloat(document.getElementById('s2-pct-khac')?.value)||0,
+    s2_topST:topST,s2_note:document.getElementById('s2-note')?.value||'',
+    s3_tongST:parseInt(document.getElementById('s3-tongST')?.value)||0,
+    s3_soSTLoi:n,s3_stLoi:stLoi,s3_note:document.getElementById('s3-note')?.value||'',
+    savedAt:Date.now()
+  };
+  const qcdb=getQCDB();if(!qcdb){alert('Không kết nối được Firebase!');return;}
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang lưu...';}
+  qcdb.ref(`qc_data/${year}/${month}`).set(data).then(()=>{
+    const saved=document.getElementById('qcd-saved');
+    if(saved){saved.style.display='block';setTimeout(()=>saved.style.display='none',4000);}
+    if(btn){btn.disabled=false;btn.textContent=btn.textContent.includes('tất cả')?'💾 Lưu tất cả & Cập nhật Dashboard':'💾 Lưu & Cập nhật';}
+  }).catch(e=>{alert('Lỗi lưu: '+e.message);if(btn){btn.disabled=false;btn.textContent='💾 Lưu & Cập nhật';}});
+}
+function qcDataLoad(){
+  const month=document.getElementById('qc-month')?.value,year=document.getElementById('qc-year')?.value;
+  if(!month||!year)return;
+  const qcdb=getQCDB();if(!qcdb){alert('Không kết nối được Firebase!');return;}
+  qcdb.ref(`qc_data/${year}/${month}`).get().then(snap=>{
+    if(!snap.exists()){alert(`Chưa có dữ liệu tháng ${month}/${year}`);return;}
+    const d=snap.val();
+    const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;};
+    set('s1-tongluot',d.s1_tongluot);set('s1-diemtb',d.s1_diemtb);set('s1-note',d.s1_note);
+    if(d.s1_stores)Object.values(d.s1_stores).forEach((v,i)=>{set(`s1-st${i}-prev`,v.prev!=null?v.prev:'');set(`s1-st${i}-curr`,v.curr!=null?v.curr:'');});
+    if(d.s1_loi)d.s1_loi.forEach((l,i)=>{set(`s1-loi${i+1}-ten`,l.ten);set(`s1-loi${i+1}-soST`,l.soST);});
+    set('s2-tongdon',d.s2_tongdon);set('s2-pct-khach',d.s2_pct_khach);set('s2-pct-st',d.s2_pct_st);set('s2-pct-khac',d.s2_pct_khac);set('s2-note',d.s2_note);
+    if(d.s2_topST)d.s2_topST.forEach((s,i)=>{set(`s2-top${i+1}-name`,s.name);set(`s2-top${i+1}-count`,s.count);});
+    set('s3-tongST',d.s3_tongST);set('s3-soSTLoi',d.s3_soSTLoi);
+    if(d.s3_soSTLoi>0){qcRenderSTLoi(d.s3_soSTLoi);setTimeout(()=>{if(d.s3_stLoi)d.s3_stLoi.forEach((s,i)=>{set(`s3-st${i}-name`,s.name);set(`s3-st${i}-loi`,s.loi);});},50);}
+    set('s3-note',d.s3_note);
+    const saved=document.getElementById('qcd-saved');
+    if(saved){saved.textContent='✅ Đã tải dữ liệu thành công!';saved.style.display='block';setTimeout(()=>{saved.style.display='none';saved.textContent='✅ Đã lưu thành công! Dashboard sẽ tự cập nhật.';},3000);}
+  }).catch(e=>alert('Lỗi tải: '+e.message));
+}
 function execAlert(st,loi,diem,thaoTac){
   const loiList=loi!=='—'?`\n• Lỗi QC: ${loi}`:'';
   const thaoTacLine=thaoTac?`\n• ⚠️ Có lỗi thao tác vận hành (không ra bill / QR cá nhân / sai PT thanh toán)`:'';
