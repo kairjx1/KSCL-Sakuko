@@ -321,7 +321,7 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{}};
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026'};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -725,46 +725,75 @@ function completeCa(dept){
    BÁO CÁO
 ══════════════════════════════════════════ */
 function rBaoCao(){
-  const tabs=['Executive QC','Nhập liệu','Tổng hợp','KPI tháng','Kiểm kê','QC','Xuất báo cáo'];
+  const tabs=['Executive QC','Nhập liệu','Báo cáo EBIT','Tổng hợp','KPI tháng','Kiểm kê','QC','Xuất báo cáo'];
   const t=S.tab||'Executive QC';
+  const qd=S.qcExecData;
+  const eM=String(S.qcExecMonth||'5');
+  const eY=String(S.qcExecYear||'2026');
+  const hasQD=!!qd;
+  const exec={
+    diemTB:hasQD?(+(qd.s1_diemtb||0)).toFixed(2)+'%':'93.17%',
+    tongDoitra:hasQD?qd.s2_tongdon:195,
+    pctKhach:hasQD?+(qd.s2_pct_khach||0):72.31,
+    pctST:hasQD?+(qd.s2_pct_st||0):21.54,
+    pctKhac:hasQD?+(qd.s2_pct_khac||0):6.15,
+    soKiemTra:hasQD?qd.s3_tongST:11,
+    soSTLoi:hasQD?qd.s3_soSTLoi:4,
+    tongLuot:hasQD?qd.s1_tongluot:44,
+    stLoi:hasQD?qd.s3_stLoi||[]:[{name:'Đội Cấn',loi:'Không ra bill'},{name:'Nguyễn Khuyến',loi:'Không ra bill'},{name:'Vũ Phạm Hàm',loi:'QR cá nhân'},{name:'Ngoại Giao Đoàn',loi:'QR cá nhân'}],
+    topDT:hasQD&&qd.s2_topST&&qd.s2_topST.length?qd.s2_topST:[{name:'Trần Đăng Ninh',count:30},{name:'ST Đội Cấn',count:21},{name:'ST Hàng Bông',count:16}],
+    topLoi:hasQD&&qd.s1_loi&&qd.s1_loi.length?qd.s1_loi:[{ten:'Vệ sinh',soST:9},{ten:'Tem giá',soST:6},{ten:'Diện mạo',soST:4}],
+    fbStores:hasQD?Object.values(qd.s1_stores||{}).filter(s=>s.name&&s.curr!=null):null,
+    savedAt:hasQD?qd.savedAt:null,
+  };
+  exec.stDuoi80=exec.fbStores?exec.fbStores.filter(s=>s.curr<80).length:0;
+  const topDTMax=exec.topDT.reduce((mx,s)=>Math.max(mx,s.count||s.v||0),1);
+  const loiClrs=['#dc2626','#d97706','#6366f1'];
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Báo cáo</div>
 <div class="sec-hdr"><h1>📊 Báo cáo & Phân tích</h1>
 <div style="display:flex;gap:8px">
-  <select style="max-width:160px"><option>Tháng 5/2026</option><option>Tháng 4/2026</option></select>
-  <a href="ebit-t5-2026.html" target="_blank" class="btn b-out b-sm">📋 Báo cáo EBIT</a>
   <button class="btn b-pri b-sm">⬇️ Xuất Excel</button>
 </div></div>
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('baocao','${tb}')">${tb}</div>`).join('')}</div>
 ${t==='Executive QC'?`
+<div style="background:${hasQD?'#f0fdf4':'#fef3c7'};border:1px solid ${hasQD?'#86efac':'#fcd34d'};border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+  <span style="font-size:13px;color:${hasQD?'#15803d':'#92400e'}">${hasQD?`✅ Dữ liệu Firebase — T${eM}/${eY}${exec.savedAt?' · '+new Date(exec.savedAt).toLocaleDateString('vi-VN'):''}`:` ⚠️ Dữ liệu mẫu T5/2026 — Nhập liệu tháng thực tế rồi bấm Tải`}</span>
+  <div style="display:flex;gap:8px;align-items:center">
+    <select id="exec-m" class="fi" style="width:65px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+    <select id="exec-y" class="fi" style="width:80px"><option value="2026"${eY==='2026'?' selected':''}>2026</option><option value="2025"${eY==='2025'?' selected':''}>2025</option></select>
+    <button onclick="qcLoadExecAndRefresh(document.getElementById('exec-y').value,document.getElementById('exec-m').value)" class="btn b-pri b-sm">🔄 Tải</button>
+    ${hasQD?`<button onclick="go('baocao','Báo cáo EBIT')" class="btn b-out b-sm">📊 Xem EBIT →</button>`:''}
+  </div>
+</div>
 <div class="g4 g-sm2" style="margin-bottom:16px">
-  ${kpi('Điểm DV TB','93.17%','Tháng 5/2026','#16a34a','⭐','+3.48% vs T4')}
-  ${kpi('Ca đổi trả','195','tháng 5','#0284c7','🔄','Do ST: 21.54%')}
-  ${kpi('ST lỗi thao tác','4/11','đã kiểm tra','#dc2626','⚠️','Cần theo dõi T6')}
-  ${kpi('ST dưới 80%','0','siêu thị','#16a34a','✅','Cải thiện hoàn toàn')}
+  ${kpi('Điểm DV TB',exec.diemTB,`T${eM}/${eY}`,'#16a34a','⭐',hasQD?`${exec.tongLuot} lượt QC`:'+3.48% vs T4')}
+  ${kpi('Ca đổi trả',String(exec.tongDoitra),`tháng ${eM}`,'#0284c7','🔄',`Do ST: ${exec.pctST}%`)}
+  ${kpi('ST lỗi thao tác',`${exec.soSTLoi}/${exec.soKiemTra}`,'đã kiểm tra','#dc2626','⚠️',`Theo dõi T${+eM+1}`)}
+  ${kpi('ST dưới 80%',String(exec.stDuoi80),'siêu thị','#16a34a','✅',exec.stDuoi80===0?'Cải thiện hoàn toàn':'Cần can thiệp khẩn')}
 </div>
 <div class="g2" style="margin-bottom:16px">
-  <div class="chart-box"><div class="chart-title">📊 Điểm dịch vụ siêu thị — T4 vs T5/2026</div><div class="chart-wrap" style="height:220px"><canvas id="c-exec-bar"></canvas></div></div>
+  <div class="chart-box"><div class="chart-title">📊 Điểm dịch vụ siêu thị — ${hasQD?`Tháng trước vs T${eM}/${eY}`:'T4 vs T5/2026'}</div><div class="chart-wrap" style="height:220px"><canvas id="c-exec-bar"></canvas></div></div>
   <div style="display:flex;flex-direction:column;gap:12px">
-    <div class="chart-box" style="flex:0 0 auto"><div class="chart-title">🔴 Nguyên nhân đổi trả tháng 5</div><div class="chart-wrap" style="height:145px"><canvas id="c-exec-doitra"></canvas></div></div>
+    <div class="chart-box" style="flex:0 0 auto"><div class="chart-title">🔴 Nguyên nhân đổi trả T${eM}/${eY}</div><div class="chart-wrap" style="height:145px"><canvas id="c-exec-doitra"></canvas></div></div>
     <div class="card" style="padding:14px 16px;flex:1">
       <div style="font-size:13px;font-weight:700;color:#be123c;margin-bottom:11px">🔥 Điểm nóng đổi trả — Top 3 ST</div>
-      ${[{n:'Trần Đăng Ninh',v:30,clr:'#dc2626'},{n:'ST Đội Cấn',v:21,clr:'#d97706'},{n:'ST Hàng Bông',v:16,clr:'#f59e0b'}].map(s=>`<div style="margin-bottom:11px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">${s.n}</span><span style="color:${s.clr};font-weight:700">${s.v} đơn</span></div><div style="height:10px;background:#fef2f2;border-radius:5px;overflow:hidden"><div style="height:100%;width:${Math.round(s.v/30*100)}%;background:${s.clr};border-radius:5px"></div></div></div>`).join('')}
-      <div style="font-size:11px;color:#94a3b8;border-top:1px solid #f0f2f7;padding-top:6px;margin-top:2px">Tổng 195 đơn · Do ST: 42 đơn (21.54%)</div>
+      ${exec.topDT.map((s,i)=>{const clr=i===0?'#dc2626':i===1?'#d97706':'#f59e0b';const n=s.name||s.n;const v=s.count||s.v||0;return`<div style="margin-bottom:11px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">${n}</span><span style="color:${clr};font-weight:700">${v} đơn</span></div><div style="height:10px;background:#fef2f2;border-radius:5px;overflow:hidden"><div style="height:100%;width:${Math.round(v/topDTMax*100)}%;background:${clr};border-radius:5px"></div></div></div>`;}).join('')}
+      <div style="font-size:11px;color:#94a3b8;border-top:1px solid #f0f2f7;padding-top:6px;margin-top:2px">Tổng ${exec.tongDoitra} đơn · Do ST: ${Math.round(exec.tongDoitra*exec.pctST/100)} đơn (${exec.pctST}%)</div>
     </div>
   </div>
 </div>
 
 <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
   <div style="padding:14px 18px;background:linear-gradient(90deg,#1e1b4b,#312e81);display:flex;align-items:center;justify-content:space-between">
-    <span style="font-size:14px;font-weight:700;color:#fff">🗺️ Bản đồ rủi ro siêu thị — Tháng 5/2026</span>
+    <span style="font-size:14px;font-weight:700;color:#fff">🗺️ Bản đồ rủi ro siêu thị — T${eM}/${eY}</span>
     <span style="font-size:11px;color:#c7d2fe">Xanh ≥90% · Vàng 80–89% · Đỏ &lt;80%</span>
   </div>
   <div style="overflow-x:auto">
   <table style="width:100%;border-collapse:collapse;font-size:13px">
     <thead><tr style="background:#f0f4ff">
       <th style="padding:10px 14px;text-align:left;color:#3730a3;font-weight:600">Siêu thị</th>
-      <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Điểm T5</th>
+      <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Điểm T${eM}</th>
       <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Tốc độ</th>
       <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Lỗi QC</th>
       <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Đổi trả</th>
@@ -818,30 +847,29 @@ ${t==='Executive QC'?`
 
 <div class="g2">
   <div class="card" style="padding:18px">
-    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:16px">📉 Top 3 nhóm lỗi phổ biến nhất — T5/2026</div>
-    ${[{lb:'Vệ sinh',n:9,clr:'#dc2626'},{lb:'Tem giá',n:6,clr:'#d97706'},{lb:'Diện mạo',n:4,clr:'#6366f1'}].map(l=>`<div style="margin-bottom:16px">
+    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:16px">📉 Top 3 nhóm lỗi phổ biến nhất — T${eM}/${eY}</div>
+    ${exec.topLoi.map((l,i)=>{const lb=l.ten||l.lb;const n=l.soST||l.n||0;const clr=loiClrs[i]||'#94a3b8';const tot=exec.fbStores?exec.fbStores.length:12;const pct=Math.round(n/tot*100);return`<div style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:6px">
-        <span style="font-weight:600">${l.lb}</span><span style="font-weight:700;color:${l.clr}">${l.n}/12 ST</span>
+        <span style="font-weight:600">${lb}</span><span style="font-weight:700;color:${clr}">${n}/${tot} ST</span>
       </div>
       <div style="height:16px;background:#f0f2f7;border-radius:8px;overflow:hidden">
-        <div style="height:100%;width:${Math.round(l.n/12*100)}%;background:${l.clr};border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px">
-          <span style="font-size:10px;color:#fff;font-weight:700">${Math.round(l.n/12*100)}%</span>
+        <div style="height:100%;width:${pct}%;background:${clr};border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px">
+          <span style="font-size:10px;color:#fff;font-weight:700">${pct}%</span>
         </div>
       </div>
-    </div>`).join('')}
+    </div>`;}).join('')}
     <div style="font-size:11px;color:#94a3b8;border-top:1px solid #f0f2f7;padding-top:10px">Nhiều ST mắc lỗi cùng lúc — tổng hợp theo nhóm phổ biến nhất trong tháng</div>
   </div>
   <div class="card" style="padding:16px">
     <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">📋 Tóm tắt Compliance Check</div>
     <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px">
-      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f0fdf4;border-radius:6px;border-left:3px solid #16a34a"><span>ST không có vi phạm</span><strong style="color:#16a34a">7 / 11</strong></div>
-      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#fef2f2;border-radius:6px;border-left:3px solid #dc2626"><span>ST có lỗi thao tác</span><strong style="color:#dc2626">4 / 11</strong></div>
-      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#fffbeb;border-radius:6px;border-left:3px solid #d97706"><span>Loại lỗi: Không ra bill</span><strong>Đội Cấn, NKhuyến</strong></div>
-      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#fffbeb;border-radius:6px;border-left:3px solid #d97706"><span>Loại lỗi: QR cá nhân / PT sai</span><strong>VPHàm, NGĐoàn</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f0fdf4;border-radius:6px;border-left:3px solid #16a34a"><span>ST không có vi phạm</span><strong style="color:#16a34a">${exec.soKiemTra-exec.soSTLoi} / ${exec.soKiemTra}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#fef2f2;border-radius:6px;border-left:3px solid #dc2626"><span>ST có lỗi thao tác</span><strong style="color:#dc2626">${exec.soSTLoi} / ${exec.soKiemTra}</strong></div>
+      ${exec.stLoi.length?exec.stLoi.map(s=>`<div style="display:flex;justify-content:space-between;padding:8px 12px;background:#fffbeb;border-radius:6px;border-left:3px solid #d97706"><span>Lỗi: ${s.loi||'Thao tác sai'}</span><strong>${(s.name||'').replace('ST ','')}</strong></div>`).join(''):''}
       <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f0fdf4;border-radius:6px;border-left:3px solid #16a34a"><span>Phát hiện gian lận tài chính</span><strong style="color:#16a34a">0 vụ ✓</strong></div>
     </div>
     <div style="margin-top:12px;padding:10px;background:#eff6ff;border-radius:6px;font-size:12px;color:#1d4ed8">
-      💡 <strong>Tác động EBIT:</strong> 4 ST lỗi thao tác đã được nhắc nhở — đưa vào diện theo dõi T6. Nếu tái phạm → lập biên bản xử lý vi phạm hành chính.
+      💡 <strong>Tác động EBIT:</strong> ${exec.soSTLoi} ST lỗi thao tác đã được nhắc nhở — đưa vào diện theo dõi T${+eM+1}. Nếu tái phạm → lập biên bản xử lý vi phạm hành chính.
     </div>
   </div>
 </div>
@@ -856,6 +884,77 @@ ${t==='Executive QC'?`
     </div>
   </div>
 </div>
+`:t==='Báo cáo EBIT'?`
+${hasQD?`
+<div style="background:#0f0d0e;border-radius:14px;padding:24px;color:#fff">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;border-bottom:1px solid #2a2828;padding-bottom:16px">
+    <div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:3px;color:#d4af37;text-transform:uppercase">SAKUKO VIETNAM · KSCL</div>
+      <h2 style="font-size:22px;font-weight:900;color:#fff;margin:6px 0 4px">Báo cáo EBIT Tháng ${eM}/${eY}</h2>
+      <div style="font-size:12px;color:#94a3b8">Dữ liệu Firebase${exec.savedAt?' · '+new Date(exec.savedAt).toLocaleDateString('vi-VN'):''}</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="ebit-m" style="padding:7px 10px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px;font-size:12px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+      <select id="ebit-y" style="padding:7px 10px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px;font-size:12px"><option value="2026"${eY==='2026'?' selected':''}>2026</option><option value="2025"${eY==='2025'?' selected':''}>2025</option></select>
+      <button onclick="qcLoadExecAndRefresh(document.getElementById('ebit-y').value,document.getElementById('ebit-m').value)" style="padding:8px 14px;background:#c8102e;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600">🔄 Tải</button>
+      <button onclick="go('baocao','Executive QC')" style="padding:8px 14px;background:#1a1818;color:#d4af37;border:1px solid #3a3838;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600">← Dashboard</button>
+    </div>
+  </div>
+  <div class="g4 g-sm2" style="margin-bottom:20px">
+    ${[{lb:'Điểm DV TB',v:exec.diemTB,sub:`T${eM}/${eY}`,clr:'#d4af37'},{lb:'Tổng đổi trả',v:exec.tongDoitra+' đơn',sub:`Do ST ${exec.pctST}%`,clr:'#c8102e'},{lb:'Lỗi thao tác',v:exec.soSTLoi+'/'+exec.soKiemTra+' ST',sub:exec.soSTLoi>0?'Cần theo dõi':'Tất cả OK',clr:exec.soSTLoi>0?'#f87171':'#4ade80'},{lb:'Lượt QC',v:exec.tongLuot+' lượt',sub:`Tháng ${eM}/${eY}`,clr:'#818cf8'}].map(k=>`<div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px 16px"><div style="font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${k.lb}</div><div style="font-size:22px;font-weight:900;color:${k.clr};margin-bottom:4px">${k.v}</div><div style="font-size:11px;color:#94a3b8">${k.sub}</div></div>`).join('')}
+  </div>
+  <div class="g2" style="margin-bottom:20px">
+    <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:16px">
+      <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px">📊 Điểm dịch vụ — Tháng trước vs T${eM}/${eY}</div>
+      <div style="height:200px"><canvas id="c-ebit-bar"></canvas></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:16px">
+        <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px">🔴 Phân loại đổi trả T${eM}/${eY}</div>
+        <div style="height:130px"><canvas id="c-ebit-doitra"></canvas></div>
+      </div>
+      <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px">
+        <div style="font-size:12px;font-weight:700;color:#c8102e;margin-bottom:8px">🔥 Điểm nóng đổi trả</div>
+        ${exec.topDT.map((s,i)=>{const clr=i===0?'#c8102e':i===1?'#d97706':'#f59e0b';const n=s.name||s.n;const v=s.count||s.v||0;return`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #2a2828"><span style="color:#e2e8f0">${n}</span><span style="color:${clr};font-weight:700">${v} đơn</span></div>`;}).join('')}
+        <div style="font-size:11px;color:#6b7280;margin-top:6px">Tổng ${exec.tongDoitra} đơn · Do ST: ${exec.pctST}%</div>
+      </div>
+    </div>
+  </div>
+  <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:16px;margin-bottom:16px">
+    <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:12px">💰 Đóng góp EBIT — T${eM}/${eY}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="background:#0d1117;border-left:3px solid #d4af37;padding:12px;border-radius:0 8px 8px 0"><strong style="color:#d4af37">✅ Điểm sáng:</strong><p style="color:#94a3b8;font-size:12px;margin:6px 0 0">Điểm TB ${exec.diemTB} toàn chuỗi${exec.fbStores?` · ${exec.fbStores.filter(s=>s.curr>=(s.prev||0)).length}/${exec.fbStores.length} ST tăng/giữ điểm`:''} — bảo vệ doanh thu dịch vụ.</p></div>
+      <div style="background:#0d1117;border-left:3px solid #c8102e;padding:12px;border-radius:0 8px 8px 0"><strong style="color:#c8102e">⚠️ Rủi ro:</strong><p style="color:#94a3b8;font-size:12px;margin:6px 0 0">Đổi trả do ST ${exec.pctST}% (~${Math.round(exec.tongDoitra*exec.pctST/100)} đơn). ${exec.soSTLoi} ST lỗi thao tác → theo dõi T${+eM+1}.</p></div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+      ${exec.topLoi.map((l,i)=>`<span style="background:#1e1b4b;color:#c7d2fe;border:1px solid #3730a3;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600">${l.ten||l.lb}: ${l.soST||l.n} ST</span>`).join('')}
+    </div>
+  </div>
+  <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:16px">
+    <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:12px">🔍 Gian lận & Compliance</div>
+    <div class="g2" style="gap:12px">
+      <div>
+        ${[{lb:'ST kiểm tra',v:exec.soKiemTra+' ST',bg:'#0d1117'},{lb:'ST lỗi thao tác',v:exec.soSTLoi+' ST',bg:'#1e0505'},{lb:'Gian lận tài chính',v:'0 vụ ✓',bg:'#0d1117'}].map(r=>`<div style="display:flex;justify-content:space-between;padding:8px 12px;background:${r.bg};border-radius:6px;margin-bottom:6px;font-size:12px"><span style="color:#94a3b8">${r.lb}</span><strong style="color:#fff">${r.v}</strong></div>`).join('')}
+      </div>
+      <div>${exec.stLoi.length?exec.stLoi.map(s=>`<div style="padding:8px 12px;background:#1e0505;border-left:3px solid #c8102e;border-radius:0 6px 6px 0;margin-bottom:6px;font-size:12px"><strong style="color:#fca5a5">${s.name}</strong><br><span style="color:#94a3b8">${s.loi||'Lỗi thao tác'}</span></div>`).join(''):'<div style="color:#4ade80;font-size:13px;padding:12px;text-align:center">Không có ST lỗi thao tác ✓</div>'}</div>
+    </div>
+  </div>
+</div>
+`:`
+<div style="background:#1a1818;border-radius:14px;padding:48px 24px;text-align:center">
+  <div style="font-size:48px;margin-bottom:16px">📊</div>
+  <h3 style="color:#fff;font-size:18px;font-weight:700;margin-bottom:8px">Chưa có dữ liệu cho tháng này</h3>
+  <p style="color:#94a3b8;font-size:13px;margin-bottom:24px">Nhập số liệu QC ở tab <strong style="color:#d4af37">Nhập liệu</strong> trước, sau đó quay lại đây chọn tháng và bấm Tải.</p>
+  <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="ebit-m2" style="padding:8px 12px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+      <select id="ebit-y2" style="padding:8px 12px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px"><option value="2026"${eY==='2026'?' selected':''}>2026</option><option value="2025">2025</option></select>
+      <button onclick="qcLoadExecAndRefresh(document.getElementById('ebit-y2').value,document.getElementById('ebit-m2').value)" style="padding:8px 18px;background:#c8102e;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600">🔄 Tải dữ liệu</button>
+    </div>
+    <button onclick="go('baocao','Nhập liệu')" style="padding:8px 18px;background:#d4af37;color:#0f0d0e;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600">✏️ Nhập liệu ngay</button>
+  </div>
+</div>
+`}
 `:t==='Nhập liệu'?`
 <div class="card" style="padding:20px;margin-bottom:16px">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
@@ -1374,6 +1473,24 @@ function getQCDB(){
   try{return(firebase.apps.length?firebase.app():firebase.initializeApp({apiKey:'AIzaSyBetoDgdhDgfVQsvNZVlpoNs_2CWvYZs6A',databaseURL:'https://kscl-chat-default-rtdb.asia-southeast1.firebasedatabase.app',projectId:'kscl-chat'})).database();}
   catch(e){return null;}
 }
+function qcLoadExecAndRefresh(year,month){
+  const m=String(month||S.qcExecMonth||'5');
+  const y=String(year||S.qcExecYear||'2026');
+  S.qcExecMonth=m;S.qcExecYear=y;
+  const qcdb=getQCDB();
+  if(!qcdb){alert('Không kết nối được Firebase');return;}
+  const ref=qcdb.ref(`qc_data/${y}/${m}`);
+  ref.get().then(snap=>{
+    if(snap.exists()){
+      S.qcExecData=snap.val();
+      go('baocao',S.tab||'Executive QC');
+    }else{
+      S.qcExecData=null;
+      go('baocao',S.tab||'Executive QC');
+      setTimeout(()=>{const b=document.querySelector('.sec-hdr');if(b){const n=document.createElement('div');n.style.cssText='background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 16px;margin-top:10px;font-size:13px;color:#dc2626';n.textContent=`⚠️ Chưa có dữ liệu T${m}/${y} trên Firebase. Hãy nhập liệu trước.`;b.after(n);setTimeout(()=>n.remove(),4000);}},200);
+    }
+  }).catch(e=>{console.error(e);alert('Lỗi tải dữ liệu: '+e.message);});
+}
 let qcStoreList=['Nguyễn Tuân','T6 Timecity','Bạch Mai','Nguyễn Du','Ecohome 3','Green Bay','Sài Đồng','Văn Phú','Đội Cấn','Linh Đàm','Thái Hà','Hàng Bông'];
 function qcLoadStores(cb){
   const qcdb=getQCDB();
@@ -1539,15 +1656,37 @@ function afterRender(){
   mkC('c-bc-kpi','line',T6,[{label:'Đạt QC (%)',data:[...Z6],noFill:true},{label:'Khớp KK (%)',data:[...Z6],noFill:true,borderColor:CC[1]}]);
   mkC('c-bc-pie','doughnut',['Đạt','Không đạt','Cảnh báo'],[{data:[0,0,0],bg:[CC[1],CC[2],CC[3]]}]);
   mkC('c-bc-bar','bar',T6,[{label:'Đợt KK',data:[...Z6]},{label:'Phiếu QC',data:[...Z6],bg:CC[1]}]);
-  // Executive QC Dashboard
-  const ST15=['N.Tuân','T6TC','Bạch Mai','N.Du','Eco3','G.Bay','S.Đồng','V.Phú','Đ.Cấn','L.Đàm','T.Hà','H.Bông'];
-  const pts4=[98,97,98,95,96,87,88,86,85,84,83,94];
-  const pts5=[100,100,100,98,98,90,90,90,88,88,85,81];
-  mkC('c-exec-bar','bar',ST15,[
-    {label:'T4/2026',data:pts4,bg:'rgba(99,102,241,.25)',borderColor:'#6366f1'},
-    {label:'T5/2026',data:pts5,bg:pts5.map(v=>v>=90?'rgba(22,163,74,.7)':v>=80?'rgba(217,119,6,.7)':'rgba(220,38,38,.7)'),borderColor:pts5.map(v=>v>=90?'#16a34a':v>=80?'#d97706':'#dc2626')}
-  ],{scales:{y:{min:70,max:105,ticks:{callback:v=>v+'%'},grid:{color:'#f0f2f7'}},x:{grid:{display:false}}}});
-  mkC('c-exec-doitra','doughnut',['Do khách hàng','Do siêu thị','Nguyên nhân khác'],[{data:[72.31,21.54,6.15],bg:['#6366f1','#dc2626','#94a3b8']}]);
+  // Executive QC Dashboard + EBIT tab — data-driven, Firebase when loaded
+  {
+    const qd=S.qcExecData;
+    const eM=String(S.qcExecMonth||'5');
+    const eY=String(S.qcExecYear||'2026');
+    const scaleOpts={scales:{y:{min:60,max:105,ticks:{callback:v=>v+'%'},grid:{color:'#f0f2f7'}},x:{grid:{display:false}}}};
+    if(qd&&qd.s1_stores&&qd.s1_storeNames){
+      const stores=Object.values(qd.s1_stores).filter(s=>s.name&&s.curr!=null);
+      const lbls=stores.map(s=>s.name.length>7?s.name.substring(0,6)+'.':s.name);
+      const prev=stores.map(s=>s.prev||0);
+      const curr=stores.map(s=>s.curr||0);
+      const barData=[
+        {label:'Tháng trước',data:prev,bg:'rgba(99,102,241,.25)',borderColor:'#6366f1'},
+        {label:`T${eM}/${eY}`,data:curr,bg:curr.map(v=>v>=90?'rgba(22,163,74,.7)':v>=80?'rgba(217,119,6,.7)':'rgba(220,38,38,.7)'),borderColor:curr.map(v=>v>=90?'#16a34a':v>=80?'#d97706':'#dc2626')}
+      ];
+      const dtData=[{data:[qd.s2_pct_khach||0,qd.s2_pct_st||0,qd.s2_pct_khac||0],bg:['#6366f1','#dc2626','#94a3b8']}];
+      mkC('c-exec-bar','bar',lbls,barData,scaleOpts);
+      mkC('c-exec-doitra','doughnut',['Do khách hàng','Do siêu thị','Khác'],dtData);
+      mkC('c-ebit-bar','bar',lbls,barData,{...scaleOpts,plugins:{legend:{labels:{color:'#fff',font:{size:11}}}}});
+      mkC('c-ebit-doitra','doughnut',['Do khách hàng','Do siêu thị','Khác'],[{...dtData[0],bg:['#6366f1','#c8102e','#4b5563']}]);
+    }else{
+      const ST=['N.Tuân','T6TC','Bạch Mai','N.Du','Eco3','G.Bay','S.Đồng','V.Phú','Đ.Cấn','L.Đàm','T.Hà','H.Bông'];
+      const p4=[98,97,98,95,96,87,88,86,85,84,83,94];
+      const p5=[100,100,100,98,98,90,90,90,88,88,85,81];
+      mkC('c-exec-bar','bar',ST,[
+        {label:'T4/2026',data:p4,bg:'rgba(99,102,241,.25)',borderColor:'#6366f1'},
+        {label:'T5/2026',data:p5,bg:p5.map(v=>v>=90?'rgba(22,163,74,.7)':v>=80?'rgba(217,119,6,.7)':'rgba(220,38,38,.7)'),borderColor:p5.map(v=>v>=90?'#16a34a':v>=80?'#d97706':'#dc2626')}
+      ],scaleOpts);
+      mkC('c-exec-doitra','doughnut',['Do khách hàng','Do siêu thị','Nguyên nhân khác'],[{data:[72.31,21.54,6.15],bg:['#6366f1','#dc2626','#94a3b8']}]);
+    }
+  }
 
   // Init dynamic store table on Nhập liệu tab
   if(S.page==='baocao'&&S.tab==='Nhập liệu')qcLoadStores();
