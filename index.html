@@ -10,7 +10,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -328,7 +327,7 @@ let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData
    FIREBASE
 ══════════════════════════════════════════ */
 firebase.initializeApp(FB);
-const auth=firebase.auth(), db=firebase.database(), storage=firebase.storage();
+const auth=firebase.auth(), db=firebase.database();
 
 auth.onAuthStateChanged(async u=>{
   if(u){
@@ -3214,28 +3213,29 @@ render();
     const file=inp.files[0];
     inp.value='';
     if(!file||!msgsRef)return;
-    const MAX=15*1024*1024;
-    if(file.size>MAX){alert('File quá lớn (tối đa 15MB)');return;}
+    if(!file.type.startsWith('image/')){alert('Chỉ hỗ trợ gửi ảnh (JPG, PNG, WEBP...)');return;}
+    if(file.size>8*1024*1024){alert('Ảnh quá lớn (tối đa 8MB)');return;}
     const bar=document.getElementById('chat-upload-bar');
-    if(bar){bar.style.display='block';bar.textContent='⏳ Đang gửi '+file.name+'...';}
+    if(bar){bar.style.display='block';bar.textContent='⏳ Đang xử lý ảnh...';}
     try{
-      const safeName=file.name.replace(/[^a-zA-Z0-9.\-_]/g,'_');
-      const path=`chat-files/${myUid}/${Date.now()}_${safeName}`;
-      const ref=storage.ref(path);
-      const task=ref.put(file);
-      task.on('state_changed',snap=>{
-        const pct=Math.round(snap.bytesTransferred/snap.totalBytes*100);
-        if(bar)bar.textContent=`⏳ Đang gửi... ${pct}%`;
+      const imgUrl=await new Promise((res,rej)=>{
+        const img=new Image(),url=URL.createObjectURL(file);
+        img.onload=()=>{
+          URL.revokeObjectURL(url);
+          const MAX=900,q=0.72;
+          let w=img.width,h=img.height;
+          if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+          const c=document.createElement('canvas');
+          c.width=w;c.height=h;
+          c.getContext('2d').drawImage(img,0,0,w,h);
+          res(c.toDataURL('image/jpeg',q));
+        };
+        img.onerror=rej;
+        img.src=url;
       });
-      await task;
-      const url=await ref.getDownloadURL();
-      const isImg=file.type.startsWith('image/');
-      const msg={uid:myUid,name:myName||'Ẩn danh',ts:Date.now(),fileName:file.name,fileSize:file.size};
-      if(isImg)msg.imgUrl=url; else msg.fileUrl=url;
-      await msgsRef.push(msg);
+      await msgsRef.push({uid:myUid,name:myName||'Ẩn danh',ts:Date.now(),fileName:file.name,imgUrl});
     }catch(e){
-      console.error('Upload error:',e);
-      alert('Lỗi gửi file: '+(e.message||e));
+      console.error(e);alert('Lỗi gửi ảnh: '+(e.message||e));
     }finally{
       if(bar)bar.style.display='none';
     }
