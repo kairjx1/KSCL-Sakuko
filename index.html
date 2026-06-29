@@ -750,6 +750,44 @@ function rBaoCao(){
   exec.stDuoi80=exec.fbStores?exec.fbStores.filter(s=>s.curr<80).length:0;
   const topDTMax=exec.topDT.reduce((mx,s)=>Math.max(mx,s.count||s.v||0),1);
   const loiClrs=['#dc2626','#d97706','#6366f1'];
+
+  // ── EBIT AUTO-ANALYSIS ──────────────────────────────────────
+  const _st=exec.fbStores||[];
+  const _drop=_st.filter(s=>s.prev!=null&&s.curr<s.prev-4).sort((a,b)=>(a.curr-a.prev)-(b.curr-b.prev));
+  const _rise=_st.filter(s=>s.prev!=null&&s.curr>s.prev+5);
+  const _pfct=_st.filter(s=>s.curr>=100);
+  const _red=_st.filter(s=>s.curr<85);
+  const _ylw=_st.filter(s=>s.curr>=85&&s.curr<90);
+  const _eDTST=Math.round(exec.tongDoitra*(exec.pctST||0)/100);
+  const _eVPct=exec.soKiemTra>0?Math.round(exec.soSTLoi/exec.soKiemTra*100):0;
+  const _eQR=exec.stLoi.filter(s=>(s.loi||'').toLowerCase().includes('qr'));
+  const _eBill=exec.stLoi.filter(s=>(s.loi||'').toLowerCase().includes('bill'));
+  const _ePTT=exec.stLoi.filter(s=>(s.loi||'').toLowerCase().includes('pttt')||(s.loi||'').toLowerCase().includes('thanh to'));
+  const _eB=_eQR.length*9+_eBill.length*3+_ePTT.length*2;
+  const _eCsav=Math.round(_eDTST*0.3*0.3*10)/10;
+  const _nextM=+eM===12?1:+eM+1;
+  const _nextY=+eM===12?+eY+1:+eY;
+  const _violSet=new Set(exec.stLoi.map(s=>(s.name||'').replace(/^ST\s*/i,'').toLowerCase()));
+  function _sRisk(s){
+    const nm=(s.name||'').replace(/^ST\s*/i,'').toLowerCase();
+    if(s.curr<80||(s.prev!=null&&s.prev-s.curr>10))return'R2';
+    if(_violSet.has(nm))return'R1V';
+    if(s.curr<85||(s.prev!=null&&s.prev-s.curr>5))return'R1';
+    if(s.curr<90||_violSet.has(nm))return'W';
+    return'G';
+  }
+  const _stSorted=[..._st].sort((a,b)=>{
+    const ord={R2:0,R1V:1,R1:2,W:3,G:4};
+    return (ord[_sRisk(a)]||4)-(ord[_sRisk(b)]||4)||(a.curr-b.curr);
+  });
+  const _alerts=[];
+  if(_drop.length)_alerts.push({c:'#c8102e',t:`🔴 <strong>Điểm giảm mạnh:</strong> ${_drop.map(s=>`${s.name} (${s.prev||'?'}%→${s.curr}%, −${(s.prev||s.curr)-s.curr}pp)`).join(' · ')}`});
+  if(_eQR.length)_alerts.push({c:'#c8102e',t:`🔴 <strong>QR cá nhân phát hiện tại:</strong> ${_eQR.map(s=>s.name).join(', ')} — rủi ro doanh thu không ghi nhận`});
+  if(_eBill.length)_alerts.push({c:'#d97706',t:`🟡 <strong>Không xuất bill tại:</strong> ${_eBill.map(s=>s.name).join(', ')}`});
+  if(_ePTT.length)_alerts.push({c:'#d97706',t:`🟡 <strong>Sai phương thức thanh toán:</strong> ${_ePTT.map(s=>s.name).join(', ')}`});
+  if(_red.length&&!_alerts.length)_alerts.push({c:'#d97706',t:`🟡 <strong>ST dưới 85%:</strong> ${_red.map(s=>s.name+'('+s.curr+'%)').join(', ')} — cần theo dõi`});
+  // ──────────────────────────────────────────────────────────────
+
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Báo cáo</div>
 <div class="sec-hdr"><h1>📊 Báo cáo & Phân tích</h1>
@@ -895,58 +933,104 @@ ${t==='Executive QC'?`
 </div>
 `:t==='Báo cáo EBIT'?`
 ${hasQD?`
-<div style="background:#0f0d0e;border-radius:14px;padding:24px;color:#fff">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;border-bottom:1px solid #2a2828;padding-bottom:16px">
+<div style="background:#0f0d0e;border-radius:14px;padding:20px;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
+  <!-- HEADER -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;border-bottom:1px solid #2a2828;padding-bottom:14px">
     <div>
-      <div style="font-size:11px;font-weight:700;letter-spacing:3px;color:#d4af37;text-transform:uppercase">SAKUKO VIETNAM · KSCL</div>
-      <h2 style="font-size:22px;font-weight:900;color:#fff;margin:6px 0 4px">Báo cáo EBIT Tháng ${eM}/${eY}</h2>
-      <div style="font-size:12px;color:#94a3b8">Dữ liệu Firebase${exec.savedAt?' · '+new Date(exec.savedAt).toLocaleDateString('vi-VN'):''}</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:3px;color:#d4af37;text-transform:uppercase">SAKUKO VIETNAM · KSCL · PHÂN TÍCH TỰ ĐỘNG</div>
+      <h2 style="font-size:20px;font-weight:900;color:#fff;margin:5px 0 3px">Báo cáo EBIT Tháng ${eM}/${eY}</h2>
+      <div style="font-size:11px;color:#6b7280">Firebase${exec.savedAt?' · '+new Date(exec.savedAt).toLocaleDateString('vi-VN'):''} · ${_stSorted.length} ST · ${exec.tongLuot} lượt QC</div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <select id="ebit-m" style="padding:7px 10px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px;font-size:12px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
-      <select id="ebit-y" style="padding:7px 10px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px;font-size:12px"><option value="2026"${eY==='2026'?' selected':''}>2026</option><option value="2025"${eY==='2025'?' selected':''}>2025</option></select>
-      <button onclick="qcLoadExecAndRefresh(document.getElementById('ebit-y').value,document.getElementById('ebit-m').value)" style="padding:8px 14px;background:#c8102e;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600">🔄 Tải</button>
-      <button onclick="go('baocao','Executive QC')" style="padding:8px 14px;background:#1a1818;color:#d4af37;border:1px solid #3a3838;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600">← Dashboard</button>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <select id="ebit-m" style="padding:6px 8px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px;font-size:12px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+      <select id="ebit-y" style="padding:6px 8px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px;font-size:12px"><option value="2026"${eY==='2026'?' selected':''}>2026</option><option value="2025"${eY==='2025'?' selected':''}>2025</option></select>
+      <button onclick="qcLoadExecAndRefresh(document.getElementById('ebit-y').value,document.getElementById('ebit-m').value)" style="padding:7px 12px;background:#c8102e;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600">🔄 Tải</button>
+      <button onclick="go('baocao','Executive QC')" style="padding:7px 12px;background:#1a1818;color:#d4af37;border:1px solid #3a3838;border-radius:7px;cursor:pointer;font-size:12px">← Dashboard</button>
     </div>
   </div>
-  <div class="g4 g-sm2" style="margin-bottom:20px">
-    ${[{lb:'Điểm DV TB',v:exec.diemTB,sub:`T${eM}/${eY}`,clr:'#d4af37'},{lb:'Tổng đổi trả',v:exec.tongDoitra+' đơn',sub:`Do ST ${exec.pctST}%`,clr:'#c8102e'},{lb:'Lỗi thao tác',v:exec.soSTLoi+'/'+exec.soKiemTra+' ST',sub:exec.soSTLoi>0?'Cần theo dõi':'Tất cả OK',clr:exec.soSTLoi>0?'#f87171':'#4ade80'},{lb:'Lượt QC',v:exec.tongLuot+' lượt',sub:`Tháng ${eM}/${eY}`,clr:'#818cf8'}].map(k=>`<div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px 16px"><div style="font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${k.lb}</div><div style="font-size:22px;font-weight:900;color:${k.clr};margin-bottom:4px">${k.v}</div><div style="font-size:11px;color:#94a3b8">${k.sub}</div></div>`).join('')}
+  <!-- ALERT BANNERS (auto) -->
+  ${_alerts.length?_alerts.map(a=>`<div style="background:rgba(200,16,46,.1);border:1px solid ${a.c}55;border-left:3px solid ${a.c};border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;line-height:1.5">${a.t}</div>`).join(''):'<div style="background:rgba(76,175,125,.08);border:1px solid #4caf7d55;border-left:3px solid #4caf7d;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;color:#4caf7d">✅ Không có cảnh báo đỏ tháng này — kết quả tốt!</div>'}
+  <!-- KPI CARDS -->
+  <div class="g4 g-sm2" style="margin-bottom:14px">
+    ${[
+      {lb:'Điểm QC TB',v:exec.diemTB,sub:_rise.length+' ST tăng · '+_drop.length+' ST giảm',clr:_drop.length>0?'#f87171':'#d4af37',bd:_drop.length>0?'#c8102e':'#2a5a2a'},
+      {lb:'Đổi trả do ST',v:_eDTST+' đơn',sub:'/ '+exec.tongDoitra+' tổng ('+exec.pctST+'%)',clr:_eDTST>35?'#f87171':_eDTST>20?'#fbbf24':'#4ade80',bd:_eDTST>35?'#c8102e':_eDTST>20?'#d97706':'#2a5a2a'},
+      {lb:'Vi phạm thao tác',v:exec.soSTLoi+'/'+exec.soKiemTra+' ST',sub:_eVPct+'% ST kiểm tra · '+(_eQR.length?_eQR.length+' QR cá nhân':''),clr:exec.soSTLoi>2?'#f87171':exec.soSTLoi>0?'#fbbf24':'#4ade80',bd:exec.soSTLoi>2?'#c8102e':exec.soSTLoi>0?'#d97706':'#2a5a2a'},
+      {lb:'ST xuất sắc ≥100%',v:_pfct.length+' ST',sub:_pfct.map(s=>s.name).join(' · ')||'—',clr:'#818cf8',bd:'#3730a3'}
+    ].map(k=>`<div style="background:#1a1818;border:1px solid ${k.bd};border-radius:10px;padding:14px 16px"><div style="font-size:10px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${k.lb}</div><div style="font-size:22px;font-weight:900;color:${k.clr};margin-bottom:3px">${k.v}</div><div style="font-size:11px;color:#6b7280">${k.sub}</div></div>`).join('')}
   </div>
-  <div class="g2" style="margin-bottom:20px">
-    <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:16px">
-      <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px">📊 Điểm dịch vụ — Tháng trước vs T${eM}/${eY}</div>
-      <div style="height:200px"><canvas id="c-ebit-bar"></canvas></div>
+
+  <!-- CHARTS ROW -->
+  <div class="g2" style="margin-bottom:14px">
+    <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px">
+      <div style="font-size:12px;font-weight:700;color:#d4af37;margin-bottom:8px">📊 Điểm dịch vụ — Tháng trước vs T${eM}/${eY}</div>
+      <div style="height:190px"><canvas id="c-ebit-bar"></canvas></div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:12px">
-      <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:16px">
-        <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px">🔴 Phân loại đổi trả T${eM}/${eY}</div>
-        <div style="height:130px"><canvas id="c-ebit-doitra"></canvas></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px;flex:1">
+        <div style="font-size:12px;font-weight:700;color:#d4af37;margin-bottom:6px">🔴 Phân loại đổi trả T${eM}/${eY}</div>
+        <div style="height:110px"><canvas id="c-ebit-doitra"></canvas></div>
       </div>
-      <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px">
-        <div style="font-size:12px;font-weight:700;color:#c8102e;margin-bottom:8px">🔥 Điểm nóng đổi trả</div>
-        ${exec.topDT.map((s,i)=>{const clr=i===0?'#c8102e':i===1?'#d97706':'#f59e0b';const n=s.name||s.n;const v=s.count||s.v||0;return`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #2a2828"><span style="color:#e2e8f0">${n}</span><span style="color:${clr};font-weight:700">${v} đơn</span></div>`;}).join('')}
-        <div style="font-size:11px;color:#6b7280;margin-top:6px">Tổng ${exec.tongDoitra} đơn · Do ST: ${exec.pctST}%</div>
+      <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:12px">
+        <div style="font-size:11px;font-weight:700;color:#c8102e;margin-bottom:6px">🔥 Top đổi trả</div>
+        ${exec.topDT.map((s,i)=>{const c=i===0?'#c8102e':i===1?'#d97706':'#f59e0b';const n=s.name||s.n;const v=s.count||s.v||0;return'<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #1e1e1e"><span style="color:#e2e8f0">'+n+'</span><span style="color:'+c+';font-weight:700">'+v+' đơn</span></div>';}).join('')}
       </div>
     </div>
   </div>
-  <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:16px;margin-bottom:16px">
-    <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:12px">💰 Đóng góp EBIT — T${eM}/${eY}</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div style="background:#0d1117;border-left:3px solid #d4af37;padding:12px;border-radius:0 8px 8px 0"><strong style="color:#d4af37">✅ Điểm sáng:</strong><p style="color:#94a3b8;font-size:12px;margin:6px 0 0">Điểm TB ${exec.diemTB} toàn chuỗi${exec.fbStores?` · ${exec.fbStores.filter(s=>s.curr>=(s.prev||0)).length}/${exec.fbStores.length} ST tăng/giữ điểm`:''} — bảo vệ doanh thu dịch vụ.</p></div>
-      <div style="background:#0d1117;border-left:3px solid #c8102e;padding:12px;border-radius:0 8px 8px 0"><strong style="color:#c8102e">⚠️ Rủi ro:</strong><p style="color:#94a3b8;font-size:12px;margin:6px 0 0">Đổi trả do ST ${exec.pctST}% (~${Math.round(exec.tongDoitra*exec.pctST/100)} đơn). ${exec.soSTLoi} ST lỗi thao tác → theo dõi T${+eM+1}.</p></div>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
-      ${exec.topLoi.map((l,i)=>`<span style="background:#1e1b4b;color:#c7d2fe;border:1px solid #3730a3;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600">${l.ten||l.lb}: ${l.soST||l.n} ST</span>`).join('')}
+
+  <!-- RISK TABLE -->
+  <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:700;color:#d4af37;margin-bottom:10px">⚠️ Bảng xếp loại rủi ro — ${_stSorted.length} ST (tự động theo dữ liệu)</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#0d1117">
+          <th style="text-align:left;padding:7px 10px;color:#6b7280;font-weight:600">Siêu thị</th>
+          <th style="text-align:center;padding:7px 8px;color:#6b7280;font-weight:600">T.trước</th>
+          <th style="text-align:center;padding:7px 8px;color:#6b7280;font-weight:600">T${eM}</th>
+          <th style="text-align:center;padding:7px 8px;color:#6b7280;font-weight:600">Thay đổi</th>
+          <th style="text-align:left;padding:7px 8px;color:#6b7280;font-weight:600">Vi phạm</th>
+          <th style="text-align:center;padding:7px 8px;color:#6b7280;font-weight:600">Xếp loại</th>
+        </tr></thead>
+        <tbody>${_stSorted.map(s=>{
+          const r=_sRisk(s);
+          const bg=r==='R2'?'rgba(200,16,46,.12)':r==='R1V'?'rgba(200,16,46,.08)':r==='R1'?'rgba(200,16,46,.06)':r==='W'?'rgba(215,119,0,.06)':'';
+          const diff=s.prev!=null?s.curr-s.prev:null;
+          const dstr=diff===null?'—':diff>0?'<span style="color:#4ade80">▲ +'+diff+'pp</span>':diff<0?'<span style="color:#f87171">▼ '+diff+'pp</span>':'<span style="color:#6b7280">→</span>';
+          const badge=r==='R2'?'<span style="background:#c8102e;color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">🔴 KHẨN</span>':r==='R1V'?'<span style="background:#c8102e;color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">🔴 Vi phạm</span>':r==='R1'?'<span style="background:#7f1d1d;color:#fca5a5;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">🟠 Rủi ro</span>':r==='W'?'<span style="background:#78350f;color:#fcd34d;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">🟡 Theo dõi</span>':'<span style="background:#14532d;color:#86efac;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">🟢 Ổn định</span>';
+          const viol=exec.stLoi.find(v=>v.name&&(s.name||'').includes(v.name.replace(/^ST\s*/i,'').trim().split(' ')[0]));
+          return '<tr style="background:'+bg+'"><td style="padding:7px 10px;color:#e2e8f0;border-top:1px solid #222">'+s.name+'</td><td style="text-align:center;padding:7px 8px;color:#6b7280;border-top:1px solid #222">'+(s.prev!=null?s.prev+'%':'—')+'</td><td style="text-align:center;padding:7px 8px;font-weight:700;color:'+(s.curr>=90?'#4ade80':s.curr>=85?'#fbbf24':'#f87171')+';border-top:1px solid #222">'+s.curr+'%</td><td style="text-align:center;padding:7px 8px;border-top:1px solid #222">'+dstr+'</td><td style="padding:7px 8px;color:#f87171;font-size:11px;border-top:1px solid #222">'+(viol?viol.loi:'—')+'</td><td style="text-align:center;padding:7px 8px;border-top:1px solid #222">'+badge+'</td></tr>';
+        }).join('')}</tbody>
+      </table>
     </div>
   </div>
-  <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:16px">
-    <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:12px">🔍 Gian lận & Compliance</div>
-    <div class="g2" style="gap:12px">
-      <div>
-        ${[{lb:'ST kiểm tra',v:exec.soKiemTra+' ST',bg:'#0d1117'},{lb:'ST lỗi thao tác',v:exec.soSTLoi+' ST',bg:'#1e0505'},{lb:'Gian lận tài chính',v:'0 vụ ✓',bg:'#0d1117'}].map(r=>`<div style="display:flex;justify-content:space-between;padding:8px 12px;background:${r.bg};border-radius:6px;margin-bottom:6px;font-size:12px"><span style="color:#94a3b8">${r.lb}</span><strong style="color:#fff">${r.v}</strong></div>`).join('')}
-      </div>
-      <div>${exec.stLoi.length?exec.stLoi.map(s=>`<div style="padding:8px 12px;background:#1e0505;border-left:3px solid #c8102e;border-radius:0 6px 6px 0;margin-bottom:6px;font-size:12px"><strong style="color:#fca5a5">${s.name}</strong><br><span style="color:#94a3b8">${s.loi||'Lỗi thao tác'}</span></div>`).join(''):'<div style="color:#4ade80;font-size:13px;padding:12px;text-align:center">Không có ST lỗi thao tác ✓</div>'}</div>
+
+  <!-- EBIT LEVERS A/B/C/D -->
+  <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:700;color:#d4af37;margin-bottom:10px">💰 Phân tích đóng góp EBIT — 4 đòn bẩy T${eM}/${eY}</div>
+    ${[
+      {lv:'A',nm:'Chống thất thoát',clr:'#c8102e',txt:'Kiểm tra '+exec.soKiemTra+' ST, phát hiện '+exec.soSTLoi+' lỗi thao tác. '+(_eBill.length?'Không xuất bill tại '+_eBill.map(s=>s.name).join(', ')+' — doanh thu chưa ghi nhận.':'')+ (_ePTT.length?' Sai phương thức TT: '+_ePTT.map(s=>s.name).join(', ')+'.':''),ebit:'Ước ~'+(_eBill.length*3+_ePTT.length*2)+'–'+(_eBill.length*6+_ePTT.length*4)+'M₫ bảo vệ (cần log POS)'},
+      {lv:'B',nm:'Kiểm soát gian lận',clr:'#e0a82e',txt:_eQR.length?'QR cá nhân tại '+_eQR.map(s=>s.name).join(', ')+' — giao dịch không qua hệ thống chuỗi. Mỗi ST ước ~30 GD/tháng × 150K = 4.5M₫/ST bị phân tán.':'Không phát hiện gian lận tài chính tháng này.',ebit:_eQR.length?'Ước ~'+(_eQR.length*5)+'–'+(_eQR.length*9)+'M₫/tháng'+(_eQR.length>1?' ('+_eQR.length+' ST)':''):'—'},
+      {lv:'C',nm:'Thu hồi & Giảm lãng phí',clr:'#4caf7d',txt:'Đổi trả do ST: '+_eDTST+' đơn/tháng ('+exec.pctST+'%) có thể phòng ngừa qua training nghiệp vụ. Lỗi hệ thống: '+(exec.pctHT!=null?Math.round(exec.tongDoitra*(exec.pctHT||0)/100):0)+' đơn → cần phối hợp IT.',ebit:'Nếu giảm 30%: tiết kiệm ~'+_eCsav+'M₫/tháng (30 đơn × ~300K₫/đơn)'},
+      {lv:'D',nm:'Tuân thủ & Vận hành',clr:'#6c8cd5',txt:'Điểm TB toàn chuỗi '+exec.diemTB+' ('+(_rise.length)+' ST tăng, '+_pfct.length+' ST đạt 100%). '+(_drop.length?_drop.length+' ST giảm điểm cần phục hồi.':'Không có ST giảm mạnh.')+ ' Top lỗi: '+exec.topLoi.map(l=>l.ten+' ('+l.soST+' ST)').join(', ')+'.',ebit:'Gián tiếp — bảo vệ doanh thu dịch vụ, giảm khiếu nại KH'}
+    ].map(r=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding:10px;background:#0d1117;border-radius:8px;border-left:3px solid ${r.clr}"><div style="flex-shrink:0;width:24px;height:24px;border-radius:6px;background:${r.clr};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff">${r.lv}</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:3px">${r.nm}</div><div style="font-size:11px;color:#94a3b8;line-height:1.5">${r.txt}</div><div style="margin-top:5px;display:inline-block;background:rgba(200,16,46,.15);color:#ff6b81;font-size:11px;padding:2px 9px;border-radius:12px;font-weight:600">EBIT: ${r.ebit}</div></div></div>`).join('')}
+  </div>
+
+  <!-- AUTO OBJECTIVES -->
+  <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px;margin-bottom:14px">
+    <div style="font-size:13px;font-weight:700;color:#d4af37;margin-bottom:10px">🎯 Mục tiêu tháng ${_nextM}/${_nextY} — Tự động phân tích</div>
+    <div style="border-left:2px solid #c8102e;padding-left:14px">
+      ${[
+        ..._eQR.length?[{p:1,who:'Trưởng KSCL + QL ST',by:'15/0'+_nextM+'/'+_nextY,what:'Xử lý dứt điểm QR cá nhân tại '+_eQR.map(s=>s.name).join(', ')+': xóa QR, QC đột xuất tái kiểm, lập biên bản răn đe có chữ ký',ebit:'Ngăn ~'+(_eQR.length*5)+'–'+(_eQR.length*9)+'M₫/tháng thất thoát doanh thu'}]:[],
+        ..._drop.length?[{p:_eQR.length?2:1,who:'Trưởng KSCL + QL '+_drop[0].name,by:'28/0'+_nextM+'/'+_nextY,what:'Phục hồi điểm QC '+_drop[0].name+' từ '+_drop[0].curr+'% → ≥'+(Math.min((_drop[0].prev||90)-2,90))+'%: 2 lượt QC trong tháng, action plan từng lỗi ('+exec.topLoi.slice(0,2).map(l=>l.ten).join(', ')+')',ebit:'Bảo vệ doanh thu KH cao cấp, giảm đổi trả liên quan ST'}]:[],
+        {p:(_eQR.length?1:0)+(_drop.length?1:0)+1,who:'KSCL + IT + Vận hành',by:'30/0'+_nextM+'/'+_nextY,what:'Giảm đổi trả do ST từ '+_eDTST+' → ≤'+Math.max(Math.round(_eDTST*0.7),5)+' đơn: training top 3 ST cao nhất, IT xử lý '+(exec.pctHT!=null?Math.round(exec.tongDoitra*(exec.pctHT||0)/100):0)+' đơn lỗi HT',ebit:'Tiết kiệm ~'+_eCsav+'M₫/tháng nếu giảm được 30%'}
+      ].map((o,i)=>`<div style="margin-bottom:12px;position:relative"><div style="font-size:10px;color:#d4af37;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">Ưu tiên ${o.p} · Hạn ${o.by}</div><div style="font-size:12px;font-weight:700;color:#e2e8f0;margin-bottom:3px">${o.who}: ${o.what}</div><span style="background:rgba(200,16,46,.15);color:#ff6b81;font-size:11px;padding:2px 9px;border-radius:12px;font-weight:600">EBIT: ${o.ebit}</span></div>`).join('')}
     </div>
+  </div>
+
+  <!-- CLOSING -->
+  <div style="text-align:center;padding:18px;background:linear-gradient(135deg,#1a1617,#1a1818);border-radius:10px;border:1px solid #2a2828">
+    <div style="font-size:14px;color:#d4af37;font-weight:600;line-height:1.7">"Tháng ${eM}/${eY}: ${_pfct.length} ST đạt 100% · Điểm TB ${exec.diemTB} toàn chuỗi · ${exec.soSTLoi} vi phạm thao tác đã phát hiện.<br>Tháng ${_nextM}: ưu tiên ${_eQR.length?'dứt điểm QR cá nhân →':_drop.length?'phục hồi '+_drop[0].name+' →':''} giảm đổi trả do ST xuống ≤${Math.max(Math.round(_eDTST*0.7),5)} đơn."</div>
+    <div style="font-size:11px;color:#6b7280;margin-top:8px">Phòng Kiểm soát Chất lượng · Sakuko Vietnam · Tự động từ dữ liệu Firebase</div>
   </div>
 </div>
 `:`
