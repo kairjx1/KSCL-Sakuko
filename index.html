@@ -3241,13 +3241,17 @@ render();
   };
 
   // Paste ảnh từ clipboard (Ctrl+V)
-  document.addEventListener('paste',function(e){
-    if(!panelOpen||!msgsRef)return;
-    const item=Array.from(e.clipboardData.items||[]).find(i=>i.type.startsWith('image/'));
+  function _pasteImg(e){
+    const item=Array.from(e.clipboardData?.items||[]).find(i=>i.kind==='file'&&i.type.startsWith('image/'));
     if(!item)return;
-    e.preventDefault();
+    e.preventDefault();e.stopPropagation();
     chatSendImage(item.getAsFile());
-  });
+  }
+  // Gắn trực tiếp vào input để bắt trước khi browser xử lý
+  const _chatInp=document.getElementById('chat-inp');
+  if(_chatInp)_chatInp.addEventListener('paste',_pasteImg);
+  // Dự phòng: document-level khi focus ở nơi khác trong panel
+  document.addEventListener('paste',function(e){if(panelOpen&&msgsRef)_pasteImg(e);});
 
   window.chatOpenAdmin=function(){
     const pw=prompt('Nhập mã quản trị:');
