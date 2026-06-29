@@ -2994,6 +2994,15 @@ render();
 
 <!-- Chat panel -->
 <div id="chat-panel">
+  <!-- Xác nhận gửi ảnh -->
+  <div id="chat-img-confirm" style="display:none;position:absolute;inset:0;background:rgba(15,15,35,.82);z-index:20;flex-direction:column;align-items:center;justify-content:center;gap:14px;border-radius:16px">
+    <img id="chat-prev-img" style="max-width:88%;max-height:52%;border-radius:12px;object-fit:contain;box-shadow:0 4px 24px rgba(0,0,0,.5)">
+    <p style="color:#e0e7ff;font-size:13px;margin:0;font-weight:500">Gửi ảnh này?</p>
+    <div style="display:flex;gap:10px">
+      <button id="chat-prev-ok" style="padding:8px 22px;background:#4f46e5;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">Gửi</button>
+      <button id="chat-prev-cancel" style="padding:8px 22px;background:#fff;color:#374151;border:none;border-radius:8px;cursor:pointer;font-size:13px">Hủy</button>
+    </div>
+  </div>
   <div id="chat-hdr">
     <div id="chat-hdr-info">
       <div id="chat-hdr-title">💬 KSCL Team Chat</div>
@@ -3235,22 +3244,47 @@ render();
     finally{if(bar)bar.style.display='none';}
   }
 
+  let _pendingFile=null,_pendingObjUrl=null;
+
+  function chatShowPreview(file){
+    if(!file)return;
+    _pendingFile=file;
+    if(_pendingObjUrl)URL.revokeObjectURL(_pendingObjUrl);
+    _pendingObjUrl=URL.createObjectURL(file);
+    const dlg=document.getElementById('chat-img-confirm');
+    const img=document.getElementById('chat-prev-img');
+    if(!dlg||!img)return;
+    img.src=_pendingObjUrl;
+    dlg.style.display='flex';
+  }
+
   window.chatFileSelected=function(inp){
     const file=inp.files[0];inp.value='';
-    chatSendImage(file);
+    if(file)chatShowPreview(file);
   };
+
+  document.getElementById('chat-prev-ok')?.addEventListener('click',async function(){
+    document.getElementById('chat-img-confirm').style.display='none';
+    if(_pendingFile)await chatSendImage(_pendingFile);
+    if(_pendingObjUrl){URL.revokeObjectURL(_pendingObjUrl);_pendingObjUrl=null;}
+    _pendingFile=null;
+  });
+
+  document.getElementById('chat-prev-cancel')?.addEventListener('click',function(){
+    document.getElementById('chat-img-confirm').style.display='none';
+    if(_pendingObjUrl){URL.revokeObjectURL(_pendingObjUrl);_pendingObjUrl=null;}
+    _pendingFile=null;
+  });
 
   // Paste ảnh từ clipboard (Ctrl+V)
   function _pasteImg(e){
     const item=Array.from(e.clipboardData?.items||[]).find(i=>i.kind==='file'&&i.type.startsWith('image/'));
     if(!item)return;
     e.preventDefault();e.stopPropagation();
-    chatSendImage(item.getAsFile());
+    chatShowPreview(item.getAsFile());
   }
-  // Gắn trực tiếp vào input để bắt trước khi browser xử lý
   const _chatInp=document.getElementById('chat-inp');
   if(_chatInp)_chatInp.addEventListener('paste',_pasteImg);
-  // Dự phòng: document-level khi focus ở nơi khác trong panel
   document.addEventListener('paste',function(e){if(panelOpen&&msgsRef)_pasteImg(e);});
 
   window.chatOpenAdmin=function(){
