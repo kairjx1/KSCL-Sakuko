@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -327,7 +328,7 @@ let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData
    FIREBASE
 ══════════════════════════════════════════ */
 firebase.initializeApp(FB);
-const auth=firebase.auth(), db=firebase.database();
+const auth=firebase.auth(), db=firebase.database(), storage=firebase.storage();
 
 auth.onAuthStateChanged(async u=>{
   if(u){
@@ -2967,6 +2968,16 @@ render();
 #chat-inp:focus{border-color:#4f46e5}
 #chat-send-btn{width:36px;height:36px;border-radius:50%;background:#4f46e5;color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
 #chat-send-btn:hover{background:#3730a3}
+#chat-attach-btn{width:32px;height:32px;border-radius:50%;background:none;border:1.5px solid #c7d2fe;color:#6366f1;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;padding:0;transition:.15s}
+#chat-attach-btn:hover{background:#e0e7ff;border-color:#6366f1}
+#chat-upload-bar{display:none;font-size:11px;color:#4f46e5;padding:3px 12px 4px;text-align:center;background:#eef2ff;border-top:1px solid #e0e7ff;flex-shrink:0}
+.cht-img{max-width:195px;max-height:220px;border-radius:10px;cursor:zoom-in;display:block;object-fit:cover;margin:2px 0}
+.cht-bub-img-me{display:inline-block;padding:2px;border-radius:12px 12px 3px 12px;overflow:hidden;max-width:210px}
+.cht-bub-img-other{display:inline-block;padding:2px;border-radius:12px 12px 12px 3px;overflow:hidden;max-width:210px}
+.cht-file-me{display:flex;align-items:center;gap:7px;padding:8px 12px;background:#4f46e5;color:#fff;border-radius:14px 14px 3px 14px;font-size:12px;text-decoration:none;max-width:210px;word-break:break-all}
+.cht-file-other{display:flex;align-items:center;gap:7px;padding:8px 12px;background:#f1f5f9;color:#1e1b4b;border-radius:14px 14px 14px 3px;font-size:12px;text-decoration:none;max-width:210px;word-break:break-all;border:1px solid #e0e7ff}
+.cht-file-icon{font-size:20px;flex-shrink:0}
+.cht-file-name{font-size:11.5px;line-height:1.4}
 #chat-name-dlg{position:absolute;inset:0;background:rgba(255,255,255,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px;text-align:center;z-index:10}
 #chat-name-dlg p{font-size:14px;font-weight:600;color:#1e1b4b;margin:0}
 #chat-name-dlg small{font-size:12px;color:#6b7280;margin-top:-8px}
@@ -3011,7 +3022,10 @@ render();
       <span>Chưa có tin nhắn nào.<br>Hãy bắt đầu cuộc trò chuyện!</span>
     </div>
   </div>
+  <div id="chat-upload-bar">⏳ Đang gửi...</div>
   <div id="chat-bottom">
+    <button id="chat-attach-btn" onclick="document.getElementById('chat-file-inp').click()" title="Gửi ảnh / file">📎</button>
+    <input id="chat-file-inp" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip" style="display:none" onchange="chatFileSelected(this)">
     <input id="chat-inp" type="text" placeholder="Nhập tin nhắn..." maxlength="500" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend()}">
     <button id="chat-send-btn" onclick="chatSend()" title="Gửi">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -3082,19 +3096,44 @@ render();
 
     const isMine=msg.uid===myUid;
     const displayName=nameOverrides[msg.uid]||msg.name||'Ẩn danh';
+
+    // Build bubble content
+    function fileIcon(name){
+      const ext=(name||'').split('.').pop().toLowerCase();
+      if(['pdf'].includes(ext))return'📕';
+      if(['doc','docx'].includes(ext))return'📝';
+      if(['xls','xlsx'].includes(ext))return'📊';
+      if(['ppt','pptx'].includes(ext))return'📑';
+      if(['zip','rar'].includes(ext))return'🗜️';
+      return'📄';
+    }
+    function fmtSize(b){if(!b)return'';if(b<1024)return b+'B';if(b<1048576)return Math.round(b/1024)+'KB';return(b/1048576).toFixed(1)+'MB';}
+    let bubbleHtml;
+    if(msg.imgUrl){
+      bubbleHtml=isMine
+        ?`<div class="cht-bub-img-me"><img src="${esc(msg.imgUrl)}" class="cht-img" onclick="window.open('${esc(msg.imgUrl)}','_blank')" alt="ảnh" loading="lazy"></div>`
+        :`<div class="cht-bub-img-other"><img src="${esc(msg.imgUrl)}" class="cht-img" onclick="window.open('${esc(msg.imgUrl)}','_blank')" alt="ảnh" loading="lazy"></div>`;
+    }else if(msg.fileUrl){
+      const sz=fmtSize(msg.fileSize);
+      bubbleHtml=isMine
+        ?`<a href="${esc(msg.fileUrl)}" target="_blank" class="cht-file-me"><span class="cht-file-icon">${fileIcon(msg.fileName)}</span><span class="cht-file-name">${esc(msg.fileName||'file')}${sz?`<br><small style="opacity:.7">${sz}</small>`:''}</span></a>`
+        :`<a href="${esc(msg.fileUrl)}" target="_blank" class="cht-file-other"><span class="cht-file-icon">${fileIcon(msg.fileName)}</span><span class="cht-file-name">${esc(msg.fileName||'file')}${sz?`<br><small style="color:#64748b">${sz}</small>`:''}</span></a>`;
+    }else{
+      bubbleHtml=isMine
+        ?`<div class="cht-bub-me">${esc(msg.text||'')}</div>`
+        :`<div class="cht-bub-other">${esc(msg.text||'')}</div>`;
+    }
+
     const row=document.createElement('div');
     if(isMine){
       row.className='cht-row-me';
-      row.innerHTML=`<div>
-        <div class="cht-bub-me">${esc(msg.text)}</div>
-        <div class="cht-meta-me">${fmtTime(msg.ts||Date.now())}</div>
-      </div>`;
+      row.innerHTML=`<div>${bubbleHtml}<div class="cht-meta-me">${fmtTime(msg.ts||Date.now())}</div></div>`;
     } else {
       const init=displayName.charAt(0).toUpperCase();
       row.className='cht-row-other';
       row.innerHTML=`<div class="cht-av">${esc(init)}</div><div>
         <div class="cht-name">${esc(displayName)}</div>
-        <div class="cht-bub-other">${esc(msg.text)}</div>
+        ${bubbleHtml}
         <div class="cht-meta-other">${fmtTime(msg.ts||Date.now())}</div>
       </div>`;
     }
@@ -3169,6 +3208,37 @@ render();
     if(!text||!msgsRef)return;
     msgsRef.push({uid:myUid,name:myName||'Ẩn danh',text,ts:Date.now()});
     inp.value='';
+  };
+
+  window.chatFileSelected=async function(inp){
+    const file=inp.files[0];
+    inp.value='';
+    if(!file||!msgsRef)return;
+    const MAX=15*1024*1024;
+    if(file.size>MAX){alert('File quá lớn (tối đa 15MB)');return;}
+    const bar=document.getElementById('chat-upload-bar');
+    if(bar){bar.style.display='block';bar.textContent='⏳ Đang gửi '+file.name+'...';}
+    try{
+      const safeName=file.name.replace(/[^a-zA-Z0-9.\-_]/g,'_');
+      const path=`chat-files/${myUid}/${Date.now()}_${safeName}`;
+      const ref=storage.ref(path);
+      const task=ref.put(file);
+      task.on('state_changed',snap=>{
+        const pct=Math.round(snap.bytesTransferred/snap.totalBytes*100);
+        if(bar)bar.textContent=`⏳ Đang gửi... ${pct}%`;
+      });
+      await task;
+      const url=await ref.getDownloadURL();
+      const isImg=file.type.startsWith('image/');
+      const msg={uid:myUid,name:myName||'Ẩn danh',ts:Date.now(),fileName:file.name,fileSize:file.size};
+      if(isImg)msg.imgUrl=url; else msg.fileUrl=url;
+      await msgsRef.push(msg);
+    }catch(e){
+      console.error('Upload error:',e);
+      alert('Lỗi gửi file: '+(e.message||e));
+    }finally{
+      if(bar)bar.style.display='none';
+    }
   };
 
   window.chatOpenAdmin=function(){
