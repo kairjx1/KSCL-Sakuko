@@ -321,7 +321,7 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026'};
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026'};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -725,12 +725,16 @@ function completeCa(dept){
    BÁO CÁO
 ══════════════════════════════════════════ */
 function rBaoCao(){
-  const tabs=['Executive QC','Nhập liệu','Báo cáo EBIT','Exec. KK','EBIT Kiểm kê','Tổng hợp','KPI tháng','Kiểm kê','QC','Xuất báo cáo'];
+  const tabs=['Executive QC','Nhập liệu','Báo cáo EBIT','Exec. KK','EBIT Kiểm kê','Nhập liệu KK','Tổng hợp','KPI tháng','Kiểm kê','QC','Xuất báo cáo'];
   const t=S.tab||'Executive QC';
   const qd=S.qcExecData;
   const eM=String(S.qcExecMonth||'5');
   const eY=String(S.qcExecYear||'2026');
   const hasQD=!!qd;
+  const kd=S.kkExecData;
+  const kM=String(S.kkExecMonth||'5');
+  const kY=String(S.kkExecYear||'2026');
+  const hasKD=!!(kd&&kd.savedAt);
   const exec={
     diemTB:hasQD?(+(qd.s1_diemtb||0)).toFixed(2)+'%':'93.17%',
     tongDoitra:hasQD?qd.s2_tongdon:195,
@@ -815,7 +819,40 @@ function rBaoCao(){
     {st:'Trần Đăng Ninh',thatthoat:0,ratio:4.03,tonAmSKU:528,risk:'W',note:'Tồn âm cao nhất hệ thống: 528 SKU'},
     {st:'Hàng Bông',thatthoat:7063215,ratio:2.16,tonAmSKU:256,risk:'W',note:'Chênh lệch dương cần xác minh + 106 SKU chưa giải trình'},
   ];
-  // ──────────────────────────────────────────────────────────────
+  // ── KK COMPUTED METRICS (falls back to sample when !hasKD) ──
+  const kkTT=hasKD?(kd.s1_tongThatthoat||0):kkD.tongThatthoat;
+  const kkTR=hasKD?(kd.s1_thuHoi||0):kkD.thuHoi;
+  const kkTonRong=kkTT-kkTR;
+  const kkPctThuHoi=kkTT>0?+(kkTR/kkTT*100).toFixed(1):0;
+  const kkDTVal=hasKD?(kd.s1_doanhThu||0):90669086837;
+  const kkPctTT=kkDTVal>0?(kkTT/kkDTVal*100).toFixed(3):'—';
+  const kkPctTTNum=parseFloat(kkPctTT)||0;
+  const kkTonAm=hasKD?(kd.s2_tongTonAm||0):kkD.tongTonAm;
+  const kkTonAmPrev=hasKD?(kd.s2_tongTonAmPrev||0):kkD.tongTonAmT4;
+  const kkPctTangTA=kkTonAmPrev>0?+((kkTonAm-kkTonAmPrev)/kkTonAmPrev*100).toFixed(1):0;
+  const kkBNM=hasKD?(kd.s2_banNhamMa||0):kkD.banNhamMa;
+  const kkCGT=hasKD?(kd.s2_chuaGiaiTrinh||0):kkD.chuaGiaiTrinh;
+  const kkCGTPrev=hasKD?(kd.s2_chuaGiaiTrinhPrev||0):19;
+  const kkCND=hasKD?(kd.s2_chuaNhanDon||0):kkD.chuaNhanDon;
+  const kkGtThua=hasKD?(kd.s2_gtThua||0):kkD.gtThua;
+  const kkGtThieu=hasKD?(kd.s2_gtThieu||0):Math.abs(kkD.gtThieu);
+  const kkEbitRong=kkGtThua-kkGtThieu;
+  const kkSoSTVuot=hasKD?(kd.s2_soSTVuotNguong||0):kkD.soSTVuotNguong;
+  const kkStores=hasKD?(Array.isArray(kd.s3_stores)?kd.s3_stores:[]):kkRiskST.map(s=>({st:s.st,thatthoat:s.thatthoat,ratio:s.ratio,tonAmSKU:s.tonAmSKU,note:s.note}));
+  const kkSoBienBan=hasKD?(kd.s1_soBienBan||0):kkD.soBienBan;
+  const _kkDual=kkStores.filter(s=>(s.thatthoat||0)<-5000000&&(s.ratio||0)>1.53);
+  const kkAlerts=[];
+  if(kkPctTTNum>0.4)kkAlerts.push({c:'#c8102e',t:'🔴 <strong>Tỷ lệ thất thoát '+kkPctTT+'% VƯỢT NGƯỠNG NGÀNH (&gt;0.4%)</strong> — cần điều tra ngay'});
+  else if(kkPctTTNum>0.2)kkAlerts.push({c:'#d97706',t:'⚠️ Tỷ lệ thất thoát '+kkPctTT+'% — tiệm cận ngưỡng cảnh báo 0.4%'});
+  else if(kkPctTTNum>0)kkAlerts.push({c:'#15803d',t:'✅ Tỷ lệ thất thoát '+kkPctTT+'% — AN TOÀN (ngưỡng ngành &lt;0.4%)',ok:true});
+  if(kkEbitRong<-10000000)kkAlerts.push({c:'#c8102e',t:'🔴 <strong>EBIT ròng bán nhầm mã '+(kkEbitRong/1e6).toFixed(1)+'M₫</strong> — sai lệch COGS nghiêm trọng cần điều chỉnh'});
+  if(_kkDual.length)kkAlerts.push({c:'#c8102e',t:'🔴 <strong>RỦI RO KÉP tại '+_kkDual.map(s=>s.st).join(', ')+':</strong> thất thoát lớn + bán nhầm mã &gt;1.53%'});
+  if(kkCGTPrev>0&&kkCGT>kkCGTPrev){const _pGT=Math.round((kkCGT-kkCGTPrev)/kkCGTPrev*100);if(_pGT>200)kkAlerts.push({c:'#d97706',t:'⚠️ <strong>Chưa giải trình ST tăng +'+_pGT.toLocaleString()+'%</strong> ('+kkCGTPrev+'→'+kkCGT+' SKU) — cần điều tra'});}
+  if(kkPctTangTA>30)kkAlerts.push({c:'#d97706',t:'⚠️ Tồn âm tăng <strong>+'+kkPctTangTA+'%</strong> ('+kkTonAmPrev+'→'+kkTonAm+' SKU) — xu hướng đáng lo'});
+  if(kkSoSTVuot>=15)kkAlerts.push({c:'#d97706',t:'🟡 '+kkSoSTVuot+'/23 ST vượt ngưỡng kiểm soát 1.53% GT thiếu/DT tháng này'});
+  if(!kkAlerts.length)kkAlerts.push({c:'#15803d',t:'✅ Không có cảnh báo đỏ — kết quả kiểm kê tốt tháng này!',ok:true});
+  // precompute biên bản table HTML (always uses kkD sample data; input form has no bienBan rows)
+  const kkBBHtml='<div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px;margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:#d4af37;margin-bottom:10px">📋 Chi tiết biên bản kiểm kê '+(hasKD?'(dữ liệu mẫu T3–4/2026)':'T3–4/2026')+'</div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#0d1117"><th style="text-align:left;padding:7px 10px;color:#6b7280">Siêu thị</th><th style="padding:7px 8px;color:#6b7280">Ngày</th><th style="padding:7px 8px;color:#6b7280">Loại</th><th style="text-align:right;padding:7px 10px;color:#6b7280">Đền bù thu hồi</th><th style="text-align:right;padding:7px 10px;color:#6b7280">Tổn thất thuần</th><th style="text-align:center;padding:7px 8px;color:#6b7280">Rủi ro</th></tr></thead><tbody>'+kkD.bienBan.map(b=>{const bg=b.risk==='R2'?'rgba(200,16,46,.12)':b.risk==='R1'?'rgba(200,16,46,.08)':b.risk==='ok'?'rgba(16,185,129,.06)':'';const tonClr=b.ton<0?'#f87171':b.ton>0?'#4ade80':'#6b7280';const tonStr=b.ton<0?b.ton.toLocaleString('vi-VN')+'₫':'+'+b.ton.toLocaleString('vi-VN')+'₫';const badge=b.risk==='R2'?'<span style="background:#c8102e;color:#fff;padding:1px 6px;border-radius:8px;font-size:10px">🔴 KÉP</span>':b.risk==='R1'?'<span style="background:#ea580c;color:#fff;padding:1px 6px;border-radius:8px;font-size:10px">🟠 CAO</span>':b.risk==='ok'?'<span style="background:#14532d;color:#86efac;padding:1px 6px;border-radius:8px;font-size:10px">🟢 ĐB</span>':'<span style="background:#374151;color:#9ca3af;padding:1px 6px;border-radius:8px;font-size:10px">⚪</span>';return '<tr style="background:'+bg+'"><td style="padding:7px 10px;color:#e2e8f0;border-top:1px solid #222">'+b.st+'</td><td style="text-align:center;padding:7px 8px;color:#6b7280;border-top:1px solid #222">'+b.ngay+'</td><td style="padding:7px 8px;color:#9ca3af;border-top:1px solid #222">'+b.loai+'</td><td style="text-align:right;padding:7px 10px;color:#4ade80;border-top:1px solid #222">'+(b.denBu>0?'+'+b.denBu.toLocaleString('vi-VN')+'₫':'—')+'</td><td style="text-align:right;padding:7px 10px;color:'+tonClr+';font-weight:700;border-top:1px solid #222">'+tonStr+'</td><td style="text-align:center;padding:7px 8px;border-top:1px solid #222">'+badge+'</td></tr>';}).join('')+'<tr style="background:#0d1117"><td colspan="3" style="padding:8px 10px;color:#d4af37;font-weight:700;border-top:2px solid #333">TỔNG CỘNG</td><td style="text-align:right;padding:8px 10px;color:#4ade80;font-weight:700;border-top:2px solid #333">+22,163,295₫</td><td style="text-align:right;padding:8px 10px;color:#f87171;font-weight:700;border-top:2px solid #333">−3,952,760₫ ròng</td><td style="border-top:2px solid #333"></td></tr></tbody></table></div></div>';
 
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Báo cáo</div>
@@ -1179,55 +1216,149 @@ ${hasQD?`
   <button onclick="qcDataSave(this)" class="btn b-pri">💾 Lưu tất cả & Cập nhật Dashboard</button>
 </div>
 `:t==='Exec. KK'?`
-<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px"><span style="font-size:13px;color:#15803d">📋 Nguồn: KK T3–4/2026 (9 biên bản) · Tồn âm T5/2025 (23 siêu thị) · DT hệ thống 90.7 tỷ₫</span><button onclick="go('baocao','EBIT Kiểm kê')" class="btn b-out b-sm">📊 Xem EBIT Kiểm kê →</button></div>
-<div class="g4 g-sm2" style="margin-bottom:16px">
-${kpi('Thất thoát phát hiện','26.1M₫','T3–4/2026 · 9 biên bản','#15803d','📦','Thu hồi 22.2M (84.9%) · Tổn thất ròng 3.95M')}
-${kpi('Tỷ lệ thất thoát/DT','0.029%','✅ AN TOÀN — ngưỡng <0.4%','#15803d','🔒','Thấp hơn 13× ngưỡng cảnh báo')}
-${kpi('Tác động EBIT bán nhầm mã','−15.9M₫','T5/2025 · COGS sai 2 chiều','#dc2626','⚠️','COGS thừa +444M / thiếu −460M')}
-${kpi('SKU tồn âm T5/2025','2,603','Tổng · +47.4% vs T4','#dc2626','📉','Bán nhầm: 1,509 · Chưa giải trình: 714 🚨')}
+<div style="background:${hasKD?'#f0fdf4':'#fef3c7'};border:1px solid ${hasKD?'#86efac':'#fcd34d'};border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+  <span style="font-size:13px;color:${hasKD?'#15803d':'#92400e'}">${hasKD?('✅ Firebase: T'+kM+'/'+kY+(kd.savedAt?' · Cập nhật '+new Date(kd.savedAt).toLocaleDateString('vi-VN'):'')):'⚠️ Dữ liệu mẫu (KK T3-4/2026 · Tồn âm T5/2025) — Chọn tháng và bấm Tải'}</span>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <select id="kk-exec-m" class="fi" style="width:65px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===kM?' selected':''}>T${m}</option>`).join('')}</select>
+    <select id="kk-exec-y" class="fi" style="width:80px"><option value="2026"${kY==='2026'?' selected':''}>2026</option><option value="2025"${kY==='2025'?' selected':''}>2025</option></select>
+    <button onclick="kkLoadExecAndRefresh(document.getElementById('kk-exec-y').value,document.getElementById('kk-exec-m').value)" class="btn b-pri b-sm">🔄 Tải</button>
+    <button onclick="go('baocao','EBIT Kiểm kê')" class="btn b-out b-sm">📊 EBIT →</button>
+    <button onclick="go('baocao','Nhập liệu KK')" class="btn b-out b-sm">✏️ Nhập liệu</button>
+  </div>
 </div>
-<div style="background:#fff2f2;border:1px solid #fecaca;border-left:3px solid #dc2626;border-radius:8px;padding:10px 16px;margin-bottom:16px"><span style="color:#dc2626;font-weight:700">🔴 Cảnh báo:</span> <strong>Chưa giải trình ST tăng +3,657%</strong> (T5/2025: 19→714 SKU) — <strong>Vũ Phạm Hàm rủi ro kép</strong>: thất thoát −10M (T3-4/26) + bán nhầm mã 7.70% (gấp 5× ngưỡng)</div>
+${kkAlerts.filter(a=>!a.ok).map(a=>'<div style="background:rgba(0,0,0,.02);border:1px solid '+a.c+'44;border-left:3px solid '+a.c+';border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;line-height:1.5">'+a.t+'</div>').join('')}
+<div class="g4 g-sm2" style="margin-bottom:16px">
+${kpi('Thất thoát phát hiện',(kkTT/1e6).toFixed(1)+'M₫','T'+kM+'/'+kY+' · '+kkSoBienBan+' biên bản',kkPctTTNum>0.4?'#dc2626':kkPctTTNum>0.2?'#d97706':'#15803d','📦','Thu hồi '+(kkTR/1e6).toFixed(1)+'M ('+kkPctThuHoi+'%) · Ròng '+(kkTonRong/1e6).toFixed(2)+'M')}
+${kpi('Tỷ lệ thất thoát/DT',kkPctTT+'%',kkPctTTNum>0.4?'🔴 VƯỢT NGƯỠNG NGÀNH':kkPctTTNum>0.2?'⚠️ Tiệm cận cảnh báo':'✅ AN TOÀN — <0.4%',kkPctTTNum>0.4?'#dc2626':kkPctTTNum>0.2?'#d97706':'#15803d','🔒','Ngưỡng ngành 0.4%')}
+${kpi('EBIT ròng bán nhầm mã',(kkEbitRong/1e6).toFixed(1)+'M₫','T'+kM+'/'+kY+' · COGS sai 2 chiều',kkEbitRong<-10000000?'#dc2626':kkEbitRong<-5000000?'#d97706':'#6b7280','⚠️','GT thừa +'+(kkGtThua/1e6).toFixed(0)+'M / GT thiếu −'+(kkGtThieu/1e6).toFixed(0)+'M')}
+${kpi('SKU tồn âm',kkTonAm.toLocaleString(),'+'+kkPctTangTA+'% vs T.trước ('+kkTonAmPrev+' SKU)',kkPctTangTA>30?'#dc2626':kkPctTangTA>10?'#d97706':'#6b7280','📉','Bán nhầm: '+kkBNM.toLocaleString()+' · Chưa GT: '+kkCGT.toLocaleString()+(kkCGT>200?' 🚨':''))}
+</div>
 <div class="g2" style="margin-bottom:16px">
-  <div class="chart-box"><div class="chart-title">📊 SKU tồn âm theo nguyên nhân — T4 vs T5/2025</div><div class="chart-wrap" style="height:220px"><canvas id="c-kk-cause"></canvas></div></div>
-  <div class="chart-box"><div class="chart-title">🥧 SKU tồn âm theo ngành hàng (T5/2025 · 2,603 SKU)</div><div class="chart-wrap" style="height:220px"><canvas id="c-kk-cat"></canvas></div></div>
+  <div class="chart-box"><div class="chart-title">📊 SKU tồn âm theo nguyên nhân — Tháng trước vs T${kM}/${kY}</div><div class="chart-wrap" style="height:220px"><canvas id="c-kk-cause"></canvas></div></div>
+  <div class="chart-box"><div class="chart-title">🥧 SKU tồn âm theo ngành hàng (T${kM}/${kY})</div><div class="chart-wrap" style="height:220px"><canvas id="c-kk-cat"></canvas></div></div>
 </div>
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
-  <div style="padding:12px 16px;background:linear-gradient(90deg,#1e3a5f,#1e40af);display:flex;align-items:center;justify-content:space-between"><span style="font-size:14px;font-weight:700;color:#fff">⚡ Bản đồ rủi ro chéo — Thất thoát × Tồn âm</span><span style="font-size:11px;color:#bfdbfe">KK T3–4/2026 + Tồn âm T5/2025</span></div>
-  <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
-    <thead><tr style="background:#eff6ff"><th style="padding:10px 14px;text-align:left;color:#1e40af">Siêu thị</th><th style="padding:10px 8px;text-align:center;color:#1e40af">Mức rủi ro</th><th style="padding:10px 14px;text-align:right;color:#1e40af">Thất thoát (T3-4/26)</th><th style="padding:10px 8px;text-align:center;color:#1e40af">GT thiếu/DT (T5/25)</th><th style="padding:10px 8px;text-align:center;color:#1e40af">SKU tồn âm</th><th style="padding:10px 14px;text-align:left;color:#1e40af">Ghi chú</th></tr></thead>
-    <tbody>${kkRiskST.map(s=>{const bg=s.risk==='R2'?'#fff1f2':s.risk==='R1'?'#fff7ed':'#fffbeb';const badge=s.risk==='R2'?'<span style="background:#c8102e;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🔴 RỦI RO KÉP</span>':s.risk==='R1'?'<span style="background:#ea580c;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🟠 CAO</span>':'<span style="background:#ca8a04;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🟡 CẢNH BÁO</span>';const tt=s.thatthoat<0?'<span style="color:#dc2626;font-weight:700">'+s.thatthoat.toLocaleString('vi-VN')+'₫</span>':s.thatthoat>0?'<span style="color:#16a34a;font-weight:700">+'+s.thatthoat.toLocaleString('vi-VN')+'₫ (*)</span>':'<span style="color:#94a3b8">—</span>';const rc=s.ratio>=5?'#dc2626':s.ratio>=2?'#ea580c':'#ca8a04';return '<tr style="background:'+bg+'"><td style="padding:10px 14px;font-weight:600;border-top:1px solid #e0e7ff">'+s.st+'</td><td style="text-align:center;padding:10px 8px;border-top:1px solid #e0e7ff">'+badge+'</td><td style="text-align:right;padding:10px 14px;border-top:1px solid #e0e7ff">'+tt+'</td><td style="text-align:center;padding:10px 8px;font-weight:700;color:'+rc+';border-top:1px solid #e0e7ff">'+s.ratio+'%</td><td style="text-align:center;padding:10px 8px;border-top:1px solid #e0e7ff">'+s.tonAmSKU+' SKU</td><td style="padding:10px 14px;font-size:12px;color:#4b5563;border-top:1px solid #e0e7ff">'+s.note+'</td></tr>';}).join('')}</tbody>
-  </table></div>
+  <div style="padding:12px 16px;background:linear-gradient(90deg,#1e3a5f,#1e40af);display:flex;align-items:center;justify-content:space-between"><span style="font-size:14px;font-weight:700;color:#fff">⚡ Bản đồ rủi ro chéo — Thất thoát × Tồn âm T${kM}/${kY}</span><span style="font-size:11px;color:#bfdbfe">Kết hợp biên bản KK + bán nhầm mã</span></div>
+  ${kkStores.length?'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#eff6ff"><th style="padding:10px 14px;text-align:left;color:#1e40af">Siêu thị</th><th style="padding:10px 8px;text-align:center;color:#1e40af">Rủi ro</th><th style="padding:10px 14px;text-align:right;color:#1e40af">Thất thoát</th><th style="padding:10px 8px;text-align:center;color:#1e40af">GT thiếu/DT</th><th style="padding:10px 8px;text-align:center;color:#1e40af">SKU tồn âm</th><th style="padding:10px 14px;text-align:left;color:#1e40af">Ghi chú</th></tr></thead><tbody>'+kkStores.map(s=>{const isDual=(s.thatthoat||0)<-5000000&&(s.ratio||0)>1.53;const isHigh=(s.thatthoat||0)<-5000000||(s.ratio||0)>3;const isWarn=(s.ratio||0)>1.53;const bg=isDual?'#fff1f2':isHigh?'#fff7ed':isWarn?'#fffbeb':'';const badge=isDual?'<span style="background:#c8102e;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🔴 RỦI RO KÉP</span>':isHigh?'<span style="background:#ea580c;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🟠 CAO</span>':isWarn?'<span style="background:#ca8a04;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🟡 CẢNH BÁO</span>':'<span style="background:#14532d;color:#86efac;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🟢 ỔN</span>';const tt=(s.thatthoat||0)<0?'<span style="color:#dc2626;font-weight:700">'+(s.thatthoat||0).toLocaleString('vi-VN')+'₫</span>':(s.thatthoat||0)>0?'<span style="color:#16a34a;font-weight:700">+'+(s.thatthoat||0).toLocaleString('vi-VN')+'₫</span>':'<span style="color:#94a3b8">—</span>';const rc=(s.ratio||0)>=5?'#dc2626':(s.ratio||0)>=2?'#ea580c':(s.ratio||0)>1.53?'#ca8a04':'#16a34a';return '<tr style="background:'+bg+'"><td style="padding:10px 14px;font-weight:600;border-top:1px solid #e0e7ff">'+(s.st||'')+'</td><td style="text-align:center;padding:10px 8px;border-top:1px solid #e0e7ff">'+badge+'</td><td style="text-align:right;padding:10px 14px;border-top:1px solid #e0e7ff">'+tt+'</td><td style="text-align:center;padding:10px 8px;font-weight:700;color:'+rc+';border-top:1px solid #e0e7ff">'+((s.ratio||0)>0?(s.ratio||0)+'%':'—')+'</td><td style="text-align:center;padding:10px 8px;border-top:1px solid #e0e7ff">'+((s.tonAmSKU||0)>0?(s.tonAmSKU||0)+' SKU':'—')+'</td><td style="padding:10px 14px;font-size:12px;color:#4b5563;border-top:1px solid #e0e7ff">'+(s.note||'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div style="padding:20px;text-align:center;color:#94a3b8">Chưa có dữ liệu siêu thị — nhập liệu KK để xem</div>'}
 </div>
 `:t==='EBIT Kiểm kê'?`
 <div style="background:#0f0d0e;border-radius:14px;padding:20px;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;border-bottom:1px solid #2a2828;padding-bottom:14px">
-    <div><div style="font-size:10px;font-weight:700;letter-spacing:3px;color:#d4af37;text-transform:uppercase">SAKUKO VIETNAM · KSCL · KIỂM KÊ & EBIT</div><h2 style="font-size:20px;font-weight:900;color:#fff;margin:5px 0 3px">EBIT Kiểm kê — KK T3–4/2026 · Tồn âm T5/2025</h2><div style="font-size:11px;color:#6b7280">23 siêu thị · 9 biên bản · DT hệ thống 90.7 tỷ₫</div></div>
-    <button onclick="go('baocao','Exec. KK')" style="padding:7px 12px;background:#1a1818;color:#d4af37;border:1px solid #3a3838;border-radius:7px;cursor:pointer;font-size:12px">← Dashboard KK</button>
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:3px;color:#d4af37;text-transform:uppercase">SAKUKO VIETNAM · KSCL · KIỂM KÊ & EBIT</div>
+      <h2 style="font-size:20px;font-weight:900;color:#fff;margin:5px 0 3px">EBIT Kiểm kê — T${kM}/${kY}</h2>
+      <div style="font-size:11px;color:#6b7280">23 siêu thị · ${kkSoBienBan} biên bản · ${kkTonAm.toLocaleString()} SKU tồn âm</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="ebitkk-m" class="fi" style="width:65px;background:#1a1818;color:#fff;border-color:#3a3838">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===kM?' selected':''}>T${m}</option>`).join('')}</select>
+      <select id="ebitkk-y" class="fi" style="width:80px;background:#1a1818;color:#fff;border-color:#3a3838"><option value="2026"${kY==='2026'?' selected':''}>2026</option><option value="2025"${kY==='2025'?' selected':''}>2025</option></select>
+      <button onclick="kkLoadExecAndRefresh(document.getElementById('ebitkk-y').value,document.getElementById('ebitkk-m').value)" style="padding:7px 12px;background:#c8102e;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px">🔄 Tải</button>
+      <button onclick="go('baocao','Exec. KK')" style="padding:7px 12px;background:#1a1818;color:#d4af37;border:1px solid #3a3838;border-radius:7px;cursor:pointer;font-size:12px">← Dashboard KK</button>
+    </div>
   </div>
-  <div style="background:rgba(200,16,46,.1);border:1px solid rgba(200,16,46,.35);border-left:3px solid #c8102e;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;line-height:1.5">🔴 <strong>RỦI RO KÉP — Vũ Phạm Hàm:</strong> Thất thoát thực −9.99M₫ (T3-4/26) <em>và</em> bán nhầm mã <strong>7.70%</strong> GT thiếu/DT (T5/25) — gấp 5× ngưỡng 1.53%. Điểm nóng duy nhất có rủi ro kép toàn hệ thống.</div>
-  <div style="background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.35);border-left:3px solid #d97706;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;line-height:1.5">⚠️ <strong>Chưa giải trình ST tăng +3,657%</strong> (T5/2025: 19→714 SKU) — mức tăng bất thường. 14/23 ST vượt ngưỡng kiểm soát 1.53%. Cần điều tra quy trình giải trình tồn âm ngay.</div>
-  <div class="g4 g-sm2" style="margin-bottom:14px">${[{lb:'Thất thoát phát hiện',v:'26.1M₫',sub:'Thu hồi 22.2M (84.9%) · Ròng −3.95M',clr:'#d4af37',bd:'#2a4a2a'},{lb:'Tỷ lệ thất thoát/DT',v:'0.029%',sub:'✅ AN TOÀN — < 0.4% ngưỡng ngành',clr:'#4ade80',bd:'#14532d'},{lb:'EBIT ròng bán nhầm mã',v:'−15.9M₫',sub:'COGS sai: +444M thừa / −460M thiếu',clr:'#f87171',bd:'#c8102e'},{lb:'SKU tồn âm · Chưa GT',v:'2,603 · 714',sub:'+47.4% vs T4 · Chưa GT tăng 3,657%',clr:'#f87171',bd:'#7f1d1d'}].map(k=>`<div style="background:#1a1818;border:1px solid ${k.bd};border-radius:10px;padding:14px 16px"><div style="font-size:10px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${k.lb}</div><div style="font-size:20px;font-weight:900;color:${k.clr};margin-bottom:3px">${k.v}</div><div style="font-size:11px;color:#6b7280">${k.sub}</div></div>`).join('')}</div>
+  ${!hasKD?'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:9px 14px;margin-bottom:12px;color:#92400e;font-size:12px">⚠️ Đang hiển thị dữ liệu mẫu (KK T3-4/2026 + Tồn âm T5/2025) — nhập liệu KK để xem phân tích thực tế</div>':''}
+  ${kkAlerts.map(a=>'<div style="background:rgba(0,0,0,.3);border:1px solid '+a.c+'44;border-left:3px solid '+a.c+';border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;line-height:1.5;color:#e2e8f0">'+a.t+'</div>').join('')}
+  <div class="g4 g-sm2" style="margin-bottom:14px">${[
+    {lb:'Thất thoát phát hiện',v:(kkTT/1e6).toFixed(1)+'M₫',sub:'Thu hồi '+(kkTR/1e6).toFixed(1)+'M ('+kkPctThuHoi+'%) · Ròng '+(kkTonRong/1e6).toFixed(2)+'M',clr:kkPctTTNum>0.4?'#f87171':'#d4af37',bd:kkPctTTNum>0.4?'#c8102e':'#2a4a2a'},
+    {lb:'Tỷ lệ thất thoát/DT',v:kkPctTT+'%',sub:kkPctTTNum>0.4?'🔴 VƯỢT NGƯỠNG NGÀNH':kkPctTTNum>0.2?'⚠️ Tiệm cận cảnh báo':'✅ AN TOÀN — < 0.4%',clr:kkPctTTNum>0.4?'#f87171':kkPctTTNum>0.2?'#fbbf24':'#4ade80',bd:kkPctTTNum>0.4?'#c8102e':'#14532d'},
+    {lb:'EBIT ròng bán nhầm mã',v:(kkEbitRong/1e6).toFixed(1)+'M₫',sub:'COGS sai: +'+(kkGtThua/1e6).toFixed(0)+'M thừa / −'+(kkGtThieu/1e6).toFixed(0)+'M thiếu',clr:'#f87171',bd:'#c8102e'},
+    {lb:'SKU tồn âm · Chưa GT',v:kkTonAm.toLocaleString()+' · '+kkCGT.toLocaleString(),sub:'+'+kkPctTangTA+'% vs T.trước · Chưa GT '+(kkCGTPrev>0&&kkCGT>kkCGTPrev?'+'+Math.round((kkCGT-kkCGTPrev)/kkCGTPrev*100)+'%':kkCGT+' SKU'),clr:'#f87171',bd:'#7f1d1d'}
+  ].map(k=>'<div style="background:#1a1818;border:1px solid '+k.bd+';border-radius:10px;padding:14px 16px"><div style="font-size:10px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">'+k.lb+'</div><div style="font-size:20px;font-weight:900;color:'+k.clr+';margin-bottom:3px">'+k.v+'</div><div style="font-size:11px;color:#6b7280">'+k.sub+'</div></div>').join('')}</div>
   <div class="g2" style="margin-bottom:14px">
-    <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px"><div style="font-size:12px;font-weight:700;color:#d4af37;margin-bottom:8px">📊 SKU tồn âm theo nguyên nhân — T4 vs T5/2025</div><div style="height:180px"><canvas id="c-kk-cause"></canvas></div></div>
-    <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px"><div style="font-size:12px;font-weight:700;color:#d4af37;margin-bottom:8px">🥧 Tồn âm theo ngành — Thực phẩm 38.1% (992 SKU)</div><div style="height:180px"><canvas id="c-kk-cat"></canvas></div></div>
+    <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px"><div style="font-size:12px;font-weight:700;color:#d4af37;margin-bottom:8px">📊 SKU tồn âm theo nguyên nhân — Tháng trước vs T${kM}/${kY}</div><div style="height:180px"><canvas id="c-kk-cause"></canvas></div></div>
+    <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px"><div style="font-size:12px;font-weight:700;color:#d4af37;margin-bottom:8px">🥧 Tồn âm theo ngành hàng (T${kM}/${kY})</div><div style="height:180px"><canvas id="c-kk-cat"></canvas></div></div>
   </div>
   <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px;margin-bottom:14px">
-    <div style="font-size:13px;font-weight:700;color:#d4af37;margin-bottom:10px">💰 Đóng góp EBIT theo 4 đòn bẩy — Bộ phận Kiểm kê</div>
-    ${[{lv:'A',nm:'Chống thất thoát',clr:'#c8102e',txt:'9 biên bản KK (7 Tổng + 2 Đột xuất). Phát hiện 26.1M₫ thất thoát ngầm — nếu không KK, EBIT mất toàn bộ. Thu hồi 22.2M₫ (84.9%). KK Ngành chưa triển khai kỳ này.',ebit:'Bảo vệ 22.2M₫ EBIT · Tổn thất ròng chỉ 3.95M₫ (gấp 6.6× nhờ kiểm kê)'},{lv:'B',nm:'Kiểm soát sai lệch hệ thống',clr:'#e0a82e',txt:'1,509 SKU bán nhầm mã T5/2025 → COGS sai 2 chiều: +444M ghi cao / −460M ghi thấp. Tác động ròng −15.9M₫ EBIT. 714 SKU chưa giải trình — rủi ro ẩn chưa định lượng.',ebit:'−15.9M₫ điều chỉnh EBIT · Lũy kế: nguy cơ sai lệch COGS hàng tỷ₫/năm'},{lv:'C',nm:'Kiểm soát chất lượng tồn kho',clr:'#4caf7d',txt:'Chưa nhận đơn ST giảm 411→169 SKU (−58.9%). Đơn NCC giảm 50% (114→57 SKU). Tín hiệu tích cực. Cần kích hoạt FIFO cho Thực phẩm (992 SKU = 38.1% tổng tồn âm).',ebit:'Gián tiếp — giảm hàng hết date, bảo vệ giá trị tồn cuối kỳ'},{lv:'D',nm:'Cảnh báo sớm & Phòng ngừa',clr:'#6c8cd5',txt:'Phát hiện điểm nóng kép Vũ Phạm Hàm. Top 2 thất thoát: NGĐ −12.5M + VPH −10M = 85% tổng thất thoát. Ưu tiên tăng tần suất KK tại 2 địa điểm này.',ebit:'Gián tiếp — ngăn tái phát · Kích hoạt KK Ngành Thực phẩm T6/2026'}].map(r=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding:10px;background:#0d1117;border-radius:8px;border-left:3px solid ${r.clr}"><div style="flex-shrink:0;width:24px;height:24px;border-radius:6px;background:${r.clr};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff">${r.lv}</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:3px">${r.nm}</div><div style="font-size:11px;color:#94a3b8;line-height:1.5">${r.txt}</div><div style="margin-top:5px;display:inline-block;background:rgba(200,16,46,.15);color:#ff6b81;font-size:11px;padding:2px 9px;border-radius:12px;font-weight:600">EBIT: ${r.ebit}</div></div></div>`).join('')}
+    <div style="font-size:13px;font-weight:700;color:#d4af37;margin-bottom:10px">💰 Đóng góp EBIT theo 4 đòn bẩy — Bộ phận Kiểm kê T${kM}/${kY}</div>
+    ${[
+      {lv:'A',nm:'Chống thất thoát',clr:'#c8102e',txt:kkSoBienBan+' biên bản KK. Phát hiện '+(kkTT/1e6).toFixed(1)+'M₫ thất thoát ngầm. Thu hồi '+(kkTR/1e6).toFixed(1)+'M₫ ('+kkPctThuHoi+'%). Tỷ lệ TT/DT: '+kkPctTT+'%.',ebit:'Bảo vệ '+(kkTR/1e6).toFixed(1)+'M₫ EBIT · Tổn thất ròng '+(kkTonRong/1e6).toFixed(2)+'M₫'},
+      {lv:'B',nm:'Kiểm soát sai lệch hệ thống',clr:'#e0a82e',txt:kkBNM.toLocaleString()+' SKU bán nhầm mã T'+kM+'/'+kY+' → COGS sai 2 chiều: +'+(kkGtThua/1e6).toFixed(0)+'M ghi cao / −'+(kkGtThieu/1e6).toFixed(0)+'M ghi thấp. Tác động ròng '+(kkEbitRong/1e6).toFixed(1)+'M₫ EBIT. '+kkCGT.toLocaleString()+' SKU chưa giải trình.',ebit:(kkEbitRong/1e6).toFixed(1)+'M₫ điều chỉnh EBIT · '+kkSoSTVuot+'/23 ST vượt ngưỡng 1.53%'},
+      {lv:'C',nm:'Kiểm soát chất lượng tồn kho',clr:'#4caf7d',txt:'Chưa nhận đơn ST: '+kkCND.toLocaleString()+' SKU. Tồn âm '+(kkPctTangTA>0?'tăng +'+kkPctTangTA+'%':'giảm '+Math.abs(kkPctTangTA)+'%')+' vs tháng trước ('+kkTonAmPrev+'→'+kkTonAm+' SKU). '+(kkPctTangTA>30?'Xu hướng đáng lo — cần điều tra.':'Đang kiểm soát tốt.'),ebit:'Gián tiếp — giảm hàng hết date, bảo vệ tồn cuối kỳ'},
+      {lv:'D',nm:'Cảnh báo sớm & Phòng ngừa',clr:'#6c8cd5',txt:_kkDual.length?'Phát hiện '+_kkDual.length+' ST rủi ro kép: '+_kkDual.map(s=>s.st).join(', ')+'. Tăng tần suất KK và điều tra.':'Không có ST rủi ro kép tháng này. '+(kkSoSTVuot>=15?kkSoSTVuot+'/23 ST vượt ngưỡng — tiếp tục theo dõi.':'Hệ thống đang kiểm soát tốt.'),ebit:'Gián tiếp — ngăn tái phát, kích hoạt KK Ngành'}
+    ].map(r=>'<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding:10px;background:#0d1117;border-radius:8px;border-left:3px solid '+r.clr+'"><div style="flex-shrink:0;width:24px;height:24px;border-radius:6px;background:'+r.clr+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff">'+r.lv+'</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:3px">'+r.nm+'</div><div style="font-size:11px;color:#94a3b8;line-height:1.5">'+r.txt+'</div><div style="margin-top:5px;display:inline-block;background:rgba(200,16,46,.15);color:#ff6b81;font-size:11px;padding:2px 9px;border-radius:12px;font-weight:600">EBIT: '+r.ebit+'</div></div></div>').join('')}
   </div>
-  <div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px;margin-bottom:14px">
-    <div style="font-size:13px;font-weight:700;color:#d4af37;margin-bottom:10px">📋 Chi tiết 9 biên bản kiểm kê T3–4/2026 (sắp xếp theo tổn thất)</div>
-    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead><tr style="background:#0d1117"><th style="text-align:left;padding:7px 10px;color:#6b7280">Siêu thị</th><th style="padding:7px 8px;color:#6b7280">Ngày KK</th><th style="padding:7px 8px;color:#6b7280">Loại</th><th style="text-align:right;padding:7px 10px;color:#6b7280">Đền bù thu hồi</th><th style="text-align:right;padding:7px 10px;color:#6b7280">Tổn thất thuần</th><th style="text-align:center;padding:7px 8px;color:#6b7280">Rủi ro</th></tr></thead>
-      <tbody>${kkD.bienBan.map(b=>{const bg=b.risk==='R2'?'rgba(200,16,46,.12)':b.risk==='R1'?'rgba(200,16,46,.08)':b.risk==='ok'?'rgba(16,185,129,.06)':'';const tonClr=b.ton<0?'#f87171':b.ton>0?'#4ade80':'#6b7280';const tonStr=b.ton<0?b.ton.toLocaleString('vi-VN')+'₫':'+'+b.ton.toLocaleString('vi-VN')+'₫ (thặng dư)';const badge=b.risk==='R2'?'<span style="background:#c8102e;color:#fff;padding:1px 6px;border-radius:8px;font-size:10px">🔴 KÉP</span>':b.risk==='R1'?'<span style="background:#ea580c;color:#fff;padding:1px 6px;border-radius:8px;font-size:10px">🟠 CAO</span>':b.risk==='ok'?'<span style="background:#14532d;color:#86efac;padding:1px 6px;border-radius:8px;font-size:10px">🟢 ĐẶC BIỆT</span>':'<span style="background:#374151;color:#9ca3af;padding:1px 6px;border-radius:8px;font-size:10px">⚪</span>';return '<tr style="background:'+bg+'"><td style="padding:7px 10px;color:#e2e8f0;border-top:1px solid #222">'+b.st+'</td><td style="text-align:center;padding:7px 8px;color:#6b7280;border-top:1px solid #222">'+b.ngay+'</td><td style="padding:7px 8px;color:#9ca3af;border-top:1px solid #222">'+b.loai+'</td><td style="text-align:right;padding:7px 10px;color:#4ade80;border-top:1px solid #222">'+(b.denBu>0?'+'+b.denBu.toLocaleString('vi-VN')+'₫':'—')+'</td><td style="text-align:right;padding:7px 10px;color:'+tonClr+';font-weight:700;border-top:1px solid #222">'+tonStr+'</td><td style="text-align:center;padding:7px 8px;border-top:1px solid #222">'+badge+'</td></tr>';}).join('')}
-      <tr style="background:#0d1117"><td colspan="3" style="padding:8px 10px;color:#d4af37;font-weight:700;border-top:2px solid #333">TỔNG CỘNG</td><td style="text-align:right;padding:8px 10px;color:#4ade80;font-weight:700;border-top:2px solid #333">+22,163,295₫</td><td style="text-align:right;padding:8px 10px;color:#f87171;font-weight:700;border-top:2px solid #333">−3,952,760₫ ròng</td><td style="border-top:2px solid #333"></td></tr>
-      </tbody>
-    </table></div>
-  </div>
+  ${kkBBHtml}
   <div style="text-align:center;padding:18px;background:linear-gradient(135deg,#1a1617,#1a1818);border-radius:10px;border:1px solid #2a2828">
-    <div style="font-size:14px;color:#d4af37;font-weight:600;line-height:1.7">"KK T3–4/2026 bảo vệ 22.2M₫ EBIT (tỷ lệ phục hồi 84.9%). Tồn âm T5/2025 — 2,603 SKU, COGS sai ±444–460M — đang làm méo báo cáo tài chính.<br><span style="color:#f87171">Vũ Phạm Hàm: rủi ro kép duy nhất — cần can thiệp ngay. Kích hoạt KK Ngành Thực phẩm T6/2026."</span></div>
-    <div style="font-size:11px;color:#6b7280;margin-top:8px">Bộ phận Kiểm kê · Sakuko Vietnam · Nguồn: Báo cáo KK T3–4/2026 + Tồn âm T5/2025</div>
+    <div style="font-size:14px;color:#d4af37;font-weight:600;line-height:1.7">"KK T${kM}/${kY} bảo vệ ${(kkTR/1e6).toFixed(1)}M₫ EBIT (tỷ lệ thu hồi ${kkPctThuHoi}%). Tồn âm: ${kkTonAm.toLocaleString()} SKU, COGS sai ±${(kkGtThua/1e6).toFixed(0)}–${(kkGtThieu/1e6).toFixed(0)}M — đang làm méo báo cáo tài chính.<br><span style="color:${_kkDual.length?'#f87171':'#4ade80'}">${_kkDual.length?_kkDual.map(s=>s.st).join(', ')+': rủi ro kép — cần can thiệp ngay.':'Không có rủi ro kép tháng này. '}${kkCGT>200?'Chưa giải trình '+kkCGT.toLocaleString()+' SKU — điều tra quy trình.':''}</span>"</div>
+    <div style="font-size:11px;color:#6b7280;margin-top:8px">Bộ phận Kiểm kê · Sakuko Vietnam · T${kM}/${kY}</div>
   </div>
+</div>
+`:t==='Nhập liệu KK'?`
+<div class="card" style="padding:20px;margin-bottom:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+    <div><h2 style="font-size:16px;font-weight:700;color:var(--t1);margin:0">📝 Nhập liệu Kiểm kê tháng</h2><p style="font-size:12px;color:var(--t2);margin:4px 0 0">Điền số liệu → Exec. KK & EBIT Kiểm kê tự cập nhật · Lưu Firebase /kk_data/năm/tháng</p></div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <label class="fi-lbl" style="margin:0">Tháng</label>
+        <select id="kk-month" class="fi" style="width:70px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${m===parseInt(kM)?' selected':''}>T${m}</option>`).join('')}</select>
+        <label class="fi-lbl" style="margin:0">Năm</label>
+        <select id="kk-year" class="fi" style="width:85px"><option value="2026"${kY==='2026'?' selected':''}>2026</option><option value="2025"${kY==='2025'?' selected':''}>2025</option></select>
+      </div>
+      <button onclick="kkDataLoad()" class="btn b-out b-sm">⬇️ Tải dữ liệu</button>
+      <button onclick="kkDataSave(this)" class="btn b-pri b-sm">💾 Lưu & Cập nhật</button>
+    </div>
+  </div>
+  <div id="kkd-saved" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:10px 14px;margin-bottom:14px;color:#15803d;font-size:13px;font-weight:600">✅ Đã lưu thành công! Dashboard KK sẽ tự cập nhật.</div>
+</div>
+<div style="margin-bottom:12px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('kkd-s1')"><span>📦 I. Kết quả kiểm kê thực tế (Biên bản KK)</span><span id="kkd-s1-ico">▼</span></div>
+  <div id="kkd-s1" class="qcd-sec-body">
+    <div class="g2" style="gap:12px;margin-bottom:12px">
+      <div><label class="fi-lbl">Doanh thu hệ thống tháng này (đ)</label><input id="kk-s1-doanhThu" type="number" class="fi" placeholder="Vd: 90669086837"></div>
+      <div><label class="fi-lbl">Số biên bản KK thực hiện</label><input id="kk-s1-soBienBan" type="number" class="fi" placeholder="Vd: 9"></div>
+      <div><label class="fi-lbl">KK Tổng (định kỳ)</label><input id="kk-s1-kkTong" type="number" class="fi" placeholder="Vd: 7"></div>
+      <div><label class="fi-lbl">KK Đột xuất</label><input id="kk-s1-kkDotXuat" type="number" class="fi" placeholder="Vd: 2"></div>
+    </div>
+    <div class="g2" style="gap:12px;margin-bottom:12px">
+      <div><label class="fi-lbl">Tổng thất thoát phát hiện (đ)</label><input id="kk-s1-tongTT" type="number" class="fi" placeholder="Vd: 26116055" oninput="kkCalcKK()"></div>
+      <div><label class="fi-lbl">Thu hồi qua đền bù (đ)</label><input id="kk-s1-thuHoi" type="number" class="fi" placeholder="Vd: 22163295" oninput="kkCalcKK()"></div>
+    </div>
+    <div style="background:#f0fdf4;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px">
+      <span style="font-weight:600;color:#15803d">📊 Tự động tính: </span>
+      Tổn thất ròng: <strong id="kk-s1-tonRong">—</strong> &nbsp;·&nbsp;
+      % Thu hồi: <strong id="kk-s1-pctTR">—</strong> &nbsp;·&nbsp;
+      Tỷ lệ TT/DT: <strong id="kk-s1-pctTT">—</strong>
+    </div>
+    <label class="fi-lbl">Ghi chú</label>
+    <textarea id="kk-s1-note" class="fi" rows="2" style="resize:vertical" placeholder="Nhận xét về kết quả kiểm kê tháng này..."></textarea>
+  </div>
+</div>
+<div style="margin-bottom:12px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('kkd-s2')"><span>📉 II. Tồn âm & Bán nhầm mã</span><span id="kkd-s2-ico">▼</span></div>
+  <div id="kkd-s2" class="qcd-sec-body">
+    <div class="g2" style="gap:12px;margin-bottom:12px">
+      <div><label class="fi-lbl">Tổng SKU tồn âm tháng này</label><input id="kk-s2-tongTonAm" type="number" class="fi" placeholder="Vd: 2603" oninput="kkCalcTonAm()"></div>
+      <div><label class="fi-lbl">Tổng SKU tồn âm tháng trước</label><input id="kk-s2-tongTonAmPrev" type="number" class="fi" placeholder="Vd: 1766" oninput="kkCalcTonAm()"></div>
+      <div><label class="fi-lbl">Bán nhầm mã (SKU)</label><input id="kk-s2-banNhamMa" type="number" class="fi" placeholder="Vd: 1509"></div>
+      <div><label class="fi-lbl">Chưa giải trình ST (SKU)</label><input id="kk-s2-chuaGiaiTrinh" type="number" class="fi" placeholder="Vd: 714"></div>
+      <div><label class="fi-lbl">Chưa GT tháng trước (SKU)</label><input id="kk-s2-chuaGTprev" type="number" class="fi" placeholder="Vd: 19"></div>
+      <div><label class="fi-lbl">Chưa nhận đơn ST (SKU)</label><input id="kk-s2-chuaNhanDon" type="number" class="fi" placeholder="Vd: 169"></div>
+      <div><label class="fi-lbl">GT tồn thừa — mã bị bấm nhầm (đ)</label><input id="kk-s2-gtThua" type="number" class="fi" placeholder="Vd: 444326070" oninput="kkCalcEbit()"></div>
+      <div><label class="fi-lbl">GT tồn thiếu — mã bị bỏ qua (đ, nhập dương)</label><input id="kk-s2-gtThieu" type="number" class="fi" placeholder="Vd: 460192435" oninput="kkCalcEbit()"></div>
+    </div>
+    <div style="background:#fef2f2;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px">
+      <span style="font-weight:600;color:#dc2626">💰 EBIT ròng bán nhầm mã: </span>
+      GT thừa: <strong id="kk-s2-thuaD">—</strong> &nbsp;·&nbsp; GT thiếu: <strong id="kk-s2-thieuD">—</strong> &nbsp;·&nbsp; EBIT ròng: <strong id="kk-s2-ebitD" style="color:#dc2626">—</strong> &nbsp;·&nbsp; % tăng tồn âm: <strong id="kk-s2-pctTaD">—</strong>
+    </div>
+    <div style="margin-bottom:12px"><label class="fi-lbl">Số ST vượt ngưỡng 1.53% GT thiếu/DT</label><input id="kk-s2-soSTVuot" type="number" class="fi" style="max-width:120px" placeholder="Vd: 14"></div>
+    <label class="fi-lbl">Ghi chú</label>
+    <textarea id="kk-s2-note" class="fi" rows="2" style="resize:vertical" placeholder="Nhận xét về tình hình tồn âm..."></textarea>
+  </div>
+</div>
+<div style="margin-bottom:16px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('kkd-s3')"><span>⚡ III. Siêu thị rủi ro — Bản đồ rủi ro chéo (tối đa 8 ST)</span><span id="kkd-s3-ico">▼</span></div>
+  <div id="kkd-s3" class="qcd-sec-body">
+    <div style="font-size:12px;color:#6366f1;background:#eef2ff;border-radius:6px;padding:7px 12px;margin-bottom:12px">💡 Thất thoát: âm nếu mất (Vd: -9995860), dương nếu thặng dư. Tỷ lệ: GT thiếu/DT của ST (%). Dữ liệu hiển thị trên bản đồ rủi ro chéo.</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:12px">
+      <thead><tr style="background:#f0f0ff"><th style="padding:8px 10px;border:1px solid #e0e7ff;text-align:left;color:#4f46e5">Tên siêu thị</th><th style="padding:8px 10px;border:1px solid #e0e7ff;color:#4f46e5">Thất thoát (đ)</th><th style="padding:8px 10px;border:1px solid #e0e7ff;color:#4f46e5">GT thiếu/DT (%)</th><th style="padding:8px 10px;border:1px solid #e0e7ff;color:#4f46e5">SKU tồn âm</th><th style="padding:8px 10px;border:1px solid #e0e7ff;color:#4f46e5;text-align:left">Ghi chú</th></tr></thead>
+      <tbody>${[0,1,2,3,4,5,6,7].map(i=>'<tr><td style="padding:4px 6px;border:1px solid #e0e7ff"><input type="text" id="kk-s3-st'+i+'-name" class="fi" placeholder="Tên ST" style="width:100%;min-width:90px"></td><td style="padding:4px 6px;border:1px solid #e0e7ff"><input type="number" id="kk-s3-st'+i+'-thatthoat" class="fi" placeholder="-9995860" style="width:110px"></td><td style="padding:4px 6px;border:1px solid #e0e7ff"><input type="number" step="0.01" id="kk-s3-st'+i+'-ratio" class="fi" placeholder="7.70" style="width:65px"></td><td style="padding:4px 6px;border:1px solid #e0e7ff"><input type="number" id="kk-s3-st'+i+'-tonAmSKU" class="fi" placeholder="46" style="width:60px"></td><td style="padding:4px 6px;border:1px solid #e0e7ff"><input type="text" id="kk-s3-st'+i+'-note" class="fi" placeholder="Ghi chú" style="width:100%;min-width:100px"></td></tr>').join('')}</tbody>
+    </table></div>
+    <label class="fi-lbl">Ghi chú tổng quan</label>
+    <textarea id="kk-s3-note" class="fi" rows="2" style="resize:vertical" placeholder="Nhận xét về tình hình rủi ro tháng này..."></textarea>
+  </div>
+</div>
+<div style="text-align:right;padding-bottom:8px">
+  <button onclick="kkDataSave(this)" class="btn b-pri">💾 Lưu tất cả & Cập nhật Dashboard KK</button>
 </div>
 `:(t==='Kiểm kê'||t==='QC')?`
   ${isAdmin()?`<div class="alert a-info" style="margin-bottom:14px"><span class="a-ic">💡</span><div class="a-bd"><strong>Chế độ Admin – có thể chỉnh sửa cấu trúc</strong><p>Di chuột vào mục → hiện nút ✏️ đổi tên / 🗑 xóa / 📁📄 thêm con.</p></div></div>`:''}
@@ -1785,6 +1916,99 @@ function qcDataLoad(){
     if(saved){saved.textContent='✅ Đã tải dữ liệu thành công!';saved.style.display='block';setTimeout(()=>{saved.style.display='none';saved.textContent='✅ Đã lưu thành công! Dashboard sẽ tự cập nhật.';},3000);}
   }).catch(e=>alert('Lỗi tải: '+e.message));
 }
+function getKKDB(){try{return db;}catch(e){return null;}}
+function kkLoadExecAndRefresh(yearIn,monthIn){
+  const m=monthIn||document.getElementById('kk-exec-m')?.value||S.kkExecMonth;
+  const y=yearIn||document.getElementById('kk-exec-y')?.value||S.kkExecYear;
+  const kkdb=getKKDB();if(!kkdb)return;
+  kkdb.ref('kk_data/'+y+'/'+m).get().then(snap=>{
+    S.kkExecData=snap.exists()?snap.val():null;
+    S.kkExecMonth=String(m);S.kkExecYear=String(y);
+    go(S.page,S.tab);
+  }).catch(e=>console.error('KK load error:',e));
+}
+function kkDataSave(btn){
+  const month=document.getElementById('kk-month')?.value,year=document.getElementById('kk-year')?.value;
+  if(!month||!year){alert('Chọn tháng/năm trước!');return;}
+  const stores=[];
+  for(let i=0;i<8;i++){const name=(document.getElementById('kk-s3-st'+i+'-name')?.value||'').trim();if(name)stores.push({st:name,thatthoat:parseFloat(document.getElementById('kk-s3-st'+i+'-thatthoat')?.value)||0,ratio:parseFloat(document.getElementById('kk-s3-st'+i+'-ratio')?.value)||0,tonAmSKU:parseInt(document.getElementById('kk-s3-st'+i+'-tonAmSKU')?.value)||0,note:(document.getElementById('kk-s3-st'+i+'-note')?.value||'').trim()});}
+  const data={
+    s1_doanhThu:parseFloat(document.getElementById('kk-s1-doanhThu')?.value)||0,
+    s1_soBienBan:parseInt(document.getElementById('kk-s1-soBienBan')?.value)||0,
+    s1_kkTong:parseInt(document.getElementById('kk-s1-kkTong')?.value)||0,
+    s1_kkDotXuat:parseInt(document.getElementById('kk-s1-kkDotXuat')?.value)||0,
+    s1_tongThatthoat:parseFloat(document.getElementById('kk-s1-tongTT')?.value)||0,
+    s1_thuHoi:parseFloat(document.getElementById('kk-s1-thuHoi')?.value)||0,
+    s1_note:document.getElementById('kk-s1-note')?.value||'',
+    s2_tongTonAm:parseInt(document.getElementById('kk-s2-tongTonAm')?.value)||0,
+    s2_tongTonAmPrev:parseInt(document.getElementById('kk-s2-tongTonAmPrev')?.value)||0,
+    s2_banNhamMa:parseInt(document.getElementById('kk-s2-banNhamMa')?.value)||0,
+    s2_chuaGiaiTrinh:parseInt(document.getElementById('kk-s2-chuaGiaiTrinh')?.value)||0,
+    s2_chuaGiaiTrinhPrev:parseInt(document.getElementById('kk-s2-chuaGTprev')?.value)||0,
+    s2_chuaNhanDon:parseInt(document.getElementById('kk-s2-chuaNhanDon')?.value)||0,
+    s2_gtThua:parseFloat(document.getElementById('kk-s2-gtThua')?.value)||0,
+    s2_gtThieu:parseFloat(document.getElementById('kk-s2-gtThieu')?.value)||0,
+    s2_soSTVuotNguong:parseInt(document.getElementById('kk-s2-soSTVuot')?.value)||0,
+    s2_note:document.getElementById('kk-s2-note')?.value||'',
+    s3_stores:stores,s3_note:document.getElementById('kk-s3-note')?.value||'',
+    savedAt:Date.now()
+  };
+  const kkdb=getKKDB();if(!kkdb){alert('Không kết nối được Firebase!');return;}
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang lưu...';}
+  kkdb.ref('kk_data/'+year+'/'+month).set(data).then(()=>{
+    S.kkExecData=data;S.kkExecMonth=String(month);S.kkExecYear=String(year);
+    const saved=document.getElementById('kkd-saved');
+    if(saved){saved.style.display='block';setTimeout(()=>saved.style.display='none',4000);}
+    if(btn){btn.disabled=false;btn.textContent=btn.textContent.includes('tất cả')?'💾 Lưu tất cả & Cập nhật Dashboard KK':'💾 Lưu & Cập nhật';}
+  }).catch(e=>{alert('Lỗi lưu: '+e.message);if(btn){btn.disabled=false;btn.textContent='💾 Lưu & Cập nhật';}});
+}
+function kkDataLoad(){
+  const month=document.getElementById('kk-month')?.value,year=document.getElementById('kk-year')?.value;
+  if(!month||!year)return;
+  const kkdb=getKKDB();if(!kkdb){alert('Không kết nối được Firebase!');return;}
+  kkdb.ref('kk_data/'+year+'/'+month).get().then(snap=>{
+    if(!snap.exists()){alert('Chưa có dữ liệu KK tháng '+month+'/'+year);return;}
+    const d=snap.val();
+    const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;};
+    set('kk-s1-doanhThu',d.s1_doanhThu);set('kk-s1-soBienBan',d.s1_soBienBan);
+    set('kk-s1-kkTong',d.s1_kkTong);set('kk-s1-kkDotXuat',d.s1_kkDotXuat);
+    set('kk-s1-tongTT',d.s1_tongThatthoat);set('kk-s1-thuHoi',d.s1_thuHoi);set('kk-s1-note',d.s1_note);
+    set('kk-s2-tongTonAm',d.s2_tongTonAm);set('kk-s2-tongTonAmPrev',d.s2_tongTonAmPrev);
+    set('kk-s2-banNhamMa',d.s2_banNhamMa);set('kk-s2-chuaGiaiTrinh',d.s2_chuaGiaiTrinh);
+    set('kk-s2-chuaGTprev',d.s2_chuaGiaiTrinhPrev);set('kk-s2-chuaNhanDon',d.s2_chuaNhanDon);
+    set('kk-s2-gtThua',d.s2_gtThua);set('kk-s2-gtThieu',d.s2_gtThieu);
+    set('kk-s2-soSTVuot',d.s2_soSTVuotNguong);set('kk-s2-note',d.s2_note);
+    if(d.s3_stores&&Array.isArray(d.s3_stores))d.s3_stores.forEach((s,i)=>{set('kk-s3-st'+i+'-name',s.st);set('kk-s3-st'+i+'-thatthoat',s.thatthoat);set('kk-s3-st'+i+'-ratio',s.ratio);set('kk-s3-st'+i+'-tonAmSKU',s.tonAmSKU);set('kk-s3-st'+i+'-note',s.note);});
+    set('kk-s3-note',d.s3_note);
+    kkCalcKK();kkCalcTonAm();kkCalcEbit();
+    const saved=document.getElementById('kkd-saved');
+    if(saved){saved.textContent='✅ Đã tải dữ liệu KK thành công!';saved.style.display='block';setTimeout(()=>{saved.style.display='none';saved.textContent='✅ Đã lưu thành công! Dashboard KK sẽ tự cập nhật.';},3000);}
+  }).catch(e=>alert('Lỗi tải KK: '+e.message));
+}
+function kkCalcKK(){
+  const tt=parseFloat(document.getElementById('kk-s1-tongTT')?.value)||0;
+  const tr=parseFloat(document.getElementById('kk-s1-thuHoi')?.value)||0;
+  const dt=parseFloat(document.getElementById('kk-s1-doanhThu')?.value)||0;
+  const fmt=v=>v.toLocaleString('vi-VN');
+  document.getElementById('kk-s1-tonRong').textContent=tt>0?fmt(tt-tr)+'₫':'—';
+  document.getElementById('kk-s1-pctTR').textContent=tt>0?(tr/tt*100).toFixed(1)+'%':'—';
+  document.getElementById('kk-s1-pctTT').textContent=dt>0?(tt/dt*100).toFixed(3)+'%':'—';
+}
+function kkCalcTonAm(){
+  const now=parseInt(document.getElementById('kk-s2-tongTonAm')?.value)||0;
+  const prev=parseInt(document.getElementById('kk-s2-tongTonAmPrev')?.value)||0;
+  const pct=prev>0?+((now-prev)/prev*100).toFixed(1):0;
+  document.getElementById('kk-s2-pctTaD').textContent=prev>0?(pct>0?'+'+pct+'% ⚠️':pct+'% ✅'):'—';
+}
+function kkCalcEbit(){
+  const thua=parseFloat(document.getElementById('kk-s2-gtThua')?.value)||0;
+  const thieu=parseFloat(document.getElementById('kk-s2-gtThieu')?.value)||0;
+  const rong=thua-thieu;const fmt=v=>(v/1e6).toFixed(1)+'M₫';
+  document.getElementById('kk-s2-thuaD').textContent=thua>0?'+'+fmt(thua):'—';
+  document.getElementById('kk-s2-thieuD').textContent=thieu>0?'-'+fmt(thieu):'—';
+  const el=document.getElementById('kk-s2-ebitD');
+  if(el){el.textContent=(thua||thieu)?fmt(rong):'—';el.style.color=rong<0?'#dc2626':rong>0?'#16a34a':'#6b7280';}
+}
 function execAlert(st,loi,diem,thaoTac){
   const loiList=loi!=='—'?`\n• Lỗi QC: ${loi}`:'';
   const thaoTacLine=thaoTac?`\n• ⚠️ Có lỗi thao tác vận hành (không ra bill / QR cá nhân / sai PT thanh toán)`:'';
@@ -1867,12 +2091,17 @@ function afterRender(){
       mkC('c-ebit-doitra','doughnut',['Do khách hàng','Do siêu thị','Lỗi hệ thống','Lý do khác'],[{data:[72.31,21.54,4.10,2.05],bg:['#6366f1','#c8102e','#d97706','#4b5563']}]);
     }
   }
-  // KK charts
-  {
+  // KK Exec charts — only on KK exec tabs (avoids c-kk-cat conflict with old KK tab)
+  if(S.tab==='Exec. KK'||S.tab==='EBIT Kiểm kê'){
+    const kd=S.kkExecData;
+    const kM=String(S.kkExecMonth||'5');
+    const kY=String(S.kkExecYear||'2026');
     const kkCL=['Bán nhầm mã','Chưa giải trình ⚠️','Chưa nhận đơn','Chưa có đơn','Đơn NCC','Đơn ngành hàng'];
+    const prevVals=[1136,19,411,64,114,6];
+    const currVals=kd?[kd.s2_banNhamMa||0,kd.s2_chuaGiaiTrinh||0,kd.s2_chuaNhanDon||0,0,0,0]:[1509,714,169,71,57,45];
     const kkCD=[
-      {label:'T4/2025',data:[1136,19,411,64,114,6],bg:'rgba(90,77,58,.5)',borderColor:'rgba(90,77,58,.8)'},
-      {label:'T5/2025',data:[1509,714,169,71,57,45],bg:['#c8102e','#ff3d00','#6366f1','#d4af37','#9ca3af','#78909c'],borderColor:['#c8102e','#ff3d00','#6366f1','#d4af37','#9ca3af','#78909c']}
+      {label:'Tháng trước',data:prevVals,bg:'rgba(90,77,58,.5)',borderColor:'rgba(90,77,58,.8)'},
+      {label:'T'+kM+'/'+kY,data:currVals,bg:['#c8102e','#ff3d00','#6366f1','#d4af37','#9ca3af','#78909c'],borderColor:['#c8102e','#ff3d00','#6366f1','#d4af37','#9ca3af','#78909c']}
     ];
     mkC('c-kk-cause','bar',kkCL,kkCD);
     mkC('c-kk-cat','doughnut',['Thực phẩm','Ngành khác','Đ.dùng đời sống','CS sắc đẹp','CS sức khỏe','Mẹ & bé','Hệ thống','Khác'],[{data:[992,333,301,258,161,116,95,347],bg:['#c8102e','#d4af37','#e07b2e','#9c27b0','#6c8cd5','#4caf7d','#00bcd4','#78909c']}]);
