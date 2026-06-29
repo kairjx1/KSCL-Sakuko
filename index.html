@@ -3209,11 +3209,9 @@ render();
     inp.value='';
   };
 
-  window.chatFileSelected=async function(inp){
-    const file=inp.files[0];
-    inp.value='';
+  async function chatSendImage(file){
     if(!file||!msgsRef)return;
-    if(!file.type.startsWith('image/')){alert('Chỉ hỗ trợ gửi ảnh (JPG, PNG, WEBP...)');return;}
+    if(!file.type.startsWith('image/')){alert('Chỉ hỗ trợ gửi ảnh');return;}
     if(file.size>8*1024*1024){alert('Ảnh quá lớn (tối đa 8MB)');return;}
     const bar=document.getElementById('chat-upload-bar');
     if(bar){bar.style.display='block';bar.textContent='⏳ Đang xử lý ảnh...';}
@@ -3230,16 +3228,26 @@ render();
           c.getContext('2d').drawImage(img,0,0,w,h);
           res(c.toDataURL('image/jpeg',q));
         };
-        img.onerror=rej;
-        img.src=url;
+        img.onerror=rej;img.src=url;
       });
-      await msgsRef.push({uid:myUid,name:myName||'Ẩn danh',ts:Date.now(),fileName:file.name,imgUrl});
-    }catch(e){
-      console.error(e);alert('Lỗi gửi ảnh: '+(e.message||e));
-    }finally{
-      if(bar)bar.style.display='none';
-    }
+      await msgsRef.push({uid:myUid,name:myName||'Ẩn danh',ts:Date.now(),fileName:file.name||'ảnh.jpg',imgUrl});
+    }catch(e){console.error(e);alert('Lỗi: '+(e.message||e));}
+    finally{if(bar)bar.style.display='none';}
+  }
+
+  window.chatFileSelected=function(inp){
+    const file=inp.files[0];inp.value='';
+    chatSendImage(file);
   };
+
+  // Paste ảnh từ clipboard (Ctrl+V)
+  document.addEventListener('paste',function(e){
+    if(!panelOpen||!msgsRef)return;
+    const item=Array.from(e.clipboardData.items||[]).find(i=>i.type.startsWith('image/'));
+    if(!item)return;
+    e.preventDefault();
+    chatSendImage(item.getAsFile());
+  });
 
   window.chatOpenAdmin=function(){
     const pw=prompt('Nhập mã quản trị:');
