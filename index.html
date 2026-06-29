@@ -2993,7 +2993,6 @@ render();
 </button>
 
 <!-- Chat panel -->
-<div id="img-lightbox" onclick="this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;align-items:center;justify-content:center;cursor:zoom-out"><img id="img-lightbox-src" style="max-width:92vw;max-height:90vh;object-fit:contain;border-radius:10px"></div>
 <div id="chat-panel">
   <!-- Xác nhận gửi ảnh -->
   <div id="chat-img-confirm" style="display:none;position:absolute;inset:0;background:rgba(15,15,35,.82);z-index:20;flex-direction:column;align-items:center;justify-content:center;gap:14px;border-radius:16px">
@@ -3120,8 +3119,8 @@ render();
     let bubbleHtml;
     if(msg.imgUrl){
       bubbleHtml=isMine
-        ?`<div class="cht-bub-img-me"><img src="${esc(msg.imgUrl)}" class="cht-img" onclick="var l=document.getElementById('img-lightbox');document.getElementById('img-lightbox-src').src=this.src;l.style.display='flex'" alt="ảnh" loading="lazy"></div>`
-        :`<div class="cht-bub-img-other"><img src="${esc(msg.imgUrl)}" class="cht-img" onclick="var l=document.getElementById('img-lightbox');document.getElementById('img-lightbox-src').src=this.src;l.style.display='flex'" alt="ảnh" loading="lazy"></div>`;
+        ?`<div class="cht-bub-img-me"><img src="${esc(msg.imgUrl)}" class="cht-img" onclick="chatViewImg(this)" alt="ảnh" loading="lazy"></div>`
+        :`<div class="cht-bub-img-other"><img src="${esc(msg.imgUrl)}" class="cht-img" onclick="chatViewImg(this)" alt="ảnh" loading="lazy"></div>`;
     }else if(msg.fileUrl){
       const sz=fmtSize(msg.fileSize);
       bubbleHtml=isMine
@@ -3287,6 +3286,22 @@ render();
   const _chatInp=document.getElementById('chat-inp');
   if(_chatInp)_chatInp.addEventListener('paste',_pasteImg);
   document.addEventListener('paste',function(e){if(panelOpen&&msgsRef)_pasteImg(e);});
+
+  // Tạo lightbox 1 lần
+  (function(){
+    const lb=document.createElement('div');
+    lb.id='img-lightbox';
+    lb.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;align-items:center;justify-content:center;cursor:zoom-out';
+    lb.innerHTML='<img id="img-lightbox-src" style="max-width:92vw;max-height:90vh;object-fit:contain;border-radius:10px">';
+    lb.onclick=()=>lb.style.display='none';
+    document.body.appendChild(lb);
+  })();
+
+  window.chatViewImg=function(el){
+    const lb=document.getElementById('img-lightbox');
+    const li=document.getElementById('img-lightbox-src');
+    if(lb&&li){li.src=el.src;lb.style.display='flex';}
+  };
 
   window.chatOpenAdmin=function(){
     const pw=prompt('Nhập mã quản trị:');
