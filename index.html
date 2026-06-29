@@ -1479,7 +1479,7 @@ function qcRenderSTLoi(n){
   list.innerHTML=rows.join('');
 }
 function getQCDB(){
-  try{return(firebase.apps.length?firebase.app():firebase.initializeApp({apiKey:'AIzaSyBetoDgdhDgfVQsvNZVlpoNs_2CWvYZs6A',databaseURL:'https://kscl-chat-default-rtdb.asia-southeast1.firebasedatabase.app',projectId:'kscl-chat'})).database();}
+  try{return db;}
   catch(e){return null;}
 }
 function qcLoadExecAndRefresh(year,month){
