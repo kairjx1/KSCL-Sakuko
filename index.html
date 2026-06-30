@@ -356,7 +356,7 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026'};
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -412,6 +412,12 @@ function go(page,tab=''){
 }
 
 function destroyCharts(){Object.values(S.charts).forEach(c=>{try{c.destroy()}catch(e){}});S.charts={};}
+function dashFilter(from,to){
+  // Clamp to available months
+  S.dashFrom=from;
+  S.dashTo=to>=from?to:from;
+  go('dashboard');
+}
 
 /* ══════════════════════════════════════════
    RENDER ROOT
@@ -522,10 +528,17 @@ function rDashboard(){
     {t:'T05',dt:17621137715,gv:497596584,tv:342066250,huy:22713000,cp:155530334,dinhmuc:37004389,conlai:266052255},
   ];
   const DS=DC?.stores?.length?DC.stores:[];
-  const totDT=DM.reduce((a,r)=>a+r.dt,0);
-  const totCP=DM.reduce((a,r)=>a+(r.gv-r.tv),0);
-  const tonDG=DM[DM.length-1].conlai||0;
-  const tlDate=(totCP-tonDG)/totDT;
+  // ── Date range filter ──
+  const _pF=n=>'T'+String(n).padStart(2,'0');
+  const _dFrom=_pF(S.dashFrom||1);
+  const _dTo=_pF(S.dashTo||12);
+  const DMF=DM.filter(r=>r.t>=_dFrom&&r.t<=_dTo);
+  const DMsrc=DMF.length?DMF:DM;
+  const isSingleM=S.dashFrom===S.dashTo&&DMsrc.length===1;
+  const totDT=DMsrc.reduce((a,r)=>a+r.dt,0);
+  const totCP=DMsrc.reduce((a,r)=>a+(r.gv-r.tv),0);
+  const tonDG=DMsrc[DMsrc.length-1].conlai||0;
+  const tlDate=totDT>0?(totCP-tonDG)/totDT:0;
   const NGUONG_DATE=0.0021;
   const ebitDate=(tlDate-NGUONG_DATE)*totDT;
   const dateOk=tlDate<=NGUONG_DATE;
@@ -550,15 +563,17 @@ function rDashboard(){
   const NGUONG_QC=90;
   const tlLabel=t=>`<span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:9px;background:${t?'#dcfce7':'#fee2e2'};color:${t?'#15803d':'#dc2626'}">${t?'✅ Đạt':'⚠️ Cần cải thiện'}</span>`;
   // ── Phân tích tổng hợp YTD ──
-  const mTL=DM.map(r=>r.dt>0?(r.gv-r.tv)/r.dt:0);
-  const mAbove=DM.filter((_,i)=>mTL[i]>NGUONG_DATE);
-  const lastTL=mTL[mTL.length-1];
+  const mTL=DMsrc.map(r=>r.dt>0?(r.gv-r.tv)/r.dt:0);
+  const mAbove=DMsrc.filter((_,i)=>mTL[i]>NGUONG_DATE);
+  const lastTL=mTL[mTL.length-1]||0;
   const prevTL=mTL.length>=2?mTL[mTL.length-2]:null;
   const dateTrendDelta=prevTL!==null?lastTL-prevTL:0;
   const alertStores=DS.filter(s=>s.cb===1).sort((a,b)=>b.tl-a.tl);
-  const totHuy=DM.reduce((a,r)=>a+(r.huy||0),0);
+  const totHuy=DMsrc.reduce((a,r)=>a+(r.huy||0),0);
   const fMil=n=>n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(0)+'M':(n/1e3).toFixed(0)+'K';
-  const CURR_M=DM[DM.length-1]?.t||'T05';
+  const CURR_M=DMsrc[DMsrc.length-1]?.t||'T05';
+  const FIRST_M=DMsrc[0]?.t||'T01';
+  const rangeLabel=isSingleM?CURR_M:(FIRST_M===CURR_M?CURR_M:FIRST_M+'→'+CURR_M);
   const ytdOk=tlDate<=NGUONG_DATE;
   const totCPnet=totCP-tonDG;
   // Executive summary bullets
@@ -585,7 +600,7 @@ function rDashboard(){
   apItems.push({p:3,icon:'🟡',txt:`<strong>Bổ sung dữ liệu KK T6:</strong> Import Excel kiểm kê sau khi chốt số để phân tích tương quan tồn âm–thất thoát và hoàn thiện báo cáo EBIT tháng 6.`});
   apItems.push({p:3,icon:'🟡',txt:`<strong>Đồng bộ Lark khi có số T6:</strong> Cập nhật date-cache.json để dashboard tự động tổng hợp YTD 6 tháng đầu năm.`});
   // YTD table rows
-  const tblRows=DM.map((r,i)=>{
+  const tblRows=DMsrc.map((r,i)=>{
     const tl=mTL[i];const ok=tl<=NGUONG_DATE;const cpNet=r.gv-r.tv;
     return`<tr style="border-bottom:1px solid rgba(0,0,0,.05)">
       <td style="padding:7px 10px;font-weight:600">${r.t}</td>
@@ -605,8 +620,28 @@ function rDashboard(){
     <td style="padding:8px 10px;text-align:center">${ytdOk?'<span style="color:#15803d;font-weight:800">✅ ĐẠT NĂM</span>':'<span style="color:#dc2626;font-weight:800">⚠️ VƯỢT NGƯỠNG</span>'}</td>
   </tr>`;
   return`
-<div class="sec-hdr" style="margin-bottom:14px">
+<div class="sec-hdr" style="margin-bottom:10px">
   <div><h1>${skIcn('dashboard',26,26)} Tổng quan EBIT — Phòng KSCL</h1><p style="color:var(--t2);font-size:13px">${now}</p></div>
+</div>
+
+<!-- Filter bar -->
+<div class="card" style="margin-bottom:12px;padding:10px 14px;background:rgba(26,37,88,.04)">
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span style="font-size:11.5px;font-weight:700;color:var(--t2);white-space:nowrap">📅 Khung thời gian:</span>
+    <button onclick="dashFilter(1,12)" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${S.dashFrom===1&&S.dashTo===12?'#1a2558':'rgba(0,0,0,.15)'};background:${S.dashFrom===1&&S.dashTo===12?'#1a2558':'#fff'};color:${S.dashFrom===1&&S.dashTo===12?'#fff':'var(--t1)'};cursor:pointer;font-weight:600">Tất cả</button>
+    ${DM.map(r=>{const m=parseInt(r.t.slice(1));const sel=S.dashFrom===m&&S.dashTo===m;return`<button onclick="dashFilter(${m},${m})" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${sel?'#e91e7b':'rgba(0,0,0,.15)'};background:${sel?'#e91e7b':'#fff'};color:${sel?'#fff':'var(--t1)'};cursor:pointer">${r.t}</button>`;}).join('')}
+    <div style="display:flex;align-items:center;gap:5px;margin-left:6px;padding-left:10px;border-left:1px solid rgba(0,0,0,.1)">
+      <span style="font-size:11.5px;color:var(--t2)">Từ</span>
+      <select onchange="S.dashFrom=+this.value;dashFilter(S.dashFrom,S.dashTo)" style="font-size:11.5px;padding:3px 6px;border:1px solid rgba(0,0,0,.2);border-radius:5px;background:#fff">
+        ${DM.map(r=>{const m=parseInt(r.t.slice(1));return`<option value="${m}"${m===S.dashFrom?' selected':''}>${r.t}</option>`;}).join('')}
+      </select>
+      <span style="font-size:11.5px;color:var(--t2)">đến</span>
+      <select onchange="S.dashTo=+this.value;dashFilter(S.dashFrom,S.dashTo)" style="font-size:11.5px;padding:3px 6px;border:1px solid rgba(0,0,0,.2);border-radius:5px;background:#fff">
+        ${DM.map(r=>{const m=parseInt(r.t.slice(1));return`<option value="${m}"${m===S.dashTo?' selected':''}>${r.t}</option>`;}).join('')}
+      </select>
+    </div>
+    <span style="margin-left:auto;font-size:11px;color:var(--t3)">Đang xem: <strong style="color:#1a2558">${rangeLabel}/2026</strong> · ${DMsrc.length} tháng · ${isSingleM?'Tháng đơn':'Lũy kế'}</span>
+  </div>
 </div>
 
 <!-- 3 trụ cột EBIT -->
@@ -629,7 +664,7 @@ function rDashboard(){
       ${tlLabel(dateOk)}
     </div>
     <div style="font-size:28px;font-weight:800;color:${dateOk?'#16a34a':'#dc2626'};line-height:1">${fP(tlDate)}<span style="font-size:14px;font-weight:600"> tỷ lệ</span></div>
-    <div style="font-size:12px;color:var(--t2);margin:4px 0">Ngưỡng 0.21% · T1→${CURR_M}/2026</div>
+    <div style="font-size:12px;color:var(--t2);margin:4px 0">Ngưỡng 0.21% · ${rangeLabel}/2026</div>
     <div style="font-size:12px;margin-top:6px">${dateOk
       ?`<span style="color:#16a34a">✅ Dưới ngưỡng, EBIT được bảo vệ</span>`
       :`<span style="color:#dc2626">🔴 Vượt ngưỡng +${((tlDate-NGUONG_DATE)*100).toFixed(2)}pp → ~${fM(ebitDate)}₫/kỳ</span>`}</div>
@@ -669,8 +704,8 @@ function rDashboard(){
 <!-- Phần 1: Tóm tắt Điều hành -->
 <div class="card" style="margin-bottom:12px;border-left:4px solid #1a2558;padding:16px 20px">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:6px">
-    <div style="font-size:13px;font-weight:700;color:#1a2558">📋 TÓM TẮT ĐIỀU HÀNH — LŨY KẾ T1→${CURR_M}/2026</div>
-    <span style="font-size:11px;color:var(--t3)">${DM.length} tháng · Tự động cập nhật khi đồng bộ Lark</span>
+    <div style="font-size:13px;font-weight:700;color:#1a2558">📋 TÓM TẮT ĐIỀU HÀNH — ${isSingleM?'THÁNG':'LŨY KẾ'} ${rangeLabel}/2026</div>
+    <span style="font-size:11px;color:var(--t3)">${DMsrc.length} tháng · Tự động cập nhật khi đồng bộ Lark</span>
   </div>
   <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px">
     ${sbArr.map(b=>`<li style="font-size:13px;line-height:1.6;color:${b.ok===null?'var(--t2)':b.ok?'#15803d':'#991b1b'}">${b.txt}</li>`).join('')}
@@ -734,7 +769,7 @@ function rDashboard(){
 <!-- Phần 3: Bảng tổng hợp YTD -->
 <div class="card" style="margin-bottom:12px;padding:16px">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:6px">
-    <div style="font-size:13px;font-weight:700;color:#1a2558">📊 BẢNG TỔNG HỢP YTD — Đổi/Hủy Date 2026</div>
+    <div style="font-size:13px;font-weight:700;color:#1a2558">📊 BẢNG TỔNG HỢP ${isSingleM?'THÁNG':'LŨY KẾ'} — Đổi/Hủy Date ${rangeLabel}/2026</div>
     <span style="font-size:11px;padding:3px 9px;border-radius:10px;background:${ytdOk?'#dcfce7':'#fee2e2'};color:${ytdOk?'#15803d':'#dc2626'};font-weight:700">${ytdOk?'✅ ĐẠT NGƯỠNG NĂM':'⚠️ VƯỢT NGƯỠNG NĂM'}</span>
   </div>
   <div style="overflow-x:auto">
@@ -2613,19 +2648,23 @@ Phòng Kiểm soát Chất lượng – Sakuko Vietnam`;
 function afterRender(){
   loadUsers(); loadNS();
   const T6=TH.slice(0,6);
-  // Dashboard — Đổi Date trend chart
+  // Dashboard — Đổi Date trend chart (respects dashFrom/dashTo filter)
   if(document.getElementById('c-dash-date')){
     const _dc=S.dateCache;
-    const _dm=_dc?.monthly?.length?_dc.monthly:[
+    const _dmAll=_dc?.monthly?.length?_dc.monthly:[
       {t:'T01',dt:28381886851,gv:254575167,tv:141209700},{t:'T02',dt:27166945070,gv:305335244,tv:175740700},
       {t:'T03',dt:21089532535,gv:270817077,tv:210663800},{t:'T04',dt:19107191653,gv:433003826,tv:295402950},
       {t:'T05',dt:17621137715,gv:497596584,tv:342066250},
     ];
-    const _lbs=_dm.map(r=>r.t);
-    const _tl=_dm.map(r=>r.dt>0?+((r.gv-r.tv)/r.dt*100).toFixed(3):0);
+    const _pF2=n=>'T'+String(n).padStart(2,'0');
+    const _f=_pF2(S.dashFrom||1),_t2=_pF2(S.dashTo||12);
+    const _dm=_dmAll.filter(r=>r.t>=_f&&r.t<=_t2);
+    const _dmS=_dm.length?_dm:_dmAll;
+    const _lbs=_dmS.map(r=>r.t);
+    const _tl=_dmS.map(r=>r.dt>0?+((r.gv-r.tv)/r.dt*100).toFixed(3):0);
     mkC('c-dash-date','line',_lbs,[
       {label:'Tỷ lệ thực (%)',data:_tl,borderColor:'#e91e7b',bg:'rgba(233,30,123,.12)',fill:true,tension:.35,pointRadius:5,pointHoverRadius:7},
-      {label:'Ngưỡng 0.21%',data:_dm.map(()=>0.21),borderColor:'#1a2558',bg:'transparent',borderDash:[5,3],pointRadius:0},
+      {label:'Ngưỡng 0.21%',data:_dmS.map(()=>0.21),borderColor:'#1a2558',bg:'transparent',borderDash:[5,3],pointRadius:0},
     ],{plugins:{legend:{labels:{font:{size:11}}},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}%`}}},scales:{y:{ticks:{callback:v=>v+'%'}}}});
   }
   // KK
