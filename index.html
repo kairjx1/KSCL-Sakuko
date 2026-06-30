@@ -549,6 +549,61 @@ function rDashboard(){
   // ── EBIT tổng ──
   const NGUONG_QC=90;
   const tlLabel=t=>`<span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:9px;background:${t?'#dcfce7':'#fee2e2'};color:${t?'#15803d':'#dc2626'}">${t?'✅ Đạt':'⚠️ Cần cải thiện'}</span>`;
+  // ── Phân tích tổng hợp YTD ──
+  const mTL=DM.map(r=>r.dt>0?(r.gv-r.tv)/r.dt:0);
+  const mAbove=DM.filter((_,i)=>mTL[i]>NGUONG_DATE);
+  const lastTL=mTL[mTL.length-1];
+  const prevTL=mTL.length>=2?mTL[mTL.length-2]:null;
+  const dateTrendDelta=prevTL!==null?lastTL-prevTL:0;
+  const alertStores=DS.filter(s=>s.cb===1).sort((a,b)=>b.tl-a.tl);
+  const totHuy=DM.reduce((a,r)=>a+(r.huy||0),0);
+  const fMil=n=>n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(0)+'M':(n/1e3).toFixed(0)+'K';
+  const CURR_M=DM[DM.length-1]?.t||'T05';
+  const ytdOk=tlDate<=NGUONG_DATE;
+  const totCPnet=totCP-tonDG;
+  // Executive summary bullets
+  const sbArr=[
+    {ok:qcOk,txt:qcOk
+      ?`QC đạt <strong>${qcScore.toFixed(2)}%</strong> — vượt ngưỡng 90%, cải thiện <strong>+${Math.abs(qcDelta).toFixed(2)}pp</strong> so T4. ${qcSTLoi>0?`Còn <strong>${qcSTLoi} siêu thị</strong> chưa đạt, cần giám sát.`:'Toàn bộ siêu thị đạt chuẩn.'}`
+      :`Cảnh báo QC: <strong>${qcScore.toFixed(2)}%</strong> — dưới ngưỡng 90%, <strong>${qcSTLoi} siêu thị</strong> vi phạm nghiêm trọng. Ưu tiên kiểm tra ngay.`},
+    {ok:ytdOk,txt:ytdOk
+      ?`Tỷ lệ Đổi/Hủy date YTD <strong>${fP(tlDate)}</strong> — trong ngưỡng 0.21%. Tổng chi phí lũy kế T1→${CURR_M}: <strong>${fMil(totCPnet)}₫</strong>.`
+      :`Tỷ lệ Đổi/Hủy date YTD <strong>${fP(tlDate)}</strong> — vượt ngưỡng 0.21%, <strong>${mAbove.length}/${DM.length} tháng</strong> quá hạn. Ảnh hưởng EBIT ước tính: <strong>~${fM(Math.abs(ebitDate))}₫</strong>.`},
+    prevTL!==null?{ok:dateTrendDelta<=0,txt:dateTrendDelta<=0
+      ?`Xu hướng tháng ${CURR_M}: tỷ lệ <strong>${fP(lastTL)}</strong> — giảm <strong>${(Math.abs(dateTrendDelta)*100).toFixed(3)}pp</strong> so tháng trước. Tín hiệu tích cực, cần duy trì.`
+      :`Xu hướng tháng ${CURR_M}: tỷ lệ <strong>${fP(lastTL)}</strong> — tăng <strong>${(dateTrendDelta*100).toFixed(3)}pp</strong> so tháng trước. Cần điều tra nguyên nhân ngay.`}:null,
+    alertStores.length>0?{ok:false,txt:`<strong>${alertStores.length} siêu thị vượt định mức</strong> đổi date: ${alertStores.slice(0,3).map(s=>`<em>${s.s}</em> (${fP(s.tl)})`).join(', ')}${alertStores.length>3?` và ${alertStores.length-3} ST khác`:''} — kiểm tra FIFO và quy trình nhập hàng.`}:null,
+    {ok:null,txt:`Kiểm kê ${CURR_M}: ${hasKD?`${kkLoi} ST chênh lệch trên ${kkST} ST kiểm kê — cần đối chiếu tương quan tồn âm với số liệu đổi date.`:'chưa có dữ liệu. Import Excel KK để phân tích tương quan tồn âm–thất thoát.'}`},
+  ].filter(Boolean);
+  // Action plan
+  const apItems=[];
+  if(mAbove.length===DM.length) apItems.push({p:1,icon:'🔴',txt:`<strong>Ưu tiên cao — Kiểm soát tỷ lệ Đổi Date:</strong> Tất cả ${DM.length} tháng đều vượt ngưỡng 0.21%. Rà soát toàn diện FIFO, quy trình đặt hàng và chất lượng nhà cung cấp. Mục tiêu: đưa tỷ lệ T6 xuống dưới 0.21% — deadline 30/06.`});
+  else if(!ytdOk) apItems.push({p:1,icon:'🔴',txt:`<strong>Giảm tỷ lệ Đổi/Hủy Date</strong> xuống dưới 0.21%: ${mAbove.length}/${DM.length} tháng vượt ngưỡng. Tập trung vào ${alertStores.slice(0,2).map(s=>s.s).join(', ')||'các ST vượt ngưỡng'} — deadline 15/06.`});
+  if(!qcOk||qcSTLoi>3) apItems.push({p:1,icon:'🔴',txt:`<strong>Cải thiện QC:</strong> ${qcSTLoi} siêu thị dưới ngưỡng. Lên lịch QC đột xuất cho Hàng Bông (81%), Hàm Nghi (84%), Thái Hà (85%) trước 10/06.`});
+  if(alertStores.length>0) apItems.push({p:2,icon:'🟠',txt:`<strong>Audit ${Math.min(alertStores.length,5)} ST vượt định mức:</strong> ${alertStores.slice(0,3).map(s=>s.s+' ('+fP(s.tl)+')').join(', ')} — yêu cầu báo cáo nguyên nhân + kế hoạch xử lý trước 20/06.`});
+  if(dateTrendDelta>0) apItems.push({p:2,icon:'🟠',txt:`<strong>Điều tra nguyên nhân tỷ lệ đổi date tăng trong ${CURR_M}:</strong> Đánh giá chất lượng hàng nhập từ NCC, hạn SDX tại thời điểm nhập, và hiệu quả kiểm soát FIFO tại cửa hàng.`});
+  apItems.push({p:3,icon:'🟡',txt:`<strong>Bổ sung dữ liệu KK T6:</strong> Import Excel kiểm kê sau khi chốt số để phân tích tương quan tồn âm–thất thoát và hoàn thiện báo cáo EBIT tháng 6.`});
+  apItems.push({p:3,icon:'🟡',txt:`<strong>Đồng bộ Lark khi có số T6:</strong> Cập nhật date-cache.json để dashboard tự động tổng hợp YTD 6 tháng đầu năm.`});
+  // YTD table rows
+  const tblRows=DM.map((r,i)=>{
+    const tl=mTL[i];const ok=tl<=NGUONG_DATE;const cpNet=r.gv-r.tv;
+    return`<tr style="border-bottom:1px solid rgba(0,0,0,.05)">
+      <td style="padding:7px 10px;font-weight:600">${r.t}</td>
+      <td style="padding:7px 10px;text-align:right;color:var(--t2)">${fMil(r.dt)}</td>
+      <td style="padding:7px 10px;text-align:right;font-weight:600;color:${ok?'inherit':'#dc2626'}">${fMil(cpNet)}</td>
+      <td style="padding:7px 10px;text-align:right;color:#9ca3af">${fMil(r.huy||0)}</td>
+      <td style="padding:7px 10px;text-align:right;font-weight:700;color:${ok?'#15803d':'#dc2626'}">${fP(tl)}</td>
+      <td style="padding:7px 10px;text-align:center;font-size:11.5px">${ok?'<span style="color:#15803d">✅ Đạt</span>':`<span style="color:#dc2626;font-weight:700">⚠️ +${((tl-NGUONG_DATE)*100).toFixed(3)}pp</span>`}</td>
+    </tr>`;
+  }).join('');
+  const tblFoot=`<tr style="background:rgba(26,37,88,.08);font-weight:700;border-top:2px solid rgba(26,37,88,.2)">
+    <td style="padding:8px 10px;color:#1a2558">CỘNG YTD</td>
+    <td style="padding:8px 10px;text-align:right">${fMil(totDT)}</td>
+    <td style="padding:8px 10px;text-align:right;color:${ytdOk?'#15803d':'#dc2626'}">${fMil(totCPnet)}</td>
+    <td style="padding:8px 10px;text-align:right;color:#6b7280">${fMil(totHuy)}</td>
+    <td style="padding:8px 10px;text-align:right;font-size:14px;color:${ytdOk?'#15803d':'#dc2626'}">${fP(tlDate)}</td>
+    <td style="padding:8px 10px;text-align:center">${ytdOk?'<span style="color:#15803d;font-weight:800">✅ ĐẠT NĂM</span>':'<span style="color:#dc2626;font-weight:800">⚠️ VƯỢT NGƯỠNG</span>'}</td>
+  </tr>`;
   return`
 <div class="sec-hdr" style="margin-bottom:14px">
   <div><h1>${skIcn('dashboard',26,26)} Tổng quan EBIT — Phòng KSCL</h1><p style="color:var(--t2);font-size:13px">${now}</p></div>
@@ -574,7 +629,7 @@ function rDashboard(){
       ${tlLabel(dateOk)}
     </div>
     <div style="font-size:28px;font-weight:800;color:${dateOk?'#16a34a':'#dc2626'};line-height:1">${fP(tlDate)}<span style="font-size:14px;font-weight:600"> tỷ lệ</span></div>
-    <div style="font-size:12px;color:var(--t2);margin:4px 0">Ngưỡng 0.21% · T1→T5/2026</div>
+    <div style="font-size:12px;color:var(--t2);margin:4px 0">Ngưỡng 0.21% · T1→${CURR_M}/2026</div>
     <div style="font-size:12px;margin-top:6px">${dateOk
       ?`<span style="color:#16a34a">✅ Dưới ngưỡng, EBIT được bảo vệ</span>`
       :`<span style="color:#dc2626">🔴 Vượt ngưỡng +${((tlDate-NGUONG_DATE)*100).toFixed(2)}pp → ~${fM(ebitDate)}₫/kỳ</span>`}</div>
@@ -594,7 +649,7 @@ function rDashboard(){
 </div>
 
 <!-- Đổi Date trend + Module grid -->
-<div class="g2" style="margin-bottom:16px;gap:12px;align-items:start">
+<div class="g2" style="margin-bottom:12px;gap:12px;align-items:start">
   <div class="chart-box" style="padding:14px 16px">
     <div class="chart-title" style="margin-bottom:10px">📈 Xu hướng tỷ lệ Đổi Date theo tháng (%)</div>
     <div class="chart-wrap" style="height:170px"><canvas id="c-dash-date"></canvas></div>
@@ -607,6 +662,108 @@ function rDashboard(){
         <div class="mc-lb" style="font-size:11px;margin-top:4px">${m.lb}</div>
       </div>`).join('')}
     </div>
+  </div>
+</div>
+
+<!-- ══ PHÂN TÍCH TỔNG HỢP ══ -->
+<!-- Phần 1: Tóm tắt Điều hành -->
+<div class="card" style="margin-bottom:12px;border-left:4px solid #1a2558;padding:16px 20px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:6px">
+    <div style="font-size:13px;font-weight:700;color:#1a2558">📋 TÓM TẮT ĐIỀU HÀNH — LŨY KẾ T1→${CURR_M}/2026</div>
+    <span style="font-size:11px;color:var(--t3)">${DM.length} tháng · Tự động cập nhật khi đồng bộ Lark</span>
+  </div>
+  <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px">
+    ${sbArr.map(b=>`<li style="font-size:13px;line-height:1.6;color:${b.ok===null?'var(--t2)':b.ok?'#15803d':'#991b1b'}">${b.txt}</li>`).join('')}
+  </ul>
+</div>
+
+<!-- Phần 2: Phân tích chuyên sâu theo 3 mảng -->
+<div class="g3 g-sm1" style="margin-bottom:12px;gap:12px;align-items:start">
+  <!-- Mảng 1: QC & Dịch vụ -->
+  <div class="card" style="padding:16px">
+    <div style="font-size:12px;font-weight:700;color:#1a2558;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,.08)">🔍 QC & DỊCH VỤ — ${CURR_M}/2026</div>
+    <div style="font-size:12px;display:flex;flex-direction:column;gap:7px">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Điểm TB hệ thống</span><strong style="color:${qcOk?'#15803d':'#dc2626'}">${qcScore.toFixed(2)}% ${qcOk?'✅':'⚠️'}</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Thay đổi vs tháng trước</span><strong style="color:${qcDelta>=0?'#15803d':'#dc2626'}">${qcDelta>=0?'+':''}${qcDelta.toFixed(2)}pp</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">ST vi phạm / tổng</span><strong style="color:${qcSTLoi>3?'#dc2626':qcSTLoi>0?'#f97316':'#15803d'}">${qcSTLoi} / 23 ST</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">ST đạt 100%</span><strong style="color:#15803d">Nguyễn Tuân · T6 TC · Bạch Mai</strong></div>
+      <div style="margin-top:4px;padding:8px 10px;background:rgba(220,38,38,.05);border-radius:7px;font-size:11.5px;line-height:1.55">
+        <strong>Phân tích:</strong> Điểm tăng nhờ audit định kỳ phát huy hiệu quả. Tuy nhiên <strong>Hàng Bông</strong> (94→81%) và <strong>Hàm Nghi</strong> (92→84%) có dấu hiệu buông lỏng — cần kiểm tra đột xuất để tránh tái vi phạm.
+      </div>
+      <div style="padding:7px 10px;background:rgba(21,128,61,.05);border-radius:7px;font-size:11.5px">
+        <strong>🎯 Hành động:</strong> QC đột xuất Hàng Bông, Hàm Nghi, Thái Hà trước 10/T6. Yêu cầu SM cam kết cải thiện bằng văn bản.
+      </div>
+    </div>
+  </div>
+  <!-- Mảng 2: Đổi/Hủy Date -->
+  <div class="card" style="padding:16px">
+    <div style="font-size:12px;font-weight:700;color:#1a2558;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,.08)">📦 ĐỔI/HỦY DATE — YTD T1→${CURR_M}</div>
+    <div style="font-size:12px;display:flex;flex-direction:column;gap:7px">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Tỷ lệ YTD</span><strong style="color:${ytdOk?'#15803d':'#dc2626'}">${fP(tlDate)} ${ytdOk?'✅':'⚠️'}</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Tháng vượt ngưỡng</span><strong style="color:${mAbove.length>0?'#dc2626':'#15803d'}">${mAbove.length} / ${DM.length} tháng</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Tổng CP đổi code</span><strong>${fMil(totCPnet)}₫</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">ST vượt định mức</span><strong style="color:${alertStores.length>0?'#dc2626':'#15803d'}">${alertStores.length} ST ⚠️</strong></div>
+      ${alertStores.length>0?`<div style="font-size:11px;color:#dc2626;line-height:1.5">${alertStores.slice(0,4).map(s=>`${s.s}: ${fP(s.tl)}`).join(' · ')}</div>`:''}
+      <div style="margin-top:4px;padding:8px 10px;background:rgba(220,38,38,.05);border-radius:7px;font-size:11.5px;line-height:1.55">
+        <strong>Phân tích:</strong> ${mAbove.length===DM.length?`Toàn bộ ${DM.length} tháng vượt ngưỡng — đây là vấn đề hệ thống, không phải cá biệt. Cần rà soát FIFO toàn chuỗi và chất lượng hàng nhập từ NCC.`:`${mAbove.length} tháng vượt ngưỡng. Tháng đỉnh điểm ${DM[mTL.indexOf(Math.max(...mTL))]?.t||''} (${fP(Math.max(...mTL))}) — cần điều tra nguyên nhân cụ thể.`}
+      </div>
+      <div style="padding:7px 10px;background:rgba(220,38,38,.05);border-radius:7px;font-size:11.5px">
+        <strong>🎯 Hành động:</strong> Audit FIFO ${alertStores.slice(0,2).map(s=>s.s).join(', ')||'5 ST vượt ngưỡng cao nhất'} — yêu cầu báo cáo nguyên nhân trước 20/T6.
+      </div>
+    </div>
+  </div>
+  <!-- Mảng 3: Kiểm kê & Tồn kho -->
+  <div class="card" style="padding:16px">
+    <div style="font-size:12px;font-weight:700;color:#1a2558;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,.08)">📊 KIỂM KÊ & TỒN KHO — ${CURR_M}</div>
+    ${hasKD?`<div style="font-size:12px;display:flex;flex-direction:column;gap:7px">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Tổng ST kiểm kê</span><strong>${kkST}</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">ST có chênh lệch</span><strong style="color:${kkLoi>2?'#dc2626':'#15803d'}">${kkLoi}</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Tỷ lệ khớp</span><strong style="color:${parseFloat(kkPct)>=95?'#15803d':'#f97316'}">${kkPct}%</strong></div>
+    </div>`:`<div style="text-align:center;padding:16px 8px;color:var(--t3)">
+      <div style="font-size:32px;margin-bottom:8px">📂</div>
+      <div style="font-size:12px;margin-bottom:6px;color:var(--t2)">Chưa có dữ liệu kiểm kê ${CURR_M}</div>
+      <div style="font-size:11px;color:var(--t3);line-height:1.55;margin-bottom:10px">Import Excel KK để phân tích: tồn âm, bán nhầm mã, thất thoát theo ngành hàng.</div>
+      <div onclick="go('kk','Import Excel')" style="display:inline-block;padding:5px 14px;background:#1a2558;color:#fff;border-radius:6px;font-size:11px;cursor:pointer">→ Import Excel KK</div>
+    </div>`}
+    <div style="margin-top:10px;padding:8px 10px;background:rgba(26,37,88,.05);border-radius:7px;font-size:11.5px;color:var(--t2);line-height:1.55">
+      <strong style="color:var(--t1)">Lưu ý tương quan:</strong> Tồn âm và bán nhầm mã thường xuất hiện cùng với tỷ lệ đổi date cao — có thể chỉ báo thất thoát ẩn. Cần đối chiếu hai nguồn dữ liệu.
+    </div>
+  </div>
+</div>
+
+<!-- Phần 3: Bảng tổng hợp YTD -->
+<div class="card" style="margin-bottom:12px;padding:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:6px">
+    <div style="font-size:13px;font-weight:700;color:#1a2558">📊 BẢNG TỔNG HỢP YTD — Đổi/Hủy Date 2026</div>
+    <span style="font-size:11px;padding:3px 9px;border-radius:10px;background:${ytdOk?'#dcfce7':'#fee2e2'};color:${ytdOk?'#15803d':'#dc2626'};font-weight:700">${ytdOk?'✅ ĐẠT NGƯỠNG NĂM':'⚠️ VƯỢT NGƯỠNG NĂM'}</span>
+  </div>
+  <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <thead>
+        <tr style="background:rgba(26,37,88,.07)">
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid rgba(26,37,88,.18);color:#1a2558">Tháng</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid rgba(26,37,88,.18);color:#1a2558">Doanh thu</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid rgba(26,37,88,.18);color:#1a2558">CP đổi code</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid rgba(26,37,88,.18);color:#1a2558">Giá trị hủy</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:2px solid rgba(26,37,88,.18);color:#1a2558">Tỷ lệ thực</th>
+          <th style="padding:8px 10px;text-align:center;border-bottom:2px solid rgba(26,37,88,.18);color:#1a2558">Cảnh báo</th>
+        </tr>
+      </thead>
+      <tbody>${tblRows}</tbody>
+      <tfoot>${tblFoot}</tfoot>
+    </table>
+  </div>
+  <div style="margin-top:8px;font-size:11px;color:var(--t3)">Ngưỡng định mức: 0.21% doanh thu · Tự động mở rộng khi thêm tháng mới · CP đổi code = Giá vốn − Thu về</div>
+</div>
+
+<!-- Phần 4: Kế hoạch Hành động T6 -->
+<div class="card" style="padding:16px;margin-bottom:4px">
+  <div style="font-size:13px;font-weight:700;color:#1a2558;margin-bottom:12px">🎯 KẾ HOẠCH HÀNH ĐỘNG — Tháng 6/2026</div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    ${apItems.map(a=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 13px;background:${a.p===1?'rgba(220,38,38,.05)':a.p===2?'rgba(234,88,12,.04)':'rgba(234,179,8,.04)'};border-radius:8px;border-left:3px solid ${a.p===1?'#dc2626':a.p===2?'#f97316':'#ca8a04'}">
+      <span style="font-size:15px;flex-shrink:0;margin-top:1px">${a.icon}</span>
+      <div style="font-size:12.5px;line-height:1.6">${a.txt}</div>
+    </div>`).join('')}
   </div>
 </div>`;
 }
