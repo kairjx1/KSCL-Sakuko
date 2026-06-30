@@ -782,17 +782,16 @@ function parseLarkDate(raw){
 async function syncLarkDate(btn){
   if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang đồng bộ...';}
   try{
-    const r=await fetch('/api/lark-date',{cache:'no-store'});
-    let d;try{d=await r.json();}catch(e){throw new Error('HTTP '+r.status+' (không đọc được response)');}
-    if(!r.ok||!d.ok)throw new Error(d?.error||('HTTP '+r.status));
-    if(!d.ok)throw new Error(d.error||'Lỗi API');
-    const parsed=parseLarkDate(d);
-    if(!parsed.monthly.length)throw new Error('Không đọc được dữ liệu tháng từ Lark');
-    const cache={...parsed,ts:Date.now()};
+    const url='https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/date-cache.json';
+    const r=await fetch(url+'?t='+Date.now());
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    if(!d.monthly?.length)throw new Error('File cache trống hoặc sai định dạng');
+    const cache={monthly:d.monthly,stores:d.stores,ts:d.ts||Date.now()};
     localStorage.setItem('lark_date_cache',JSON.stringify(cache));
     S.dateCache=cache;
     go(S.page,S.tab);
-    toast('Đồng bộ Lark thành công ✅','t-ok');
+    toast('Đồng bộ thành công ✅','t-ok');
   }catch(e){
     toast('Lỗi đồng bộ: '+e.message,'t-err');
   }finally{
