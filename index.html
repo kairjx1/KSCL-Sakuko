@@ -1604,9 +1604,11 @@ ${hasQD?`
       </div>
       <button onclick="qcDataLoad()" class="btn b-out b-sm">⬇️ Tải dữ liệu</button>
       <button onclick="qcDataSave(this)" class="btn b-pri b-sm">💾 Lưu & Cập nhật</button>
+      <button onclick="toggleHistPanel('qc')" class="btn b-out b-sm" style="border-color:#6b7280;color:#6b7280">🕐 Lịch sử</button>
     </div>
   </div>
   <div id="qcd-saved" class="qcd-saved">✅ Đã lưu thành công! Dashboard sẽ tự cập nhật.</div>
+  <div id="hist-qc-panel" style="display:none;margin-top:10px;padding:12px;background:rgba(0,0,0,.03);border-radius:8px;border:1px solid rgba(0,0,0,.08)"></div>
 </div>
 
 <div style="margin-bottom:12px">
@@ -1770,9 +1772,11 @@ ${kpi('SKU tồn âm',kkTonAm.toLocaleString(),'+'+kkPctTangTA+'% vs T.trước 
       </div>
       <button onclick="kkDataLoad()" class="btn b-out b-sm">⬇️ Tải dữ liệu</button>
       <button onclick="kkDataSave(this)" class="btn b-pri b-sm">💾 Lưu & Cập nhật</button>
+      <button onclick="toggleHistPanel('kk')" class="btn b-out b-sm" style="border-color:#6b7280;color:#6b7280">🕐 Lịch sử</button>
     </div>
   </div>
   <div id="kkd-saved" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:10px 14px;margin-bottom:14px;color:#15803d;font-size:13px;font-weight:600">✅ Đã lưu thành công! Dashboard KK sẽ tự cập nhật.</div>
+  <div id="hist-kk-panel" style="display:none;margin-top:10px;padding:12px;background:rgba(0,0,0,.03);border-radius:8px;border:1px solid rgba(0,0,0,.08)"></div>
 </div>
 <div style="margin-bottom:12px">
   <div class="qcd-sec-hdr" onclick="qcToggleSec('kkd-s1')"><span>📦 I. Kết quả kiểm kê thực tế (Biên bản KK)</span><span id="kkd-s1-ico">▼</span></div>
@@ -2362,7 +2366,15 @@ function qcDataSave(btn){
   };
   const qcdb=getQCDB();if(!qcdb){alert('Không kết nối được Firebase!');return;}
   if(btn){btn.disabled=true;btn.textContent='⏳ Đang lưu...';}
-  qcdb.ref(`qc_data/${year}/${month}`).set(data).then(()=>{
+  const _qcMainRef=qcdb.ref(`qc_data/${year}/${month}`);
+  _qcMainRef.get().then(oldSnap=>{
+    const ops=[];
+    if(oldSnap.exists()){
+      const snap=oldSnap.val();
+      ops.push(qcdb.ref(`qc_history/${year}/${month}`).push({...snap,_snapshotAt:Date.now(),_by:S.profile?.name||S.user?.email||'?'}));
+    }
+    return Promise.all(ops).then(()=>_qcMainRef.set(data));
+  }).then(()=>{
     const saved=document.getElementById('qcd-saved');
     if(saved){saved.style.display='block';setTimeout(()=>saved.style.display='none',4000);}
     if(btn){btn.disabled=false;btn.textContent=btn.textContent.includes('tất cả')?'💾 Lưu tất cả & Cập nhật Dashboard':'💾 Lưu & Cập nhật';}
@@ -2430,7 +2442,15 @@ function kkDataSave(btn){
   };
   const kkdb=getKKDB();if(!kkdb){alert('Không kết nối được Firebase!');return;}
   if(btn){btn.disabled=true;btn.textContent='⏳ Đang lưu...';}
-  kkdb.ref('kk_data/'+year+'/'+month).set(data).then(()=>{
+  const _kkMainRef=kkdb.ref('kk_data/'+year+'/'+month);
+  _kkMainRef.get().then(oldSnap=>{
+    const ops=[];
+    if(oldSnap.exists()){
+      const snap=oldSnap.val();
+      ops.push(kkdb.ref('kk_history/'+year+'/'+month).push({...snap,_snapshotAt:Date.now(),_by:S.profile?.name||S.user?.email||'?'}));
+    }
+    return Promise.all(ops).then(()=>_kkMainRef.set(data));
+  }).then(()=>{
     S.kkExecData=data;S.kkExecMonth=String(month);S.kkExecYear=String(year);
     const saved=document.getElementById('kkd-saved');
     if(saved){saved.style.display='block';setTimeout(()=>saved.style.display='none',4000);}
@@ -2459,6 +2479,87 @@ function kkDataLoad(){
     const saved=document.getElementById('kkd-saved');
     if(saved){saved.textContent='✅ Đã tải dữ liệu KK thành công!';saved.style.display='block';setTimeout(()=>{saved.style.display='none';saved.textContent='✅ Đã lưu thành công! Dashboard KK sẽ tự cập nhật.';},3000);}
   }).catch(e=>alert('Lỗi tải KK: '+e.message));
+}
+function _fillQCForm(d){
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;};
+  if(d.s1_storeNames&&Array.isArray(d.s1_storeNames)&&d.s1_storeNames.length){qcStoreList=d.s1_storeNames;qcSaveStoreConfig();qcRenderStoreTable();}
+  set('s1-tongluot',d.s1_tongluot);set('s1-diemtb',d.s1_diemtb);set('s1-note',d.s1_note);
+  if(d.s1_stores)Object.values(d.s1_stores).forEach((v,i)=>{set(`s1-st${i}-prev`,v.prev!=null?v.prev:'');set(`s1-st${i}-curr`,v.curr!=null?v.curr:'');});
+  if(d.s1_loi)d.s1_loi.forEach((l,i)=>{set(`s1-loi${i+1}-ten`,l.ten);set(`s1-loi${i+1}-soST`,l.soST);});
+  set('s2-tongdon',d.s2_tongdon);set('s2-pct-khach',d.s2_pct_khach);set('s2-pct-st',d.s2_pct_st);set('s2-pct-khac',d.s2_pct_khac);set('s2-note',d.s2_note);
+  if(d.s2_topST)d.s2_topST.forEach((s,i)=>{set(`s2-top${i+1}-name`,s.name);set(`s2-top${i+1}-count`,s.count);});
+  set('s3-tongST',d.s3_tongST);set('s3-soSTLoi',d.s3_soSTLoi);
+  if(d.s3_soSTLoi>0){qcRenderSTLoi(d.s3_soSTLoi);setTimeout(()=>{if(d.s3_stLoi)d.s3_stLoi.forEach((s,i)=>{set(`s3-st${i}-name`,s.name);set(`s3-st${i}-loi`,s.loi);});},60);}
+  set('s3-note',d.s3_note);
+}
+function _fillKKForm(d){
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;};
+  set('kk-s1-doanhThu',d.s1_doanhThu);set('kk-s1-soBienBan',d.s1_soBienBan);
+  set('kk-s1-kkTong',d.s1_kkTong);set('kk-s1-kkDotXuat',d.s1_kkDotXuat);
+  set('kk-s1-tongTT',d.s1_tongThatthoat);set('kk-s1-thuHoi',d.s1_thuHoi);set('kk-s1-note',d.s1_note);
+  set('kk-s2-tongTonAm',d.s2_tongTonAm);set('kk-s2-tongTonAmPrev',d.s2_tongTonAmPrev);
+  set('kk-s2-banNhamMa',d.s2_banNhamMa);set('kk-s2-chuaGiaiTrinh',d.s2_chuaGiaiTrinh);
+  set('kk-s2-chuaGTprev',d.s2_chuaGiaiTrinhPrev);set('kk-s2-chuaNhanDon',d.s2_chuaNhanDon);
+  set('kk-s2-gtThua',d.s2_gtThua);set('kk-s2-gtThieu',d.s2_gtThieu);
+  set('kk-s2-soSTVuot',d.s2_soSTVuotNguong);set('kk-s2-note',d.s2_note);
+  if(d.s3_stores&&Array.isArray(d.s3_stores))d.s3_stores.forEach((s,i)=>{
+    const set2=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;};
+    set2('kk-s3-st'+i+'-name',s.st);set2('kk-s3-st'+i+'-thatthoat',s.thatthoat);
+    set2('kk-s3-st'+i+'-ratio',s.ratio);set2('kk-s3-st'+i+'-tonAmSKU',s.tonAmSKU);set2('kk-s3-st'+i+'-note',s.note);
+  });
+  set('kk-s3-note',d.s3_note);
+  kkCalcKK();kkCalcTonAm();kkCalcEbit();
+}
+function toggleHistPanel(type){
+  const panel=document.getElementById('hist-'+type+'-panel');
+  if(!panel)return;
+  if(panel.style.display!=='none'&&panel.style.display!==''){panel.style.display='none';return;}
+  const m=document.getElementById(type==='qc'?'qc-month':'kk-month')?.value;
+  const y=document.getElementById(type==='qc'?'qc-year':'kk-year')?.value;
+  if(!m||!y){alert('Chọn tháng/năm trước!');return;}
+  panel.style.display='block';
+  panel.innerHTML='<div style="padding:10px;text-align:center;color:var(--t3);font-size:12px">⏳ Đang tải lịch sử...</div>';
+  const refdb=type==='qc'?getQCDB():getKKDB();
+  if(!refdb){panel.innerHTML='<div style="padding:10px;color:#dc2626;font-size:12px">Không kết nối được Firebase</div>';return;}
+  const histPath=type==='qc'?`qc_history/${y}/${m}`:`kk_history/${y}/${m}`;
+  refdb.ref(histPath).orderByKey().limitToLast(10).get().then(snap=>{
+    if(!snap.exists()){panel.innerHTML='<div style="padding:10px;color:var(--t3);font-size:12px;text-align:center">Chưa có lịch sử lưu cho tháng '+m+'/'+y+'.<br>Lịch sử sẽ được ghi tự động từ lần lưu tiếp theo.</div>';return;}
+    const rows=[];
+    snap.forEach(child=>{
+      const d=child.val(),k=child.key;
+      const ts=d._snapshotAt||parseInt(k)||0;
+      const dt=ts?new Date(ts).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'N/A';
+      const by=d._by||'N/A';
+      const savedAt=d.savedAt?new Date(d.savedAt).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+      rows.unshift(`<tr style="border-bottom:1px solid rgba(0,0,0,.06)">
+        <td style="padding:7px 10px;font-size:12px"><span style="font-weight:600">${dt}</span>${savedAt?`<br><span style="font-size:11px;color:var(--t3)">Dữ liệu tháng: ${savedAt}</span>`:''}</td>
+        <td style="padding:7px 10px;font-size:12px;color:var(--t2)">${by}</td>
+        <td style="padding:7px 10px;text-align:center"><button onclick="restoreHistory('${type}','${y}','${m}','${k}')" style="padding:4px 12px;font-size:11.5px;border:1px solid #1a2558;color:#1a2558;background:#fff;border-radius:6px;cursor:pointer;white-space:nowrap">↩ Khôi phục</button></td>
+      </tr>`);
+    });
+    panel.innerHTML=`<div style="font-size:11px;color:var(--t3);padding:6px 10px;background:rgba(234,179,8,.08);border-radius:5px;margin-bottom:8px">⚠️ Khôi phục chỉ điền lại form — dữ liệu <strong>chưa được ghi đè</strong> cho đến khi bạn bấm Lưu.</div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:rgba(0,0,0,.04)">
+        <th style="padding:7px 10px;text-align:left;font-size:11px;color:var(--t2);font-weight:600">Thời điểm snapshot</th>
+        <th style="padding:7px 10px;text-align:left;font-size:11px;color:var(--t2);font-weight:600">Người lưu</th>
+        <th style="padding:7px 10px;font-size:11px;color:var(--t2);font-weight:600">Thao tác</th>
+      </tr></thead>
+      <tbody>${rows.join('')}</tbody>
+    </table>`;
+  }).catch(e=>{panel.innerHTML=`<div style="padding:10px;color:#dc2626;font-size:12px">Lỗi tải lịch sử: ${e.message}</div>`;});
+}
+function restoreHistory(type,y,m,key){
+  if(!confirm('Khôi phục bản này vào form? Dữ liệu hiện tại trên form sẽ bị thay thế (chưa lưu).'))return;
+  const refdb=type==='qc'?getQCDB():getKKDB();if(!refdb)return;
+  const histPath=type==='qc'?`qc_history/${y}/${m}/${key}`:`kk_history/${y}/${m}/${key}`;
+  refdb.ref(histPath).get().then(snap=>{
+    if(!snap.exists()){alert('Không tìm thấy bản lưu này.');return;}
+    const d=snap.val();
+    if(type==='qc')_fillQCForm(d);
+    else _fillKKForm(d);
+    const ts=d._snapshotAt?new Date(d._snapshotAt).toLocaleString('vi-VN'):'N/A';
+    toast('✅ Đã khôi phục bản lưu lúc '+ts+' — kiểm tra lại rồi bấm Lưu nếu muốn ghi đè.','t-ok');
+  }).catch(e=>alert('Lỗi khôi phục: '+e.message));
 }
 function kkCalcKK(){
   const tt=parseFloat(document.getElementById('kk-s1-tongTT')?.value)||0;
