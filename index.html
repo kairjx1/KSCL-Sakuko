@@ -511,25 +511,103 @@ function rMain(){
 function rDashboard(){
   const acc=MODS.filter(m=>m.id!=='dashboard'&&canAccess(m.id));
   const now=new Date().toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
+  // ── Đổi Date data ──
+  if(!S.dateCache){try{S.dateCache=JSON.parse(localStorage.getItem('lark_date_cache')||'null');}catch(e){}}
+  const DC=S.dateCache;
+  const DM=DC?.monthly?.length?DC.monthly:[
+    {t:'T01',dt:28381886851,gv:254575167,tv:141209700,huy:913000,cp:113365467,dinhmuc:59601962,conlai:0},
+    {t:'T02',dt:27166945070,gv:305335244,tv:175740700,huy:13973000,cp:129594544,dinhmuc:57050584,conlai:0},
+    {t:'T03',dt:21089532535,gv:270817077,tv:210663800,huy:56046000,cp:60153277,dinhmuc:44288018,conlai:0},
+    {t:'T04',dt:19107191653,gv:433003826,tv:295402950,huy:20985000,cp:137600876,dinhmuc:40125102,conlai:0},
+    {t:'T05',dt:17621137715,gv:497596584,tv:342066250,huy:22713000,cp:155530334,dinhmuc:37004389,conlai:266052255},
+  ];
+  const DS=DC?.stores?.length?DC.stores:[];
+  const totDT=DM.reduce((a,r)=>a+r.dt,0);
+  const totCP=DM.reduce((a,r)=>a+(r.gv-r.tv),0);
+  const tonDG=DM[DM.length-1].conlai||0;
+  const tlDate=(totCP-tonDG)/totDT;
+  const NGUONG_DATE=0.0021;
+  const ebitDate=(tlDate-NGUONG_DATE)*totDT;
+  const dateOk=tlDate<=NGUONG_DATE;
+  // ── QC data ──
+  const qd=S.qcExecData;
+  const hasQD=qd&&qd.s1_tongluot>0;
+  const qcScore=hasQD?qd.s3_diemTB||0:93.17;
+  const qcLast=hasQD?qd.s3_diemTBLast||0:89.74;
+  const qcDelta=qcScore-qcLast;
+  const qcOk=qcScore>=90;
+  const qcSTLoi=hasQD?qd.s3_soSTLoi:4;
+  // ── KK data ──
+  const kd=S.kkExecData;
+  const hasKD=kd&&kd.tongST>0;
+  const kkST=hasKD?kd.tongST:23;
+  const kkLoi=hasKD?kd.soSTLoi||0:'—';
+  const kkPct=hasKD?((kkST-(kd.soSTLoi||0))/kkST*100).toFixed(1):'—';
+  const kkOk=hasKD?kd.soSTLoi<=2:null;
+  const fM=n=>(n/1e6).toFixed(1)+'M';
+  const fP=n=>(n*100).toFixed(2)+'%';
+  // ── EBIT tổng ──
+  const NGUONG_QC=90;
+  const tlLabel=t=>`<span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:9px;background:${t?'#dcfce7':'#fee2e2'};color:${t?'#15803d':'#dc2626'}">${t?'✅ Đạt':'⚠️ Cần cải thiện'}</span>`;
   return`
-<div class="sec-hdr"><div><h1>Tổng quan hệ thống</h1><p style="color:var(--t2);font-size:13px">${now}</p></div></div>
-<div class="g4" style="margin-bottom:18px">
-  ${kpi('Lỗi QC hôm nay','0','ca','#dc2626','kpi-error','')}
-  ${kpi('Đợt kiểm kê T.này','0','đợt','#0066cc','kpi-kk','')}
-  ${kpi('Tỉ lệ đạt chuẩn','—','%','#16a34a','kpi-check','')}
-  ${kpi('Nhân viên QC','—','người','#7c3aed','kpi-users','')}
+<div class="sec-hdr" style="margin-bottom:14px">
+  <div><h1>${skIcn('dashboard',26,26)} Tổng quan EBIT — Phòng KSCL</h1><p style="color:var(--t2);font-size:13px">${now}</p></div>
 </div>
-<div class="alert a-info" style="margin-bottom:18px"><span class="a-ic">💡</span><div class="a-bd"><strong>Bắt đầu sử dụng hệ thống</strong><p>Import file Excel tại mục Kiểm kê hoặc QC để dữ liệu tự động điền vào biểu đồ và kích hoạt cảnh báo ngưỡng.</p></div></div>
-<div style="font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Phân hệ & Ứng dụng</div>
-<div class="mod-grid" style="margin-bottom:20px">
-  ${acc.map(m=>`<div class="mc" onclick="go('${m.id}')" style="--mc:${m.color}">
-    <div class="mc-ic" style="background:${m.bg}">${m.sic?skIcn(m.sic,48,48):m.ic}</div>
-    <div class="mc-lb">${m.lb}</div><div class="mc-ds">${m.ds}</div>
-  </div>`).join('')}
+
+<!-- 3 trụ cột EBIT -->
+<div class="g3 g-sm1" style="margin-bottom:16px;gap:12px">
+  <!-- QC -->
+  <div class="card" onclick="go('baocao','Executive QC')" style="cursor:pointer;padding:16px;border-left:4px solid ${qcOk?'#16a34a':'#dc2626'};transition:box-shadow .15s" onmouseenter="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseleave="this.style.boxShadow=''">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+      <span style="font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.5px">Kiểm soát CL (QC)</span>
+      ${tlLabel(qcOk)}
+    </div>
+    <div style="font-size:28px;font-weight:800;color:${qcOk?'#16a34a':'#dc2626'};line-height:1">${qcScore.toFixed(2)}<span style="font-size:14px;font-weight:600">%</span></div>
+    <div style="font-size:12px;color:var(--t2);margin:4px 0">Điểm TB T5 · 23 siêu thị</div>
+    <div style="font-size:12px;margin-top:6px">${qcDelta>=0?`<span style="color:#16a34a">↑ +${qcDelta.toFixed(2)}pp vs T4</span>`:`<span style="color:#dc2626">↓ ${qcDelta.toFixed(2)}pp vs T4</span>`} · <span style="color:${qcSTLoi>3?'#dc2626':'var(--t2)'}">⚠️ ${qcSTLoi} ST lỗi</span></div>
+    <div style="margin-top:8px;height:4px;border-radius:2px;background:rgba(0,0,0,.07)"><div style="height:100%;width:${Math.min(qcScore,100)}%;border-radius:2px;background:${qcOk?'#16a34a':'#f97316'}"></div></div>
+  </div>
+  <!-- Đổi Date -->
+  <div class="card" onclick="go('baocao','Đổi Date')" style="cursor:pointer;padding:16px;border-left:4px solid ${dateOk?'#16a34a':'#dc2626'};transition:box-shadow .15s" onmouseenter="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseleave="this.style.boxShadow=''">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+      <span style="font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.5px">Đổi Date / Hủy Date</span>
+      ${tlLabel(dateOk)}
+    </div>
+    <div style="font-size:28px;font-weight:800;color:${dateOk?'#16a34a':'#dc2626'};line-height:1">${fP(tlDate)}<span style="font-size:14px;font-weight:600"> tỷ lệ</span></div>
+    <div style="font-size:12px;color:var(--t2);margin:4px 0">Ngưỡng 0.21% · T1→T5/2026</div>
+    <div style="font-size:12px;margin-top:6px">${dateOk
+      ?`<span style="color:#16a34a">✅ Dưới ngưỡng, EBIT được bảo vệ</span>`
+      :`<span style="color:#dc2626">🔴 Vượt ngưỡng +${((tlDate-NGUONG_DATE)*100).toFixed(2)}pp → ~${fM(ebitDate)}₫/kỳ</span>`}</div>
+    <div style="margin-top:8px;height:4px;border-radius:2px;background:rgba(0,0,0,.07)"><div style="height:100%;width:${Math.min(tlDate/0.005*100,100)}%;border-radius:2px;background:${dateOk?'#16a34a':'#dc2626'}"></div></div>
+  </div>
+  <!-- KK -->
+  <div class="card" onclick="go('baocao','Exec. KK')" style="cursor:pointer;padding:16px;border-left:4px solid ${kkOk===null?'#6b7280':kkOk?'#16a34a':'#f97316'};transition:box-shadow .15s" onmouseenter="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseleave="this.style.boxShadow=''">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+      <span style="font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.5px">Kiểm kê hàng hóa</span>
+      ${kkOk===null?'<span style="font-size:11px;color:var(--t3)">Chưa có data</span>':tlLabel(kkOk)}
+    </div>
+    <div style="font-size:28px;font-weight:800;color:${kkOk===null?'#6b7280':kkOk?'#16a34a':'#f97316'};line-height:1">${kkPct}<span style="font-size:14px;font-weight:600">${kkPct!=='—'?'%':''}</span></div>
+    <div style="font-size:12px;color:var(--t2);margin:4px 0">ST đạt / ${kkST} siêu thị</div>
+    <div style="font-size:12px;margin-top:6px;color:var(--t2)">${hasKD?`${kkLoi} ST cần xử lý chênh lệch`:'Import Excel KK để xem số liệu'}</div>
+    <div style="margin-top:8px;height:4px;border-radius:2px;background:rgba(0,0,0,.07)"><div style="height:100%;width:${kkPct!=='—'?kkPct:0}%;border-radius:2px;background:${kkOk===null?'#d1d5db':kkOk?'#16a34a':'#f97316'}"></div></div>
+  </div>
 </div>
-<div class="g2">
-  <div class="chart-box"><div class="chart-title">📈 Xu hướng lỗi QC 6 tháng gần nhất</div><div class="chart-wrap"><canvas id="c-dash-trend"></canvas></div></div>
-  <div class="chart-box"><div class="chart-title">🥧 Phân loại lỗi QC</div><div class="chart-wrap"><canvas id="c-dash-pie"></canvas></div></div>
+
+<!-- Đổi Date trend + Module grid -->
+<div class="g2" style="margin-bottom:16px;gap:12px;align-items:start">
+  <div class="chart-box" style="padding:14px 16px">
+    <div class="chart-title" style="margin-bottom:10px">📈 Xu hướng tỷ lệ Đổi Date theo tháng (%)</div>
+    <div class="chart-wrap" style="height:170px"><canvas id="c-dash-date"></canvas></div>
+  </div>
+  <div>
+    <div style="font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Phân hệ & Ứng dụng</div>
+    <div class="mod-grid" style="grid-template-columns:repeat(4,1fr);gap:8px">
+      ${acc.map(m=>`<div class="mc" onclick="go('${m.id}')" style="--mc:${m.color};padding:10px 8px">
+        <div class="mc-ic" style="background:${m.bg};width:36px;height:36px">${m.sic?skIcn(m.sic,30,30):m.ic}</div>
+        <div class="mc-lb" style="font-size:11px;margin-top:4px">${m.lb}</div>
+      </div>`).join('')}
+    </div>
+  </div>
 </div>`;
 }
 
@@ -2277,9 +2355,21 @@ Phòng Kiểm soát Chất lượng – Sakuko Vietnam`;
 function afterRender(){
   loadUsers(); loadNS();
   const T6=TH.slice(0,6);
-  // Dashboard
-  mkC('c-dash-trend','line',T6,[{label:'Lỗi QC',data:[...Z6],borderColor:CC[2],bg:CC[2]+'22'},{label:'KK chênh lệch',data:[...Z6],borderColor:CC[3],bg:CC[3]+'22'}]);
-  mkC('c-dash-pie','doughnut',['Ngoại quan','Trọng lượng','Bao bì','Vi sinh','Khác'],[{data:[0,0,0,0,0],bg:CC}]);
+  // Dashboard — Đổi Date trend chart
+  if(document.getElementById('c-dash-date')){
+    const _dc=S.dateCache;
+    const _dm=_dc?.monthly?.length?_dc.monthly:[
+      {t:'T01',dt:28381886851,gv:254575167,tv:141209700},{t:'T02',dt:27166945070,gv:305335244,tv:175740700},
+      {t:'T03',dt:21089532535,gv:270817077,tv:210663800},{t:'T04',dt:19107191653,gv:433003826,tv:295402950},
+      {t:'T05',dt:17621137715,gv:497596584,tv:342066250},
+    ];
+    const _lbs=_dm.map(r=>r.t);
+    const _tl=_dm.map(r=>r.dt>0?+((r.gv-r.tv)/r.dt*100).toFixed(3):0);
+    mkC('c-dash-date','line',_lbs,[
+      {label:'Tỷ lệ thực (%)',data:_tl,borderColor:'#e91e7b',bg:'rgba(233,30,123,.12)',fill:true,tension:.35,pointRadius:5,pointHoverRadius:7},
+      {label:'Ngưỡng 0.21%',data:_dm.map(()=>0.21),borderColor:'#1a2558',bg:'transparent',borderDash:[5,3],pointRadius:0},
+    ],{plugins:{legend:{labels:{font:{size:11}}},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}%`}}},scales:{y:{ticks:{callback:v=>v+'%'}}}});
+  }
   // KK
   mkC('c-kk-bar','bar',T6,[{label:'Đợt KK',data:[...Z6],bg:CC[1]}]);
   mkC('c-kk-line','line',T6,[{label:'Tỉ lệ khớp (%)',data:[...Z6],noFill:true}]);
