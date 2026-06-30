@@ -71,7 +71,7 @@ input:focus,select:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(0,102
 .sb-it{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;border-left:3px solid transparent;color:var(--sb-t);font-size:13.5px;transition:.15s}
 .sb-it:hover{background:var(--sb-h);color:#fff}
 .sb-it.active{background:var(--sb-h);color:#fff;border-left-color:var(--pri)}
-.sb-ic{font-size:17px;width:28px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-ic{font-size:17px;width:28px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.sb-ic svg{filter:brightness(0) invert(1);opacity:.72}.sb-it.active .sb-ic svg,.sb-it:hover .sb-ic svg{opacity:1}
 .sb-bot{margin-top:auto;border-top:1px solid rgba(255,255,255,.07);padding:6px 0}
 
 /* MAIN */
@@ -492,7 +492,7 @@ function buildSB(){
     if(!items.length)return'';
     return`<div class="sb-g"><div class="sb-gl">${g.lb}</div>${items.map(id=>{
       const m=MODS.find(x=>x.id===id);
-      return`<div class="sb-it${S.page===id?' active':''}" onclick="go('${id}')"><span class="sb-ic">${m.ic}</span>${m.lb}</div>`;
+      return`<div class="sb-it${S.page===id?' active':''}" onclick="go('${id}')"><span class="sb-ic">${m.sic?skIcn(m.sic,22,22):m.ic}</span>${m.lb}</div>`;
     }).join('')}</div>`;
   }).join('');
 }
