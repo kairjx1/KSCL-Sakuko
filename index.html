@@ -71,7 +71,7 @@ input:focus,select:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(0,102
 .sb-it{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;border-left:3px solid transparent;color:var(--sb-t);font-size:13.5px;transition:.15s}
 .sb-it:hover{background:var(--sb-h);color:#fff}
 .sb-it.active{background:var(--sb-h);color:#fff;border-left-color:var(--pri)}
-.sb-ic{font-size:17px;width:22px;text-align:center;flex-shrink:0}
+.sb-ic{font-size:17px;width:28px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .sb-bot{margin-top:auto;border-top:1px solid rgba(255,255,255,.07);padding:6px 0}
 
 /* MAIN */
@@ -107,13 +107,13 @@ input:focus,select:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(0,102
 .kpi-u{font-size:14px;font-weight:500;color:var(--t2);margin-left:3px}
 .kpi-tr{font-size:11px;margin-top:7px;display:flex;align-items:center;gap:3px}
 .tr-ok{color:var(--ok)}.tr-dn{color:var(--err)}
-.kpi-bg{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:38px;opacity:.12}
+.kpi-bg{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:38px;opacity:.14;display:flex;align-items:center;line-height:1}
 
 /* MODULE GRID */
 .mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px}
 .mc{background:#fff;border-radius:12px;padding:22px 14px;text-align:center;cursor:pointer;transition:.2s;box-shadow:var(--sh);border:2px solid transparent}
 .mc:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(0,0,0,.13)}
-.mc-ic{width:58px;height:58px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px}
+.mc-ic{width:68px;height:68px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px;overflow:visible;position:relative;box-shadow:0 3px 12px rgba(26,37,88,.13)}
 .mc-lb{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:3px}
 .mc-ds{font-size:11px;color:var(--t2);line-height:1.4}
 
@@ -289,6 +289,38 @@ const FB={
   messagingSenderId:"341527530481",
   appId:"1:341527530481:web:084ac4e25294ba52f85250"
 };
+/* ══════════════════════════════════════════
+   SAKUKO SVG ICON SYSTEM — navy #1a2558 + sakura pink #e91e7b
+══════════════════════════════════════════ */
+const _SKS='<circle cx="41" cy="37" r="2.2" fill="#e91e7b"/><circle cx="44.8" cy="38.8" r="2.2" fill="#e91e7b"/><circle cx="43.4" cy="42.2" r="2.2" fill="#e91e7b"/><circle cx="38.6" cy="42.2" r="2.2" fill="#e91e7b"/><circle cx="37.2" cy="38.8" r="2.2" fill="#e91e7b"/><circle cx="41" cy="40" r="1.4" fill="#fff"/>';
+const SKICONS={
+  /* ── Module nav icons ── */
+  dashboard:'<path d="M7 23L24 9L41 23V42H30V31H18V42H7Z" fill="rgba(26,37,88,.1)" stroke="#1a2558" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>',
+  kk:'<rect x="6" y="22" width="22" height="20" rx="3" fill="rgba(26,37,88,.08)" stroke="#1a2558" stroke-width="2.5"/><path d="M12 32L16 36L23 27" stroke="#1a2558" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="33" cy="14" r="9" fill="rgba(26,37,88,.06)" stroke="#1a2558" stroke-width="2.5"/><line x1="39.4" y1="20.4" x2="45" y2="26" stroke="#1a2558" stroke-width="3" stroke-linecap="round"/>',
+  qc:'<path d="M24 5L40 11V24C40 34 32 42 24 45C16 42 8 34 8 24V11Z" fill="rgba(26,37,88,.1)" stroke="#1a2558" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 24L21 29L32 17" stroke="#1a2558" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  congviec:'<rect x="10" y="6" width="26" height="36" rx="3" fill="rgba(26,37,88,.08)" stroke="#1a2558" stroke-width="2.5"/><rect x="18" y="2" width="10" height="8" rx="2.5" fill="#1a2558"/><path d="M16 18L20 22L26 15" stroke="#1a2558" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="29" y1="19" x2="33" y2="19" stroke="#1a2558" stroke-width="2" stroke-linecap="round"/><path d="M16 26L20 30L26 23" stroke="#1a2558" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="29" y1="27" x2="33" y2="27" stroke="#1a2558" stroke-width="2" stroke-linecap="round"/>',
+  baocao:'<line x1="5" y1="43" x2="44" y2="43" stroke="#1a2558" stroke-width="2.5" stroke-linecap="round"/><rect x="7" y="27" width="9" height="16" rx="2" fill="#1a2558" opacity=".45"/><rect x="20" y="18" width="9" height="25" rx="2" fill="#1a2558" opacity=".65"/><rect x="32" y="10" width="8" height="33" rx="2" fill="#1a2558"/>',
+  daotao:'<path d="M24 11C16 7 6 9 6 9V38C6 38 16 36 24 40C32 36 42 38 42 38V9C42 9 32 7 24 11Z" fill="rgba(26,37,88,.08)" stroke="#1a2558" stroke-width="2.5" stroke-linejoin="round"/><line x1="24" y1="11" x2="24" y2="40" stroke="#1a2558" stroke-width="2" stroke-dasharray="3 2" stroke-linecap="round"/><path d="M10 16L20 14" stroke="#1a2558" stroke-width="2" stroke-linecap="round"/><path d="M10 22L20 20" stroke="#1a2558" stroke-width="2" stroke-linecap="round"/><path d="M28 15L38 17" stroke="#1a2558" stroke-width="2" stroke-linecap="round"/><path d="M28 21L38 23" stroke="#1a2558" stroke-width="2" stroke-linecap="round"/>',
+  nhansu:'<circle cx="17" cy="14" r="7" fill="rgba(26,37,88,.15)" stroke="#1a2558" stroke-width="2.5"/><path d="M4 40C4 31 10 27 17 27C24 27 30 31 30 40" fill="rgba(26,37,88,.08)" stroke="#1a2558" stroke-width="2.5" stroke-linecap="round"/><circle cx="34" cy="16" r="5" fill="rgba(26,37,88,.1)" stroke="#1a2558" stroke-width="2"/><path d="M27 40C28 35 30 32 34 32C38 32 40 36 42 40" fill="none" stroke="#1a2558" stroke-width="2" stroke-linecap="round"/>',
+  admin:'<circle cx="24" cy="24" r="7" fill="rgba(26,37,88,.12)" stroke="#1a2558" stroke-width="2.5"/><circle cx="24" cy="8.5" r="3.5" fill="#1a2558"/><circle cx="34.9" cy="13.1" r="3.5" fill="#1a2558"/><circle cx="39.5" cy="24" r="3.5" fill="#1a2558"/><circle cx="34.9" cy="34.9" r="3.5" fill="#1a2558"/><circle cx="24" cy="39.5" r="3.5" fill="#1a2558"/><circle cx="13.1" cy="34.9" r="3.5" fill="#1a2558"/><circle cx="8.5" cy="24" r="3.5" fill="#1a2558"/><circle cx="13.1" cy="13.1" r="3.5" fill="#1a2558"/>',
+  appkscl:'<rect x="5" y="9" width="38" height="26" rx="4" fill="rgba(26,37,88,.08)" stroke="#1a2558" stroke-width="2.5"/><line x1="17" y1="39" x2="31" y2="39" stroke="#1a2558" stroke-width="2.5" stroke-linecap="round"/><line x1="24" y1="35" x2="24" y2="39" stroke="#1a2558" stroke-width="2.5" stroke-linecap="round"/><polyline points="11,28 17,20 23,26 29,17 35,22" fill="none" stroke="#1a2558" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  /* ── KPI background icons (use currentColor for accent) ── */
+  'kpi-error':'<circle cx="24" cy="24" r="17" fill="currentColor" fill-opacity=".1" stroke="currentColor" stroke-width="2.5"/><path d="M17 17L31 31M31 17L17 31" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
+  'kpi-box':'<path d="M7 17L24 9L41 17V33L24 41L7 33Z" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><line x1="7" y1="17" x2="41" y2="17" stroke="currentColor" stroke-width="1.5" opacity=".5"/><line x1="24" y1="9" x2="24" y2="41" stroke="currentColor" stroke-width="1.5" opacity=".5"/>',
+  'kpi-check':'<circle cx="24" cy="24" r="17" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-width="2.5"/><path d="M14 24L21 31L34 16" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+  'kpi-users':'<circle cx="18" cy="17" r="7" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="2.5"/><path d="M5 42C5 33 11 29 18 29C25 29 31 33 31 42" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="33" cy="18" r="5" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-width="2"/><path d="M27 42C28 37 30 34 33 34C36 34 39 37 43 42" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  'kpi-chart':'<rect x="7" y="26" width="9" height="17" rx="2" fill="currentColor" fill-opacity=".5"/><rect x="20" y="18" width="9" height="25" rx="2" fill="currentColor" fill-opacity=".7"/><rect x="33" y="10" width="8" height="33" rx="2" fill="currentColor"/><line x1="5" y1="44" x2="44" y2="44" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>',
+  'kpi-warn':'<path d="M24 7L44 41H4Z" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><line x1="24" y1="21" x2="24" y2="31" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="24" cy="37" r="2.2" fill="currentColor"/>',
+  'kpi-search':'<circle cx="21" cy="21" r="12" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-width="2.5"/><line x1="30" y1="30" x2="43" y2="43" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>',
+  'kpi-kk':'<rect x="5" y="22" width="20" height="20" rx="2" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-width="2.5"/><path d="M10 32L14 36L21 27" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="33" cy="14" r="9" fill="currentColor" fill-opacity=".06" stroke="currentColor" stroke-width="2.5"/><line x1="39.4" y1="20.4" x2="44" y2="26" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
+};
+function skIcn(n,w=48,h=48,col=''){
+  const p=SKICONS[n];if(!p)return'';
+  const kpi=n.startsWith('kpi-');
+  const sa=(!kpi&&w>=36)?_SKS:'';
+  const colorAttr=col?` style="color:${col}"`:' style="color:#1a2558"';
+  return`<svg width="${w}" height="${h}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"${colorAttr}>${p}${sa}</svg>`;
+}
 const ADMIN_EMAILS=["kairjx1@gmail.com"];
 
 /* ══════════════════════════════════════════
@@ -307,15 +339,15 @@ const ROLES={
    MODULES
 ══════════════════════════════════════════ */
 const MODS=[
-  {id:'dashboard',ic:'🏠',lb:'Tổng quan',  color:'#0066cc',bg:'#e8f2ff',ds:'KPI & tổng hợp'},
-  {id:'kk',       ic:'📦',lb:'Kiểm kê',    color:'#16a34a',bg:'#dcfce7',ds:'Kiểm kê hàng hóa'},
-  {id:'qc',       ic:'🔬',lb:'Kiểm soát CL',color:'#0284c7',bg:'#e0f2fe',ds:'Quality Control'},
-  {id:'congviec', ic:'✅',lb:'Công việc',  color:'#ea580c',bg:'#fff7ed',ds:'Task & Checklist'},
-  {id:'baocao',   ic:'📊',lb:'Báo cáo',    color:'#7c3aed',bg:'#f5f3ff',ds:'Phân tích & KPI'},
-  {id:'daotao',   ic:'📚',lb:'Đào tạo',    color:'#0d9488',bg:'#ccfbf1',ds:'Học liệu nội bộ'},
-  {id:'nhansu',   ic:'👥',lb:'Nhân sự QC', color:'#db2777',bg:'#fce7f3',ds:'Quản lý nhân viên'},
-  {id:'admin',    ic:'⚙️',lb:'Quản trị',   color:'#475569',bg:'#f1f5f9',ds:'Cài đặt & phân quyền'},
-  {id:'appkscl',  ic:'🔧',lb:'APP KSCL',   color:'#1e3a5f',bg:'#e8f2ff',ds:'Công cụ xử lý dữ liệu'},
+  {id:'dashboard',ic:'🏠',sic:'dashboard',lb:'Tổng quan',  color:'#0066cc',bg:'#e8f2ff',ds:'KPI & tổng hợp'},
+  {id:'kk',       ic:'📦',sic:'kk',       lb:'Kiểm kê',    color:'#16a34a',bg:'#dcfce7',ds:'Kiểm kê hàng hóa'},
+  {id:'qc',       ic:'🔬',sic:'qc',       lb:'Kiểm soát CL',color:'#0284c7',bg:'#e0f2fe',ds:'Quality Control'},
+  {id:'congviec', ic:'✅',sic:'congviec', lb:'Công việc',  color:'#ea580c',bg:'#fff7ed',ds:'Task & Checklist'},
+  {id:'baocao',   ic:'📊',sic:'baocao',   lb:'Báo cáo',    color:'#7c3aed',bg:'#f5f3ff',ds:'Phân tích & KPI'},
+  {id:'daotao',   ic:'📚',sic:'daotao',   lb:'Đào tạo',    color:'#0d9488',bg:'#ccfbf1',ds:'Học liệu nội bộ'},
+  {id:'nhansu',   ic:'👥',sic:'nhansu',   lb:'Nhân sự QC', color:'#db2777',bg:'#fce7f3',ds:'Quản lý nhân viên'},
+  {id:'admin',    ic:'⚙️',sic:'admin',    lb:'Quản trị',   color:'#475569',bg:'#f1f5f9',ds:'Cài đặt & phân quyền'},
+  {id:'appkscl',  ic:'🔧',sic:'appkscl',  lb:'APP KSCL',   color:'#1e3a5f',bg:'#e8f2ff',ds:'Công cụ xử lý dữ liệu'},
 ];
 
 /* ══════════════════════════════════════════
@@ -479,16 +511,16 @@ function rDashboard(){
   return`
 <div class="sec-hdr"><div><h1>Tổng quan hệ thống</h1><p style="color:var(--t2);font-size:13px">${now}</p></div></div>
 <div class="g4" style="margin-bottom:18px">
-  ${kpi('Lỗi QC hôm nay','0','ca','#dc2626','❌','')}
-  ${kpi('Đợt kiểm kê T.này','0','đợt','#0066cc','📦','')}
-  ${kpi('Tỉ lệ đạt chuẩn','—','%','#16a34a','✅','')}
-  ${kpi('Nhân viên QC','—','người','#7c3aed','👥','')}
+  ${kpi('Lỗi QC hôm nay','0','ca','#dc2626','kpi-error','')}
+  ${kpi('Đợt kiểm kê T.này','0','đợt','#0066cc','kpi-kk','')}
+  ${kpi('Tỉ lệ đạt chuẩn','—','%','#16a34a','kpi-check','')}
+  ${kpi('Nhân viên QC','—','người','#7c3aed','kpi-users','')}
 </div>
 <div class="alert a-info" style="margin-bottom:18px"><span class="a-ic">💡</span><div class="a-bd"><strong>Bắt đầu sử dụng hệ thống</strong><p>Import file Excel tại mục Kiểm kê hoặc QC để dữ liệu tự động điền vào biểu đồ và kích hoạt cảnh báo ngưỡng.</p></div></div>
 <div style="font-size:12px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Phân hệ & Ứng dụng</div>
 <div class="mod-grid" style="margin-bottom:20px">
   ${acc.map(m=>`<div class="mc" onclick="go('${m.id}')" style="--mc:${m.color}">
-    <div class="mc-ic" style="background:${m.bg}">${m.ic}</div>
+    <div class="mc-ic" style="background:${m.bg}">${m.sic?skIcn(m.sic,48,48):m.ic}</div>
     <div class="mc-lb">${m.lb}</div><div class="mc-ds">${m.ds}</div>
   </div>`).join('')}
 </div>
@@ -499,11 +531,14 @@ function rDashboard(){
 }
 
 function kpi(lb,val,unit,color,ic,trend){
+  const bgEl=ic&&ic.startsWith('kpi-')
+    ?`<div class="kpi-bg">${skIcn(ic,56,56,color)}</div>`
+    :`<div class="kpi-bg">${ic}</div>`;
   return`<div class="kpi" style="color:${color}">
     <div class="kpi-lb">${lb}</div>
     <div class="kpi-v">${val}<span class="kpi-u">${unit}</span></div>
     ${trend?`<div class="kpi-tr tr-ok">↑ ${trend}</div>`:'<div class="kpi-tr" style="color:var(--t3);font-size:11px">Chưa có dữ liệu</div>'}
-    <div class="kpi-bg">${ic}</div>
+    ${bgEl}
   </div>`;
 }
 
@@ -527,10 +562,10 @@ ${t==='Tổng quan'?rKKOv():t==='Biểu đồ'?rKKChart():t==='Danh sách'?rKKLi
 }
 function rKKOv(){return`
 <div class="g4" style="margin-bottom:18px">
-  ${kpi('Đợt KK tháng này','0','đợt','#16a34a','📦','')}
-  ${kpi('SKU đã kiểm','0','SKU','#0284c7','📋','')}
-  ${kpi('Chênh lệch','0','SKU','#ea580c','⚠️','')}
-  ${kpi('Tỉ lệ khớp kho','—','%','#7c3aed','✅','')}
+  ${kpi('Đợt KK tháng này','0','đợt','#16a34a','kpi-kk','')}
+  ${kpi('SKU đã kiểm','0','SKU','#0284c7','kpi-search','')}
+  ${kpi('Chênh lệch','0','SKU','#ea580c','kpi-warn','')}
+  ${kpi('Tỉ lệ khớp kho','—','%','#7c3aed','kpi-check','')}
 </div>
 <div class="g2">
   <div class="card">
