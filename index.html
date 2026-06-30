@@ -762,16 +762,58 @@ function completeCa(dept){
 /* ══════════════════════════════════════════
    BÁO CÁO
 ══════════════════════════════════════════ */
+/* ── LARK SYNC helpers ── */
+function _num(f){if(f===null||f===undefined)return 0;if(typeof f==='number')return f;if(f&&Array.isArray(f.value))return f.value[0]||0;return 0;}
+function _txt(f){if(!f)return '';if(typeof f==='string')return f;if(Array.isArray(f)&&f[0])return f[0].text!=null?f[0].text:String(f[0]);return '';}
+function parseLarkDate(raw){
+  const monthly=(raw.monthly||[]).map(f=>({
+    t:'T'+(('00'+_txt(f['Tháng']||f['Month']||'')).slice(-2)),
+    dt:_num(f['Doanh thu']),gv:_num(f['Giá vốn']),tv:_num(f['Thu về']),
+    huy:_num(f['Hủy']),cp:_num(f['Chi phí đổi code']),
+    dinhmuc:_num(f['Định mức tối đa']),conlai:_num(f['Còn lại theo mã DG']),
+  })).filter(r=>r.dt>0).sort((a,b)=>a.t>b.t?1:-1);
+  const stores=(raw.stores||[]).map(f=>({
+    s:_txt(f['ST']).replace(/^[^\s]+\s/,'').trim(),m:_txt(f['Mã kho']),
+    dt:_num(f['Doanh thu']),cp:_num(f['Chi phí đổi code']),
+    tl:_num(f['Tỷ lệ đổi code/DT']),cb:f['Cảnh báo(0.21%)']?1:0,
+  })).filter(s=>s.s&&s.dt>0);
+  return{monthly,stores};
+}
+async function syncLarkDate(btn){
+  if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang đồng bộ...';}
+  try{
+    const r=await fetch('/api/lark-date',{cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    if(!d.ok)throw new Error(d.error||'Lỗi API');
+    const parsed=parseLarkDate(d);
+    if(!parsed.monthly.length)throw new Error('Không đọc được dữ liệu tháng từ Lark');
+    const cache={...parsed,ts:Date.now()};
+    localStorage.setItem('lark_date_cache',JSON.stringify(cache));
+    S.dateCache=cache;
+    go(S.page,S.tab);
+    toast('Đồng bộ Lark thành công ✅','t-ok');
+  }catch(e){
+    toast('Lỗi đồng bộ: '+e.message,'t-err');
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='🔄 Đồng bộ Lark';}
+  }
+}
 /* ── ĐỔI DATE / HỦY DATE ── */
 function rDateDH(){
-  const DM=[
-    {t:'T01',dm:'DGMD', dt:28381886851,gv:254575167,tv:141209700,huy:913000,  cp:113365467,dinhmuc:59601962, conlai:0},
-    {t:'T02',dm:'DGMDN',dt:27166945070,gv:305335244,tv:175740700,huy:13973000,cp:129594544,dinhmuc:57050585, conlai:0},
-    {t:'T03',dm:'DGMD', dt:21089532535,gv:270817077,tv:210663800,huy:56046000,cp:60153277, dinhmuc:44288018, conlai:0},
-    {t:'T04',dm:'DGMDN',dt:19107191653,gv:433003826,tv:295402950,huy:20985000,cp:137600876,dinhmuc:40125102, conlai:0},
-    {t:'T05',dm:'DGMD', dt:17621137715,gv:497596584,tv:342066250,huy:22713000,cp:155530334,dinhmuc:37004389, conlai:266052255},
+  // Load live data from cache (set by syncLarkDate) or fall back to static snapshot
+  if(!S.dateCache){try{S.dateCache=JSON.parse(localStorage.getItem('lark_date_cache')||'null');}catch(e){}}
+  const cache=S.dateCache;
+  const cacheAge=cache?.ts?Math.round((Date.now()-cache.ts)/60000):null;
+  const isLive=!!cache?.monthly?.length;
+  const DM=isLive?cache.monthly:[
+    {t:'T01',dt:28381886851,gv:254575167,tv:141209700,huy:913000,  cp:113365467,dinhmuc:59601962,conlai:0},
+    {t:'T02',dt:27166945070,gv:305335244,tv:175740700,huy:13973000,cp:129594544,dinhmuc:57050585,conlai:0},
+    {t:'T03',dt:21089532535,gv:270817077,tv:210663800,huy:56046000,cp:60153277, dinhmuc:44288018,conlai:0},
+    {t:'T04',dt:19107191653,gv:433003826,tv:295402950,huy:20985000,cp:137600876,dinhmuc:40125102,conlai:0},
+    {t:'T05',dt:17621137715,gv:497596584,tv:342066250,huy:22713000,cp:155530334,dinhmuc:37004389,conlai:266052255},
   ];
-  const DS=[
+  const DS=isLive&&cache.stores?.length?cache.stores:[
     {s:'Đội Cấn',         m:'S1001',dt:4281991509, cp:23162578,  tl:0.00541,  cb:1},
     {s:'Linh Đàm',        m:'S1002',dt:5693319064, cp:18970991,  tl:0.00333,  cb:1},
     {s:'Mandarin',        m:'S1004',dt:6487741612, cp:-1868534,  tl:-0.000288,cb:0},
@@ -801,7 +843,7 @@ function rDateDH(){
   const totTV=DM.reduce((a,r)=>a+r.tv,0);
   const totHuy=DM.reduce((a,r)=>a+r.huy,0);
   const totCP=totGV-totTV;
-  const tonDG=DM[4].conlai;
+  const tonDG=DM[DM.length-1].conlai||0;
   const tlThuc=(totCP-tonDG)/totDT;
   const NGUONG=0.0021;
   const stCB=DS.filter(s=>s.cb).length;
@@ -809,6 +851,35 @@ function rDateDH(){
   const DSsorted=[...DS].sort((a,b)=>b.tl-a.tl);
   const fM=n=>(n/1e6).toFixed(2)+'M';
   const fP=n=>(n*100).toFixed(2)+'%';
+
+  // ── Month-by-month tỷ lệ (raw = cp/dt, no tồn DG) ──
+  const mTL=DM.map(r=>r.dt>0?(r.gv-r.tv)/r.dt:0);
+  const bestIdx=mTL.indexOf(Math.min(...mTL));
+  const worstIdx=mTL.indexOf(Math.max(...mTL));
+  const lastTrend=mTL.length>1?mTL[mTL.length-1]-mTL[0]:0;
+  const overallColor=lastTrend>0.003?'#dc2626':lastTrend<-0.003?'#15803d':'#6b7280';
+  const overallLabel=lastTrend>0.003?'🔴 Xu hướng tăng — cần kiểm soát khẩn tháng tới':lastTrend<-0.003?'✅ Xu hướng cải thiện — tiếp tục duy trì':'→ Dao động, chưa có xu hướng ổn định';
+  const obsRows=DM.map((r,i)=>{
+    const tl=mTL[i];
+    const prev=i>0?mTL[i-1]:null;
+    const d=prev!=null?tl-prev:null;
+    let ic=tl>0.006?'🔴':tl>NGUONG?'⚠️':'✅';
+    let trend='';
+    if(d!=null){
+      const pp=(Math.abs(d)*100).toFixed(2);
+      if(d>0.002)trend=`<span style="color:#dc2626">↑ tăng +${pp}pp</span>`;
+      else if(d<-0.002)trend=`<span style="color:#15803d">↓ giảm ${pp}pp</span>`;
+      else trend=`<span style="color:#6b7280">→ ổn định (${d>=0?'+':''}${(d*100).toFixed(2)}pp)</span>`;
+    }else trend='<span style="color:#6b7280">—</span>';
+    const cpM=(r.gv-r.tv)/1e6;
+    return`<tr><td style="padding:5px 10px;font-size:12px;font-weight:700">${ic} ${r.t}</td><td style="padding:5px 10px;font-size:13px;font-weight:700;color:${tl>0.006?'#dc2626':tl>NGUONG?'#f97316':'#15803d'}">${fP(tl)}</td><td style="padding:5px 10px;font-size:11px">${trend}</td><td style="padding:5px 10px;font-size:11px;color:var(--t2)">${cpM.toFixed(1)}M₫ CP · ${(r.dt/1e9).toFixed(1)}B DT${r.conlai?` · Tồn DG ${(r.conlai/1e6).toFixed(0)}M₫`:''}</td></tr>`;
+  }).join('');
+  // Best/worst highlights
+  const bestComment=`Tháng tốt nhất: <strong>${DM[bestIdx].t}</strong> — tỷ lệ ${fP(mTL[bestIdx])}`;
+  const worstComment=`Tháng cao nhất: <strong>${DM[worstIdx].t}</strong> — tỷ lệ ${fP(mTL[worstIdx])} (thô)`;
+  // Store improvement/warning in last month (if detail data)
+  const topWarn=DSsorted.filter(s=>s.cb).slice(0,3).map(s=>`<span style="color:#dc2626">⚠️ ${s.s} (${(s.tl*100).toFixed(2)}%)</span>`).join(' · ');
+
   const stRows=DSsorted.map((s,i)=>{
     const pct=(s.tl*100).toFixed(2);
     const clr=s.tl>0.01?'#dc2626':s.tl>NGUONG?'#f97316':s.tl<0?'#0d9488':'#16a34a';
@@ -817,20 +888,26 @@ function rDateDH(){
     const barW=Math.min(Math.abs(s.tl)*100/3.5,100);
     return '<tr style="background:'+bg+'"><td style="padding:5px 10px;font-size:11px;color:var(--t2)">'+(i+1)+'</td><td style="padding:5px 10px;font-size:12px;font-weight:600">'+flag+' '+s.s+'</td><td style="padding:5px 10px;font-size:11px;color:var(--t3)">'+s.m+'</td><td style="padding:5px 10px;text-align:right;font-size:11px">'+(s.dt/1e9).toFixed(1)+'B</td><td style="padding:5px 10px;text-align:right;font-size:13px;font-weight:700;color:'+clr+'">'+pct+'%</td><td style="padding:5px 10px;text-align:right;font-size:12px;color:'+(s.cp<0?'#0d9488':'var(--t1)')+'">'+fM(s.cp)+'</td><td style="padding:5px 10px"><div style="height:5px;border-radius:3px;background:rgba(0,0,0,.07)"><div style="height:100%;width:'+barW+'%;background:'+clr+';border-radius:3px"></div></div></td></tr>';
   }).join('');
+
+  const cacheLabel=isLive
+    ?`<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:9px;font-size:11px;font-weight:600">🟢 Live · ${cacheAge<2?'vừa xong':cacheAge+'ph trước'}</span>`
+    :`<span style="background:#fef9c3;color:#92400e;padding:2px 8px;border-radius:9px;font-size:11px;font-weight:600">📌 Bản tĩnh</span>`;
+
   return`
-<div style="background:rgba(233,30,123,.07);border:1px solid rgba(233,30,123,.25);border-radius:10px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+<div style="background:rgba(233,30,123,.07);border:1px solid rgba(233,30,123,.25);border-radius:10px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
   ${skIcn('daotao',22,22)}
-  <div><strong style="color:#b91c6c">Đổi Date / Hủy Date — Tổng hợp T1→T5/2026</strong><span style="font-size:12px;color:var(--t2);margin-left:10px">Nguồn: Lark Bitable "Kết quả xử lý date" · Cập nhật 20/06/2026</span></div>
+  <div style="flex:1;min-width:160px"><strong style="color:#b91c6c">Đổi Date / Hủy Date</strong><span style="font-size:12px;color:var(--t2);margin-left:10px">${DM[0].t}→${DM[DM.length-1].t}/${new Date().getFullYear()}</span> ${cacheLabel}</div>
+  <button onclick="syncLarkDate(this)" style="background:#1a2558;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">🔄 Đồng bộ Lark</button>
 </div>
 <div class="g4 g-sm2" style="margin-bottom:18px">
   ${kpi('Tỷ lệ đổi date T1-T5',fP(tlThuc),'ngưỡng 0.21%',tlThuc>0.004?'#dc2626':tlThuc>NGUONG?'#d97706':'#15803d','kpi-warn',tlThuc>NGUONG?'Vượt +'+((tlThuc-NGUONG)*100).toFixed(2)+'pp so ngưỡng':'Đạt ngưỡng ✅')}
   ${kpi('CP giảm giá (GV−TV)',fM(totCP)+'₫','T1→T5/2026','#d97706','kpi-chart','Tồn DG còn: '+fM(tonDG)+'₫')}
-  ${kpi('ST vượt ngưỡng 0.21%',String(stCB)+'/23','siêu thị','#dc2626','kpi-error',DSsorted.filter(s=>s.cb).slice(0,2).map(s=>s.s).join(', ')+'...')}
-  ${kpi('Tổng hủy date',fM(totHuy)+'₫','T1→T5/2026','#6b7280','kpi-kk','T3 cao nhất: '+fM(DM[2].huy)+'₫')}
+  ${kpi('ST vượt ngưỡng 0.21%',String(stCB)+'/'+DS.length,'siêu thị','#dc2626','kpi-error',DSsorted.filter(s=>s.cb).slice(0,2).map(s=>s.s).join(', ')+'...')}
+  ${kpi('Tổng hủy date',fM(totHuy)+'₫','T1→T5/2026','#6b7280','kpi-kk','T3 cao nhất: '+fM(DM[2]?.huy||0)+'₫')}
 </div>
 <div class="g2" style="margin-bottom:16px">
   <div class="chart-box">
-    <div class="chart-title">📊 Chi phí đổi date vs Định mức tối đa (T1→T5/2026, M₫)</div>
+    <div class="chart-title">📊 Chi phí đổi date vs Định mức tối đa (M₫)</div>
     <div class="chart-wrap" style="height:200px"><canvas id="c-date-mon"></canvas></div>
   </div>
   <div class="chart-box">
@@ -838,30 +915,43 @@ function rDateDH(){
     <div class="chart-wrap" style="height:200px"><canvas id="c-date-st"></canvas></div>
   </div>
 </div>
+<div class="g2" style="margin-bottom:16px">
+  <div class="chart-box">
+    <div class="chart-title">📈 Xu hướng tỷ lệ đổi date theo tháng (%) — tỷ lệ thô CP/DT</div>
+    <div class="chart-wrap" style="height:180px"><canvas id="c-date-trend"></canvas></div>
+  </div>
+  <div class="card" style="padding:14px 16px">
+    <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#1a2558">🤖 Nhận xét so sánh tháng</div>
+    <table style="width:100%;border-collapse:collapse;font-size:11px">${obsRows}</table>
+    <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--br);font-size:12px;font-weight:600;color:${overallColor}">${overallLabel}</div>
+    <div style="margin-top:6px;font-size:11px;color:var(--t2)">${bestComment} · ${worstComment}</div>
+    ${topWarn?`<div style="margin-top:6px;font-size:11px">ST cảnh báo: ${topWarn}</div>`:''}
+  </div>
+</div>
 <div class="g2" style="margin-bottom:14px;gap:12px">
   <div class="card" style="padding:14px 16px;background:linear-gradient(135deg,rgba(233,30,123,.05),rgba(26,37,88,.03));border:1px solid rgba(233,30,123,.15)">
-    <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#b91c6c">📐 Cách tính Tỷ lệ đổi date (Base 4)</div>
+    <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#b91c6c">📐 Cách tính Tỷ lệ đổi date</div>
     <div style="font-size:12px;line-height:1.8;color:var(--t1)">
-      <div style="margin-bottom:4px"><span style="color:var(--t2)">1.</span> <strong>CP giảm giá</strong> = Giá vốn − Thu về = ${fM(totGV)} − ${fM(totTV)} = <strong>${fM(totCP)}</strong></div>
+      <div style="margin-bottom:4px"><span style="color:var(--t2)">1.</span> <strong>CP giảm giá</strong> = GV − TV = ${fM(totGV)} − ${fM(totTV)} = <strong>${fM(totCP)}</strong></div>
       <div style="margin-bottom:4px"><span style="color:var(--t2)">2.</span> <strong>Tồn còn lại mã DG</strong> = <strong style="color:#d97706">${fM(tonDG)}</strong> (trừ ra khỏi CP)</div>
       <div style="margin-bottom:4px"><span style="color:var(--t2)">3.</span> <strong>CP thực</strong> = ${fM(totCP)} − ${fM(tonDG)} = <strong style="color:#dc2626">${fM(totCP-tonDG)}</strong></div>
-      <div style="margin-bottom:4px"><span style="color:var(--t2)">4.</span> <strong>Tỷ lệ</strong> = CP thực / Tổng DT = ${fM(totCP-tonDG)} / ${(totDT/1e9).toFixed(1)}B = <strong style="font-size:15px;color:${tlThuc>NGUONG?'#dc2626':'#15803d'}">${fP(tlThuc)}</strong></div>
-      <div style="font-size:11px;color:var(--t2);margin-top:6px;padding-top:6px;border-top:1px solid var(--br)">Lưu ý: Tỷ lệ thô (chưa trừ tồn DG) = ${fP(totCP/totDT)} → Tồn DG cải thiện ${fP((totCP/totDT)-tlThuc)}</div>
+      <div style="margin-bottom:4px"><span style="color:var(--t2)">4.</span> <strong>Tỷ lệ</strong> = ${fM(totCP-tonDG)} / ${(totDT/1e9).toFixed(1)}B = <strong style="font-size:15px;color:${tlThuc>NGUONG?'#dc2626':'#15803d'}">${fP(tlThuc)}</strong></div>
+      <div style="font-size:11px;color:var(--t2);margin-top:6px;padding-top:6px;border-top:1px solid var(--br)">Tỷ lệ thô (chưa trừ tồn DG) = ${fP(totCP/totDT)} → Tồn DG bù ${fP((totCP/totDT)-tlThuc)}</div>
     </div>
   </div>
   <div class="card" style="padding:14px 16px;background:${tlThuc>NGUONG?'rgba(220,38,38,.04)':'rgba(21,128,61,.04)'};border-left:4px solid ${tlThuc>NGUONG?'#dc2626':'#15803d'}">
     <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:${tlThuc>NGUONG?'#dc2626':'#15803d'}">⚡ Đóng góp EBIT</div>
     <div style="font-size:12px;line-height:1.8;color:var(--t1)">
       ${tlThuc>NGUONG?
-        '<strong style="color:#dc2626">🔴 '+fP(tlThuc)+' vượt ngưỡng 0.21% (+'+((tlThuc-NGUONG)*100).toFixed(2)+'pp)</strong><br>→ CP phát sinh vượt mức: <strong>~'+fM(ebitLeak)+'₫/tháng</strong><br>→ Kiểm soát về 0.21%: tiết kiệm <strong style="color:#15803d">~'+fM(ebitLeak)+' × 12 = '+fM(ebitLeak*12)+'₫/năm</strong><br>→ Ưu tiên: Green Bay (3.12%), Vũ Phạm Hàm (1.74%), Nguyễn Văn Lộc (1.11%)'
-        :'<strong style="color:#15803d">✅ '+fP(tlThuc)+' — dưới ngưỡng 0.21%</strong><br>→ EBIT được bảo vệ tháng này<br>→ Tiếp tục duy trì quản lý date chặt'}
+        '<strong style="color:#dc2626">🔴 '+fP(tlThuc)+' vượt ngưỡng 0.21% (+'+((tlThuc-NGUONG)*100).toFixed(2)+'pp)</strong><br>→ CP vượt mức: <strong>~'+fM(ebitLeak)+'₫</strong> trên tổng tích lũy<br>→ Kiểm soát về 0.21%: tiết kiệm ~'+fM(ebitLeak*12)+'₫/năm<br>→ Ưu tiên ST: Green Bay, Vũ Phạm Hàm, Nguyễn Văn Lộc'
+        :'<strong style="color:#15803d">✅ '+fP(tlThuc)+' — dưới ngưỡng 0.21%</strong><br>→ EBIT được bảo vệ<br>→ Tiếp tục duy trì quản lý date chặt'}
     </div>
   </div>
 </div>
 <div class="card" style="padding:0;overflow:hidden">
   <div style="padding:10px 16px;background:linear-gradient(90deg,rgba(26,37,88,.06),transparent);border-bottom:1px solid var(--br);display:flex;justify-content:space-between;align-items:center">
-    <span style="font-weight:700;font-size:13px">📋 Chi tiết 23 siêu thị — T1-T5/2026 (sắp xếp tỷ lệ cao→thấp)</span>
-    <span style="font-size:11px;color:var(--t2)">Lark: "Xử lý date cảnh báo"</span>
+    <span style="font-weight:700;font-size:13px">📋 Chi tiết ${DS.length} siêu thị (sắp xếp tỷ lệ cao→thấp)</span>
+    <span style="font-size:11px;color:var(--t2)">${isLive?'Nguồn: Lark Live':'Bản tĩnh 20/06/2026'}</span>
   </div>
   <div style="overflow-x:auto">
     <table style="width:100%;border-collapse:collapse">
@@ -2244,24 +2334,38 @@ function afterRender(){
   }
   // Đổi Date charts
   if(S.tab==='Đổi Date'){
-    const DM=[
-      {t:'T01',cp:113.4,dm:59.6},{t:'T02',cp:129.6,dm:57.1},
-      {t:'T03',cp:60.2,dm:44.3},{t:'T04',cp:137.6,dm:40.1},{t:'T05',cp:155.5,dm:37.0},
+    const _c=S.dateCache;
+    const DM_raw=_c?.monthly?.length?_c.monthly:[
+      {t:'T01',dt:28381886851,gv:254575167,tv:141209700,dinhmuc:59601962},
+      {t:'T02',dt:27166945070,gv:305335244,tv:175740700,dinhmuc:57050585},
+      {t:'T03',dt:21089532535,gv:270817077,tv:210663800,dinhmuc:44288018},
+      {t:'T04',dt:19107191653,gv:433003826,tv:295402950,dinhmuc:40125102},
+      {t:'T05',dt:17621137715,gv:497596584,tv:342066250,dinhmuc:37004389},
     ];
-    const TOP10=[
-      {s:'Green Bay',tl:3.12},{s:'Vũ Phạm Hàm',tl:1.74},{s:'Nguyễn Văn Lộc',tl:1.11},
-      {s:'Nguyễn Khuyến',tl:0.94},{s:'Sài Đồng',tl:0.92},{s:'Bạch Mai',tl:0.74},
-      {s:'Đỗ Quang',tl:0.57},{s:'Văn Phú',tl:0.45},{s:'Đội Cấn',tl:0.54},{s:'Linh Đàm',tl:0.33},
+    const DS_raw=_c?.stores?.length?_c.stores:[
+      {s:'Green Bay',tl:0.03124},{s:'Vũ Phạm Hàm',tl:0.01741},{s:'Nguyễn Văn Lộc',tl:0.01108},
+      {s:'Nguyễn Khuyến',tl:0.009424},{s:'Sài Đồng',tl:0.009218},{s:'Bạch Mai',tl:0.007378},
+      {s:'Đỗ Quang',tl:0.005663},{s:'Đội Cấn',tl:0.00541},{s:'Văn Phú',tl:0.004489},{s:'Linh Đàm',tl:0.00333},
     ];
-    mkC('c-date-mon','bar',DM.map(r=>r.t+'/'+(r.t==='T01'?'DGMD':r.t==='T02'?'DGMDN':r.t==='T03'?'DGMD':r.t==='T04'?'DGMDN':'DGMD')),[
-      {label:'CP đổi date (M₫)',data:DM.map(r=>r.cp),bg:'rgba(233,30,123,.7)',borderColor:'#e91e7b'},
-      {label:'Định mức tối đa (M₫)',data:DM.map(r=>r.dm),bg:'rgba(26,37,88,.15)',borderColor:'#1a2558'},
+    const labels=DM_raw.map(r=>r.t);
+    const cpM=DM_raw.map(r=>((r.gv-r.tv)/1e6).toFixed(1)*1);
+    const dmM=DM_raw.map(r=>(r.dinhmuc/1e6).toFixed(1)*1);
+    mkC('c-date-mon','bar',labels,[
+      {label:'CP đổi date (M₫)',data:cpM,bg:'rgba(233,30,123,.7)',borderColor:'#e91e7b'},
+      {label:'Định mức tối đa (M₫)',data:dmM,bg:'rgba(26,37,88,.15)',borderColor:'#1a2558'},
     ]);
+    const TOP10=[...DS_raw].sort((a,b)=>b.tl-a.tl).slice(0,10);
     mkC('c-date-st','bar',TOP10.map(r=>r.s),[
-      {label:'Tỷ lệ đổi date (%)',data:TOP10.map(r=>r.tl),
-       bg:TOP10.map(r=>r.tl>2?'#dc2626':r.tl>0.5?'#f97316':'#f59e0b'),
+      {label:'Tỷ lệ (%)',data:TOP10.map(r=>+(r.tl*100).toFixed(2)),
+       bg:TOP10.map(r=>r.tl>0.01?'#dc2626':r.tl>0.005?'#f97316':'#f59e0b'),
        borderColor:'transparent'},
     ],{indexAxis:'y'});
+    // Trend line chart — monthly tỷ lệ vs ngưỡng 0.21%
+    const tlArr=DM_raw.map(r=>r.dt>0?+((r.gv-r.tv)/r.dt*100).toFixed(3):0);
+    mkC('c-date-trend','line',labels,[
+      {label:'Tỷ lệ thực (%)',data:tlArr,borderColor:'#e91e7b',bg:'rgba(233,30,123,.1)',fill:true,tension:.35,pointRadius:5,pointHoverRadius:7},
+      {label:'Ngưỡng 0.21%',data:DM_raw.map(()=>0.21),borderColor:'#1a2558',bg:'transparent',borderDash:[5,3],pointRadius:0},
+    ],{plugins:{tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}%`}}}});
   }
   // KK Exec charts — only on KK exec tabs (avoids c-kk-cat conflict with old KK tab)
   if(S.tab==='Exec. KK'||S.tab==='EBIT Kiểm kê'){
