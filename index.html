@@ -356,7 +356,7 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[]};
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{}};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -900,7 +900,7 @@ function rQC(){
   </div>
 </div>
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('qc','${tb}')">${tb}</div>`).join('')}</div>
-${t==='Tổng quan'?rQCOv():t==='Chấm điểm dịch vụ'?rQCDiem():rImport('qc')}`;
+${t==='Tổng quan'?rQCOv():t==='Chấm điểm dịch vụ'?rQCDiem():t==='Đổi trả'?rQCDoiTra():rImport('qc')}`;
 }
 function qcDiemPct(n){return isFinite(n)?(n*100).toFixed(2)+'%':'—';}
 function yearOpts(cur){return[2030,2029,2028,2027,2026,2025].map(y=>`<option value="${y}"${String(y)===String(cur)?' selected':''}>  ${y}</option>`).join('');}
@@ -1157,6 +1157,98 @@ function qcLoiHMRemoveRow(i){
   S.qcDiemLoiHM.splice(i,1);
   const body=document.getElementById('qcd-loihm-body');
   if(body)body.innerHTML=qcLoiHMRowsHTML();
+}
+/* ── QC ĐỔI TRẢ ── */
+function qcDTLoad(year,month){
+  const y=String(year||S.qcDTYear||'2026'),m=String(month||S.qcDTMonth||'5');
+  S.qcDTYear=y;S.qcDTMonth=m;
+  const db=getQCDB();if(!db){alert('Không kết nối Firebase!');return;}
+  db.ref(`qc_doitra/${y}/${m}`).get().then(snap=>{
+    const d=snap.exists()?snap.val():null;
+    S.qcDTST=d&&d.st?d.st:{};
+    S.qcDTCVS=d&&d.cvs?d.cvs:{};
+    go('qc','Đổi trả');
+  }).catch(e=>alert('Lỗi tải: '+e.message));
+}
+function qcDTSave(btn){
+  const y=document.getElementById('qcdt-year')?.value||S.qcDTYear;
+  const m=document.getElementById('qcdt-month')?.value||S.qcDTMonth;
+  S.qcDTYear=y;S.qcDTMonth=m;
+  const db=getQCDB();if(!db){alert('Không kết nối Firebase!');return;}
+  const readSec=(pfx)=>({
+    tongDon:parseFloat(document.getElementById(pfx+'-tongDon')?.value)||0,
+    pctKhach:parseFloat(document.getElementById(pfx+'-pctKhach')?.value)||0,
+    pctST:parseFloat(document.getElementById(pfx+'-pctST')?.value)||0,
+    top:[1,2,3].map(i=>({name:(document.getElementById(pfx+'-top'+i+'n')?.value||'').trim(),don:parseInt(document.getElementById(pfx+'-top'+i+'d')?.value)||0})).filter(r=>r.name),
+    ghiChu:document.getElementById(pfx+'-ghiChu')?.value||''
+  });
+  const data={st:readSec('qcdt-st'),cvs:readSec('qcdt-cvs'),savedAt:Date.now(),_by:S.profile?.name||S.user?.email||'?'};
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang lưu...';}
+  const ref=db.ref(`qc_doitra/${y}/${m}`);
+  ref.get().then(old=>{
+    const ops=[];
+    if(old.exists())ops.push(db.ref(`qc_doitra_history/${y}/${m}`).push({...old.val(),_snapshotAt:Date.now(),_by:data._by}));
+    return Promise.all(ops).then(()=>ref.set(data));
+  }).then(()=>{
+    const s=document.getElementById('qcdt-saved');if(s){s.style.display='block';setTimeout(()=>s.style.display='none',4000);}
+    if(btn){btn.disabled=false;btn.textContent='💾 Lưu';}
+  }).catch(e=>{alert('Lỗi lưu: '+e.message);if(btn){btn.disabled=false;btn.textContent='💾 Lưu';}});
+}
+function qcDTCalcKhac(pfx){
+  const k=parseFloat(document.getElementById(pfx+'-pctKhach')?.value)||0;
+  const s=parseFloat(document.getElementById(pfx+'-pctST')?.value)||0;
+  const el=document.getElementById(pfx+'-pctKhac');
+  if(el)el.value=Math.max(0,100-k-s).toFixed(2);
+}
+function qcDTSec(pfx,title,d){
+  const v=(k)=>d[k]||'';
+  const top=Array.isArray(d.top)?d.top:[{},{},{}];
+  const k=parseFloat(d.pctKhach)||0,st=parseFloat(d.pctST)||0;
+  const khac=Math.max(0,100-k-st).toFixed(2);
+  return`
+<div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('${pfx}-body')" style="background:linear-gradient(90deg,#1e3a8a,#2563eb)"><span>${title}</span><span id="${pfx}-body-ico">▼</span></div>
+  <div id="${pfx}-body" class="qcd-sec-body">
+    <div class="g2" style="gap:12px;margin-bottom:12px">
+      <div><label class="fi-lbl">Tổng số đơn đổi trả</label><input id="${pfx}-tongDon" type="number" class="fi" value="${v('tongDon')}" placeholder="Vd: 195"></div>
+      <div><label class="fi-lbl">% Do khách hàng</label><input id="${pfx}-pctKhach" type="number" step="0.01" class="fi" value="${v('pctKhach')}" placeholder="Vd: 72.31" oninput="qcDTCalcKhac('${pfx}')"></div>
+      <div><label class="fi-lbl">% Do siêu thị</label><input id="${pfx}-pctST" type="number" step="0.01" class="fi" value="${v('pctST')}" placeholder="Vd: 21.54" oninput="qcDTCalcKhac('${pfx}')"></div>
+      <div><label class="fi-lbl">% Nguyên nhân khác (tự tính)</label><input id="${pfx}-pctKhac" type="number" step="0.01" class="fi" value="${khac}" placeholder="Tự tính" readonly style="background:#f8f8ff;color:#6b7280"></div>
+    </div>
+    <div style="margin-bottom:12px">
+      <label class="fi-lbl" style="margin-bottom:8px">Top ST có nhiều đổi trả nhất</label>
+      ${[0,1,2].map(i=>`
+      <div class="qcd-row" style="margin-bottom:6px">
+        <div class="qcd-num">${i+1}</div>
+        <input id="${pfx}-top${i+1}n" class="fi" style="flex:1" value="${(top[i]&&top[i].name)||''}" placeholder="Tên siêu thị">
+        <input id="${pfx}-top${i+1}d" type="number" class="fi" style="width:90px;text-align:center" value="${(top[i]&&top[i].don)||''}" placeholder="Số đơn">
+      </div>`).join('')}
+    </div>
+    <div><label class="fi-lbl">Ghi chú / Nhận xét</label><textarea id="${pfx}-ghiChu" class="fi" style="width:100%;min-height:70px;resize:vertical" placeholder="Nhận xét về tình hình đổi trả tháng này...">${v('ghiChu')}</textarea></div>
+  </div>
+</div>`;
+}
+function rQCDoiTra(){
+  const eM=String(S.qcDTMonth||'5'),eY=String(S.qcDTYear||'2026');
+  return`
+<div class="card" style="padding:16px 20px;margin-bottom:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2 style="font-size:15px;font-weight:700;color:var(--t1);margin:0">🔄 Kiểm soát hoạt động đổi trả</h2>
+      <p style="font-size:12px;color:var(--t2);margin:4px 0 0">Nhập liệu đổi trả theo tháng — tách riêng Siêu thị & CVS</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label class="fi-lbl" style="margin:0">Tháng</label>
+      <select id="qcdt-month" class="fi" style="width:70px" onchange="qcDTLoad(document.getElementById('qcdt-year').value,this.value)">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+      <label class="fi-lbl" style="margin:0">Năm</label>
+      <select id="qcdt-year" class="fi" style="width:85px" onchange="qcDTLoad(this.value,document.getElementById('qcdt-month').value)">${yearOpts(eY)}</select>
+      <button onclick="qcDTSave(this)" class="btn b-pri b-sm">💾 Lưu</button>
+    </div>
+  </div>
+  <div id="qcdt-saved" class="qcd-saved" style="margin-top:8px">✅ Đã lưu thành công!</div>
+</div>
+${qcDTSec('qcdt-st','🏪 I. Siêu thị',S.qcDTST)}
+${qcDTSec('qcdt-cvs','🏬 II. CVS',S.qcDTCVS)}`;
 }
 function rQCOv(){return`
 <div class="g4" style="margin-bottom:18px">
@@ -3032,6 +3124,7 @@ function afterRender(){
   // Init dynamic store table on Nhập liệu tab
   if(S.page==='baocao'&&S.tab==='Nhập liệu')qcLoadStores();
   if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ'&&!S._qcDiemAutoLoaded){S._qcDiemAutoLoaded=true;qcDiemLoad(S.qcDiemYear,S.qcDiemMonth);}
+  if(S.page==='qc'&&S.tab==='Đổi trả'&&!S._qcDTAutoLoaded){S._qcDTAutoLoaded=true;qcDTLoad(S.qcDTYear,S.qcDTMonth);}
   // Load saved import data
   if(S.user)db.ref(`imports/${S.user.uid}`).get().then(snap=>{if(snap.exists()){const d=snap.val();Object.keys(d).forEach(m=>{S.data[m]=d[m].data;updateChartFromData(m,S.data[m]);});}});
 }
