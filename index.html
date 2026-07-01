@@ -1338,59 +1338,18 @@ async function qcGLSync(btn){
     if(!secret)return;
     localStorage.setItem('lark_gl_secret',secret);
   }
-  if(btn){btn.disabled=true;btn.textContent='⏳ Đang lấy token...';}
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang đồng bộ...';}
   try{
-    // Lấy app_access_token từ App ID + Secret
-    const authR=await fetch('https://open.larksuite.com/open-apis/auth/v3/app_access_token/internal',
-      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({app_id:GL_APP_ID,app_secret:secret})});
-    const authJ=await authR.json();
-    if(authJ.code!==0)throw new Error('Auth lỗi: '+authJ.msg+' ('+authJ.code+'). Kiểm tra lại App Secret.');
-    const aat=authJ.app_access_token;
-    if(btn)btn.textContent='⏳ Đang đồng bộ...';
-    const appToken='AGGAbC9BPaioxas1VW8lV6tOg7g';
-    const fetchAll=async(tblId,fields)=>{
-      let all=[],pt='',more=true;
-      while(more){
-        const body={field_names:fields,page_size:200};if(pt)body.page_token=pt;
-        const r=await fetch(`https://open.larksuite.com/open-apis/bitable/v1/apps/${appToken}/tables/${tblId}/records/search`,
-          {method:'POST',headers:{'Authorization':'Bearer '+aat,'Content-Type':'application/json'},body:JSON.stringify(body)});
-        const j=await r.json();
-        if(j.code&&j.code!==0)throw new Error('Bitable API: '+j.msg+' ('+j.code+')');
-        all=all.concat((j.data&&j.data.items)||[]);
-        more=!!(j.data&&j.data.has_more);pt=(j.data&&j.data.page_token)||'';
-      }
-      return all;
-    };
-    const[dkRecs,ctkmRecs]=await Promise.all([
-      fetchAll('tblU0OlbMShM5ooe',['Ngày kiểm tra','Tên Siêu thị','Kết quả check cam','Lỗi vi phạm','Tháng','Năm','Giải trình lý do']),
-      fetchAll('tblQxeGxroYYFpY6',['Thời gian','Tên Siêu thị','Kết quả','Tháng','Năm'])
-    ]);
-    const agg={};
-    const slot=(y,m)=>{const k=`${y}/${m}`;if(!agg[k])agg[k]={y,m,dk:{total:0,sp:0,dgt:0,cgt:0,loiVPs:{}},ctkm:{total:0,sp:0,cgt:0,loiVPs:{}}};return agg[k];};
-    for(const r of dkRecs){
-      const f=r.fields,y=f['Năm']&&f['Năm'].value&&f['Năm'].value[0],m=f['Tháng'];
-      if(!y||y===1899||!m)continue;
-      const s=slot(y,m);s.dk.total++;
-      if(f['Kết quả check cam']==='Sai phạm'){
-        s.dk.sp++;
-        const hasGT=Array.isArray(f['Giải trình lý do'])&&f['Giải trình lý do'].length>0;
-        if(hasGT)s.dk.dgt++;else s.dk.cgt++;
-        for(const l of(Array.isArray(f['Lỗi vi phạm'])?f['Lỗi vi phạm']:[]))s.dk.loiVPs[l]=(s.dk.loiVPs[l]||0)+1;
-      }
-    }
-    for(const r of ctkmRecs){
-      const f=r.fields,y=f['Năm']&&f['Năm'].value&&f['Năm'].value[0],m=f['Tháng'];
-      if(!y||y===1899||!m||!f['Kết quả'])continue;
-      const s=slot(y,m);s.ctkm.total++;
-      if(f['Kết quả']==='Không tặng khách'){s.ctkm.sp++;s.ctkm.cgt++;s.ctkm.loiVPs['Không tặng khách']=(s.ctkm.loiVPs['Không tặng khách']||0)+1;}
-    }
-    const db2=getQCDB(),now=Date.now();
+    const r=await fetch('/lark-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret})});
+    const j=await r.json();
+    if(!j.ok)throw new Error(j.error||'Unknown error');
+    const agg=j.data,db2=getQCDB(),now=Date.now();
     await Promise.all(Object.values(agg).map(v=>db2.ref(`qc_gianlantctm/${v.y}/${v.m}`).set({...v,syncedAt:now})));
-    alert(`✅ Đồng bộ thành công!\n${Object.keys(agg).length} tháng · ${dkRecs.length} check ĐK · ${ctkmRecs.length} check CTKM`);
+    alert(`✅ Đồng bộ thành công!\n${Object.keys(agg).length} tháng · ${j.counts.dk} check ĐK · ${j.counts.ctkm} check CTKM`);
     await qcGLLoad(S.qcGLYear,S.qcGLMonth);
   }catch(e){
     const msg=e.message||'';
-    if(msg.includes('App Secret')||msg.includes('app_secret')||msg.includes('10003')){localStorage.removeItem('lark_gl_secret');alert('App Secret không đúng. Vui lòng nhập lại.\n\n'+msg);}
+    if(msg.includes('Auth lỗi')||msg.includes('app_secret')){localStorage.removeItem('lark_gl_secret');alert('App Secret không đúng. Vui lòng nhập lại.\n\n'+msg);}
     else alert('Lỗi đồng bộ: '+msg);
     if(btn){btn.disabled=false;btn.textContent='🔄 Đồng bộ Lark';}
   }
