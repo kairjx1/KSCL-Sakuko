@@ -893,9 +893,10 @@ function rQC(){
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › QC</div>
 <div class="sec-hdr">
   <h1>${skIcn('qc',26,26)} QC</h1>
-  <div style="display:flex;gap:8px">
-    <button class="btn b-out b-sm">📥 Template Excel</button>
-    <button class="btn b-pri b-sm" onclick="showImport('qc')">⬆️ Import Excel</button>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="btn b-out b-sm" onclick="${t==='Chấm điểm dịch vụ'?'qcDiemDownloadTemplate()':'alert(\'Vào tab Chấm điểm dịch vụ để tải template\')'}">📥 Template Excel</button>
+    <button class="btn b-pri b-sm" onclick="${t==='Chấm điểm dịch vụ'?'document.getElementById(\'qcd-file-import\').click()':'showImport(\'qc\')'}">⬆️ Import Excel</button>
+    <input type="file" id="qcd-file-import" accept=".xlsx,.xls" style="display:none" onchange="qcDiemImportFile(this)">
   </div>
 </div>
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('qc','${tb}')">${tb}</div>`).join('')}</div>
@@ -989,9 +990,11 @@ function rQCDiem(){
       <select id="qcd-year" class="fi" style="width:85px"><option value="2026"${eY==='2026'?' selected':''}>2026</option><option value="2025"${eY==='2025'?' selected':''}>2025</option></select>
       <button onclick="qcDiemLoad(document.getElementById('qcd-year').value,document.getElementById('qcd-month').value)" class="btn b-out b-sm">⬇️ Tải</button>
       <button onclick="qcDiemSave(this)" class="btn b-pri b-sm">💾 Lưu</button>
+      <button onclick="qcDiemShowHistory()" class="btn b-sm" style="background:#6366f1;color:#fff" title="Xem & khôi phục phiên bản cũ">🕐 Lịch sử</button>
     </div>
   </div>
   <div id="qcd-diem-saved" class="qcd-saved">✅ Đã lưu thành công!</div>
+  <div id="qcd-hist-panel" style="display:none;margin-top:10px;border:1px solid #e0e7ff;border-radius:8px;overflow:hidden;max-height:280px;overflow-y:auto"></div>
 </div>
 <div class="card" style="padding:14px 20px;margin-bottom:16px">
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -1035,6 +1038,95 @@ function rQCDiem(){
     </div>
   </div>
 </div>`;
+}
+let _qcDiemHistCache={};
+function qcDiemDownloadTemplate(){
+  const m=parseInt(S.qcDiemMonth||'5'),y=parseInt(S.qcDiemYear||'2026');
+  const wb=XLSX.utils.book_new();
+  const ws1=XLSX.utils.aoa_to_sheet([
+    ['Tháng','Năm','Siêu thị','Tổng điểm max','Tổng điểm thực chấm'],
+    [m,y,'Đội Cấn',100,92],[m,y,'Linh Đàm',100,88],[m,y,'Trần Đăng Ninh',100,95],
+  ]);
+  ws1['!cols']=[{wch:8},{wch:6},{wch:22},{wch:16},{wch:22}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Chấm điểm');
+  const ws2=XLSX.utils.aoa_to_sheet([
+    ['Tháng','Năm','Hạng mục lỗi','Tỷ lệ lỗi %','Số lỗi phát sinh'],
+    [m,y,'Khu vực kho',11.5,10],[m,y,'Trưng bày hàng',30,27],[m,y,'Vệ sinh khu vực',14,13],
+  ]);
+  ws2['!cols']=[{wch:8},{wch:6},{wch:26},{wch:14},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Lỗi hạng mục');
+  XLSX.writeFile(wb,`QC_ChamDiem_T${m}_${y}_Template.xlsx`);
+}
+function qcDiemImportFile(input){
+  const file=input.files[0];if(!file)return;
+  input.value='';
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws1=wb.Sheets['Chấm điểm'];
+      const rows1=ws1?XLSX.utils.sheet_to_json(ws1,{header:1}):[];
+      let month=null,year=null;
+      const newRows=[];
+      for(let i=1;i<rows1.length;i++){
+        const [t,y,st,max,thuc]=rows1[i];
+        if(!st)continue;
+        if(!month&&t){month=String(parseInt(t));year=String(parseInt(y));}
+        newRows.push({st:String(st),max:String(max||''),thuc:String(thuc||'')});
+      }
+      const ws2=wb.Sheets['Lỗi hạng mục'];
+      const rows2=ws2?XLSX.utils.sheet_to_json(ws2,{header:1}):[];
+      const newLoi=[];
+      for(let i=1;i<rows2.length;i++){
+        const [t,y,cat,tyle,soLoi]=rows2[i];
+        if(!cat)continue;
+        if(!month&&t){month=String(parseInt(t));year=String(parseInt(y));}
+        newLoi.push({cat:String(cat),tyle:parseFloat(tyle)||0,soLoi:parseInt(soLoi)||0});
+      }
+      if(!newRows.length&&!newLoi.length){alert('File không có dữ liệu hoặc sai tên sheet (cần "Chấm điểm" và "Lỗi hạng mục")!');return;}
+      if(month){S.qcDiemMonth=month;S.qcDiemYear=year;}
+      S.qcDiemRows=newRows;S.qcDiemLoiHM=newLoi;S._qcDiemAutoLoaded=true;
+      go('qc','Chấm điểm dịch vụ');
+      setTimeout(()=>{const s=document.getElementById('qcd-diem-saved');if(s){s.textContent=`✅ Đã import ${newRows.length} siêu thị & ${newLoi.length} hạng mục từ Excel!`;s.style.display='block';setTimeout(()=>s.style.display='none',5000);}},300);
+    }catch(err){alert('Lỗi đọc file Excel: '+err.message);}
+  };
+  reader.readAsBinaryString(file);
+}
+function qcDiemShowHistory(){
+  const panel=document.getElementById('qcd-hist-panel');if(!panel)return;
+  if(panel.style.display!=='none'){panel.style.display='none';return;}
+  const y=S.qcDiemYear||'2026',m=S.qcDiemMonth||'5';
+  const qcdb=getQCDB();if(!qcdb){alert('Không kết nối Firebase!');return;}
+  panel.innerHTML='<div style="padding:12px;text-align:center;color:#94a3b8;font-size:13px">⏳ Đang tải lịch sử T'+m+'/'+y+'...</div>';
+  panel.style.display='block';
+  qcdb.ref(`qc_diem_history/${y}/${m}`).get().then(snap=>{
+    if(!snap.exists()){panel.innerHTML='<div style="padding:12px;color:#94a3b8;font-size:13px">Chưa có phiên bản nào được lưu cho T'+m+'/'+y+'.</div>';return;}
+    _qcDiemHistCache={};
+    const vers=[];
+    snap.forEach(child=>{_qcDiemHistCache[child.key]=child.val();vers.push({key:child.key,...child.val()});});
+    vers.sort((a,b)=>(b._snapshotAt||0)-(a._snapshotAt||0));
+    panel.innerHTML='<div style="padding:8px 12px;background:#f0f0ff;font-size:12px;font-weight:700;color:#4f46e5;border-bottom:1px solid #e0e7ff">📋 Lịch sử phiên bản T'+m+'/'+y+' ('+vers.length+' bản)</div>'+
+    vers.slice(0,15).map(v=>{
+      const dt=v._snapshotAt?new Date(v._snapshotAt).toLocaleString('vi-VN'):'?';
+      const by=v._by||'?';
+      const rc=Array.isArray(v.rows)?v.rows.length:0;
+      const lc=Array.isArray(v.loiHM)?v.loiHM.length:0;
+      return`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #f0f0ff;font-size:12.5px">
+        <div><strong>${dt}</strong> <span style="color:#94a3b8;font-size:11px">bởi ${by}</span><br><span style="color:#6b7280;font-size:11px">${rc} siêu thị · ${lc} hạng mục lỗi</span></div>
+        <button onclick="qcDiemRestoreVersion('${v.key}')" class="btn b-sm" style="background:#6366f1;color:#fff;font-size:11px">⏪ Khôi phục</button>
+      </div>`;
+    }).join('');
+  }).catch(e=>{panel.innerHTML='<div style="padding:12px;color:#dc2626">Lỗi: '+e.message+'</div>';});
+}
+function qcDiemRestoreVersion(key){
+  const data=_qcDiemHistCache[key];
+  if(!data){alert('Không tìm thấy phiên bản!');return;}
+  if(!confirm('Khôi phục phiên bản này? Dữ liệu hiện tại sẽ bị thay thế (chưa lưu lên Firebase).'))return;
+  S.qcDiemRows=Array.isArray(data.rows)?data.rows:[];
+  S.qcDiemLoiHM=Array.isArray(data.loiHM)?data.loiHM:[];
+  S._qcDiemAutoLoaded=true;
+  go('qc','Chấm điểm dịch vụ');
+  setTimeout(()=>{const s=document.getElementById('qcd-diem-saved');if(s){s.textContent='⏪ Đã khôi phục phiên bản cũ. Kiểm tra rồi bấm Lưu để ghi lại.';s.style.display='block';setTimeout(()=>s.style.display='none',6000);}},300);
 }
 function qcLoiHMRowsHTML(){
   if(!S.qcDiemLoiHM.length)return`<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8">Chưa có hạng mục nào. Gõ tên hạng mục ở trên và bấm Thêm.</td></tr>`;
