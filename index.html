@@ -356,7 +356,7 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLData:null,qcGLYearData:{}};
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:23,qcGLData:null,qcGLYearData:{}};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -1269,6 +1269,8 @@ function rQCGianLan(){
       <select id="qcgl-month" class="fi" style="width:70px" onchange="qcGLLoad(document.getElementById('qcgl-year').value,this.value)">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
       <label class="fi-lbl" style="margin:0">Năm</label>
       <select id="qcgl-year" class="fi" style="width:85px" onchange="qcGLLoad(this.value,document.getElementById('qcgl-month').value)">${yearOpts(eY)}</select>
+      <label class="fi-lbl" style="margin:0">KH ĐK/tháng</label>
+      <input id="qcgl-kh" type="number" class="fi" style="width:64px" min="1" value="${S.qcGLKH||23}" onchange="S.qcGLKH=+this.value;go('qc','Check gian lận định kỳ và CTKM')">
       <button id="qcgl-sync-btn" onclick="qcGLSync(this)" class="btn b-pri b-sm">🔄 Đồng bộ Lark</button>
     </div>
   </div>
@@ -1279,7 +1281,17 @@ function rQCGianLan(){
     <span>📊 Biểu đồ check theo tháng — ${eY}</span><span id="qcgl-s1-ico">▼</span>
   </div>
   <div id="qcgl-s1" class="qcd-sec-body">
-    ${!hasYear?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có dữ liệu năm ${eY}. Bấm 🔄 <strong>Đồng bộ Lark</strong> để tải dữ liệu.</div>`:`<div class="chart-wrap" style="height:230px"><canvas id="c-gl-annual"></canvas></div>`}
+    ${!hasYear?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có dữ liệu năm ${eY}. Bấm 🔄 <strong>Đồng bộ Lark</strong> để tải dữ liệu.</div>`:`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <div style="font-weight:600;font-size:12px;color:var(--t2);margin-bottom:6px">🔍 Check Gian lận định kỳ</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="c-gl-dk"></canvas></div>
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:12px;color:var(--t2);margin-bottom:6px">🎁 Check CTKM</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="c-gl-ctkm"></canvas></div>
+      </div>
+    </div>`}
   </div>
 </div>
 <div style="margin-bottom:16px">
@@ -3252,10 +3264,15 @@ function afterRender(){
     const yd=S.qcGLYearData||{};
     if(Object.keys(yd).length){
       const labels=['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
-      mkC('c-gl-annual','bar',labels,[
-        {label:'Check ĐK',data:labels.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].dk&&yd[String(i+1)].dk.total)||0),bg:'rgba(59,130,246,0.7)',borderColor:'#3b82f6'},
-        {label:'Check CTKM',data:labels.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].ctkm&&yd[String(i+1)].ctkm.total)||0),bg:'rgba(168,85,247,0.7)',borderColor:'#a855f7'},
+      const kh=S.qcGLKH||23;
+      mkC('c-gl-dk','bar',labels,[
+        {label:'Thực tế',data:labels.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].dk&&yd[String(i+1)].dk.total)||0),bg:'rgba(59,130,246,0.7)',borderColor:'#3b82f6'},
+        {label:'Kế hoạch',data:labels.map((_,i)=>{const t=(yd[String(i+1)]&&yd[String(i+1)].dk&&yd[String(i+1)].dk.total)||0;return t>0?kh:0;}),bg:'rgba(234,179,8,0.5)',borderColor:'#eab308'},
         {label:'Cần giải trình',data:labels.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].dk&&yd[String(i+1)].dk.cgt)||0),bg:'rgba(220,38,38,0.8)',borderColor:'#dc2626'}
+      ]);
+      mkC('c-gl-ctkm','bar',labels,[
+        {label:'Đã check',data:labels.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].ctkm&&yd[String(i+1)].ctkm.total)||0),bg:'rgba(168,85,247,0.7)',borderColor:'#a855f7'},
+        {label:'Cần giải trình',data:labels.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].ctkm&&yd[String(i+1)].ctkm.cgt)||0),bg:'rgba(220,38,38,0.8)',borderColor:'#dc2626'}
       ]);
     }
     if(S.qcGLData){
