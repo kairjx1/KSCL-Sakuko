@@ -1017,83 +1017,54 @@ function rQCDiem(){
 <div style="margin-bottom:12px;margin-top:16px">
   <div class="qcd-sec-hdr" onclick="qcToggleSec('qcd-loihm')" style="background:linear-gradient(90deg,#dc2626,#ef4444)"><span>📊 Lỗi phát sinh theo hạng mục — So sánh tháng trước & tháng này</span><span id="qcd-loihm-ico">▼</span></div>
   <div id="qcd-loihm" class="qcd-sec-body">
-    <div style="font-size:12px;color:#6366f1;background:#eef2ff;border-radius:6px;padding:7px 12px;margin-bottom:12px">💡 Nhập số lỗi phát sinh theo từng hạng mục cho tháng trước và tháng này. Hệ thống tự vẽ biểu đồ so sánh.</div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
-      <input id="qcd-new-hm" class="fi" style="flex:1;min-width:200px" placeholder="Nhập tên hạng mục rồi bấm Thêm..." onkeydown="if(event.key==='Enter'){event.preventDefault();qcLoiHMAddRow();}">
+      <input id="qcd-new-hm" class="fi" style="flex:1;min-width:200px" placeholder="Gõ tên hạng mục rồi bấm Thêm hạng mục..." onkeydown="if(event.key==='Enter'){event.preventDefault();qcLoiHMAddRow();}">
       <button onclick="qcLoiHMAddRow()" class="btn b-pri b-sm">➕ Thêm hạng mục</button>
     </div>
-    <div style="overflow-x:auto;margin-bottom:16px">
+    <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
         <thead><tr style="background:#fef2f2">
           <th style="padding:8px;border:1px solid #fecaca;color:#6b7280">#</th>
-          <th style="text-align:left;padding:8px 12px;border:1px solid #fecaca;color:#dc2626;font-weight:700">Hạng mục</th>
-          <th style="padding:8px;border:1px solid #fecaca;color:#6b7280">Số lỗi T${parseInt(eM)>1?parseInt(eM)-1:12}</th>
-          <th style="padding:8px;border:1px solid #fecaca;color:#dc2626;font-weight:700">Số lỗi T${eM}</th>
+          <th style="text-align:left;padding:8px 12px;border:1px solid #fecaca;color:#dc2626;font-weight:700">Hạng mục lỗi</th>
+          <th style="padding:8px;border:1px solid #fecaca;color:#d97706;font-weight:700">Tỷ lệ lỗi %</th>
+          <th style="padding:8px;border:1px solid #fecaca;color:#6b7280">Số lỗi phát sinh</th>
           <th style="width:36px;border:1px solid #fecaca;background:#fef2f2"></th>
         </tr></thead>
-        <tbody id="qcd-loihm-body">${qcLoiHMRowsHTML(eM)}</tbody>
+        <tbody id="qcd-loihm-body">${qcLoiHMRowsHTML()}</tbody>
       </table>
-    </div>
-    <div class="g2" style="gap:16px">
-      <div class="card" style="padding:14px"><div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:8px">📊 Hạng mục phát sinh lỗi (số lượng)</div><div style="height:240px"><canvas id="c-qcd-loicount"></canvas></div></div>
-      <div class="card" style="padding:14px"><div style="font-size:12px;font-weight:700;color:#d97706;margin-bottom:8px">📈 Tỷ lệ lỗi theo từng hạng mục (%)</div><div style="height:240px"><canvas id="c-qcd-loirate"></canvas></div></div>
     </div>
   </div>
 </div>`;
 }
-function qcLoiHMRowsHTML(eM){
-  const m=parseInt(eM||S.qcDiemMonth||'5');
-  const prevM=m>1?m-1:12;
-  if(!S.qcDiemLoiHM.length)return`<tr><td colspan="5" style="padding:14px;text-align:center;color:#94a3b8">Chưa có hạng mục nào. Nhập tên hạng mục ở trên và bấm Thêm.</td></tr>`;
+function qcLoiHMRowsHTML(){
+  if(!S.qcDiemLoiHM.length)return`<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8">Chưa có hạng mục nào. Gõ tên hạng mục ở trên và bấm Thêm.</td></tr>`;
   return S.qcDiemLoiHM.map((r,i)=>`<tr>
     <td style="padding:6px;border:1px solid #fecaca;text-align:center;color:#94a3b8">${i+1}</td>
     <td style="padding:6px 12px;border:1px solid #fecaca;font-weight:600">${r.cat}</td>
-    <td style="padding:4px;border:1px solid #fecaca"><input type="number" class="fi fi-sm" value="${r.prev||''}" placeholder="T${prevM}" oninput="qcLoiHMUpdate(${i},'prev',this.value)"></td>
-    <td style="padding:4px;border:1px solid #fecaca"><input type="number" class="fi fi-sm" value="${r.curr||''}" placeholder="T${m}" oninput="qcLoiHMUpdate(${i},'curr',this.value)"></td>
+    <td style="padding:4px;border:1px solid #fecaca"><input type="number" step="0.01" class="fi" style="width:120px;text-align:center" value="${r.tyle||''}" placeholder="Vd: 12.50" oninput="qcLoiHMUpdate(${i},'tyle',this.value)"></td>
+    <td style="padding:4px;border:1px solid #fecaca"><input type="number" class="fi" style="width:100px;text-align:center" value="${r.soLoi||''}" placeholder="Vd: 10" oninput="qcLoiHMUpdate(${i},'soLoi',this.value)"></td>
     <td style="padding:4px;border:1px solid #fecaca;text-align:center"><button onclick="qcLoiHMRemoveRow(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer" title="Xóa">🗑</button></td>
   </tr>`).join('');
 }
 function qcLoiHMUpdate(i,field,val){
   if(!S.qcDiemLoiHM[i])return;
-  S.qcDiemLoiHM[i][field]=parseFloat(val)||0;
-  qcLoiHMRenderCharts();
+  S.qcDiemLoiHM[i][field]=field==='tyle'?parseFloat(val)||0:parseInt(val)||0;
 }
 function qcLoiHMAddRow(){
   const inp=document.getElementById('qcd-new-hm');
   const name=(inp?.value||'').trim();
   if(!name){alert('Nhập tên hạng mục trước!');return;}
   if(S.qcDiemLoiHM.some(r=>r.cat===name)){alert(`"${name}" đã có trong bảng!`);return;}
-  S.qcDiemLoiHM.push({cat:name,prev:0,curr:0});
+  S.qcDiemLoiHM.push({cat:name,tyle:0,soLoi:0});
   inp.value='';
   const body=document.getElementById('qcd-loihm-body');
-  const eM=String(S.qcDiemMonth||'5');
-  if(body)body.innerHTML=qcLoiHMRowsHTML(eM);
-  qcLoiHMRenderCharts();
+  if(body)body.innerHTML=qcLoiHMRowsHTML();
 }
 function qcLoiHMRemoveRow(i){
   if(!confirm(`Xóa "${S.qcDiemLoiHM[i].cat}"?`))return;
   S.qcDiemLoiHM.splice(i,1);
   const body=document.getElementById('qcd-loihm-body');
-  const eM=String(S.qcDiemMonth||'5');
-  if(body)body.innerHTML=qcLoiHMRowsHTML(eM);
-  qcLoiHMRenderCharts();
-}
-function qcLoiHMRenderCharts(){
-  const m=parseInt(S.qcDiemMonth||'5');
-  const prevM=m>1?m-1:12;
-  const labels=S.qcDiemLoiHM.map(r=>r.cat);
-  const prevVals=S.qcDiemLoiHM.map(r=>r.prev||0);
-  const currVals=S.qcDiemLoiHM.map(r=>r.curr||0);
-  const totalPrev=prevVals.reduce((a,b)=>a+b,0)||1;
-  const totalCurr=currVals.reduce((a,b)=>a+b,0)||1;
-  const prevRates=prevVals.map(v=>+(v/totalPrev*100).toFixed(1));
-  const currRates=currVals.map(v=>+(v/totalCurr*100).toFixed(1));
-  const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11}}}}};
-  ['qcd-loicount','qcd-loirate'].forEach(id=>{if(S.charts[id]){S.charts[id].destroy();delete S.charts[id];}});
-  const c1=document.getElementById('c-qcd-loicount');
-  if(c1)S.charts['qcd-loicount']=new Chart(c1,{type:'bar',data:{labels,datasets:[{label:`T${prevM}`,data:prevVals,backgroundColor:'#1e3a8a',borderRadius:3},{label:`T${m}`,data:currVals,backgroundColor:'#60a5fa',borderRadius:3}]},options:{...opts,scales:{y:{beginAtZero:true,ticks:{font:{size:10}}}}}});
-  const c2=document.getElementById('c-qcd-loirate');
-  if(c2)S.charts['qcd-loirate']=new Chart(c2,{type:'bar',data:{labels,datasets:[{label:`T${prevM} (%)`,data:prevRates,backgroundColor:'#1e3a8a',borderRadius:3},{label:`T${m} (%)`,data:currRates,backgroundColor:'#f87171',borderRadius:3}]},options:{...opts,scales:{y:{beginAtZero:true,ticks:{font:{size:10},callback:v=>v+'%'}}}}});
+  if(body)body.innerHTML=qcLoiHMRowsHTML();
 }
 function rQCOv(){return`
 <div class="g4" style="margin-bottom:18px">
@@ -2969,7 +2940,6 @@ function afterRender(){
   // Init dynamic store table on Nhập liệu tab
   if(S.page==='baocao'&&S.tab==='Nhập liệu')qcLoadStores();
   if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ'&&!S._qcDiemAutoLoaded){S._qcDiemAutoLoaded=true;qcDiemLoad(S.qcDiemYear,S.qcDiemMonth);}
-  if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ'&&S.qcDiemLoiHM.length)setTimeout(qcLoiHMRenderCharts,50);
   // Load saved import data
   if(S.user)db.ref(`imports/${S.user.uid}`).get().then(snap=>{if(snap.exists()){const d=snap.val();Object.keys(d).forEach(m=>{S.data[m]=d[m].data;updateChartFromData(m,S.data[m]);});}});
 }
