@@ -1331,23 +1331,31 @@ async function qcGLLoad(year,month){
   go('qc','Check gian lận định kỳ và CTKM');
 }
 async function qcGLSync(btn){
-  let pat=localStorage.getItem('lark_gl_pat');
-  if(!pat){
-    pat=prompt('Nhập Lark User Access Token (UAT):\n\n→ Lark → Profile → Security → User Access Token\n→ Hoặc tạo Personal Access Token tại: open.larksuite.com');
-    if(!pat)return;
-    localStorage.setItem('lark_gl_pat',pat);
+  const GL_APP_ID='cli_aaa0cdd424b81eed';
+  let secret=localStorage.getItem('lark_gl_secret');
+  if(!secret){
+    secret=prompt('Nhập Lark App Secret:\n\n→ Vào open.larksuite.com/app/cli_aaa0cdd424b81eed/baseinfo\n→ Mục "Credentials & Basic Info"\n→ Bấm icon 👁️ cạnh App Secret để hiện → Copy & dán vào đây');
+    if(!secret)return;
+    localStorage.setItem('lark_gl_secret',secret);
   }
-  if(btn){btn.disabled=true;btn.textContent='⏳ Đang đồng bộ...';}
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang lấy token...';}
   try{
+    // Lấy app_access_token từ App ID + Secret
+    const authR=await fetch('https://open.larksuite.com/open-apis/auth/v3/app_access_token/internal',
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({app_id:GL_APP_ID,app_secret:secret})});
+    const authJ=await authR.json();
+    if(authJ.code!==0)throw new Error('Auth lỗi: '+authJ.msg+' ('+authJ.code+'). Kiểm tra lại App Secret.');
+    const aat=authJ.app_access_token;
+    if(btn)btn.textContent='⏳ Đang đồng bộ...';
     const appToken='AGGAbC9BPaioxas1VW8lV6tOg7g';
     const fetchAll=async(tblId,fields)=>{
       let all=[],pt='',more=true;
       while(more){
         const body={field_names:fields,page_size:200};if(pt)body.page_token=pt;
         const r=await fetch(`https://open.larksuite.com/open-apis/bitable/v1/apps/${appToken}/tables/${tblId}/records/search`,
-          {method:'POST',headers:{'Authorization':'Bearer '+pat,'Content-Type':'application/json'},body:JSON.stringify(body)});
+          {method:'POST',headers:{'Authorization':'Bearer '+aat,'Content-Type':'application/json'},body:JSON.stringify(body)});
         const j=await r.json();
-        if(j.code&&j.code!==0)throw new Error('Lark API: '+j.msg+' (code '+j.code+')');
+        if(j.code&&j.code!==0)throw new Error('Bitable API: '+j.msg+' ('+j.code+')');
         all=all.concat((j.data&&j.data.items)||[]);
         more=!!(j.data&&j.data.has_more);pt=(j.data&&j.data.page_token)||'';
       }
@@ -1378,11 +1386,12 @@ async function qcGLSync(btn){
     }
     const db2=getQCDB(),now=Date.now();
     await Promise.all(Object.values(agg).map(v=>db2.ref(`qc_gianlantctm/${v.y}/${v.m}`).set({...v,syncedAt:now})));
-    alert(`✅ Đồng bộ thành công! ${Object.keys(agg).length} tháng / ${dkRecs.length+ctkmRecs.length} bản ghi đã lưu.`);
+    alert(`✅ Đồng bộ thành công!\n${Object.keys(agg).length} tháng · ${dkRecs.length} check ĐK · ${ctkmRecs.length} check CTKM`);
     await qcGLLoad(S.qcGLYear,S.qcGLMonth);
   }catch(e){
-    if(e.message&&(e.message.includes('401')||e.message.includes('99991663'))){localStorage.removeItem('lark_gl_pat');alert('Token không hợp lệ hoặc hết hạn. Vui lòng nhập lại.');}
-    else alert('Lỗi đồng bộ: '+e.message);
+    const msg=e.message||'';
+    if(msg.includes('App Secret')||msg.includes('app_secret')||msg.includes('10003')){localStorage.removeItem('lark_gl_secret');alert('App Secret không đúng. Vui lòng nhập lại.\n\n'+msg);}
+    else alert('Lỗi đồng bộ: '+msg);
     if(btn){btn.disabled=false;btn.textContent='🔄 Đồng bộ Lark';}
   }
 }
