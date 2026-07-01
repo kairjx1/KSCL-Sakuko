@@ -1051,48 +1051,17 @@ function parseLarkDate(raw){
 }
 async function syncLarkDate(btn){
   if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang đồng bộ...';}
-  const AI='cli_a955afff9c21ded4',AS='peCKpaEI6Vvr03FqhwbPpfjBsKg3n0uc';
-  const AT='Gxgcwfo3Qihm6HkB9o9lNB9zgyg',TB='tbl6WUAU40sXbdde';
-  const BASE='https://open.larksuite.com/open-apis';
   try{
-    const ar=await fetch(BASE+'/auth/v3/app_access_token/internal',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({app_id:AI,app_secret:AS})
-    });
-    const ad=await ar.json();
-    if(!ad.tenant_access_token)throw new Error('Auth Lark thất bại: '+(ad.msg||ad.code));
-    const tk=ad.tenant_access_token;
-    const hd={'Authorization':'Bearer '+tk,'Content-Type':'application/json'};
-    const items=[];let pt=null;
-    do{
-      const body={page_size:500};if(pt)body.page_token=pt;
-      const rr=await fetch(`${BASE}/bitable/v1/apps/${AT}/tables/${TB}/records/search`,
-        {method:'POST',headers:hd,body:JSON.stringify(body)});
-      const rd=await rr.json();
-      if(rd.code!==0)throw new Error('Bitable lỗi: '+rd.msg);
-      (rd.data?.items||[]).forEach(it=>items.push(it));
-      pt=rd.data?.has_more?rd.data.page_token:null;
-    }while(pt);
-    if(!items.length)throw new Error('Không có bản ghi từ Lark Bitable');
-    const byM={};
-    for(const it of items){
-      const f=it.fields;
-      const m=('00'+_txt(f['Tháng']||'')).slice(-2);
-      if(!m||m==='00')continue;
-      const k='T'+m;
-      if(!byM[k])byM[k]={t:k,dt:0,gv:0,tv:0,conlai:0,huy:0,cp:0,dinhmuc:0};
-      byM[k].dt+=_num(f['Doanh thu']);
-      byM[k].gv+=_num(f['Đầu vào(GV)']);
-      byM[k].tv+=_num(f['Thu về']);
-      byM[k].conlai+=_num(f['Tồn trước đó']);
-    }
-    const monthly=Object.values(byM).sort((a,b)=>a.t>b.t?1:-1);
-    if(!monthly.length)throw new Error('Không tổng hợp được dữ liệu tháng');
-    const cache={monthly,stores:S.dateCache?.stores?.length?S.dateCache.stores:[],ts:Date.now()};
+    const url='https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/date-cache.json';
+    const r=await fetch(url+'?t='+Date.now());
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    if(!d.monthly?.length)throw new Error('Dữ liệu rỗng');
+    const cache={monthly:d.monthly,stores:d.stores||[],ts:Date.now()};
     localStorage.setItem('lark_date_cache',JSON.stringify(cache));
     S.dateCache=cache;
     go(S.page,S.tab);
-    toast(`✅ Đồng bộ Lark thành công: ${monthly.length} tháng, ${items.length} bản ghi`,'t-ok');
+    toast('✅ Đồng bộ thành công ('+d.monthly.length+' tháng)','t-ok');
   }catch(e){
     toast('❌ Lỗi đồng bộ: '+e.message,'t-err');
   }finally{
