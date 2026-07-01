@@ -1284,34 +1284,47 @@ function rQCGianLan(){
 </div>
 <div style="margin-bottom:16px">
   <div class="qcd-sec-hdr" onclick="qcToggleSec('qcgl-s2')" style="background:linear-gradient(90deg,#1d4ed8,#3b82f6)">
-    <span>🔍 I. Check Gian lận định kỳ — ${eY}</span><span id="qcgl-s2-ico">▼</span>
+    <span>📋 Số liệu theo tháng — ${eY}</span><span id="qcgl-s2-ico">▼</span>
   </div>
   <div id="qcgl-s2" class="qcd-sec-body">
     ${!hasYear?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có dữ liệu năm ${eY}. Bấm 🔄 Đồng bộ Lark để tải.</div>`:`
-    <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <thead><tr style="background:rgba(59,130,246,0.15)">
-        <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--br)">Tháng</th>
-        <th style="padding:8px 12px;text-align:right;border-bottom:1px solid var(--br)">Số check ĐK</th>
-        <th style="padding:8px 12px;text-align:right;border-bottom:1px solid var(--br)">Cần giải trình</th>
-      </tr></thead>
-      <tbody>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>{const r=yd[String(m)];const t=r&&r.dk&&r.dk.total||0;const c=r&&r.dk&&r.dk.cgt||0;return`<tr style="border-bottom:1px solid var(--br)"><td style="padding:7px 12px">Tháng ${m}</td><td style="padding:7px 12px;text-align:right">${t||'—'}</td><td style="padding:7px 12px;text-align:right;color:${c>0?'#dc2626':'#16a34a'}">${c||'—'}</td></tr>`;}).join('')}</tbody>
-    </table>`}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#3b82f6">🔍 Check Gian lận định kỳ</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:rgba(59,130,246,0.15)">
+            <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--br)">Tháng</th>
+            <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--br)">Check ĐK</th>
+            <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--br)">Cần GT</th>
+          </tr></thead>
+          <tbody>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>{const r=yd[String(m)];const t=r&&r.dk&&r.dk.total||0;const c=r&&r.dk&&r.dk.cgt||0;return`<tr style="border-bottom:1px solid var(--br)"><td style="padding:6px 10px">T${m}</td><td style="padding:6px 10px;text-align:right">${t||'—'}</td><td style="padding:6px 10px;text-align:right;color:${c>0?'#dc2626':'#16a34a'}">${c||'—'}</td></tr>`;}).join('')}</tbody>
+        </table>
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#a855f7">🎁 Check CTKM</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:rgba(168,85,247,0.15)">
+            <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--br)">Tháng</th>
+            <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--br)">Check CTKM</th>
+            <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--br)">Cần GT</th>
+          </tr></thead>
+          <tbody>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>{const r=yd[String(m)];const t=r&&r.ctkm&&r.ctkm.total||0;const c=r&&r.ctkm&&r.ctkm.cgt||0;return`<tr style="border-bottom:1px solid var(--br)"><td style="padding:6px 10px">T${m}</td><td style="padding:6px 10px;text-align:right">${t||'—'}</td><td style="padding:6px 10px;text-align:right;color:${c>0?'#dc2626':'#16a34a'}">${c||'—'}</td></tr>`;}).join('')}</tbody>
+        </table>
+      </div>
+    </div>`}
   </div>
 </div>
 <div style="margin-bottom:16px">
-  <div class="qcd-sec-hdr" onclick="qcToggleSec('qcgl-s3')" style="background:linear-gradient(90deg,#7e22ce,#a855f7)">
-    <span>🎁 II. Check CTKM — ${eY}</span><span id="qcgl-s3-ico">▼</span>
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('qcgl-s3')" style="background:linear-gradient(90deg,#dc2626,#ef4444)">
+    <span>⚠️ Tổng hợp lỗi vi phạm tháng ${eM}/${eY}</span><span id="qcgl-s3-ico">▼</span>
   </div>
   <div id="qcgl-s3" class="qcd-sec-body">
-    ${!hasYear?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có dữ liệu năm ${eY}. Bấm 🔄 Đồng bộ Lark để tải.</div>`:`
-    <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <thead><tr style="background:rgba(168,85,247,0.15)">
-        <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--br)">Tháng</th>
-        <th style="padding:8px 12px;text-align:right;border-bottom:1px solid var(--br)">Số check CTKM</th>
-        <th style="padding:8px 12px;text-align:right;border-bottom:1px solid var(--br)">Cần giải trình</th>
-      </tr></thead>
-      <tbody>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>{const r=yd[String(m)];const t=r&&r.ctkm&&r.ctkm.total||0;const c=r&&r.ctkm&&r.ctkm.cgt||0;return`<tr style="border-bottom:1px solid var(--br)"><td style="padding:7px 12px">Tháng ${m}</td><td style="padding:7px 12px;text-align:right">${t||'—'}</td><td style="padding:7px 12px;text-align:right;color:${c>0?'#dc2626':'#16a34a'}">${c||'—'}</td></tr>`;}).join('')}</tbody>
-    </table>`}
+    ${!d?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có dữ liệu.</div>`:`
+    <div class="g2" style="gap:12px;margin-bottom:12px">
+      <div><div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--t1)">🔍 Định kỳ — Lỗi vi phạm</div>${_glLoiTable(dk.loiVPs||{})}</div>
+      <div><div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--t1)">🎁 CTKM — Lỗi vi phạm</div>${_glLoiTable(ctkm.loiVPs||{})}</div>
+    </div>
+    <div class="chart-wrap" style="height:200px"><canvas id="c-gl-loi"></canvas></div>`}
   </div>
 </div>`;
 }
