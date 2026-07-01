@@ -1488,17 +1488,14 @@ function rQCBienBan(){
   </div>
 </div>`;
 }
-const _FB_BUCKET='kscl---sakuko.firebasestorage.app';
-async function _fbUpload(file,path){
-  const user=firebase.auth().currentUser;
-  if(!user)throw new Error('Chưa đăng nhập');
-  const tok=await user.getIdToken();
-  const res=await fetch(`https://firebasestorage.googleapis.com/v0/b/${_FB_BUCKET}/o?name=${encodeURIComponent(path)}&uploadType=media`,{
-    method:'POST',headers:{'Authorization':'Bearer '+tok,'Content-Type':file.type||'application/octet-stream'},body:file
-  });
-  if(!res.ok){const j=await res.json();throw new Error(j.error?.message||'Upload lỗi '+res.status);}
+async function _driveUpload(file,filename){
+  const fd=new FormData();
+  fd.append('file',file,filename||file.name);
+  fd.append('name',filename||file.name);
+  const res=await fetch('/drive-upload',{method:'POST',body:fd});
   const j=await res.json();
-  return`https://firebasestorage.googleapis.com/v0/b/${_FB_BUCKET}/o/${encodeURIComponent(path)}?alt=media&token=${j.downloadTokens}`;
+  if(!j.ok)throw new Error(j.error||'Drive upload thất bại');
+  return j.viewUrl;
 }
 async function qcDocsLoad(){
   const db2=getQCDB();if(!db2)return;
@@ -1512,7 +1509,7 @@ async function qcDocUpload(type,idx,inp){
   lbl.childNodes[0].textContent='⏳';
   try{
     const uid=Date.now()+'_'+Math.random().toString(36).substr(2,6);
-    const url=await _fbUpload(file,`qc_docs/${type}/${uid}_${file.name}`);
+    const url=await _driveUpload(file,`${uid}_${file.name}`);
     await getQCDB().ref(`qc_docs/${type}/${idx}`).set({url,filename:file.name,uploaded_at:Date.now()});
     if(!S.qcDocsData[type])S.qcDocsData[type]={};
     S.qcDocsData[type][idx]={url,filename:file.name};
@@ -1552,7 +1549,7 @@ async function qcBBSave(btn){
       if(file.size>10*1024*1024){throw new Error('File quá 10MB');}
       prog.style.display='block';progTxt.textContent='⏳ Đang upload file...';
       const uid=Date.now()+'_'+Math.random().toString(36).substr(2,6);
-      file_url=await _fbUpload(file,`bienbans/${year}/${month}/${uid}_${file.name}`);
+      file_url=await _driveUpload(file,`${uid}_${file.name}`);
       ten_file=file.name;
       progTxt.textContent='✅ Upload xong!';
     }
