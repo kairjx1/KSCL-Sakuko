@@ -344,7 +344,7 @@ const ROLES={
 const MODS=[
   {id:'dashboard',ic:'🏠',sic:'dashboard',lb:'Tổng quan',  color:'#0066cc',bg:'#e8f2ff',ds:'KPI & tổng hợp'},
   {id:'kk',       ic:'📦',sic:'kk',       lb:'Kiểm kê',    color:'#16a34a',bg:'#dcfce7',ds:'Kiểm kê hàng hóa'},
-  {id:'qc',       ic:'🔬',sic:'qc',       lb:'Kiểm soát CL',color:'#0284c7',bg:'#e0f2fe',ds:'Quality Control'},
+  {id:'qc',       ic:'🔬',sic:'qc',       lb:'QC',color:'#0284c7',bg:'#e0f2fe',ds:'Quality Control'},
   {id:'congviec', ic:'✅',sic:'congviec', lb:'Công việc',  color:'#ea580c',bg:'#fff7ed',ds:'Task & Checklist'},
   {id:'baocao',   ic:'📊',sic:'baocao',   lb:'Báo cáo',    color:'#7c3aed',bg:'#f5f3ff',ds:'Phân tích & KPI'},
   {id:'daotao',   ic:'📚',sic:'daotao',   lb:'Đào tạo',    color:'#0d9488',bg:'#ccfbf1',ds:'Học liệu nội bộ'},
@@ -887,19 +887,19 @@ function rKKList(){return`
    QC MODULE
 ══════════════════════════════════════════ */
 function rQC(){
-  const tabs=['Tổng quan','Biểu đồ lỗi','Phiếu QC','Tiêu chuẩn','Import Excel'];
+  const tabs=['Tổng quan','Chấm điểm dịch vụ','Đổi trả','Check gian lận định kỳ và CTKM','Biên bản xử lý vi phạm','Hàng thanh lý'];
   const t=S.tab||'Tổng quan';
   return`
-<div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Kiểm soát chất lượng</div>
+<div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › QC</div>
 <div class="sec-hdr">
-  <h1>${skIcn('qc',26,26)} Kiểm soát chất lượng</h1>
+  <h1>${skIcn('qc',26,26)} QC</h1>
   <div style="display:flex;gap:8px">
     <button class="btn b-out b-sm">📥 Template Excel</button>
     <button class="btn b-pri b-sm" onclick="showImport('qc')">⬆️ Import Excel</button>
   </div>
 </div>
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('qc','${tb}')">${tb}</div>`).join('')}</div>
-${t==='Tổng quan'?rQCOv():t==='Biểu đồ lỗi'?rQCChart():t==='Phiếu QC'?rQCList():t==='Tiêu chuẩn'?rQCStd():rImport('qc')}`;
+${t==='Tổng quan'?rQCOv():rImport('qc')}`;
 }
 function rQCOv(){return`
 <div class="g4" style="margin-bottom:18px">
