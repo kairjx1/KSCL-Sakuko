@@ -356,7 +356,7 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12};
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026'};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -899,7 +899,125 @@ function rQC(){
   </div>
 </div>
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('qc','${tb}')">${tb}</div>`).join('')}</div>
-${t==='Tổng quan'?rQCOv():rImport('qc')}`;
+${t==='Tổng quan'?rQCOv():t==='Chấm điểm dịch vụ'?rQCDiem():rImport('qc')}`;
+}
+function qcDiemPct(n){return isFinite(n)?(n*100).toFixed(2)+'%':'—';}
+function qcDiemRowsHTML(){
+  if(!S.qcDiemRows.length)return`<tr><td colspan="9" style="padding:20px;text-align:center;color:#94a3b8">Chưa có siêu thị nào. Gõ tên ST ở trên và bấm Thêm ST.</td></tr>`;
+  return S.qcDiemRows.map((r,i)=>{
+    const max=parseFloat(r.max)||0,thuc=parseFloat(r.thuc)||0,loiPS=parseFloat(r.loiPS)||0;
+    const dat=max>0?thuc/max:0,loi=max>0?1-dat:0,loiPct=max>0?loiPS/max:0;
+    return`<tr>
+      <td style="padding:6px;border:1px solid #e0e7ff;text-align:center;color:#94a3b8">${i+1}</td>
+      <td style="padding:6px 12px;border:1px solid #e0e7ff;font-weight:600">${r.st}</td>
+      <td style="padding:4px;border:1px solid #e0e7ff"><input type="number" class="fi fi-sm" value="${r.max||''}" oninput="qcDiemUpdate(${i},'max',this.value)"></td>
+      <td style="padding:4px;border:1px solid #e0e7ff"><input type="number" class="fi fi-sm" value="${r.thuc||''}" oninput="qcDiemUpdate(${i},'thuc',this.value)"></td>
+      <td class="qcd-cell-dat" style="padding:6px;border:1px solid #e0e7ff;text-align:center;font-weight:700;color:${dat>=0.9?'#15803d':dat>=0.8?'#d97706':'#dc2626'}">${qcDiemPct(dat)}</td>
+      <td class="qcd-cell-loi" style="padding:6px;border:1px solid #e0e7ff;text-align:center;color:#dc2626">${qcDiemPct(loi)}</td>
+      <td style="padding:4px;border:1px solid #e0e7ff"><input type="number" class="fi fi-sm" value="${r.loiPS||''}" oninput="qcDiemUpdate(${i},'loiPS',this.value)"></td>
+      <td class="qcd-cell-loips" style="padding:6px;border:1px solid #e0e7ff;text-align:center;color:#d97706">${qcDiemPct(loiPct)}</td>
+      <td style="padding:4px;border:1px solid #e0e7ff;text-align:center"><button onclick="qcDiemRemoveRow(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer" title="Xóa">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+function qcDiemUpdate(i,field,val){
+  if(!S.qcDiemRows[i])return;
+  S.qcDiemRows[i][field]=val;
+  const row=document.querySelectorAll('#qcd-diem-body tr')[i];if(!row)return;
+  const max=parseFloat(S.qcDiemRows[i].max)||0,thuc=parseFloat(S.qcDiemRows[i].thuc)||0,loiPS=parseFloat(S.qcDiemRows[i].loiPS)||0;
+  const dat=max>0?thuc/max:0,loi=max>0?1-dat:0,loiPct=max>0?loiPS/max:0;
+  const cDat=row.querySelector('.qcd-cell-dat'),cLoi=row.querySelector('.qcd-cell-loi'),cLoiPS=row.querySelector('.qcd-cell-loips');
+  if(cDat){cDat.textContent=qcDiemPct(dat);cDat.style.color=dat>=0.9?'#15803d':dat>=0.8?'#d97706':'#dc2626';}
+  if(cLoi)cLoi.textContent=qcDiemPct(loi);
+  if(cLoiPS)cLoiPS.textContent=qcDiemPct(loiPct);
+}
+function qcDiemAddRow(){
+  const inp=document.getElementById('qcd-new-st');
+  const name=(inp?.value||'').trim();
+  if(!name){alert('Nhập tên siêu thị trước!');return;}
+  if(S.qcDiemRows.some(r=>r.st===name)){alert(`"${name}" đã có trong bảng!`);return;}
+  S.qcDiemRows.push({st:name,max:'',thuc:'',loiPS:''});
+  if(!qcStoreList.includes(name)){qcStoreList.push(name);qcSaveStoreConfig();}
+  inp.value='';
+  const body=document.getElementById('qcd-diem-body');if(body)body.innerHTML=qcDiemRowsHTML();
+}
+function qcDiemRemoveRow(i){
+  if(!confirm(`Xóa "${S.qcDiemRows[i].st}" khỏi bảng?`))return;
+  S.qcDiemRows.splice(i,1);
+  const body=document.getElementById('qcd-diem-body');if(body)body.innerHTML=qcDiemRowsHTML();
+}
+function qcDiemLoad(year,month){
+  const y=String(year||S.qcDiemYear||'2026'),m=String(month||S.qcDiemMonth||'5');
+  S.qcDiemYear=y;S.qcDiemMonth=m;
+  const qcdb=getQCDB();if(!qcdb){alert('Không kết nối được Firebase!');return;}
+  qcdb.ref(`qc_diem/${y}/${m}`).get().then(snap=>{
+    const d=snap.exists()?snap.val():null;
+    S.qcDiemRows=d&&Array.isArray(d.rows)?d.rows:[];
+    go('qc','Chấm điểm dịch vụ');
+  }).catch(e=>alert('Lỗi tải dữ liệu: '+e.message));
+}
+function qcDiemSave(btn){
+  const y=document.getElementById('qcd-year')?.value||S.qcDiemYear||'2026';
+  const m=document.getElementById('qcd-month')?.value||S.qcDiemMonth||'5';
+  S.qcDiemYear=y;S.qcDiemMonth=m;
+  const qcdb=getQCDB();if(!qcdb){alert('Không kết nối được Firebase!');return;}
+  const data={rows:S.qcDiemRows,savedAt:Date.now()};
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang lưu...';}
+  const ref=qcdb.ref(`qc_diem/${y}/${m}`);
+  ref.get().then(oldSnap=>{
+    const ops=[];
+    if(oldSnap.exists())ops.push(qcdb.ref(`qc_diem_history/${y}/${m}`).push({...oldSnap.val(),_snapshotAt:Date.now(),_by:S.profile?.name||S.user?.email||'?'}));
+    return Promise.all(ops).then(()=>ref.set(data));
+  }).then(()=>{
+    const saved=document.getElementById('qcd-diem-saved');
+    if(saved){saved.style.display='block';setTimeout(()=>saved.style.display='none',4000);}
+    if(btn){btn.disabled=false;btn.textContent='💾 Lưu';}
+  }).catch(e=>{alert('Lỗi lưu: '+e.message);if(btn){btn.disabled=false;btn.textContent='💾 Lưu';}});
+}
+function rQCDiem(){
+  const eM=String(S.qcDiemMonth||'5');
+  const eY=String(S.qcDiemYear||'2026');
+  return`
+<div class="card" style="padding:16px 20px;margin-bottom:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2 style="font-size:15px;font-weight:700;color:var(--t1);margin:0">📋 Chấm điểm dịch vụ siêu thị</h2>
+      <p style="font-size:12px;color:var(--t2);margin:4px 0 0">Nhập điểm max / điểm thực chấm từng ST — hệ thống tự tính tỷ lệ đạt & tỷ lệ lỗi</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label class="fi-lbl" style="margin:0">Tháng</label>
+      <select id="qcd-month" class="fi" style="width:70px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+      <label class="fi-lbl" style="margin:0">Năm</label>
+      <select id="qcd-year" class="fi" style="width:85px"><option value="2026"${eY==='2026'?' selected':''}>2026</option><option value="2025"${eY==='2025'?' selected':''}>2025</option></select>
+      <button onclick="qcDiemLoad(document.getElementById('qcd-year').value,document.getElementById('qcd-month').value)" class="btn b-out b-sm">⬇️ Tải</button>
+      <button onclick="qcDiemSave(this)" class="btn b-pri b-sm">💾 Lưu</button>
+    </div>
+  </div>
+  <div id="qcd-diem-saved" class="qcd-saved">✅ Đã lưu thành công!</div>
+</div>
+<div class="card" style="padding:14px 20px;margin-bottom:16px">
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input id="qcd-new-st" list="qcd-st-list" class="fi" style="flex:1;min-width:220px" placeholder="Gõ tên siêu thị rồi bấm Thêm ST..." onkeydown="if(event.key==='Enter'){event.preventDefault();qcDiemAddRow();}">
+    <datalist id="qcd-st-list">${qcStoreList.map(s=>`<option value="${s}">`).join('')}</datalist>
+    <button onclick="qcDiemAddRow()" class="btn b-pri b-sm">➕ Thêm ST</button>
+  </div>
+</div>
+<div class="card" style="padding:0;overflow-x:auto">
+  <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+    <thead><tr style="background:#f0f0ff">
+      <th style="padding:8px;border:1px solid #e0e7ff;color:#6b7280">#</th>
+      <th style="text-align:left;padding:8px 12px;border:1px solid #e0e7ff;color:#4f46e5;font-weight:700">Siêu thị</th>
+      <th style="padding:8px;border:1px solid #e0e7ff;color:#6b7280">Tổng điểm max</th>
+      <th style="padding:8px;border:1px solid #e0e7ff;color:#6b7280">Tổng điểm thực chấm</th>
+      <th style="padding:8px;border:1px solid #e0e7ff;color:#15803d">Tỷ lệ đạt</th>
+      <th style="padding:8px;border:1px solid #e0e7ff;color:#dc2626">Tỷ lệ lỗi %</th>
+      <th style="padding:8px;border:1px solid #e0e7ff;color:#6b7280">Số lỗi phát sinh</th>
+      <th style="padding:8px;border:1px solid #e0e7ff;color:#d97706">Tỷ lệ lỗi phát sinh</th>
+      <th style="width:36px;border:1px solid #e0e7ff;background:#f0f0ff"></th>
+    </tr></thead>
+    <tbody id="qcd-diem-body">${qcDiemRowsHTML()}</tbody>
+  </table>
+</div>`;
 }
 function rQCOv(){return`
 <div class="g4" style="margin-bottom:18px">
@@ -2774,6 +2892,7 @@ function afterRender(){
 
   // Init dynamic store table on Nhập liệu tab
   if(S.page==='baocao'&&S.tab==='Nhập liệu')qcLoadStores();
+  if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ'&&!S._qcDiemAutoLoaded){S._qcDiemAutoLoaded=true;qcDiemLoad(S.qcDiemYear,S.qcDiemMonth);}
   // Load saved import data
   if(S.user)db.ref(`imports/${S.user.uid}`).get().then(snap=>{if(snap.exists()){const d=snap.val();Object.keys(d).forEach(m=>{S.data[m]=d[m].data;updateChartFromData(m,S.data[m]);});}});
 }
