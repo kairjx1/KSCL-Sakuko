@@ -356,7 +356,7 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026'};
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[]};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -903,10 +903,10 @@ ${t==='Tổng quan'?rQCOv():t==='Chấm điểm dịch vụ'?rQCDiem():rImport('
 }
 function qcDiemPct(n){return isFinite(n)?(n*100).toFixed(2)+'%':'—';}
 function qcDiemRowsHTML(){
-  if(!S.qcDiemRows.length)return`<tr><td colspan="9" style="padding:20px;text-align:center;color:#94a3b8">Chưa có siêu thị nào. Gõ tên ST ở trên và bấm Thêm ST.</td></tr>`;
+  if(!S.qcDiemRows.length)return`<tr><td colspan="7" style="padding:20px;text-align:center;color:#94a3b8">Chưa có siêu thị nào. Gõ tên ST ở trên và bấm Thêm ST.</td></tr>`;
   return S.qcDiemRows.map((r,i)=>{
-    const max=parseFloat(r.max)||0,thuc=parseFloat(r.thuc)||0,loiPS=parseFloat(r.loiPS)||0;
-    const dat=max>0?thuc/max:0,loi=max>0?1-dat:0,loiPct=max>0?loiPS/max:0;
+    const max=parseFloat(r.max)||0,thuc=parseFloat(r.thuc)||0;
+    const dat=max>0?thuc/max:0,loi=max>0?1-dat:0;
     return`<tr>
       <td style="padding:6px;border:1px solid #e0e7ff;text-align:center;color:#94a3b8">${i+1}</td>
       <td style="padding:6px 12px;border:1px solid #e0e7ff;font-weight:600">${r.st}</td>
@@ -914,8 +914,6 @@ function qcDiemRowsHTML(){
       <td style="padding:4px;border:1px solid #e0e7ff"><input type="number" class="fi fi-sm" value="${r.thuc||''}" oninput="qcDiemUpdate(${i},'thuc',this.value)"></td>
       <td class="qcd-cell-dat" style="padding:6px;border:1px solid #e0e7ff;text-align:center;font-weight:700;color:${dat>=0.9?'#15803d':dat>=0.8?'#d97706':'#dc2626'}">${qcDiemPct(dat)}</td>
       <td class="qcd-cell-loi" style="padding:6px;border:1px solid #e0e7ff;text-align:center;color:#dc2626">${qcDiemPct(loi)}</td>
-      <td style="padding:4px;border:1px solid #e0e7ff"><input type="number" class="fi fi-sm" value="${r.loiPS||''}" oninput="qcDiemUpdate(${i},'loiPS',this.value)"></td>
-      <td class="qcd-cell-loips" style="padding:6px;border:1px solid #e0e7ff;text-align:center;color:#d97706">${qcDiemPct(loiPct)}</td>
       <td style="padding:4px;border:1px solid #e0e7ff;text-align:center"><button onclick="qcDiemRemoveRow(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer" title="Xóa">🗑</button></td>
     </tr>`;
   }).join('');
@@ -924,19 +922,18 @@ function qcDiemUpdate(i,field,val){
   if(!S.qcDiemRows[i])return;
   S.qcDiemRows[i][field]=val;
   const row=document.querySelectorAll('#qcd-diem-body tr')[i];if(!row)return;
-  const max=parseFloat(S.qcDiemRows[i].max)||0,thuc=parseFloat(S.qcDiemRows[i].thuc)||0,loiPS=parseFloat(S.qcDiemRows[i].loiPS)||0;
-  const dat=max>0?thuc/max:0,loi=max>0?1-dat:0,loiPct=max>0?loiPS/max:0;
-  const cDat=row.querySelector('.qcd-cell-dat'),cLoi=row.querySelector('.qcd-cell-loi'),cLoiPS=row.querySelector('.qcd-cell-loips');
+  const max=parseFloat(S.qcDiemRows[i].max)||0,thuc=parseFloat(S.qcDiemRows[i].thuc)||0;
+  const dat=max>0?thuc/max:0,loi=max>0?1-dat:0;
+  const cDat=row.querySelector('.qcd-cell-dat'),cLoi=row.querySelector('.qcd-cell-loi');
   if(cDat){cDat.textContent=qcDiemPct(dat);cDat.style.color=dat>=0.9?'#15803d':dat>=0.8?'#d97706':'#dc2626';}
   if(cLoi)cLoi.textContent=qcDiemPct(loi);
-  if(cLoiPS)cLoiPS.textContent=qcDiemPct(loiPct);
 }
 function qcDiemAddRow(){
   const inp=document.getElementById('qcd-new-st');
   const name=(inp?.value||'').trim();
   if(!name){alert('Nhập tên siêu thị trước!');return;}
   if(S.qcDiemRows.some(r=>r.st===name)){alert(`"${name}" đã có trong bảng!`);return;}
-  S.qcDiemRows.push({st:name,max:'',thuc:'',loiPS:''});
+  S.qcDiemRows.push({st:name,max:'',thuc:''});
   if(!qcStoreList.includes(name)){qcStoreList.push(name);qcSaveStoreConfig();}
   inp.value='';
   const body=document.getElementById('qcd-diem-body');if(body)body.innerHTML=qcDiemRowsHTML();
@@ -953,6 +950,7 @@ function qcDiemLoad(year,month){
   qcdb.ref(`qc_diem/${y}/${m}`).get().then(snap=>{
     const d=snap.exists()?snap.val():null;
     S.qcDiemRows=d&&Array.isArray(d.rows)?d.rows:[];
+    S.qcDiemLoiHM=d&&Array.isArray(d.loiHM)?d.loiHM:[];
     go('qc','Chấm điểm dịch vụ');
   }).catch(e=>alert('Lỗi tải dữ liệu: '+e.message));
 }
@@ -961,7 +959,7 @@ function qcDiemSave(btn){
   const m=document.getElementById('qcd-month')?.value||S.qcDiemMonth||'5';
   S.qcDiemYear=y;S.qcDiemMonth=m;
   const qcdb=getQCDB();if(!qcdb){alert('Không kết nối được Firebase!');return;}
-  const data={rows:S.qcDiemRows,savedAt:Date.now()};
+  const data={rows:S.qcDiemRows,loiHM:S.qcDiemLoiHM,savedAt:Date.now()};
   if(btn){btn.disabled=true;btn.textContent='⏳ Đang lưu...';}
   const ref=qcdb.ref(`qc_diem/${y}/${m}`);
   ref.get().then(oldSnap=>{
@@ -1011,13 +1009,91 @@ function rQCDiem(){
       <th style="padding:8px;border:1px solid #e0e7ff;color:#6b7280">Tổng điểm thực chấm</th>
       <th style="padding:8px;border:1px solid #e0e7ff;color:#15803d">Tỷ lệ đạt</th>
       <th style="padding:8px;border:1px solid #e0e7ff;color:#dc2626">Tỷ lệ lỗi %</th>
-      <th style="padding:8px;border:1px solid #e0e7ff;color:#6b7280">Số lỗi phát sinh</th>
-      <th style="padding:8px;border:1px solid #e0e7ff;color:#d97706">Tỷ lệ lỗi phát sinh</th>
       <th style="width:36px;border:1px solid #e0e7ff;background:#f0f0ff"></th>
     </tr></thead>
     <tbody id="qcd-diem-body">${qcDiemRowsHTML()}</tbody>
   </table>
+</div>
+<div style="margin-bottom:12px;margin-top:16px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('qcd-loihm')" style="background:linear-gradient(90deg,#dc2626,#ef4444)"><span>📊 Lỗi phát sinh theo hạng mục — So sánh tháng trước & tháng này</span><span id="qcd-loihm-ico">▼</span></div>
+  <div id="qcd-loihm" class="qcd-sec-body">
+    <div style="font-size:12px;color:#6366f1;background:#eef2ff;border-radius:6px;padding:7px 12px;margin-bottom:12px">💡 Nhập số lỗi phát sinh theo từng hạng mục cho tháng trước và tháng này. Hệ thống tự vẽ biểu đồ so sánh.</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+      <input id="qcd-new-hm" class="fi" style="flex:1;min-width:200px" placeholder="Nhập tên hạng mục rồi bấm Thêm..." onkeydown="if(event.key==='Enter'){event.preventDefault();qcLoiHMAddRow();}">
+      <button onclick="qcLoiHMAddRow()" class="btn b-pri b-sm">➕ Thêm hạng mục</button>
+    </div>
+    <div style="overflow-x:auto;margin-bottom:16px">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr style="background:#fef2f2">
+          <th style="padding:8px;border:1px solid #fecaca;color:#6b7280">#</th>
+          <th style="text-align:left;padding:8px 12px;border:1px solid #fecaca;color:#dc2626;font-weight:700">Hạng mục</th>
+          <th style="padding:8px;border:1px solid #fecaca;color:#6b7280">Số lỗi T${parseInt(eM)>1?parseInt(eM)-1:12}</th>
+          <th style="padding:8px;border:1px solid #fecaca;color:#dc2626;font-weight:700">Số lỗi T${eM}</th>
+          <th style="width:36px;border:1px solid #fecaca;background:#fef2f2"></th>
+        </tr></thead>
+        <tbody id="qcd-loihm-body">${qcLoiHMRowsHTML(eM)}</tbody>
+      </table>
+    </div>
+    <div class="g2" style="gap:16px">
+      <div class="card" style="padding:14px"><div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:8px">📊 Hạng mục phát sinh lỗi (số lượng)</div><div style="height:240px"><canvas id="c-qcd-loicount"></canvas></div></div>
+      <div class="card" style="padding:14px"><div style="font-size:12px;font-weight:700;color:#d97706;margin-bottom:8px">📈 Tỷ lệ lỗi theo từng hạng mục (%)</div><div style="height:240px"><canvas id="c-qcd-loirate"></canvas></div></div>
+    </div>
+  </div>
 </div>`;
+}
+function qcLoiHMRowsHTML(eM){
+  const m=parseInt(eM||S.qcDiemMonth||'5');
+  const prevM=m>1?m-1:12;
+  if(!S.qcDiemLoiHM.length)return`<tr><td colspan="5" style="padding:14px;text-align:center;color:#94a3b8">Chưa có hạng mục nào. Nhập tên hạng mục ở trên và bấm Thêm.</td></tr>`;
+  return S.qcDiemLoiHM.map((r,i)=>`<tr>
+    <td style="padding:6px;border:1px solid #fecaca;text-align:center;color:#94a3b8">${i+1}</td>
+    <td style="padding:6px 12px;border:1px solid #fecaca;font-weight:600">${r.cat}</td>
+    <td style="padding:4px;border:1px solid #fecaca"><input type="number" class="fi fi-sm" value="${r.prev||''}" placeholder="T${prevM}" oninput="qcLoiHMUpdate(${i},'prev',this.value)"></td>
+    <td style="padding:4px;border:1px solid #fecaca"><input type="number" class="fi fi-sm" value="${r.curr||''}" placeholder="T${m}" oninput="qcLoiHMUpdate(${i},'curr',this.value)"></td>
+    <td style="padding:4px;border:1px solid #fecaca;text-align:center"><button onclick="qcLoiHMRemoveRow(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer" title="Xóa">🗑</button></td>
+  </tr>`).join('');
+}
+function qcLoiHMUpdate(i,field,val){
+  if(!S.qcDiemLoiHM[i])return;
+  S.qcDiemLoiHM[i][field]=parseFloat(val)||0;
+  qcLoiHMRenderCharts();
+}
+function qcLoiHMAddRow(){
+  const inp=document.getElementById('qcd-new-hm');
+  const name=(inp?.value||'').trim();
+  if(!name){alert('Nhập tên hạng mục trước!');return;}
+  if(S.qcDiemLoiHM.some(r=>r.cat===name)){alert(`"${name}" đã có trong bảng!`);return;}
+  S.qcDiemLoiHM.push({cat:name,prev:0,curr:0});
+  inp.value='';
+  const body=document.getElementById('qcd-loihm-body');
+  const eM=String(S.qcDiemMonth||'5');
+  if(body)body.innerHTML=qcLoiHMRowsHTML(eM);
+  qcLoiHMRenderCharts();
+}
+function qcLoiHMRemoveRow(i){
+  if(!confirm(`Xóa "${S.qcDiemLoiHM[i].cat}"?`))return;
+  S.qcDiemLoiHM.splice(i,1);
+  const body=document.getElementById('qcd-loihm-body');
+  const eM=String(S.qcDiemMonth||'5');
+  if(body)body.innerHTML=qcLoiHMRowsHTML(eM);
+  qcLoiHMRenderCharts();
+}
+function qcLoiHMRenderCharts(){
+  const m=parseInt(S.qcDiemMonth||'5');
+  const prevM=m>1?m-1:12;
+  const labels=S.qcDiemLoiHM.map(r=>r.cat);
+  const prevVals=S.qcDiemLoiHM.map(r=>r.prev||0);
+  const currVals=S.qcDiemLoiHM.map(r=>r.curr||0);
+  const totalPrev=prevVals.reduce((a,b)=>a+b,0)||1;
+  const totalCurr=currVals.reduce((a,b)=>a+b,0)||1;
+  const prevRates=prevVals.map(v=>+(v/totalPrev*100).toFixed(1));
+  const currRates=currVals.map(v=>+(v/totalCurr*100).toFixed(1));
+  const opts={responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11}}}}};
+  ['qcd-loicount','qcd-loirate'].forEach(id=>{if(S.charts[id]){S.charts[id].destroy();delete S.charts[id];}});
+  const c1=document.getElementById('c-qcd-loicount');
+  if(c1)S.charts['qcd-loicount']=new Chart(c1,{type:'bar',data:{labels,datasets:[{label:`T${prevM}`,data:prevVals,backgroundColor:'#1e3a8a',borderRadius:3},{label:`T${m}`,data:currVals,backgroundColor:'#60a5fa',borderRadius:3}]},options:{...opts,scales:{y:{beginAtZero:true,ticks:{font:{size:10}}}}}});
+  const c2=document.getElementById('c-qcd-loirate');
+  if(c2)S.charts['qcd-loirate']=new Chart(c2,{type:'bar',data:{labels,datasets:[{label:`T${prevM} (%)`,data:prevRates,backgroundColor:'#1e3a8a',borderRadius:3},{label:`T${m} (%)`,data:currRates,backgroundColor:'#f87171',borderRadius:3}]},options:{...opts,scales:{y:{beginAtZero:true,ticks:{font:{size:10},callback:v=>v+'%'}}}}});
 }
 function rQCOv(){return`
 <div class="g4" style="margin-bottom:18px">
@@ -2893,6 +2969,7 @@ function afterRender(){
   // Init dynamic store table on Nhập liệu tab
   if(S.page==='baocao'&&S.tab==='Nhập liệu')qcLoadStores();
   if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ'&&!S._qcDiemAutoLoaded){S._qcDiemAutoLoaded=true;qcDiemLoad(S.qcDiemYear,S.qcDiemMonth);}
+  if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ'&&S.qcDiemLoiHM.length)setTimeout(qcLoiHMRenderCharts,50);
   // Load saved import data
   if(S.user)db.ref(`imports/${S.user.uid}`).get().then(snap=>{if(snap.exists()){const d=snap.val();Object.keys(d).forEach(m=>{S.data[m]=d[m].data;updateChartFromData(m,S.data[m]);});}});
 }
