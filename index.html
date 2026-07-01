@@ -356,7 +356,7 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{}};
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLData:null,qcGLYearData:{}};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -900,7 +900,7 @@ function rQC(){
   </div>
 </div>
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('qc','${tb}')">${tb}</div>`).join('')}</div>
-${t==='Tổng quan'?rQCOv():t==='Chấm điểm dịch vụ'?rQCDiem():t==='Đổi trả'?rQCDoiTra():rImport('qc')}`;
+${t==='Tổng quan'?rQCOv():t==='Chấm điểm dịch vụ'?rQCDiem():t==='Đổi trả'?rQCDoiTra():t==='Check gian lận định kỳ và CTKM'?rQCGianLan():rImport('qc')}`;
 }
 function qcDiemPct(n){return isFinite(n)?(n*100).toFixed(2)+'%':'—';}
 function yearOpts(cur){return[2030,2029,2028,2027,2026,2025].map(y=>`<option value="${y}"${String(y)===String(cur)?' selected':''}>  ${y}</option>`).join('');}
@@ -1249,6 +1249,142 @@ function rQCDoiTra(){
 </div>
 ${qcDTSec('qcdt-st','🏪 I. Siêu thị',S.qcDTST)}
 ${qcDTSec('qcdt-cvs','🏬 II. CVS',S.qcDTCVS)}`;
+}
+/* ── Check gian lận định kỳ & CTKM ── */
+function rQCGianLan(){
+  const d=S.qcGLData,eM=String(S.qcGLMonth||'5'),eY=String(S.qcGLYear||'2026');
+  const dk=d&&d.dk||{},ctkm=d&&d.ctkm||{};
+  const syncAt=d&&d.syncedAt?new Date(d.syncedAt).toLocaleDateString('vi-VN'):'—';
+  const yd=S.qcGLYearData||{};
+  const hasYear=Object.keys(yd).length>0;
+  return`
+<div class="card" style="padding:16px 20px;margin-bottom:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2 style="font-size:15px;font-weight:700;color:var(--t1);margin:0">🔍 Check gian lận định kỳ & CTKM</h2>
+      <p style="font-size:12px;color:var(--t2);margin:4px 0 0">Dữ liệu từ Lark Bitable — đồng bộ qua nút bên dưới</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label class="fi-lbl" style="margin:0">Tháng</label>
+      <select id="qcgl-month" class="fi" style="width:70px" onchange="qcGLLoad(document.getElementById('qcgl-year').value,this.value)">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+      <label class="fi-lbl" style="margin:0">Năm</label>
+      <select id="qcgl-year" class="fi" style="width:85px" onchange="qcGLLoad(this.value,document.getElementById('qcgl-month').value)">${yearOpts(eY)}</select>
+      <button id="qcgl-sync-btn" onclick="qcGLSync(this)" class="btn b-pri b-sm">🔄 Đồng bộ Lark</button>
+    </div>
+  </div>
+  <div style="font-size:11px;color:var(--t2);margin-top:8px">Đồng bộ lần cuối: ${syncAt}${d&&d.syncedAt?' · T'+eM+'/'+eY:''}  <span style="color:#94a3b8;font-size:10px">(Token lưu trong browser — bấm Đồng bộ lần đầu sẽ yêu cầu nhập)</span></div>
+</div>
+<div style="margin-bottom:16px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('qcgl-s1')" style="background:linear-gradient(90deg,#1d4ed8,#3b82f6)">
+    <span>📊 Biểu đồ check theo tháng — ${eY}</span><span id="qcgl-s1-ico">▼</span>
+  </div>
+  <div id="qcgl-s1" class="qcd-sec-body">
+    ${!hasYear?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có dữ liệu năm ${eY}. Bấm 🔄 <strong>Đồng bộ Lark</strong> để tải dữ liệu.</div>`:`<div class="chart-wrap" style="height:230px"><canvas id="c-gl-annual"></canvas></div>`}
+  </div>
+</div>
+<div style="margin-bottom:16px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('qcgl-s2')" style="background:linear-gradient(90deg,#7e22ce,#a855f7)">
+    <span>📋 Chi tiết tháng ${eM}/${eY}</span><span id="qcgl-s2-ico">▼</span>
+  </div>
+  <div id="qcgl-s2" class="qcd-sec-body">
+    ${!d?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có dữ liệu T${eM}/${eY}. Bấm 🔄 Đồng bộ Lark để tải.</div>`:`
+    <div class="g4" style="margin-bottom:4px">
+      ${_glCard('Check ĐK',dk.total||0,'lượt',(dk.total||0)>=8?'#16a34a':'#f59e0b')}
+      ${_glCard('Check CTKM',ctkm.total||0,'lượt',(ctkm.total||0)>=8?'#16a34a':'#f59e0b')}
+      ${_glCard('Vi phạm ĐK',dk.sp||0,'ST',(dk.sp||0)===0?'#16a34a':(dk.sp||0)<=2?'#f59e0b':'#dc2626')}
+      ${_glCard('Cần giải trình',(dk.cgt||0)+(ctkm.cgt||0),'mục',((dk.cgt||0)+(ctkm.cgt||0))===0?'#16a34a':'#dc2626')}
+    </div>`}
+  </div>
+</div>
+<div style="margin-bottom:16px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('qcgl-s3')" style="background:linear-gradient(90deg,#dc2626,#ef4444)">
+    <span>⚠️ Tổng hợp lỗi vi phạm tháng ${eM}/${eY}</span><span id="qcgl-s3-ico">▼</span>
+  </div>
+  <div id="qcgl-s3" class="qcd-sec-body">
+    ${!d?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có dữ liệu.</div>`:`
+    <div class="g2" style="gap:12px;margin-bottom:12px">
+      <div><div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--t1)">🔍 Định kỳ — Lỗi vi phạm</div>${_glLoiTable(dk.loiVPs||{})}</div>
+      <div><div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--t1)">🎁 CTKM — Lỗi vi phạm</div>${_glLoiTable(ctkm.loiVPs||{})}</div>
+    </div>
+    <div class="chart-wrap" style="height:200px"><canvas id="c-gl-loi"></canvas></div>`}
+  </div>
+</div>`;
+}
+function _glCard(lb,v,unit,clr){
+  return`<div class="card" style="padding:14px 16px;text-align:center"><div style="font-size:28px;font-weight:800;color:${clr}">${v}</div><div style="font-size:11px;color:var(--t2);margin-top:2px">${unit}</div><div style="font-size:12px;font-weight:600;color:var(--t1);margin-top:4px">${lb}</div></div>`;
+}
+function _glLoiTable(loiVPs){
+  const entries=Object.entries(loiVPs).sort((a,b)=>b[1]-a[1]);
+  if(!entries.length)return`<div style="color:#16a34a;font-size:12.5px;padding:6px 0">✅ Không có lỗi vi phạm</div>`;
+  return`<table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left;padding:6px 8px;background:rgba(220,38,38,.06)">Loại lỗi</th><th style="text-align:center;width:60px;background:rgba(220,38,38,.06)">Số lần</th></tr></thead><tbody>${entries.map(([k,v])=>`<tr><td style="padding:5px 8px">${k}</td><td style="text-align:center;padding:5px 8px"><strong style="color:#dc2626">${v}</strong></td></tr>`).join('')}</tbody></table>`;
+}
+async function qcGLLoad(year,month){
+  S.qcGLYear=String(year);S.qcGLMonth=String(month);
+  const db2=getQCDB();if(!db2)return;
+  const[snap,ysnap]=await Promise.all([
+    db2.ref(`qc_gianlantctm/${year}/${month}`).get(),
+    db2.ref(`qc_gianlantctm/${year}`).get()
+  ]);
+  S.qcGLData=snap.exists()?snap.val():null;
+  S.qcGLYearData=ysnap.exists()?ysnap.val():{};
+  S._qcGLAutoLoaded=true;
+  go('qc','Check gian lận định kỳ và CTKM');
+}
+async function qcGLSync(btn){
+  let pat=localStorage.getItem('lark_gl_pat');
+  if(!pat){
+    pat=prompt('Nhập Lark User Access Token (UAT):\n\n→ Lark → Profile → Security → User Access Token\n→ Hoặc tạo Personal Access Token tại: open.larksuite.com');
+    if(!pat)return;
+    localStorage.setItem('lark_gl_pat',pat);
+  }
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang đồng bộ...';}
+  try{
+    const appToken='AGGAbC9BPaioxas1VW8lV6tOg7g';
+    const fetchAll=async(tblId,fields)=>{
+      let all=[],pt='',more=true;
+      while(more){
+        const body={field_names:fields,page_size:200};if(pt)body.page_token=pt;
+        const r=await fetch(`https://open.larksuite.com/open-apis/bitable/v1/apps/${appToken}/tables/${tblId}/records/search`,
+          {method:'POST',headers:{'Authorization':'Bearer '+pat,'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const j=await r.json();
+        if(j.code&&j.code!==0)throw new Error('Lark API: '+j.msg+' (code '+j.code+')');
+        all=all.concat((j.data&&j.data.items)||[]);
+        more=!!(j.data&&j.data.has_more);pt=(j.data&&j.data.page_token)||'';
+      }
+      return all;
+    };
+    const[dkRecs,ctkmRecs]=await Promise.all([
+      fetchAll('tblU0OlbMShM5ooe',['Ngày kiểm tra','Tên Siêu thị','Kết quả check cam','Lỗi vi phạm','Tháng','Năm','Giải trình lý do']),
+      fetchAll('tblQxeGxroYYFpY6',['Thời gian','Tên Siêu thị','Kết quả','Tháng','Năm'])
+    ]);
+    const agg={};
+    const slot=(y,m)=>{const k=`${y}/${m}`;if(!agg[k])agg[k]={y,m,dk:{total:0,sp:0,dgt:0,cgt:0,loiVPs:{}},ctkm:{total:0,sp:0,cgt:0,loiVPs:{}}};return agg[k];};
+    for(const r of dkRecs){
+      const f=r.fields,y=f['Năm']&&f['Năm'].value&&f['Năm'].value[0],m=f['Tháng'];
+      if(!y||y===1899||!m)continue;
+      const s=slot(y,m);s.dk.total++;
+      if(f['Kết quả check cam']==='Sai phạm'){
+        s.dk.sp++;
+        const hasGT=Array.isArray(f['Giải trình lý do'])&&f['Giải trình lý do'].length>0;
+        if(hasGT)s.dk.dgt++;else s.dk.cgt++;
+        for(const l of(Array.isArray(f['Lỗi vi phạm'])?f['Lỗi vi phạm']:[]))s.dk.loiVPs[l]=(s.dk.loiVPs[l]||0)+1;
+      }
+    }
+    for(const r of ctkmRecs){
+      const f=r.fields,y=f['Năm']&&f['Năm'].value&&f['Năm'].value[0],m=f['Tháng'];
+      if(!y||y===1899||!m||!f['Kết quả'])continue;
+      const s=slot(y,m);s.ctkm.total++;
+      if(f['Kết quả']==='Không tặng khách'){s.ctkm.sp++;s.ctkm.cgt++;s.ctkm.loiVPs['Không tặng khách']=(s.ctkm.loiVPs['Không tặng khách']||0)+1;}
+    }
+    const db2=getQCDB(),now=Date.now();
+    await Promise.all(Object.values(agg).map(v=>db2.ref(`qc_gianlantctm/${v.y}/${v.m}`).set({...v,syncedAt:now})));
+    alert(`✅ Đồng bộ thành công! ${Object.keys(agg).length} tháng / ${dkRecs.length+ctkmRecs.length} bản ghi đã lưu.`);
+    await qcGLLoad(S.qcGLYear,S.qcGLMonth);
+  }catch(e){
+    if(e.message&&(e.message.includes('401')||e.message.includes('99991663'))){localStorage.removeItem('lark_gl_pat');alert('Token không hợp lệ hoặc hết hạn. Vui lòng nhập lại.');}
+    else alert('Lỗi đồng bộ: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='🔄 Đồng bộ Lark';}
+  }
 }
 function rQCOv(){return`
 <div class="g4" style="margin-bottom:18px">
@@ -3125,6 +3261,24 @@ function afterRender(){
   if(S.page==='baocao'&&S.tab==='Nhập liệu')qcLoadStores();
   if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ'&&!S._qcDiemAutoLoaded){S._qcDiemAutoLoaded=true;qcDiemLoad(S.qcDiemYear,S.qcDiemMonth);}
   if(S.page==='qc'&&S.tab==='Đổi trả'&&!S._qcDTAutoLoaded){S._qcDTAutoLoaded=true;qcDTLoad(S.qcDTYear,S.qcDTMonth);}
+  if(S.page==='qc'&&S.tab==='Check gian lận định kỳ và CTKM'){
+    if(!S._qcGLAutoLoaded){S._qcGLAutoLoaded=true;qcGLLoad(S.qcGLYear,S.qcGLMonth);}
+    const yd=S.qcGLYearData||{};
+    if(Object.keys(yd).length){
+      const labels=['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
+      mkC('c-gl-annual','bar',labels,[
+        {label:'Check ĐK',data:labels.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].dk&&yd[String(i+1)].dk.total)||0),bg:'rgba(59,130,246,0.7)',borderColor:'#3b82f6'},
+        {label:'Check CTKM',data:labels.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].ctkm&&yd[String(i+1)].ctkm.total)||0),bg:'rgba(168,85,247,0.7)',borderColor:'#a855f7'},
+        {label:'Vi phạm ĐK',data:labels.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].dk&&yd[String(i+1)].dk.sp)||0),bg:'rgba(220,38,38,0.8)',borderColor:'#dc2626'}
+      ]);
+    }
+    if(S.qcGLData){
+      const allLoi={...(S.qcGLData.dk&&S.qcGLData.dk.loiVPs||{})};
+      for(const[k,v]of Object.entries(S.qcGLData.ctkm&&S.qcGLData.ctkm.loiVPs||{}))allLoi[k]=(allLoi[k]||0)+v;
+      const ent=Object.entries(allLoi).sort((a,b)=>b[1]-a[1]);
+      if(ent.length)mkC('c-gl-loi','bar',ent.map(e=>e[0]),[{label:'Số lần vi phạm',data:ent.map(e=>e[1]),bg:'rgba(220,38,38,0.75)',borderColor:'#dc2626'}]);
+    }
+  }
   // Load saved import data
   if(S.user)db.ref(`imports/${S.user.uid}`).get().then(snap=>{if(snap.exists()){const d=snap.val();Object.keys(d).forEach(m=>{S.data[m]=d[m].data;updateChartFromData(m,S.data[m]);});}});
 }
