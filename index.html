@@ -594,7 +594,7 @@ function rDashboard(){
   const apItems=[];
   if(mAbove.length===DM.length) apItems.push({p:1,icon:'🔴',txt:`<strong>Ưu tiên cao — Kiểm soát tỷ lệ Đổi Date:</strong> Tất cả ${DM.length} tháng đều vượt ngưỡng 0.21%. Rà soát toàn diện FIFO, quy trình đặt hàng và chất lượng nhà cung cấp. Mục tiêu: đưa tỷ lệ T6 xuống dưới 0.21% — deadline 30/06.`});
   else if(!ytdOk) apItems.push({p:1,icon:'🔴',txt:`<strong>Giảm tỷ lệ Đổi/Hủy Date</strong> xuống dưới 0.21%: ${mAbove.length}/${DM.length} tháng vượt ngưỡng. Tập trung vào ${alertStores.slice(0,2).map(s=>s.s).join(', ')||'các ST vượt ngưỡng'} — deadline 15/06.`});
-  if(!qcOk||qcSTLoi>3) apItems.push({p:1,icon:'🔴',txt:`<strong>Cải thiện QC:</strong> ${qcSTLoi} siêu thị dưới ngưỡng. Lên lịch QC đột xuất cho Hàng Bông (81%), Hàm Nghi (84%), Thái Hà (85%) trước 10/06.`});
+  if(!qcOk||qcSTLoi>3) apItems.push({p:1,icon:'🔴',txt:`<strong>Cải thiện QC:</strong> ${qcSTLoi} siêu thị dưới ngưỡng. Lên lịch QC đột xuất — ưu tiên ST có điểm thấp nhất. Yêu cầu SM cam kết cải thiện bằng văn bản.`});
   if(alertStores.length>0) apItems.push({p:2,icon:'🟠',txt:`<strong>Audit ${Math.min(alertStores.length,5)} ST vượt định mức:</strong> ${alertStores.slice(0,3).map(s=>s.s+' ('+fP(s.tl)+')').join(', ')} — yêu cầu báo cáo nguyên nhân + kế hoạch xử lý trước 20/06.`});
   if(dateTrendDelta>0) apItems.push({p:2,icon:'🟠',txt:`<strong>Điều tra nguyên nhân tỷ lệ đổi date tăng trong ${CURR_M}:</strong> Đánh giá chất lượng hàng nhập từ NCC, hạn SDX tại thời điểm nhập, và hiệu quả kiểm soát FIFO tại cửa hàng.`});
   apItems.push({p:3,icon:'🟡',txt:`<strong>Bổ sung dữ liệu KK T6:</strong> Import Excel kiểm kê sau khi chốt số để phân tích tương quan tồn âm–thất thoát và hoàn thiện báo cáo EBIT tháng 6.`});
@@ -721,12 +721,12 @@ function rDashboard(){
       <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Điểm TB hệ thống</span><strong style="color:${qcOk?'#15803d':'#dc2626'}">${qcScore.toFixed(2)}% ${qcOk?'✅':'⚠️'}</strong></div>
       <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Thay đổi vs tháng trước</span><strong style="color:${qcDelta>=0?'#15803d':'#dc2626'}">${qcDelta>=0?'+':''}${qcDelta.toFixed(2)}pp</strong></div>
       <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">ST vi phạm / tổng</span><strong style="color:${qcSTLoi>3?'#dc2626':qcSTLoi>0?'#f97316':'#15803d'}">${qcSTLoi} / 23 ST</strong></div>
-      <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">ST đạt 100%</span><strong style="color:#15803d">Nguyễn Tuân · T6 TC · Bạch Mai</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">ST đạt 100%</span><strong style="color:#15803d">${hasQD&&qd.s1_stores?Object.values(qd.s1_stores).filter(s=>s.curr>=100).map(s=>s.name||'').filter(Boolean).slice(0,3).join(' · ')||'Không có':'Xem tab QC'}</strong></div>
       <div style="margin-top:4px;padding:8px 10px;background:rgba(220,38,38,.05);border-radius:7px;font-size:11.5px;line-height:1.55">
-        <strong>Phân tích:</strong> Điểm tăng nhờ audit định kỳ phát huy hiệu quả. Tuy nhiên <strong>Hàng Bông</strong> (94→81%) và <strong>Hàm Nghi</strong> (92→84%) có dấu hiệu buông lỏng — cần kiểm tra đột xuất để tránh tái vi phạm.
+        <strong>Phân tích:</strong> ${hasQD?`Điểm ${qcDelta>=0?'tăng':'giảm'} ${Math.abs(qcDelta).toFixed(2)}pp so tháng trước. ${qcSTLoi>0?`<strong>${qcSTLoi} ST</strong> chưa đạt ngưỡng — cần kiểm tra đột xuất.`:'Toàn bộ ST đạt chuẩn.'}`:'Nhập dữ liệu QC để xem phân tích chi tiết.'}
       </div>
       <div style="padding:7px 10px;background:rgba(21,128,61,.05);border-radius:7px;font-size:11.5px">
-        <strong>🎯 Hành động:</strong> QC đột xuất Hàng Bông, Hàm Nghi, Thái Hà trước 10/T6. Yêu cầu SM cam kết cải thiện bằng văn bản.
+        <strong>🎯 Hành động:</strong> ${hasQD?(qcSTLoi>0?`Lên lịch QC đột xuất ${qcSTLoi} ST chưa đạt. Yêu cầu SM cam kết cải thiện bằng văn bản.`:'Duy trì chất lượng, tiếp tục audit định kỳ.'):'Cập nhật dữ liệu QC tháng này để xem đề xuất hành động.'}
       </div>
     </div>
   </div>
@@ -1120,6 +1120,9 @@ function rDateDH(){
   const DSsorted=[...DS].sort((a,b)=>b.tl-a.tl);
   const fM=n=>(n/1e6).toFixed(2)+'M';
   const fP=n=>(n*100).toFixed(2)+'%';
+  const maxHuyIdx=DM.reduce((mi,r,i)=>(r.huy||0)>(DM[mi].huy||0)?i:mi,0);
+  const rangeLabel2=DM[0].t+'→'+DM[DM.length-1].t;
+  const yearLabel=rangeLabel2+'/'+new Date().getFullYear();
 
   // ── Month-by-month tỷ lệ (raw = cp/dt, no tồn DG) ──
   const mTL=DM.map(r=>r.dt>0?(r.gv-r.tv-r.conlai)/r.dt:0);
@@ -1169,10 +1172,10 @@ function rDateDH(){
   <button onclick="syncLarkDate(this)" style="background:#1a2558;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">🔄 Đồng bộ Lark</button>
 </div>
 <div class="g4 g-sm2" style="margin-bottom:18px">
-  ${kpi('Tỷ lệ đổi date T1-T5',fP(tlThuc),'ngưỡng 0.21%',tlThuc>0.004?'#dc2626':tlThuc>NGUONG?'#d97706':'#15803d','kpi-warn',tlThuc>NGUONG?'Vượt +'+((tlThuc-NGUONG)*100).toFixed(2)+'pp so ngưỡng':'Đạt ngưỡng ✅')}
-  ${kpi('CP giảm giá (GV−TV)',fM(totCP)+'₫','T1→T5/2026','#d97706','kpi-chart','Tồn DG còn: '+fM(tonDG)+'₫')}
+  ${kpi('Tỷ lệ đổi date '+rangeLabel2,fP(tlThuc),'ngưỡng 0.21%',tlThuc>0.004?'#dc2626':tlThuc>NGUONG?'#d97706':'#15803d','kpi-warn',tlThuc>NGUONG?'Vượt +'+((tlThuc-NGUONG)*100).toFixed(2)+'pp so ngưỡng':'Đạt ngưỡng ✅')}
+  ${kpi('CP giảm giá (GV−TV)',fM(totCP)+'₫',yearLabel,'#d97706','kpi-chart','Tồn DG còn: '+fM(tonDG)+'₫')}
   ${kpi('ST vượt ngưỡng 0.21%',String(stCB)+'/'+DS.length,'siêu thị','#dc2626','kpi-error',DSsorted.filter(s=>s.cb).slice(0,2).map(s=>s.s).join(', ')+'...')}
-  ${kpi('Tổng hủy date',fM(totHuy)+'₫','T1→T5/2026','#6b7280','kpi-kk','T3 cao nhất: '+fM(DM[2]?.huy||0)+'₫')}
+  ${kpi('Tổng hủy date',fM(totHuy)+'₫',yearLabel,'#6b7280','kpi-kk',DM[maxHuyIdx].t+' cao nhất: '+fM(DM[maxHuyIdx]?.huy||0)+'₫')}
 </div>
 <div class="g2" style="margin-bottom:16px">
   <div class="chart-box">
