@@ -1176,7 +1176,7 @@ function rDateDH(){
   }).join('');
   // Best/worst highlights
   const bestComment=`Tháng tốt nhất: <strong>${DM[bestIdx].t}</strong> — tỷ lệ ${fP(mTL[bestIdx])}`;
-  const worstComment=`Tháng cao nhất: <strong>${DM[worstIdx].t}</strong> — tỷ lệ ${fP(mTL[worstIdx])}\`;
+  const worstComment=`Tháng cao nhất: <strong>${DM[worstIdx].t}</strong> — tỷ lệ ${fP(mTL[worstIdx])}`;
   // Store improvement/warning in last month (if detail data)
   const topWarn=DSsorted.filter(s=>s.cb).slice(0,3).map(s=>`<span style="color:#dc2626">⚠️ ${s.s} (${(s.tl*100).toFixed(2)}%)</span>`).join(' · ');
 
