@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -356,7 +357,7 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{}};
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:'5',qcBBYear:'2026',qcBBList:[],qcBBYearData:{}};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -900,7 +901,7 @@ function rQC(){
   </div>
 </div>
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('qc','${tb}')">${tb}</div>`).join('')}</div>
-${t==='Tổng quan'?rQCOv():t==='Chấm điểm dịch vụ'?rQCDiem():t==='Đổi trả'?rQCDoiTra():t==='Check gian lận định kỳ và CTKM'?rQCGianLan():rImport('qc')}`;
+${t==='Tổng quan'?rQCOv():t==='Chấm điểm dịch vụ'?rQCDiem():t==='Đổi trả'?rQCDoiTra():t==='Check gian lận định kỳ và CTKM'?rQCGianLan():t==='Biên bản xử lý vi phạm'?rQCBienBan():rImport('qc')}`;
 }
 function qcDiemPct(n){return isFinite(n)?(n*100).toFixed(2)+'%':'—';}
 function yearOpts(cur){return[2030,2029,2028,2027,2026,2025].map(y=>`<option value="${y}"${String(y)===String(cur)?' selected':''}>  ${y}</option>`).join('');}
@@ -1375,6 +1376,174 @@ async function qcGLSaveKH(btn){
     setTimeout(()=>{if(btn)btn.textContent='💾 Lưu KH';},1800);
     go('qc','Check gian lận định kỳ và CTKM');
   }catch(e){if(btn){btn.disabled=false;btn.textContent='💾 Lưu KH';}alert('Lỗi lưu: '+e.message);}
+}
+/* ── Biên bản xử lý vi phạm ── */
+const BB_STORES=['Đội Cấn','Linh Đàm','Mandarin','Thái Hà','Trần Đăng Ninh','Nguyễn Du','Hàng Bông','Văn Phú','Hàm Nghi','Nguyễn Tuân','Đỗ Quang','Ngoại Giao Đoàn','Trần Duy Hưng','Nguyễn Văn Lộc','T6 Timecity','Ecohome 3','Green Bay','Xuân La','Nguyễn Khuyến','Sài Đồng','Bạch Mai','Vũ Phạm Hàm','Bắc Ninh'];
+const BB_LOAI=['Biên bản kỷ luật','Cảnh báo','Đánh giá'];
+const BB_LOAI_CLR={'Biên bản kỷ luật':'#dc2626','Cảnh báo':'#b45309','Đánh giá':'#1d4ed8'};
+const BB_LOAI_BG={'Biên bản kỷ luật':'rgba(220,38,38,0.12)','Cảnh báo':'rgba(234,179,8,0.15)','Đánh giá':'rgba(59,130,246,0.12)'};
+const BB_QDOCS=[
+  'NS.QĐ.01 — Hành vi vi phạm kỷ luật & xử lý vi phạm CBNV',
+  'Quy định xử phạt về kết ca và nộp doanh thu',
+  'SKK.QĐ.TCKT — Chế tài thu ngân',
+  'SVN.SG.QĐ.02 — Bảo quản hàng tồn kho'
+];
+const BB_TEMPS=[
+  'Biên bản vi phạm (mẫu chung)',
+  'Mẫu biên bản xử lý gian lận TĐN',
+  'Biên bản xử lý dán sai date'
+];
+function rQCBienBan(){
+  const eM=String(S.qcBBMonth||'5'),eY=String(S.qcBBYear||'2026');
+  const list=S.qcBBList||[];
+  const yd=S.qcBBYearData||{};
+  return`
+<div class="card" style="padding:16px 20px;margin-bottom:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2 style="font-size:15px;font-weight:700;color:var(--t1);margin:0">📋 Biên bản xử lý vi phạm</h2>
+      <p style="font-size:12px;color:var(--t2);margin:4px 0 0">Quản lý biên bản, cảnh báo và đánh giá vi phạm</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label class="fi-lbl" style="margin:0">Tháng</label>
+      <select id="qcbb-month" class="fi" style="width:70px" onchange="qcBBLoad(document.getElementById('qcbb-year').value,this.value)">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+      <label class="fi-lbl" style="margin:0">Năm</label>
+      <select id="qcbb-year" class="fi" style="width:85px" onchange="qcBBLoad(this.value,document.getElementById('qcbb-month').value)">${yearOpts(eY)}</select>
+    </div>
+  </div>
+</div>
+<div style="margin-bottom:16px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('qcbb-s1')" style="background:linear-gradient(90deg,#0f766e,#14b8a6)">
+    <span>📁 Tài liệu tham khảo</span><span id="qcbb-s1-ico">▼</span>
+  </div>
+  <div id="qcbb-s1" class="qcd-sec-body" style="display:none">
+    <div class="g2" style="gap:20px">
+      <div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--t1)">📜 Nội quy & Quy định</div>
+        ${BB_QDOCS.map(d=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:18px">📄</span><span style="font-size:13px;color:var(--t1)">${d}</span></div>`).join('')}
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--t1)">📝 Mẫu form biên bản</div>
+        ${BB_TEMPS.map(d=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:18px">📝</span><span style="font-size:13px;color:var(--t1)">${d}</span></div>`).join('')}
+      </div>
+    </div>
+  </div>
+</div>
+<div style="margin-bottom:16px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('qcbb-s2')" style="background:linear-gradient(90deg,#1d4ed8,#3b82f6)">
+    <span>➕ Nhập biên bản mới</span><span id="qcbb-s2-ico">▼</span>
+  </div>
+  <div id="qcbb-s2" class="qcd-sec-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <div style="margin-bottom:12px"><label class="fi-lbl">Tên người vi phạm *</label><input id="bb-nguoi" class="fi" type="text" placeholder="Họ tên người vi phạm" style="width:100%;box-sizing:border-box"></div>
+        <div style="margin-bottom:12px"><label class="fi-lbl">Siêu thị *</label><select id="bb-st" class="fi" style="width:100%;box-sizing:border-box"><option value="">— Chọn siêu thị —</option>${BB_STORES.map(s=>`<option value="${s}">${s}</option>`).join('')}</select></div>
+        <div style="margin-bottom:12px"><label class="fi-lbl">Loại xử lý *</label><select id="bb-loai" class="fi" style="width:100%;box-sizing:border-box"><option value="">— Chọn loại —</option>${BB_LOAI.map(l=>`<option value="${l}">${l}</option>`).join('')}</select></div>
+        <div style="margin-bottom:12px"><label class="fi-lbl">Tháng/Năm *</label><div style="display:flex;gap:8px"><select id="bb-month" class="fi" style="flex:1">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select><select id="bb-year" class="fi" style="flex:1">${yearOpts(eY)}</select></div></div>
+      </div>
+      <div>
+        <div style="margin-bottom:12px"><label class="fi-lbl">Lý do xử phạt *</label><textarea id="bb-lydo" class="fi" rows="4" placeholder="Mô tả lý do vi phạm..." style="width:100%;box-sizing:border-box;resize:vertical"></textarea></div>
+        <div style="margin-bottom:12px"><label class="fi-lbl">Upload file biên bản</label><input id="bb-file" type="file" class="fi" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="width:100%;box-sizing:border-box"><div style="font-size:11px;color:var(--t2);margin-top:4px">PDF, Word hoặc ảnh (tối đa 10MB)</div></div>
+        <div style="margin-bottom:12px"><label class="fi-lbl">Ghi chú</label><textarea id="bb-ghichu" class="fi" rows="3" placeholder="Ghi chú thêm..." style="width:100%;box-sizing:border-box;resize:vertical"></textarea></div>
+      </div>
+    </div>
+    <div id="bb-prog" style="display:none;margin:8px 0"><div style="background:rgba(59,130,246,0.1);border-radius:6px;padding:8px 12px;font-size:13px;color:#3b82f6"><span id="bb-prog-txt">⏳ Đang upload...</span></div></div>
+    <div style="margin-top:12px;text-align:right"><button onclick="qcBBSave(this)" class="btn b-pri">💾 Lưu biên bản</button></div>
+  </div>
+</div>
+<div style="margin-bottom:16px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('qcbb-s3')" style="background:linear-gradient(90deg,#7e22ce,#a855f7)">
+    <span>📊 Thống kê vi phạm — ${eY}</span><span id="qcbb-s3-ico">▼</span>
+  </div>
+  <div id="qcbb-s3" class="qcd-sec-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div><div style="font-size:12px;color:var(--t2);margin-bottom:6px">Biên bản theo tháng</div><div class="chart-wrap" style="height:210px"><canvas id="c-bb-monthly"></canvas></div></div>
+      <div><div style="font-size:12px;color:var(--t2);margin-bottom:6px">Top siêu thị vi phạm nhiều nhất</div><div class="chart-wrap" style="height:210px"><canvas id="c-bb-stores"></canvas></div></div>
+    </div>
+  </div>
+</div>
+<div style="margin-bottom:16px">
+  <div class="qcd-sec-hdr" onclick="qcToggleSec('qcbb-s4')" style="background:linear-gradient(90deg,#dc2626,#ef4444)">
+    <span>📃 Danh sách biên bản T${eM}/${eY} (${list.length})</span><span id="qcbb-s4-ico">▼</span>
+  </div>
+  <div id="qcbb-s4" class="qcd-sec-body">
+    ${!list.length?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có biên bản nào T${eM}/${eY}. Nhập mới ở mục bên trên.</div>`:`
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:rgba(220,38,38,0.07)">
+        <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--br)">Người vi phạm</th>
+        <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--br)">Siêu thị</th>
+        <th style="padding:8px 10px;text-align:center;border-bottom:1px solid var(--br)">Loại</th>
+        <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--br)">Lý do</th>
+        <th style="padding:8px 10px;text-align:center;border-bottom:1px solid var(--br)">File</th>
+        <th style="padding:8px 10px;text-align:center;border-bottom:1px solid var(--br)">Xóa</th>
+      </tr></thead>
+      <tbody>${list.map(r=>`<tr style="border-bottom:1px solid var(--br)">
+        <td style="padding:7px 10px;font-weight:600">${r.nguoi_vi_pham||'—'}</td>
+        <td style="padding:7px 10px">${r.sieu_thi||'—'}</td>
+        <td style="padding:7px 10px;text-align:center"><span style="padding:2px 8px;border-radius:12px;font-size:11px;background:${BB_LOAI_BG[r.loai]||'#eee'};color:${BB_LOAI_CLR[r.loai]||'#333'}">${r.loai||'—'}</span></td>
+        <td style="padding:7px 10px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${(r.ly_do||'').replace(/"/g,'&quot;')}">${r.ly_do||'—'}</td>
+        <td style="padding:7px 10px;text-align:center">${r.file_url?`<a href="${r.file_url}" target="_blank" style="color:#3b82f6;font-size:12px;text-decoration:none">📎 Xem</a>`:'—'}</td>
+        <td style="padding:7px 10px;text-align:center"><button onclick="qcBBDelete('${r.id}','${eY}','${eM}',this)" style="border:none;background:none;cursor:pointer;font-size:15px">🗑️</button></td>
+      </tr>`).join('')}</tbody>
+    </table>`}
+  </div>
+</div>`;
+}
+async function qcBBLoad(year,month){
+  S.qcBBYear=String(year);S.qcBBMonth=String(month);
+  const db2=getQCDB();if(!db2)return;
+  const[snap,ysnap]=await Promise.all([
+    db2.ref(`qc_bienbans/${year}/${month}`).get(),
+    db2.ref(`qc_bienbans/${year}`).get()
+  ]);
+  S.qcBBList=snap.exists()?Object.entries(snap.val()).map(([id,v])=>({id,...v})):[];
+  S.qcBBYearData=ysnap.exists()?ysnap.val():{};
+  S._qcBBAutoLoaded=true;
+  go('qc','Biên bản xử lý vi phạm');
+}
+async function qcBBSave(btn){
+  const nguoi=(document.getElementById('bb-nguoi').value||'').trim();
+  const st=document.getElementById('bb-st').value;
+  const loai=document.getElementById('bb-loai').value;
+  const lydo=(document.getElementById('bb-lydo').value||'').trim();
+  const ghichu=(document.getElementById('bb-ghichu').value||'').trim();
+  const month=document.getElementById('bb-month').value;
+  const year=document.getElementById('bb-year').value;
+  const file=document.getElementById('bb-file').files[0];
+  if(!nguoi||!st||!loai||!lydo){alert('Vui lòng điền đầy đủ (*): Tên người vi phạm, Siêu thị, Loại xử lý, Lý do');return;}
+  btn.disabled=true;btn.textContent='⏳ Đang lưu...';
+  const prog=document.getElementById('bb-prog'),progTxt=document.getElementById('bb-prog-txt');
+  try{
+    let file_url='',ten_file='';
+    if(file){
+      if(file.size>10*1024*1024){throw new Error('File quá 10MB');}
+      prog.style.display='block';progTxt.textContent='⏳ Đang upload file...';
+      const uid=Date.now()+'_'+Math.random().toString(36).substr(2,6);
+      const sref=firebase.storage().ref(`bienbans/${year}/${month}/${uid}_${file.name}`);
+      await sref.put(file);
+      file_url=await sref.getDownloadURL();
+      ten_file=file.name;
+      progTxt.textContent='✅ Upload xong!';
+    }
+    const db2=getQCDB();
+    const id=db2.ref(`qc_bienbans/${year}/${month}`).push().key;
+    await db2.ref(`qc_bienbans/${year}/${month}/${id}`).set({
+      nguoi_vi_pham:nguoi,sieu_thi:st,loai,ly_do:lydo,ghi_chu:ghichu,
+      ten_file,file_url,nguoi_upload:S.user&&S.user.email||'—',created_at:Date.now()
+    });
+    prog.style.display='none';
+    btn.disabled=false;btn.textContent='💾 Lưu biên bản';
+    alert('✅ Đã lưu biên bản!');
+    await qcBBLoad(year,month);
+  }catch(e){btn.disabled=false;btn.textContent='💾 Lưu biên bản';prog.style.display='none';alert('Lỗi: '+e.message);}
+}
+async function qcBBDelete(id,year,month,btn){
+  if(!confirm('Xác nhận xóa biên bản này?'))return;
+  btn.disabled=true;
+  try{
+    await getQCDB().ref(`qc_bienbans/${year}/${month}/${id}`).remove();
+    await qcBBLoad(year,month);
+  }catch(e){btn.disabled=false;alert('Lỗi xóa: '+e.message);}
 }
 async function qcGLSync(btn){
   const GL_APP_ID='cli_aaa0cdd424b81eed';
@@ -3297,6 +3466,21 @@ function afterRender(){
       const ent=Object.entries(allLoi).sort((a,b)=>b[1]-a[1]);
       if(ent.length)mkC('c-gl-loi','bar',ent.map(e=>e[0]),[{label:'Số lần vi phạm',data:ent.map(e=>e[1]),bg:'rgba(220,38,38,0.75)',borderColor:'#dc2626'}]);
     }
+  }
+  if(S.page==='qc'&&S.tab==='Biên bản xử lý vi phạm'){
+    if(!S._qcBBAutoLoaded){S._qcBBAutoLoaded=true;qcBBLoad(S.qcBBYear,S.qcBBMonth);}
+    const yd=S.qcBBYearData||{};
+    const months=Array.from({length:12},(_,i)=>String(i+1));
+    const getCount=(m,loai)=>{const md=yd[m];if(!md)return 0;return Object.values(md).filter(r=>!loai||r.loai===loai).length;};
+    mkC('c-bb-monthly','bar',months.map(m=>'T'+m),[
+      {label:'Biên bản kỷ luật',data:months.map(m=>getCount(m,'Biên bản kỷ luật')),bg:'rgba(220,38,38,0.75)',borderColor:'#dc2626'},
+      {label:'Cảnh báo',data:months.map(m=>getCount(m,'Cảnh báo')),bg:'rgba(234,179,8,0.65)',borderColor:'#eab308'},
+      {label:'Đánh giá',data:months.map(m=>getCount(m,'Đánh giá')),bg:'rgba(59,130,246,0.65)',borderColor:'#3b82f6'}
+    ]);
+    const stCnt={};
+    for(const mData of Object.values(yd)){if(typeof mData!=='object')continue;for(const r of Object.values(mData)){if(r.sieu_thi)stCnt[r.sieu_thi]=(stCnt[r.sieu_thi]||0)+1;}}
+    const top=Object.entries(stCnt).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    if(top.length)mkC('c-bb-stores','bar',top.map(s=>s[0]),[{label:'Số vi phạm',data:top.map(s=>s[1]),bg:'rgba(220,38,38,0.7)',borderColor:'#dc2626'}],{indexAxis:'y',plugins:{legend:{display:false}}});
   }
   // Load saved import data
   if(S.user)db.ref(`imports/${S.user.uid}`).get().then(snap=>{if(snap.exists()){const d=snap.val();Object.keys(d).forEach(m=>{S.data[m]=d[m].data;updateChartFromData(m,S.data[m]);});}});
