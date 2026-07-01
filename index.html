@@ -985,10 +985,9 @@ function rQCDiem(){
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <label class="fi-lbl" style="margin:0">Tháng</label>
-      <select id="qcd-month" class="fi" style="width:70px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+      <select id="qcd-month" class="fi" style="width:70px" onchange="qcDiemLoad(document.getElementById('qcd-year').value,this.value)">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
       <label class="fi-lbl" style="margin:0">Năm</label>
-      <select id="qcd-year" class="fi" style="width:85px"><option value="2026"${eY==='2026'?' selected':''}>2026</option><option value="2025"${eY==='2025'?' selected':''}>2025</option></select>
-      <button onclick="qcDiemLoad(document.getElementById('qcd-year').value,document.getElementById('qcd-month').value)" class="btn b-out b-sm">⬇️ Tải</button>
+      <select id="qcd-year" class="fi" style="width:85px" onchange="qcDiemLoad(this.value,document.getElementById('qcd-month').value)"><option value="2026"${eY==='2026'?' selected':''}>2026</option><option value="2025"${eY==='2025'?' selected':''}>2025</option></select>
       <button onclick="qcDiemSave(this)" class="btn b-pri b-sm">💾 Lưu</button>
       <button onclick="qcDiemShowHistory()" class="btn b-sm" style="background:#6366f1;color:#fff" title="Xem & khôi phục phiên bản cũ">🕐 Lịch sử</button>
     </div>
