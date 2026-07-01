@@ -356,7 +356,7 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:23,qcGLData:null,qcGLYearData:{}};
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{}};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -1269,8 +1269,9 @@ function rQCGianLan(){
       <select id="qcgl-month" class="fi" style="width:70px" onchange="qcGLLoad(document.getElementById('qcgl-year').value,this.value)">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
       <label class="fi-lbl" style="margin:0">Năm</label>
       <select id="qcgl-year" class="fi" style="width:85px" onchange="qcGLLoad(this.value,document.getElementById('qcgl-month').value)">${yearOpts(eY)}</select>
-      <label class="fi-lbl" style="margin:0">KH ĐK/tháng</label>
-      <input id="qcgl-kh" type="number" class="fi" style="width:64px" min="1" value="${S.qcGLKH||23}" onchange="S.qcGLKH=+this.value;go('qc','Check gian lận định kỳ và CTKM')">
+      <label class="fi-lbl" style="margin:0">KH ĐK T${eM}</label>
+      <input id="qcgl-kh" type="number" class="fi" style="width:64px" min="0" value="${S.qcGLKHData[eM]||S.qcGLKH||''}">
+      <button onclick="qcGLSaveKH(this)" class="btn b-sm" style="background:#16a34a;color:#fff">💾 Lưu KH</button>
       <button id="qcgl-sync-btn" onclick="qcGLSync(this)" class="btn b-pri b-sm">🔄 Đồng bộ Lark</button>
     </div>
   </div>
@@ -1351,14 +1352,29 @@ function _glLoiTable(loiVPs){
 async function qcGLLoad(year,month){
   S.qcGLYear=String(year);S.qcGLMonth=String(month);
   const db2=getQCDB();if(!db2)return;
-  const[snap,ysnap]=await Promise.all([
+  const[snap,ysnap,khsnap]=await Promise.all([
     db2.ref(`qc_gianlantctm/${year}/${month}`).get(),
-    db2.ref(`qc_gianlantctm/${year}`).get()
+    db2.ref(`qc_gianlantctm/${year}`).get(),
+    db2.ref(`qc_kh/${year}`).get()
   ]);
   S.qcGLData=snap.exists()?snap.val():null;
   S.qcGLYearData=ysnap.exists()?ysnap.val():{};
+  S.qcGLKHData=khsnap.exists()?khsnap.val():{};
+  S.qcGLKH=S.qcGLKHData[String(month)]||0;
   S._qcGLAutoLoaded=true;
   go('qc','Check gian lận định kỳ và CTKM');
+}
+async function qcGLSaveKH(btn){
+  const db2=getQCDB();if(!db2)return;
+  const v=+(document.getElementById('qcgl-kh').value)||0;
+  if(btn){btn.disabled=true;btn.textContent='⏳';}
+  try{
+    await db2.ref(`qc_kh/${S.qcGLYear}/${S.qcGLMonth}`).set(v);
+    S.qcGLKHData[S.qcGLMonth]=v;S.qcGLKH=v;
+    if(btn){btn.disabled=false;btn.textContent='✅ Đã lưu';}
+    setTimeout(()=>{if(btn)btn.textContent='💾 Lưu KH';},1800);
+    go('qc','Check gian lận định kỳ và CTKM');
+  }catch(e){if(btn){btn.disabled=false;btn.textContent='💾 Lưu KH';}alert('Lỗi lưu: '+e.message);}
 }
 async function qcGLSync(btn){
   const GL_APP_ID='cli_aaa0cdd424b81eed';
@@ -3264,10 +3280,10 @@ function afterRender(){
     const yd=S.qcGLYearData||{};
     if(Object.keys(yd).length){
       const labels=['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
-      const kh=S.qcGLKH||23;
+      const khd=S.qcGLKHData||{};
       mkC('c-gl-dk','bar',labels,[
         {label:'Thực tế',data:labels.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].dk&&yd[String(i+1)].dk.total)||0),bg:'rgba(59,130,246,0.7)',borderColor:'#3b82f6'},
-        {label:'Kế hoạch',data:labels.map((_,i)=>{const t=(yd[String(i+1)]&&yd[String(i+1)].dk&&yd[String(i+1)].dk.total)||0;return t>0?kh:0;}),bg:'rgba(234,179,8,0.5)',borderColor:'#eab308'},
+        {label:'Kế hoạch',data:labels.map((_,i)=>khd[String(i+1)]||0),bg:'rgba(234,179,8,0.5)',borderColor:'#eab308'},
         {label:'Cần giải trình',data:labels.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].dk&&yd[String(i+1)].dk.cgt)||0),bg:'rgba(220,38,38,0.8)',borderColor:'#dc2626'}
       ]);
       mkC('c-gl-ctkm','bar',labels,[
