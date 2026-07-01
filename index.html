@@ -903,6 +903,7 @@ function rQC(){
 ${t==='Tổng quan'?rQCOv():t==='Chấm điểm dịch vụ'?rQCDiem():rImport('qc')}`;
 }
 function qcDiemPct(n){return isFinite(n)?(n*100).toFixed(2)+'%':'—';}
+function yearOpts(cur){return[2030,2029,2028,2027,2026,2025].map(y=>`<option value="${y}"${String(y)===String(cur)?' selected':''}>  ${y}</option>`).join('');}
 function qcDiemRowsHTML(){
   if(!S.qcDiemRows.length)return`<tr><td colspan="7" style="padding:20px;text-align:center;color:#94a3b8">Chưa có siêu thị nào. Gõ tên ST ở trên và bấm Thêm ST.</td></tr>`;
   return S.qcDiemRows.map((r,i)=>{
@@ -987,7 +988,7 @@ function rQCDiem(){
       <label class="fi-lbl" style="margin:0">Tháng</label>
       <select id="qcd-month" class="fi" style="width:70px" onchange="qcDiemLoad(document.getElementById('qcd-year').value,this.value)">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
       <label class="fi-lbl" style="margin:0">Năm</label>
-      <select id="qcd-year" class="fi" style="width:85px" onchange="qcDiemLoad(this.value,document.getElementById('qcd-month').value)"><option value="2026"${eY==='2026'?' selected':''}>2026</option><option value="2025"${eY==='2025'?' selected':''}>2025</option></select>
+      <select id="qcd-year" class="fi" style="width:85px" onchange="qcDiemLoad(this.value,document.getElementById('qcd-month').value)">${yearOpts(eY)}</select>
       <button onclick="qcDiemSave(this)" class="btn b-pri b-sm">💾 Lưu</button>
       <button onclick="qcDiemShowHistory()" class="btn b-sm" style="background:#6366f1;color:#fff" title="Xem & khôi phục phiên bản cũ">🕐 Lịch sử</button>
     </div>
@@ -1634,7 +1635,7 @@ ${t==='Executive QC'?`
   <span style="font-size:13px;color:${hasQD?'#15803d':'#92400e'}">${hasQD?`✅ Dữ liệu Firebase — T${eM}/${eY}${exec.savedAt?' · '+new Date(exec.savedAt).toLocaleDateString('vi-VN'):''}`:` ⚠️ Dữ liệu mẫu T5/2026 — Nhập liệu tháng thực tế rồi bấm Tải`}</span>
   <div style="display:flex;gap:8px;align-items:center">
     <select id="exec-m" class="fi" style="width:65px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
-    <select id="exec-y" class="fi" style="width:80px"><option value="2026"${eY==='2026'?' selected':''}>2026</option><option value="2025"${eY==='2025'?' selected':''}>2025</option></select>
+    <select id="exec-y" class="fi" style="width:80px">${yearOpts(eY)}</select>
     <button onclick="qcLoadExecAndRefresh(document.getElementById('exec-y').value,document.getElementById('exec-m').value)" class="btn b-pri b-sm">🔄 Tải</button>
     ${hasQD?`<button onclick="go('baocao','Báo cáo EBIT')" class="btn b-out b-sm">📊 Xem EBIT →</button>`:''}
   </div>
@@ -1777,7 +1778,7 @@ ${hasQD?`
     </div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
       <select id="ebit-m" style="padding:6px 8px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px;font-size:12px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
-      <select id="ebit-y" style="padding:6px 8px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px;font-size:12px"><option value="2026"${eY==='2026'?' selected':''}>2026</option><option value="2025"${eY==='2025'?' selected':''}>2025</option></select>
+      <select id="ebit-y" style="padding:6px 8px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px;font-size:12px">${yearOpts(eY)}</select>
       <button onclick="qcLoadExecAndRefresh(document.getElementById('ebit-y').value,document.getElementById('ebit-m').value)" style="padding:7px 12px;background:#c8102e;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600">🔄 Tải</button>
       <button onclick="go('baocao','Executive QC')" style="padding:7px 12px;background:#1a1818;color:#d4af37;border:1px solid #3a3838;border-radius:7px;cursor:pointer;font-size:12px">← Dashboard</button>
     </div>
@@ -1875,7 +1876,7 @@ ${hasQD?`
   <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
     <div style="display:flex;gap:8px;align-items:center">
       <select id="ebit-m2" style="padding:8px 12px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
-      <select id="ebit-y2" style="padding:8px 12px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px"><option value="2026"${eY==='2026'?' selected':''}>2026</option><option value="2025">2025</option></select>
+      <select id="ebit-y2" style="padding:8px 12px;background:#1a1818;color:#fff;border:1px solid #3a3838;border-radius:7px">${yearOpts(eY)}</select>
       <button onclick="qcLoadExecAndRefresh(document.getElementById('ebit-y2').value,document.getElementById('ebit-m2').value)" style="padding:8px 18px;background:#c8102e;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600">🔄 Tải dữ liệu</button>
     </div>
     <button onclick="go('baocao','Nhập liệu')" style="padding:8px 18px;background:#d4af37;color:#0f0d0e;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600">✏️ Nhập liệu ngay</button>
@@ -1894,7 +1895,7 @@ ${hasQD?`
         <label class="fi-lbl" style="margin:0">Tháng</label>
         <select id="qc-month" class="fi" style="width:70px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${m===6?' selected':''}>T${m}</option>`).join('')}</select>
         <label class="fi-lbl" style="margin:0">Năm</label>
-        <select id="qc-year" class="fi" style="width:85px"><option value="2026" selected>2026</option><option value="2025">2025</option></select>
+        <select id="qc-year" class="fi" style="width:85px">${yearOpts('2026')}</select>
       </div>
       <button onclick="qcDataLoad()" class="btn b-out b-sm">⬇️ Tải dữ liệu</button>
       <button onclick="qcDataSave(this)" class="btn b-pri b-sm">💾 Lưu & Cập nhật</button>
@@ -1990,7 +1991,7 @@ ${hasQD?`
   <span style="font-size:13px;color:${hasKD?'#15803d':'#92400e'}">${hasKD?('✅ Firebase: T'+kM+'/'+kY+(kd.savedAt?' · Cập nhật '+new Date(kd.savedAt).toLocaleDateString('vi-VN'):'')):'⚠️ Dữ liệu mẫu (KK T3-4/2026 · Tồn âm T5/2025) — Chọn tháng và bấm Tải'}</span>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <select id="kk-exec-m" class="fi" style="width:65px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===kM?' selected':''}>T${m}</option>`).join('')}</select>
-    <select id="kk-exec-y" class="fi" style="width:80px"><option value="2026"${kY==='2026'?' selected':''}>2026</option><option value="2025"${kY==='2025'?' selected':''}>2025</option></select>
+    <select id="kk-exec-y" class="fi" style="width:80px">${yearOpts(kY)}</select>
     <button onclick="kkLoadExecAndRefresh(document.getElementById('kk-exec-y').value,document.getElementById('kk-exec-m').value)" class="btn b-pri b-sm">🔄 Tải</button>
     <button onclick="go('baocao','EBIT Kiểm kê')" class="btn b-out b-sm">📊 EBIT →</button>
     <button onclick="go('baocao','Nhập liệu KK')" class="btn b-out b-sm">✏️ Nhập liệu</button>
@@ -2021,7 +2022,7 @@ ${kpi('SKU tồn âm',kkTonAm.toLocaleString(),'+'+kkPctTangTA+'% vs T.trước 
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <select id="ebitkk-m" class="fi" style="width:65px;background:#1a1818;color:#fff;border-color:#3a3838">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===kM?' selected':''}>T${m}</option>`).join('')}</select>
-      <select id="ebitkk-y" class="fi" style="width:80px;background:#1a1818;color:#fff;border-color:#3a3838"><option value="2026"${kY==='2026'?' selected':''}>2026</option><option value="2025"${kY==='2025'?' selected':''}>2025</option></select>
+      <select id="ebitkk-y" class="fi" style="width:80px;background:#1a1818;color:#fff;border-color:#3a3838">${yearOpts(kY)}</select>
       <button onclick="kkLoadExecAndRefresh(document.getElementById('ebitkk-y').value,document.getElementById('ebitkk-m').value)" style="padding:7px 12px;background:#c8102e;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px">🔄 Tải</button>
       <button onclick="go('baocao','Exec. KK')" style="padding:7px 12px;background:#1a1818;color:#d4af37;border:1px solid #3a3838;border-radius:7px;cursor:pointer;font-size:12px">← Dashboard KK</button>
     </div>
@@ -2062,7 +2063,7 @@ ${kpi('SKU tồn âm',kkTonAm.toLocaleString(),'+'+kkPctTangTA+'% vs T.trước 
         <label class="fi-lbl" style="margin:0">Tháng</label>
         <select id="kk-month" class="fi" style="width:70px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${m===parseInt(kM)?' selected':''}>T${m}</option>`).join('')}</select>
         <label class="fi-lbl" style="margin:0">Năm</label>
-        <select id="kk-year" class="fi" style="width:85px"><option value="2026"${kY==='2026'?' selected':''}>2026</option><option value="2025"${kY==='2025'?' selected':''}>2025</option></select>
+        <select id="kk-year" class="fi" style="width:85px">${yearOpts(kY)}</select>
       </div>
       <button onclick="kkDataLoad()" class="btn b-out b-sm">⬇️ Tải dữ liệu</button>
       <button onclick="kkDataSave(this)" class="btn b-pri b-sm">💾 Lưu & Cập nhật</button>
