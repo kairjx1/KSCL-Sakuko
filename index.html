@@ -357,7 +357,7 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:'5',qcBBYear:'2026',qcBBList:[],qcBBYearData:{}};
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:'5',qcBBYear:'2026',qcBBList:[],qcBBYearData:{},qcDocsData:{}};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -1420,11 +1420,11 @@ function rQCBienBan(){
     <div class="g2" style="gap:20px">
       <div>
         <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--t1)">📜 Nội quy & Quy định</div>
-        ${BB_QDOCS.map(d=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:18px">📄</span><span style="font-size:13px;color:var(--t1)">${d}</span></div>`).join('')}
+        ${BB_QDOCS.map((d,i)=>{const info=S.qcDocsData&&S.qcDocsData.noi_quy&&S.qcDocsData.noi_quy[i];return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:16px">📄</span><span style="font-size:13px;color:var(--t1);flex:1">${d}</span>${info&&info.url?`<a href="${info.url}" target="_blank" download style="font-size:12px;color:#0ea5e9;text-decoration:none;white-space:nowrap">⬇️ Tải xuống</a>`:'<span style="font-size:11px;color:var(--t2)">Chưa có file</span>'}<label style="cursor:pointer;font-size:11px;color:#6366f1;white-space:nowrap;margin-left:8px">📤 Upload<input type="file" accept=".pdf,.doc,.docx" style="display:none" onchange="qcDocUpload('noi_quy',${i},this)"></label></div>`;}).join('')}
       </div>
       <div>
         <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--t1)">📝 Mẫu form biên bản</div>
-        ${BB_TEMPS.map(d=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:18px">📝</span><span style="font-size:13px;color:var(--t1)">${d}</span></div>`).join('')}
+        ${BB_TEMPS.map((d,i)=>{const info=S.qcDocsData&&S.qcDocsData.mau_form&&S.qcDocsData.mau_form[i];return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:16px">📝</span><span style="font-size:13px;color:var(--t1);flex:1">${d}</span>${info&&info.url?`<a href="${info.url}" target="_blank" download style="font-size:12px;color:#0ea5e9;text-decoration:none;white-space:nowrap">⬇️ Tải xuống</a>`:'<span style="font-size:11px;color:var(--t2)">Chưa có file</span>'}<label style="cursor:pointer;font-size:11px;color:#6366f1;white-space:nowrap;margin-left:8px">📤 Upload<input type="file" accept=".pdf,.doc,.docx" style="display:none" onchange="qcDocUpload('mau_form',${i},this)"></label></div>`;}).join('')}
       </div>
     </div>
   </div>
@@ -1437,7 +1437,7 @@ function rQCBienBan(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div>
         <div style="margin-bottom:12px"><label class="fi-lbl">Tên người vi phạm *</label><input id="bb-nguoi" class="fi" type="text" placeholder="Họ tên người vi phạm" style="width:100%;box-sizing:border-box"></div>
-        <div style="margin-bottom:12px"><label class="fi-lbl">Siêu thị *</label><select id="bb-st" class="fi" style="width:100%;box-sizing:border-box"><option value="">— Chọn siêu thị —</option>${BB_STORES.map(s=>`<option value="${s}">${s}</option>`).join('')}</select></div>
+        <div style="margin-bottom:12px"><label class="fi-lbl">Siêu thị *</label><input id="bb-st" list="bb-st-list" class="fi" type="text" placeholder="Gõ tên siêu thị..." style="width:100%;box-sizing:border-box" autocomplete="off"><datalist id="bb-st-list">${BB_STORES.map(s=>`<option value="${s}">`).join('')}</datalist></div>
         <div style="margin-bottom:12px"><label class="fi-lbl">Loại xử lý *</label><select id="bb-loai" class="fi" style="width:100%;box-sizing:border-box"><option value="">— Chọn loại —</option>${BB_LOAI.map(l=>`<option value="${l}">${l}</option>`).join('')}</select></div>
         <div style="margin-bottom:12px"><label class="fi-lbl">Tháng/Năm *</label><div style="display:flex;gap:8px"><select id="bb-month" class="fi" style="flex:1">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select><select id="bb-year" class="fi" style="flex:1">${yearOpts(eY)}</select></div></div>
       </div>
@@ -1489,15 +1489,39 @@ function rQCBienBan(){
   </div>
 </div>`;
 }
+async function qcDocsLoad(){
+  const db2=getQCDB();if(!db2)return;
+  const snap=await db2.ref('qc_docs').get();
+  S.qcDocsData=snap.exists()?snap.val():{};
+}
+async function qcDocUpload(type,idx,inp){
+  const file=inp.files[0];if(!file)return;
+  const lbl=inp.parentElement;
+  const origTxt=lbl.childNodes[0].textContent;
+  lbl.childNodes[0].textContent='⏳';
+  try{
+    const uid=Date.now()+'_'+Math.random().toString(36).substr(2,6);
+    const sref=firebase.storage().ref(`qc_docs/${type}/${uid}_${file.name}`);
+    await sref.put(file);
+    const url=await sref.getDownloadURL();
+    await getQCDB().ref(`qc_docs/${type}/${idx}`).set({url,filename:file.name,uploaded_at:Date.now()});
+    if(!S.qcDocsData[type])S.qcDocsData[type]={};
+    S.qcDocsData[type][idx]={url,filename:file.name};
+    alert('✅ Upload thành công!');
+    go('qc','Biên bản xử lý vi phạm');
+  }catch(e){lbl.childNodes[0].textContent=origTxt;alert('Lỗi upload: '+e.message);}
+}
 async function qcBBLoad(year,month){
   S.qcBBYear=String(year);S.qcBBMonth=String(month);
   const db2=getQCDB();if(!db2)return;
-  const[snap,ysnap]=await Promise.all([
+  const[snap,ysnap,dsnap]=await Promise.all([
     db2.ref(`qc_bienbans/${year}/${month}`).get(),
-    db2.ref(`qc_bienbans/${year}`).get()
+    db2.ref(`qc_bienbans/${year}`).get(),
+    db2.ref('qc_docs').get()
   ]);
   S.qcBBList=snap.exists()?Object.entries(snap.val()).map(([id,v])=>({id,...v})):[];
   S.qcBBYearData=ysnap.exists()?ysnap.val():{};
+  S.qcDocsData=dsnap.exists()?dsnap.val():{};
   S._qcBBAutoLoaded=true;
   go('qc','Biên bản xử lý vi phạm');
 }
