@@ -2099,7 +2099,7 @@ async function syncTonAm(btn){
     const r=await fetch(url+'?t='+Date.now());
     if(!r.ok)throw new Error('HTTP '+r.status);
     const d=await r.json();
-    if(!d.months||!Object.keys(d.months).length)throw new Error('Dữ liệu rỗng');
+    if(!d||typeof d.months!=='object')throw new Error('Format không hợp lệ');
     localStorage.setItem('tonam_cache',JSON.stringify(d));
     S.tonAmCache=d;
     const ms=Object.keys(d.months).sort();
