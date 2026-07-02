@@ -820,7 +820,7 @@ function kpi(lb,val,unit,color,ic,trend){
    KIỂM KÊ MODULE
 ══════════════════════════════════════════ */
 function rKK(){
-  const tabs=['Tổng quan','Biểu đồ','Danh sách','Import Excel'];
+  const tabs=['Tổng quan','Tồn âm','Biên bản kiểm kê','Xuất hủy - lỗi hỏng'];
   const t=S.tab||'Tổng quan';
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Kiểm kê</div>
@@ -832,7 +832,7 @@ function rKK(){
   </div>
 </div>
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('kk','${tb}')">${tb}</div>`).join('')}</div>
-${t==='Tổng quan'?rKKOv():t==='Biểu đồ'?rKKChart():t==='Danh sách'?rKKList():rImport('kk')}`;
+${t==='Tổng quan'?rKKOv():t==='Tồn âm'?rKKTonAm():t==='Biên bản kiểm kê'?rKKBienBan():rKKXuatHuy()}`;
 }
 function rKKOv(){return`
 <div class="g4" style="margin-bottom:18px">
@@ -883,6 +883,9 @@ function rKKList(){return`
 <thead><tr><th>STT</th><th>Mã đợt KK</th><th>Ngày KK</th><th>Loại</th><th>Kho</th><th>Số SKU</th><th>SKU chênh</th><th>Tỉ lệ khớp</th><th>Trạng thái</th><th>NV thực hiện</th></tr></thead>
 <tbody id="kk-list"><tr><td colspan="10"><div class="empty-state"><div class="es-ic">📂</div><p>Chưa có dữ liệu. Import Excel để bắt đầu.</p></div></td></tr></tbody>
 </table></div></div>`;}
+function rKKTonAm(){return`<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px;margin-bottom:12px">📉</div><div style="font-size:15px;font-weight:700;color:var(--t1);margin-bottom:6px">Tồn âm</div><p style="color:var(--t2);font-size:13px">Phân tích SKU tồn âm đang được phát triển.</p></div>`;}
+function rKKBienBan(){return`<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="font-size:15px;font-weight:700;color:var(--t1);margin-bottom:6px">Biên bản kiểm kê</div><p style="color:var(--t2);font-size:13px">Quản lý biên bản kiểm kê đang được phát triển.</p></div>`;}
+function rKKXuatHuy(){return`<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px;margin-bottom:12px">🗑️</div><div style="font-size:15px;font-weight:700;color:var(--t1);margin-bottom:6px">Xuất hủy - lỗi hỏng</div><p style="color:var(--t2);font-size:13px">Quản lý xuất hủy và hàng lỗi hỏng đang được phát triển.</p></div>`;}
 
 /* ══════════════════════════════════════════
    QC MODULE
