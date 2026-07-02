@@ -1277,10 +1277,14 @@ function qcDTShowHistory(){
     vers.slice(0,15).map(v=>{
       const dt=v._snapshotAt?new Date(v._snapshotAt).toLocaleString('vi-VN'):'?';
       const st=v.st||{},cvs=v.cvs||{};
-      return`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #f0f0ff;font-size:12.5px">
-        <div><strong>${dt}</strong> <span style="color:#94a3b8;font-size:11px">bởi ${v._by||'?'}</span><br>
-        <span style="color:#6b7280;font-size:11px">ST: ${st.tongDon||0} đơn · CVS: ${cvs.tongDon||0} đơn</span></div>
-        <button onclick="qcDTRestore('${v.key}')" class="btn b-sm" style="background:#6366f1;color:#fff;font-size:11px">⏪ Khôi phục</button>
+      const note=(st.ghiChu||'')+(cvs.ghiChu?((st.ghiChu?' · ':'')+cvs.ghiChu):'');
+      return`<div style="padding:9px 12px;border-bottom:1px solid #f0f0ff;font-size:12.5px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div><strong>${dt}</strong> <span style="color:#94a3b8;font-size:11px">bởi ${v._by||'?'}</span><br>
+          <span style="color:#6b7280;font-size:11px">ST: ${st.tongDon||0} đơn · CVS: ${cvs.tongDon||0} đơn</span></div>
+          <button onclick="qcDTRestore('${v.key}')" class="btn b-sm" style="background:#6366f1;color:#fff;font-size:11px">⏪ Khôi phục</button>
+        </div>
+        ${note?`<div style="font-size:11px;color:#4f46e5;margin-top:4px;padding:4px 8px;background:#eef2ff;border-radius:4px;white-space:pre-wrap">💬 ${note.length>120?note.substring(0,120)+'…':note}</div>`:''}
       </div>`;
     }).join('');
   }).catch(e=>{panel.innerHTML='<div style="padding:12px;color:#dc2626">Lỗi: '+e.message+'</div>';});
@@ -1288,7 +1292,9 @@ function qcDTShowHistory(){
 function qcDTRestore(key){
   const data=_qcDTHistCache[key];
   if(!data){alert('Không tìm thấy phiên bản!');return;}
-  if(!confirm('Khôi phục phiên bản này? Dữ liệu hiện tại sẽ bị thay thế (chưa lưu lên Firebase).'))return;
+  const stNote=(data.st&&data.st.ghiChu)||'',cvsNote=(data.cvs&&data.cvs.ghiChu)||'';
+  const noteWarn=(!stNote&&!cvsNote)?'\n⚠️ Bản này không có Nhận xét — nếu bạn đã nhập Nhận xét, hãy copy lại trước khi khôi phục.':'';
+  if(!confirm('Khôi phục phiên bản này? Dữ liệu hiện tại trên form sẽ bị thay thế.'+noteWarn))return;
   S.qcDTST=data.st||{};S.qcDTCVS=data.cvs||{};
   go('qc','Đổi trả');
   setTimeout(()=>{const s=document.getElementById('qcdt-saved');if(s){s.textContent='⏪ Đã khôi phục. Kiểm tra rồi bấm Lưu để ghi lại.';s.style.display='block';setTimeout(()=>s.style.display='none',6000);}},300);
