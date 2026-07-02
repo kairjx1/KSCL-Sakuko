@@ -1489,13 +1489,18 @@ function rQCBienBan(){
 </div>`;
 }
 async function _driveUpload(file,filename){
-  const fd=new FormData();
-  fd.append('file',file,filename||file.name);
-  fd.append('name',filename||file.name);
-  const res=await fetch('/drive-upload',{method:'POST',body:fd});
+  const user=firebase.auth().currentUser;
+  if(!user)throw new Error('Chưa đăng nhập');
+  const idToken=await user.getIdToken();
+  const bucket='kscl---sakuko.firebasestorage.app';
+  const name=`bienbans/${Date.now()}_${(filename||file.name).replace(/[^a-zA-Z0-9._\-]/g,'_')}`;
+  const res=await fetch(
+    `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(name)}`,
+    {method:'POST',headers:{'Authorization':'Bearer '+idToken,'Content-Type':file.type||'application/octet-stream'},body:file}
+  );
   const j=await res.json();
-  if(!j.ok)throw new Error(j.error||'Drive upload thất bại');
-  return j.viewUrl;
+  if(!res.ok)throw new Error('Upload thất bại: '+(j.error?.message||res.status));
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(name)}?alt=media&token=${j.downloadTokens}`;
 }
 async function qcDocsLoad(){
   const db2=getQCDB();if(!db2)return;
