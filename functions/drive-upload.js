@@ -20,7 +20,12 @@ export async function onRequestPost(context) {
     if (!file) return json({ ok: false, error: 'Không có file trong request' }, 400);
 
     const fileBuffer = await file.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
+    const bytes = new Uint8Array(fileBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 8192) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    }
+    const base64 = btoa(binary);
 
     const safeName = `${Date.now()}_${fileName.replace(/[^a-zA-Z0-9._\-]/g, '_')}`;
     const path = `uploads/${safeName}`;
