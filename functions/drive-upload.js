@@ -24,38 +24,50 @@ export async function onRequestPost(context) {
     if (!file) return json({ ok: false, error: 'Không có file trong request' }, 400);
 
     const fileBuffer = await file.arrayBuffer();
+    const mimeType = file.type || 'application/octet-stream';
 
-    // Step 1: Create file metadata in Drive
-    const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: fileName, parents: [DRIVE_FOLDER_ID] })
-    });
-    const created = await createRes.json();
-    if (!created.id) throw new Error('Tạo file Drive thất bại: ' + JSON.stringify(created));
+    // Multipart upload: metadata + content in a single POST
+    const boundary = 'boundary' + Date.now();
+    const meta = JSON.stringify({ name: fileName, parents: [DRIVE_FOLDER_ID] });
+    const before = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`;
+    const after = `\r\n--${boundary}--`;
 
-    // Step 2: Upload file content
+    const beforeBytes = new TextEncoder().encode(before);
+    const fileBytes = new Uint8Array(fileBuffer);
+    const afterBytes = new TextEncoder().encode(after);
+    const body = new Uint8Array(beforeBytes.length + fileBytes.length + afterBytes.length);
+    body.set(beforeBytes, 0);
+    body.set(fileBytes, beforeBytes.length);
+    body.set(afterBytes, beforeBytes.length + fileBytes.length);
+
     const uploadRes = await fetch(
-      `https://www.googleapis.com/upload/drive/v3/files/${created.id}?uploadType=media`,
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
       {
-        method: 'PATCH',
+        method: 'POST',
         headers: {
           'Authorization': 'Bearer ' + accessToken,
-          'Content-Type': file.type || 'application/octet-stream'
+          'Content-Type': `multipart/related; boundary="${boundary}"`
         },
-        body: fileBuffer
+        body
       }
     );
-    if (!uploadRes.ok) throw new Error('Upload Drive thất bại: HTTP ' + uploadRes.status);
 
-    // Step 3: Make file publicly readable (anyone with link) — non-fatal
+    if (!uploadRes.ok) {
+      const errText = await uploadRes.text();
+      throw new Error(`Upload Drive thất bại: HTTP ${uploadRes.status} — ${errText.slice(0, 300)}`);
+    }
+
+    const created = await uploadRes.json();
+    if (!created.id) throw new Error('Drive không trả về file ID: ' + JSON.stringify(created));
+
+    // Make file publicly readable — non-fatal
     try {
       await fetch(`https://www.googleapis.com/drive/v3/files/${created.id}/permissions`, {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: 'reader', type: 'anyone' })
       });
-    } catch (_) { /* public permission is best-effort */ }
+    } catch (_) { /* best-effort */ }
 
     return json({
       ok: true,
