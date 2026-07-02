@@ -48,12 +48,14 @@ export async function onRequestPost(context) {
     );
     if (!uploadRes.ok) throw new Error('Upload Drive thất bại: HTTP ' + uploadRes.status);
 
-    // Step 3: Make file publicly readable (anyone with link)
-    await fetch(`https://www.googleapis.com/drive/v3/files/${created.id}/permissions`, {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'reader', type: 'anyone' })
-    });
+    // Step 3: Make file publicly readable (anyone with link) — non-fatal
+    try {
+      await fetch(`https://www.googleapis.com/drive/v3/files/${created.id}/permissions`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'reader', type: 'anyone' })
+      });
+    } catch (_) { /* public permission is best-effort */ }
 
     return json({
       ok: true,
@@ -72,7 +74,7 @@ async function getGoogleToken(sa) {
   const header = b64url({ alg: 'RS256', typ: 'JWT' });
   const payload = b64url({
     iss: sa.client_email,
-    scope: 'https://www.googleapis.com/auth/drive.file',
+    scope: 'https://www.googleapis.com/auth/drive',
     aud: 'https://oauth2.googleapis.com/token',
     exp: now + 3600,
     iat: now
