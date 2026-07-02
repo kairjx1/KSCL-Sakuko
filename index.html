@@ -1011,7 +1011,129 @@ function rKKTonAm(){
   </div>
 </div>`;
 }
-function rKKBienBan(){return`<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="font-size:15px;font-weight:700;color:var(--t1);margin-bottom:6px">Biên bản kiểm kê</div><p style="color:var(--t2);font-size:13px">Quản lý biên bản kiểm kê đang được phát triển.</p></div>`;}
+function rKKBienBan(){
+  if(!S.bbkkCache){try{S.bbkkCache=JSON.parse(localStorage.getItem('bbkk_cache')||'null');}catch(e){}}
+  const C=S.bbkkCache;
+  const age=C?.ts?Math.round((Date.now()-C.ts)/3600000):null;
+  const fmt=v=>Math.abs(Math.round(v||0)).toLocaleString('vi-VN');
+  const fmtDT=v=>v>=1e9?(v/1e9).toFixed(1)+' tỷ':v>=1e6?(v/1e6).toFixed(0)+' tr':'—';
+  const syncBar=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <span style="font-size:12px;color:var(--t2)">${C?`✅ Cập nhật ${age!=null?(age<24?age+'h':Math.round(age/24)+'d'):''} trước · ${(C.t1||[]).length} biên bản`:'⚠️ Chưa có dữ liệu — bấm Đồng bộ'}</span>
+    <button class="btn b-ok b-sm" onclick="syncBBKK(this)">🔄 Đồng bộ Lark</button>
+  </div>`;
+  if(!C)return`<div class="card">${syncBar}<div style="text-align:center;padding:32px 0"><div style="font-size:48px;margin-bottom:10px">📋</div><p style="color:var(--t2);font-size:13px">Bấm <strong>Đồng bộ Lark</strong> để tải dữ liệu biên bản kiểm kê từ Lark.</p><p style="color:var(--t3);font-size:11px;margin-top:6px">Hoặc chạy <code>node automation/sync-bbkk.js</code> rồi push lên GitHub.</p></div></div>`;
+  const t1=C.t1||[]; const t2=C.t2||[]; const t4=C.t4||[];
+  const months=[...new Set(t1.map(r=>r.thang))].sort((a,b)=>a-b);
+  const selM=S.bbkkMonth||0;
+  const rows=selM?t1.filter(r=>r.thang===selM):t1;
+  const bbTab=S.bbkkTab||'bienban';
+  /* KPIs */
+  const totDenBu=rows.reduce((s,r)=>s+(r.denBu||0),0);
+  const totCT=rows.reduce((s,r)=>s+(r.congtyHT||0),0);
+  const totCLp=rows.reduce((s,r)=>s+(r.clPlus||0),0);
+  const totCLm=rows.reduce((s,r)=>s+(r.clMinus||0),0);
+  const totNet=totCLp+totCLm;
+  const totDT=t2.reduce((s,r)=>s+(r.tongDT||0),0);
+  const totQuy=t2.reduce((s,r)=>s+(r.quyHT||0),0);
+  const totHTong=t2.reduce((s,r)=>s+(r.htTong||0),0);
+  const totConLai=t2.reduce((s,r)=>s+(r.conLai||0),0);
+  /* header bar */
+  const mBtns=[{v:0,lb:'Tất cả'},...months.map(m=>({v:m,lb:'T'+m}))].map(({v,lb})=>
+    `<button onclick="S.bbkkMonth=${v};go('kk','Biên bản kiểm kê')" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${selM===v?'#e91e7b':'rgba(0,0,0,.15)'};background:${selM===v?'#e91e7b':'#fff'};color:${selM===v?'#fff':'var(--t1)'}">${lb}</button>`).join('');
+  const tabBtns=[{v:'bienban',lb:'📋 Biên bản'},{v:'quy',lb:'💰 Quỹ hỗ trợ'},{v:'dt',lb:'📊 Doanh thu'}].map(({v,lb})=>
+    `<button onclick="S.bbkkTab='${v}';go('kk','Biên bản kiểm kê')" style="padding:6px 14px;font-size:12.5px;border-radius:8px;border:none;background:${bbTab===v?'var(--pri)':'#f0f2f7'};color:${bbTab===v?'#fff':'var(--t2)'};font-weight:${bbTab===v?700:500}">${lb}</button>`).join('');
+  const kpis=`<div class="g4" style="margin-bottom:0">
+    <div class="kpi" style="color:#1a2558"><div class="kpi-lb">Số biên bản</div><div class="kpi-v">${rows.length}<span class="kpi-u">BB</span></div><div class="kpi-tr" style="font-size:11px;color:#6b7280">${selM?'T'+selM+'/2026':'Năm 2026'}</div><div class="kpi-bg">📋</div></div>
+    <div class="kpi" style="color:${totNet<0?'#dc2626':'#16a34a'}"><div class="kpi-lb">Chênh lệch ròng</div><div class="kpi-v">${totNet>=0?'+':'−'}${fmt(totNet)}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="font-size:10px;color:#6b7280">CL+ ${fmt(totCLp)} / CL− ${fmt(Math.abs(totCLm))}</div><div class="kpi-bg">⚖️</div></div>
+    <div class="kpi" style="color:#dc2626"><div class="kpi-lb">ST đền bù</div><div class="kpi-v">${totDenBu<0?fmt(totDenBu):'0'}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="color:#dc2626;font-size:11px">Tổng đền bù</div><div class="kpi-bg">⚠️</div></div>
+    <div class="kpi" style="color:#f97316"><div class="kpi-lb">Công ty hỗ trợ</div><div class="kpi-v">${totCT<0?fmt(Math.abs(totCT)):'0'}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="color:#f97316;font-size:11px">Dùng quỹ</div><div class="kpi-bg">🏢</div></div>
+  </div>`;
+  /* TABLE 1 */
+  const bbRows=rows.length?[...rows].sort((a,b)=>b.ngay-a.ngay).map(r=>{
+    const net=(r.clPlus||0)+(r.clMinus||0);
+    const nc=net<0?'#dc2626':net>0?'#16a34a':'#6b7280';
+    const tn=(r.tenST||r.ma||'?').replace(/^[^_-]+[_-]/,'');
+    const hasCL=r.clPlus||r.clMinus;
+    return`<tr style="border-bottom:1px solid #f0f2f7">
+      <td style="padding:7px 6px;font-size:11px;color:var(--t2);white-space:nowrap">T${r.thang}</td>
+      <td style="padding:7px 6px"><div style="font-size:12px;font-weight:600;color:var(--t1)">${tn}</div><div style="font-size:10px;color:var(--t3)">${r.loai}</div></td>
+      <td style="padding:7px 6px;font-size:11px;color:var(--t2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.ten||''}</td>
+      <td style="padding:7px 6px;text-align:right;font-size:11.5px;color:#16a34a">${hasCL&&r.clPlus>0?'+'+fmt(r.clPlus):'-'}</td>
+      <td style="padding:7px 6px;text-align:right;font-size:11.5px;color:#dc2626">${hasCL&&r.clMinus<0?'−'+fmt(Math.abs(r.clMinus)):'-'}</td>
+      <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:700;color:${nc}">${hasCL?(net>=0?'+':'−')+fmt(Math.abs(net)):'-'}</td>
+      <td style="padding:7px 6px;text-align:right;font-size:11.5px;color:${r.denBu<0?'#dc2626':'var(--t3)'}">${r.denBu<0?'−'+fmt(Math.abs(r.denBu)):'-'}</td>
+      <td style="padding:7px 6px;text-align:right;font-size:11.5px;color:${r.congtyHT<0?'#f97316':'var(--t3)'}">${r.congtyHT<0?'−'+fmt(Math.abs(r.congtyHT)):'-'}</td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--t2)">Không có dữ liệu cho tháng này</td></tr>`;
+  const bbTable=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+    <thead><tr style="background:#f8f9fc;border-bottom:2px solid var(--border)">
+      <th style="padding:8px 6px;text-align:left;font-size:11px;color:var(--t2)">Tháng</th>
+      <th style="padding:8px 6px;text-align:left;font-size:11px;color:var(--t2)">Siêu thị</th>
+      <th style="padding:8px 6px;text-align:left;font-size:11px;color:var(--t2)">Biên bản</th>
+      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#16a34a">CL (+)</th>
+      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#dc2626">CL (−)</th>
+      <th style="padding:8px 6px;text-align:right;font-size:11px;color:var(--t2)">Ròng</th>
+      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#dc2626">Đền bù ST</th>
+      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#f97316">CT hỗ trợ</th>
+    </tr></thead><tbody>${bbRows}</tbody>
+  </table></div>`;
+  /* TABLE 2 */
+  const quyKpis=`<div class="g4" style="margin-bottom:14px">
+    <div class="kpi" style="color:#0369a1"><div class="kpi-lb">Tổng DT chuỗi</div><div class="kpi-v" style="font-size:18px">${fmtDT(totDT)}<span class="kpi-u">VNĐ</span></div><div class="kpi-bg">💰</div></div>
+    <div class="kpi" style="color:#0369a1"><div class="kpi-lb">Tổng quỹ HT</div><div class="kpi-v" style="font-size:18px">${fmt(totQuy)}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="font-size:10px;color:var(--t2)">${totDT>0?(totQuy/totDT*100).toFixed(2)+'% DT':''}</div><div class="kpi-bg">🏦</div></div>
+    <div class="kpi" style="color:#f97316"><div class="kpi-lb">Đã dùng quỹ</div><div class="kpi-v" style="font-size:18px">${fmt(Math.abs(totHTong))}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="font-size:10px;color:#f97316">${totQuy>0?Math.round(Math.abs(totHTong)/totQuy*100)+'% quỹ':''}</div><div class="kpi-bg">📤</div></div>
+    <div class="kpi" style="color:#16a34a"><div class="kpi-lb">Quỹ còn lại</div><div class="kpi-v" style="font-size:18px">${fmt(totConLai)}<span class="kpi-u">đ</span></div><div class="kpi-tr tr-ok" style="font-size:10px">${totQuy>0?Math.round(totConLai/totQuy*100)+'% còn':''}</div><div class="kpi-bg">✅</div></div>
+  </div>`;
+  const quyRows=[...t2].sort((a,b)=>Math.abs(b.htTong||0)+Math.abs(b.stDen||0)-Math.abs(a.htTong||0)-Math.abs(a.stDen||0)).map(r=>{
+    const tn=(r.ten||r.ma||'').replace(/^[^_-]+[_-]/,'');
+    const pct=r.quyHT>0?Math.round(Math.abs(r.htTong||0)/r.quyHT*100):0;
+    const danger=r.conLai<100000;
+    const pctTag=pct>0?`<span style="background:${pct>80?'#fee2e2':pct>50?'#fef3c7':'#dcfce7'};color:${pct>80?'#dc2626':pct>50?'#d97706':'#16a34a'};padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">${pct}%</span>`:'-';
+    return`<tr style="border-bottom:1px solid #f0f2f7;${danger?'background:#fff8f8':''}">
+      <td style="padding:7px 6px;font-size:12px;font-weight:600;color:${danger?'#dc2626':'var(--t1)'}">${tn}</td>
+      <td style="padding:7px 6px;text-align:right;font-size:11px">${fmt(r.tongDT)}</td>
+      <td style="padding:7px 6px;text-align:right;font-size:11px;color:#0369a1">${fmt(r.quyHT)}</td>
+      <td style="padding:7px 6px;text-align:right;font-size:11px;color:#f97316">${r.htTong<0?'−'+fmt(Math.abs(r.htTong)):'-'}</td>
+      <td style="padding:7px 6px;text-align:right;font-size:11px;color:#dc2626">${r.stDen<0?'−'+fmt(Math.abs(r.stDen)):'-'}</td>
+      <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:700;color:${danger?'#dc2626':'#16a34a'}">${fmt(r.conLai)}</td>
+      <td style="padding:7px 6px;text-align:center">${pctTag}</td>
+      <td style="padding:7px 6px;text-align:center;font-size:11px;color:var(--t2)">${r.htVaoThang?'T'+r.htVaoThang:'-'}</td>
+    </tr>`;
+  }).join('');
+  const quyTable=`${quyKpis}<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+    <thead><tr style="background:#f8f9fc;border-bottom:2px solid var(--border)">
+      <th style="padding:8px 6px;text-align:left;font-size:11px;color:var(--t2)">Siêu thị</th>
+      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#0369a1">Tổng DT</th>
+      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#0369a1">Quỹ HT</th>
+      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#f97316">CT hỗ trợ</th>
+      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#dc2626">ST đền</th>
+      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#16a34a">Còn lại</th>
+      <th style="padding:8px 6px;text-align:center;font-size:11px;color:var(--t2)">% Dùng quỹ</th>
+      <th style="padding:8px 6px;text-align:center;font-size:11px;color:var(--t2)">Tháng HT</th>
+    </tr></thead><tbody>${quyRows}</tbody>
+  </table></div>`;
+  /* TABLE 4 */
+  const maxDT=Math.max(...t4.map(r=>r.dt),1);
+  const dtBars=t4.filter(r=>r.dt>0).map(r=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5">
+      <div style="min-width:30px;font-size:12px;font-weight:700;color:var(--t2)">T${r.thang}</div>
+      <div style="flex:1;background:#f0f2f7;border-radius:4px;overflow:hidden">
+        <div style="height:10px;background:linear-gradient(90deg,#0066cc,#00c6ff);border-radius:4px;width:${Math.round(r.dt/maxDT*100)}%"></div>
+      </div>
+      <div style="min-width:90px;text-align:right;font-size:12px;font-weight:700;color:#1a2558">${fmtDT(r.dt)}</div>
+    </div>`).join('');
+  const dtSection=`<div style="font-size:13px;font-weight:700;margin-bottom:14px">📊 Doanh thu tháng (tỷ VNĐ)</div>${dtBars}`;
+  const content=bbTab==='bienban'?`<div class="card">${bbTable}</div>`:bbTab==='quy'?`<div class="card">${quyTable}</div>`:`<div class="card">${dtSection}</div>`;
+  return`
+<div class="card" style="margin-bottom:14px">${syncBar}
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+    <span style="font-size:11px;color:var(--t2);margin-right:2px">Tháng:</span>${mBtns}
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">${tabBtns}</div>
+  ${kpis}
+</div>
+${content}`;
+}
 function rKKXuatHuy(){return`<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px;margin-bottom:12px">🗑️</div><div style="font-size:15px;font-weight:700;color:var(--t1);margin-bottom:6px">Xuất hủy - lỗi hỏng</div><p style="color:var(--t2);font-size:13px">Quản lý xuất hủy và hàng lỗi hỏng đang được phát triển.</p></div>`;}
 
 /* ══════════════════════════════════════════
@@ -2146,6 +2268,25 @@ async function syncTonAm(btn){
     if(!S.tonAmMonth||!d.months[S.tonAmMonth])S.tonAmMonth=ms[ms.length-1]||'';
     go(S.page,S.tab);
     toast('✅ Đồng bộ tồn âm thành công ('+ms.join(', ')+')','t-ok');
+  }catch(e){
+    toast('❌ Lỗi đồng bộ: '+e.message,'t-err');
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='🔄 Đồng bộ Lark';}
+  }
+}
+/* ── BIÊN BẢN KIỂM KÊ SYNC ── */
+async function syncBBKK(btn){
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang đồng bộ...';}
+  try{
+    const url='https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/bbkk-cache.json';
+    const r=await fetch(url+'?t='+Date.now());
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    if(!d||!Array.isArray(d.t1))throw new Error('Format không hợp lệ');
+    localStorage.setItem('bbkk_cache',JSON.stringify(d));
+    S.bbkkCache=d;
+    go(S.page,S.tab);
+    toast('✅ Đồng bộ biên bản kiểm kê thành công ('+d.t1.length+' biên bản)','t-ok');
   }catch(e){
     toast('❌ Lỗi đồng bộ: '+e.message,'t-err');
   }finally{
