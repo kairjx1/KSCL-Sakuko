@@ -1177,8 +1177,8 @@ function qcDTSave(btn){
   const db=getQCDB();if(!db){alert('Không kết nối Firebase!');return;}
   const readSec=(pfx)=>({
     tongDon:parseFloat(document.getElementById(pfx+'-tongDon')?.value)||0,
-    pctKhach:parseFloat(document.getElementById(pfx+'-pctKhach')?.value)||0,
-    pctST:parseFloat(document.getElementById(pfx+'-pctST')?.value)||0,
+    donKhach:parseFloat(document.getElementById(pfx+'-donKhach')?.value)||0,
+    donST:parseFloat(document.getElementById(pfx+'-donST')?.value)||0,
     top:[1,2,3].map(i=>({name:(document.getElementById(pfx+'-top'+i+'n')?.value||'').trim(),don:parseInt(document.getElementById(pfx+'-top'+i+'d')?.value)||0})).filter(r=>r.name),
     ghiChu:document.getElementById(pfx+'-ghiChu')?.value||''
   });
@@ -1194,27 +1194,57 @@ function qcDTSave(btn){
     if(btn){btn.disabled=false;btn.textContent='💾 Lưu';}
   }).catch(e=>{alert('Lỗi lưu: '+e.message);if(btn){btn.disabled=false;btn.textContent='💾 Lưu';}});
 }
-function qcDTCalcKhac(pfx){
-  const k=parseFloat(document.getElementById(pfx+'-pctKhach')?.value)||0;
-  const s=parseFloat(document.getElementById(pfx+'-pctST')?.value)||0;
-  const el=document.getElementById(pfx+'-pctKhac');
-  if(el)el.value=Math.max(0,100-k-s).toFixed(2);
+function qcDTCalc(pfx){
+  const tot=parseFloat(document.getElementById(pfx+'-tongDon')?.value)||0;
+  const k=parseFloat(document.getElementById(pfx+'-donKhach')?.value)||0;
+  const s=parseFloat(document.getElementById(pfx+'-donST')?.value)||0;
+  const khac=Math.max(0,tot-k-s);
+  const pct=n=>tot>0?(n/tot*100).toFixed(1)+'%':'—';
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
+  set(pfx+'-pctKhach',pct(k));
+  set(pfx+'-pctST',pct(s));
+  set(pfx+'-donKhac',khac>0?khac:'');
+  set(pfx+'-pctKhac',pct(khac));
 }
 function qcDTSec(pfx,title,d){
   const v=(k)=>d[k]||'';
   const top=Array.isArray(d.top)?d.top:[{},{},{}];
-  const k=parseFloat(d.pctKhach)||0,st=parseFloat(d.pctST)||0;
-  const khac=Math.max(0,100-k-st).toFixed(2);
+  const tot=parseFloat(d.tongDon)||0;
+  const dk=parseFloat(d.donKhach)||0,ds=parseFloat(d.donST)||0,dkhac=Math.max(0,tot-dk-ds);
+  const pct=n=>tot>0?(n/tot*100).toFixed(1)+'%':'';
+  const ro='background:#f8f8ff;color:#6b7280;text-align:center';
   return`
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">
   <div class="qcd-sec-hdr" onclick="qcToggleSec('${pfx}-body')" style="background:linear-gradient(90deg,#1e3a8a,#2563eb)"><span>${title}</span><span id="${pfx}-body-ico">▼</span></div>
   <div id="${pfx}-body" class="qcd-sec-body">
-    <div class="g2" style="gap:12px;margin-bottom:12px">
-      <div><label class="fi-lbl">Tổng số đơn đổi trả</label><input id="${pfx}-tongDon" type="number" class="fi" value="${v('tongDon')}" placeholder="Vd: 195"></div>
-      <div><label class="fi-lbl">% Do khách hàng</label><input id="${pfx}-pctKhach" type="number" step="0.01" class="fi" value="${v('pctKhach')}" placeholder="Vd: 72.31" oninput="qcDTCalcKhac('${pfx}')"></div>
-      <div><label class="fi-lbl">% Do siêu thị</label><input id="${pfx}-pctST" type="number" step="0.01" class="fi" value="${v('pctST')}" placeholder="Vd: 21.54" oninput="qcDTCalcKhac('${pfx}')"></div>
-      <div><label class="fi-lbl">% Nguyên nhân khác (tự tính)</label><input id="${pfx}-pctKhac" type="number" step="0.01" class="fi" value="${khac}" placeholder="Tự tính" readonly style="background:#f8f8ff;color:#6b7280"></div>
+    <div style="margin-bottom:12px">
+      <label class="fi-lbl">Tổng số đơn đổi trả</label>
+      <input id="${pfx}-tongDon" type="number" class="fi" style="max-width:200px" value="${tot||''}" placeholder="Vd: 217" oninput="qcDTCalc('${pfx}')">
     </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
+      <thead><tr style="background:var(--bg2)">
+        <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--t2)">Nguyên nhân</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--t2)">Số đơn</th>
+        <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--t2)">% (tự tính)</th>
+      </tr></thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--br)">
+          <td style="padding:8px 10px;color:var(--t1)">👤 Do khách hàng</td>
+          <td style="padding:6px 10px"><input id="${pfx}-donKhach" type="number" class="fi" style="width:100%;text-align:center" value="${dk||''}" placeholder="0" oninput="qcDTCalc('${pfx}')"></td>
+          <td style="padding:6px 10px"><input id="${pfx}-pctKhach" class="fi" style="width:100%;${ro}" value="${pct(dk)}" readonly></td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--br)">
+          <td style="padding:8px 10px;color:var(--t1)">🏪 Do siêu thị</td>
+          <td style="padding:6px 10px"><input id="${pfx}-donST" type="number" class="fi" style="width:100%;text-align:center" value="${ds||''}" placeholder="0" oninput="qcDTCalc('${pfx}')"></td>
+          <td style="padding:6px 10px"><input id="${pfx}-pctST" class="fi" style="width:100%;${ro}" value="${pct(ds)}" readonly></td>
+        </tr>
+        <tr>
+          <td style="padding:8px 10px;color:var(--t1)">❓ Nguyên nhân khác</td>
+          <td style="padding:6px 10px"><input id="${pfx}-donKhac" class="fi" style="width:100%;${ro}" value="${dkhac>0?dkhac:''}" readonly></td>
+          <td style="padding:6px 10px"><input id="${pfx}-pctKhac" class="fi" style="width:100%;${ro}" value="${pct(dkhac)}" readonly></td>
+        </tr>
+      </tbody>
+    </table>
     <div style="margin-bottom:12px">
       <label class="fi-lbl" style="margin-bottom:8px">Top ST có nhiều đổi trả nhất</label>
       ${[0,1,2].map(i=>`
