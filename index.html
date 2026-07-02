@@ -1419,11 +1419,13 @@ function rQCBienBan(){
     <div class="g2" style="gap:20px">
       <div>
         <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--t1)">📜 Nội quy & Quy định</div>
-        ${BB_QDOCS.map((d,i)=>{const info=S.qcDocsData&&S.qcDocsData.noi_quy&&S.qcDocsData.noi_quy[i];return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:16px">📄</span><span style="font-size:13px;color:var(--t1);flex:1">${d}</span>${info&&info.url?`<a href="${info.url}" target="_blank" download style="font-size:12px;color:#0ea5e9;text-decoration:none;white-space:nowrap">⬇️ Tải xuống</a>`:'<span style="font-size:11px;color:var(--t2)">Chưa có file</span>'}<label style="cursor:pointer;font-size:11px;color:#6366f1;white-space:nowrap;margin-left:8px">📤 Upload<input type="file" accept=".pdf,.doc,.docx" style="display:none" onchange="qcDocUpload('noi_quy',${i},this)"></label></div>`;}).join('')}
+        ${(S.qcDocLists&&S.qcDocLists.noi_quy||BB_QDOCS).map((d,i)=>{const info=S.qcDocsData&&S.qcDocsData.noi_quy&&S.qcDocsData.noi_quy[i];return`<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:16px">📄</span><span style="font-size:13px;color:var(--t1);flex:1">${d}</span><button onclick="qcDocEditName('noi_quy',${i})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:0;opacity:.6" title="Sửa tên">✏️</button>${info&&info.url?`<a href="${info.url}" target="_blank" download style="font-size:12px;color:#0ea5e9;text-decoration:none;white-space:nowrap">⬇️ Tải xuống</a>`:'<span style="font-size:11px;color:var(--t2)">Chưa có file</span>'}<label style="cursor:pointer;font-size:11px;color:#6366f1;white-space:nowrap;margin-left:4px">📤 Upload<input type="file" accept=".pdf,.doc,.docx" style="display:none" onchange="qcDocUpload('noi_quy',${i},this)"></label></div>`;}).join('')}
+        <button onclick="qcDocAddItem('noi_quy')" style="margin-top:8px;width:100%;border:1px dashed var(--br);background:none;cursor:pointer;font-size:12px;color:var(--t2);padding:6px;border-radius:6px">+ Thêm tài liệu</button>
       </div>
       <div>
         <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--t1)">📝 Mẫu form biên bản</div>
-        ${BB_TEMPS.map((d,i)=>{const info=S.qcDocsData&&S.qcDocsData.mau_form&&S.qcDocsData.mau_form[i];return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:16px">📝</span><span style="font-size:13px;color:var(--t1);flex:1">${d}</span>${info&&info.url?`<a href="${info.url}" target="_blank" download style="font-size:12px;color:#0ea5e9;text-decoration:none;white-space:nowrap">⬇️ Tải xuống</a>`:'<span style="font-size:11px;color:var(--t2)">Chưa có file</span>'}<label style="cursor:pointer;font-size:11px;color:#6366f1;white-space:nowrap;margin-left:8px">📤 Upload<input type="file" accept=".pdf,.doc,.docx" style="display:none" onchange="qcDocUpload('mau_form',${i},this)"></label></div>`;}).join('')}
+        ${(S.qcDocLists&&S.qcDocLists.mau_form||BB_TEMPS).map((d,i)=>{const info=S.qcDocsData&&S.qcDocsData.mau_form&&S.qcDocsData.mau_form[i];return`<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:16px">📝</span><span style="font-size:13px;color:var(--t1);flex:1">${d}</span><button onclick="qcDocEditName('mau_form',${i})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:0;opacity:.6" title="Sửa tên">✏️</button>${info&&info.url?`<a href="${info.url}" target="_blank" download style="font-size:12px;color:#0ea5e9;text-decoration:none;white-space:nowrap">⬇️ Tải xuống</a>`:'<span style="font-size:11px;color:var(--t2)">Chưa có file</span>'}<label style="cursor:pointer;font-size:11px;color:#6366f1;white-space:nowrap;margin-left:4px">📤 Upload<input type="file" accept=".pdf,.doc,.docx" style="display:none" onchange="qcDocUpload('mau_form',${i},this)"></label></div>`;}).join('')}
+        <button onclick="qcDocAddItem('mau_form')" style="margin-top:8px;width:100%;border:1px dashed var(--br);background:none;cursor:pointer;font-size:12px;color:var(--t2);padding:6px;border-radius:6px">+ Thêm mẫu form</button>
       </div>
     </div>
   </div>
@@ -1520,15 +1522,34 @@ async function qcDocUpload(type,idx,inp){
 async function qcBBLoad(year,month){
   S.qcBBYear=String(year);S.qcBBMonth=String(month);
   const db2=getQCDB();if(!db2)return;
-  const[snap,ysnap,dsnap]=await Promise.all([
+  const[snap,ysnap,dsnap,nsnap]=await Promise.all([
     db2.ref(`qc_bienbans/${year}/${month}`).get(),
     db2.ref(`qc_bienbans/${year}`).get(),
-    db2.ref('qc_docs').get()
+    db2.ref('qc_docs').get(),
+    db2.ref('qc_doc_names').get()
   ]);
   S.qcBBList=snap.exists()?Object.entries(snap.val()).map(([id,v])=>({id,...v})):[];
   S.qcBBYearData=ysnap.exists()?ysnap.val():{};
   S.qcDocsData=dsnap.exists()?dsnap.val():{};
+  const nn=nsnap.exists()?nsnap.val():{};
+  S.qcDocLists={noi_quy:nn.noi_quy||BB_QDOCS.slice(),mau_form:nn.mau_form||BB_TEMPS.slice()};
   S._qcBBAutoLoaded=true;
+  go('qc','Biên bản xử lý vi phạm');
+}
+async function qcDocEditName(type,idx){
+  const cur=(S.qcDocLists[type]||[])[idx]||'';
+  const n=prompt('Sửa tên:',cur);
+  if(!n||n===cur)return;
+  S.qcDocLists[type][idx]=n;
+  await getQCDB().ref(`qc_doc_names/${type}`).set(S.qcDocLists[type]);
+  go('qc','Biên bản xử lý vi phạm');
+}
+async function qcDocAddItem(type){
+  const n=prompt('Tên tài liệu mới:');
+  if(!n)return;
+  if(!S.qcDocLists[type])S.qcDocLists[type]=[];
+  S.qcDocLists[type].push(n);
+  await getQCDB().ref(`qc_doc_names/${type}`).set(S.qcDocLists[type]);
   go('qc','Biên bản xử lý vi phạm');
 }
 async function qcBBSave(btn){
