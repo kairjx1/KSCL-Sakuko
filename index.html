@@ -357,7 +357,8 @@ const MODS=[
    STATE
 ══════════════════════════════════════════ */
 let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:'5',qcBBYear:'2026',qcBBList:[],qcBBYearData:{},qcDocsData:{},qcDocLists:{},
-  qcOvMonth:'6',qcOvYear:'2026',qcOvData:null,qcOv2Month:'6',qcOv2Year:'2025',qcOv2Data:null};
+  qcOvMonth:'6',qcOvYear:'2026',qcOvData:null,qcOv2Month:'6',qcOv2Year:'2025',qcOv2Data:null,
+  tonAmCache:null,tonAmMonth:''};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -883,7 +884,93 @@ function rKKList(){return`
 <thead><tr><th>STT</th><th>Mã đợt KK</th><th>Ngày KK</th><th>Loại</th><th>Kho</th><th>Số SKU</th><th>SKU chênh</th><th>Tỉ lệ khớp</th><th>Trạng thái</th><th>NV thực hiện</th></tr></thead>
 <tbody id="kk-list"><tr><td colspan="10"><div class="empty-state"><div class="es-ic">📂</div><p>Chưa có dữ liệu. Import Excel để bắt đầu.</p></div></td></tr></tbody>
 </table></div></div>`;}
-function rKKTonAm(){return`<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px;margin-bottom:12px">📉</div><div style="font-size:15px;font-weight:700;color:var(--t1);margin-bottom:6px">Tồn âm</div><p style="color:var(--t2);font-size:13px">Phân tích SKU tồn âm đang được phát triển.</p></div>`;}
+function rKKTonAm(){
+  if(!S.tonAmCache){try{S.tonAmCache=JSON.parse(localStorage.getItem('tonam_cache')||'null');}catch(e){}}
+  const cache=S.tonAmCache;
+  const months=cache?.months||{};
+  const avail=Object.keys(months).sort();
+  if(!S.tonAmMonth||!months[S.tonAmMonth])S.tonAmMonth=avail[avail.length-1]||'';
+  const m=S.tonAmMonth;
+  const md=months[m];
+  const age=cache?.ts?Math.round((Date.now()-cache.ts)/60000):null;
+  const ageStr=age!=null?(age<60?age+'p trước':Math.round(age/60)+'h trước'):'chưa đồng bộ';
+  const syncBar=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+    <span style="font-size:12px;color:var(--t2)">${avail.length?'✅ Dữ liệu Lark · '+ageStr:'⚠️ Chưa có dữ liệu'}</span>
+    <button onclick="syncTonAm(this)" style="background:#1a2558;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer">🔄 Đồng bộ Lark</button>
+  </div>`;
+  if(!avail.length)return`<div class="card">${syncBar}<div style="text-align:center;padding:32px 0"><div style="font-size:48px;margin-bottom:10px">📉</div><p style="color:var(--t2);font-size:13px">Bấm <strong>Đồng bộ Lark</strong> để tải dữ liệu tồn âm từ Lark bitable.</p><p style="color:var(--t3);font-size:11px;margin-top:6px">Chạy <code>node automation/sync-tonam.js</code> để tạo cache nếu chưa có.</p></div></div>`;
+  const ALL_M=['T01','T02','T03','T04','T05','T06'];
+  const mBtns=ALL_M.map(t=>{const has=!!months[t],sel=t===m;
+    return`<button onclick="${has?`S.tonAmMonth='${t}';go('kk','Tồn âm')`:'void 0'}" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${sel?'#e91e7b':has?'rgba(0,0,0,.15)':'rgba(0,0,0,.07)'};background:${sel?'#e91e7b':'#fff'};color:${sel?'#fff':has?'var(--t1)':'#ccc'};cursor:${has?'pointer':'default'}">${t}</button>`;
+  }).join('');
+  const pctQH=md.total>0?(md.qh/md.total*100).toFixed(1):'0';
+  const pctCH=md.total>0?(md.ch/md.total*100).toFixed(1):'0';
+  const pctOk=md.total>0?(100-+pctQH-+pctCH).toFixed(1):'0';
+  const topST=(md.stores||[]).slice(0,10);
+  const topLD=Object.entries(md.lyDo||{}).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const topNG=Object.entries(md.nganh||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxLD=topLD[0]?.[1]||1;
+  const stRows=topST.map((s,i)=>{
+    const pq=s.count>0?(s.qh/s.count*100).toFixed(0):'0';
+    const pc=s.count>0?(s.ch/s.count*100).toFixed(0):'0';
+    const risk=+pq>50?'#dc2626':+pq>25?'#f97316':'#15803d';
+    return`<tr style="border-bottom:1px solid #f0f0f0">
+      <td style="padding:7px 10px;font-size:12px;color:#6b7280">${i+1}</td>
+      <td style="padding:7px 10px;font-size:13px;font-weight:600;color:var(--t1)">${s.ten||s.ma}</td>
+      <td style="padding:7px 10px;font-size:12px;text-align:right;color:var(--t1)">${s.count.toLocaleString()}</td>
+      <td style="padding:7px 10px;font-size:12px;text-align:right;color:#dc2626;font-weight:600">${s.qh.toLocaleString()} <span style="font-weight:400;color:#9ca3af">(${pq}%)</span></td>
+      <td style="padding:7px 10px;font-size:12px;text-align:right;color:#f97316">${s.ch.toLocaleString()} <span style="font-weight:400;color:#9ca3af">(${pc}%)</span></td>
+      <td style="padding:7px 10px"><div style="width:60px;height:6px;background:#f0f0f0;border-radius:3px"><div style="width:${pq}%;height:100%;background:${risk};border-radius:3px"></div></div></td>
+    </tr>`;
+  }).join('');
+  const ldRows=topLD.map(([ld,cnt])=>{
+    const pct=Math.round(cnt/maxLD*100);
+    const c=ld.includes('bán nhầm')?'#6366f1':ld.includes('chưa nhận')?'#0ea5e9':ld.includes('Xin hàng')?'#f59e0b':ld.includes('trùng')||ld.includes('Trùng')?'#ec4899':'#64748b';
+    return`<div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+        <span style="color:var(--t1);font-weight:500">${ld}</span>
+        <span style="color:var(--t2)">${cnt.toLocaleString()} SKU</span>
+      </div>
+      <div style="background:#f0f0f0;border-radius:3px;height:8px"><div style="width:${pct}%;height:100%;background:${c};border-radius:3px"></div></div>
+    </div>`;
+  }).join('');
+  const ngRows=topNG.map(([ng,cnt])=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f5f5f5;font-size:12px">
+      <span style="color:var(--t1)">${ng}</span>
+      <span style="font-weight:700;color:#1a2558">${cnt.toLocaleString()}</span>
+    </div>`).join('');
+  return`
+<div class="card" style="margin-bottom:14px">${syncBar}
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${mBtns}</div>
+  <div class="g4" style="margin-bottom:0">
+    <div class="kpi" style="color:#1a2558"><div class="kpi-lb">Tổng SKU tồn âm</div><div class="kpi-v">${md.total.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr" style="color:#6b7280;font-size:11px">${m}/2026</div><div class="kpi-bg">📉</div></div>
+    <div class="kpi" style="color:#dc2626"><div class="kpi-lb">Quá hạn</div><div class="kpi-v">${md.qh.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr tr-err" style="color:#dc2626">⚠️ ${pctQH}% tổng</div><div class="kpi-bg">🚨</div></div>
+    <div class="kpi" style="color:#f97316"><div class="kpi-lb">Cận hạn</div><div class="kpi-v">${md.ch.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr" style="color:#f97316;font-size:11px">${pctCH}% tổng</div><div class="kpi-bg">⚠️</div></div>
+    <div class="kpi" style="color:#15803d"><div class="kpi-lb">Bình thường</div><div class="kpi-v">${(md.total-md.qh-md.ch).toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr tr-ok" style="color:#15803d">${pctOk}% tổng</div><div class="kpi-bg">✅</div></div>
+  </div>
+</div>
+<div class="g2" style="margin-bottom:14px">
+  <div class="card" style="padding:16px">
+    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">🏪 ST tồn âm nhiều nhất — ${m}/2026</div>
+    ${topST.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:#f8f9fa;font-size:11px;color:#6b7280;text-transform:uppercase">
+        <th style="padding:6px 10px;text-align:left">#</th>
+        <th style="padding:6px 10px;text-align:left">Siêu thị</th>
+        <th style="padding:6px 10px;text-align:right">SKU âm</th>
+        <th style="padding:6px 10px;text-align:right">Quá hạn</th>
+        <th style="padding:6px 10px;text-align:right">Cận hạn</th>
+        <th style="padding:6px 10px">Rủi ro</th>
+      </tr></thead>
+      <tbody>${stRows}</tbody>
+    </table></div>`:'<div class="empty-state"><p>Không có dữ liệu siêu thị</p></div>'}
+  </div>
+  <div class="card" style="padding:16px">
+    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">🔍 Lý do gây tồn âm — ${m}/2026</div>
+    ${topLD.length?ldRows:'<div class="empty-state"><p>Không có dữ liệu lý do</p></div>'}
+    ${topNG.length?`<div style="font-size:13px;font-weight:700;color:var(--t1);margin:14px 0 10px">📦 Theo ngành hàng</div>${ngRows}`:''}
+  </div>
+</div>`;
+}
 function rKKBienBan(){return`<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="font-size:15px;font-weight:700;color:var(--t1);margin-bottom:6px">Biên bản kiểm kê</div><p style="color:var(--t2);font-size:13px">Quản lý biên bản kiểm kê đang được phát triển.</p></div>`;}
 function rKKXuatHuy(){return`<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px;margin-bottom:12px">🗑️</div><div style="font-size:15px;font-weight:700;color:var(--t1);margin-bottom:6px">Xuất hủy - lỗi hỏng</div><p style="color:var(--t2);font-size:13px">Quản lý xuất hủy và hàng lỗi hỏng đang được phát triển.</p></div>`;}
 
@@ -1998,6 +2085,27 @@ async function syncLarkDate(btn){
     S.dateCache=cache;
     go(S.page,S.tab);
     toast('✅ Đồng bộ thành công ('+d.monthly.length+' tháng)','t-ok');
+  }catch(e){
+    toast('❌ Lỗi đồng bộ: '+e.message,'t-err');
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='🔄 Đồng bộ Lark';}
+  }
+}
+/* ── TỒNG ÂM SYNC ── */
+async function syncTonAm(btn){
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang đồng bộ...';}
+  try{
+    const url='https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/tonam-cache.json';
+    const r=await fetch(url+'?t='+Date.now());
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    if(!d.months||!Object.keys(d.months).length)throw new Error('Dữ liệu rỗng');
+    localStorage.setItem('tonam_cache',JSON.stringify(d));
+    S.tonAmCache=d;
+    const ms=Object.keys(d.months).sort();
+    if(!S.tonAmMonth||!d.months[S.tonAmMonth])S.tonAmMonth=ms[ms.length-1]||'';
+    go(S.page,S.tab);
+    toast('✅ Đồng bộ tồn âm thành công ('+ms.join(', ')+')','t-ok');
   }catch(e){
     toast('❌ Lỗi đồng bộ: '+e.message,'t-err');
   }finally{
