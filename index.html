@@ -1258,6 +1258,40 @@ function qcDTSec(pfx,title,d){
   </div>
 </div>`;
 }
+let _qcDTHistCache={};
+function qcDTShowHistory(){
+  const panel=document.getElementById('qcdt-hist-panel');if(!panel)return;
+  if(panel.style.display!=='none'){panel.style.display='none';return;}
+  const y=S.qcDTYear||'2026',m=S.qcDTMonth||'5';
+  const db=getQCDB();if(!db)return;
+  panel.innerHTML='<div style="padding:12px;text-align:center;color:#94a3b8;font-size:13px">⏳ Đang tải lịch sử T'+m+'/'+y+'...</div>';
+  panel.style.display='block';
+  db.ref(`qc_doitra_history/${y}/${m}`).get().then(snap=>{
+    if(!snap.exists()){panel.innerHTML='<div style="padding:12px;color:#94a3b8;font-size:13px">Chưa có phiên bản nào cho T'+m+'/'+y+'.</div>';return;}
+    _qcDTHistCache={};
+    const vers=[];
+    snap.forEach(child=>{_qcDTHistCache[child.key]=child.val();vers.push({key:child.key,...child.val()});});
+    vers.sort((a,b)=>(b._snapshotAt||0)-(a._snapshotAt||0));
+    panel.innerHTML='<div style="padding:8px 12px;background:#f0f0ff;font-size:12px;font-weight:700;color:#4f46e5;border-bottom:1px solid #e0e7ff">📋 Lịch sử đổi trả T'+m+'/'+y+' ('+vers.length+' bản)</div>'+
+    vers.slice(0,15).map(v=>{
+      const dt=v._snapshotAt?new Date(v._snapshotAt).toLocaleString('vi-VN'):'?';
+      const st=v.st||{},cvs=v.cvs||{};
+      return`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid #f0f0ff;font-size:12.5px">
+        <div><strong>${dt}</strong> <span style="color:#94a3b8;font-size:11px">bởi ${v._by||'?'}</span><br>
+        <span style="color:#6b7280;font-size:11px">ST: ${st.tongDon||0} đơn · CVS: ${cvs.tongDon||0} đơn</span></div>
+        <button onclick="qcDTRestore('${v.key}')" class="btn b-sm" style="background:#6366f1;color:#fff;font-size:11px">⏪ Khôi phục</button>
+      </div>`;
+    }).join('');
+  }).catch(e=>{panel.innerHTML='<div style="padding:12px;color:#dc2626">Lỗi: '+e.message+'</div>';});
+}
+function qcDTRestore(key){
+  const data=_qcDTHistCache[key];
+  if(!data){alert('Không tìm thấy phiên bản!');return;}
+  if(!confirm('Khôi phục phiên bản này? Dữ liệu hiện tại sẽ bị thay thế (chưa lưu lên Firebase).'))return;
+  S.qcDTST=data.st||{};S.qcDTCVS=data.cvs||{};
+  go('qc','Đổi trả');
+  setTimeout(()=>{const s=document.getElementById('qcdt-saved');if(s){s.textContent='⏪ Đã khôi phục. Kiểm tra rồi bấm Lưu để ghi lại.';s.style.display='block';setTimeout(()=>s.style.display='none',6000);}},300);
+}
 function rQCDoiTra(){
   const eM=String(S.qcDTMonth||'5'),eY=String(S.qcDTYear||'2026');
   return`
@@ -1273,9 +1307,11 @@ function rQCDoiTra(){
       <label class="fi-lbl" style="margin:0">Năm</label>
       <select id="qcdt-year" class="fi" style="width:85px" onchange="qcDTLoad(this.value,document.getElementById('qcdt-month').value)">${yearOpts(eY)}</select>
       <button onclick="qcDTSave(this)" class="btn b-pri b-sm">💾 Lưu</button>
+      <button onclick="qcDTShowHistory()" class="btn b-sm" style="background:#6366f1;color:#fff">📋 Lịch sử</button>
     </div>
   </div>
   <div id="qcdt-saved" class="qcd-saved" style="margin-top:8px">✅ Đã lưu thành công!</div>
+  <div id="qcdt-hist-panel" style="display:none;border:1px solid #e0e7ff;border-radius:8px;margin-top:10px;overflow:hidden;max-height:320px;overflow-y:auto"></div>
 </div>
 ${qcDTSec('qcdt-st','🏪 I. Siêu thị',S.qcDTST)}
 ${qcDTSec('qcdt-cvs','🏬 II. CVS',S.qcDTCVS)}`;
