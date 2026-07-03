@@ -358,7 +358,7 @@ const MODS=[
 ══════════════════════════════════════════ */
 let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:'5',qcBBYear:'2026',qcBBList:[],qcBBYearData:{},qcDocsData:{},qcDocLists:{},
   qcOvMonth:'6',qcOvYear:'2026',qcOvData:null,qcOv2Month:'6',qcOv2Year:'2025',qcOv2Data:null,
-  tonAmCache:null,tonAmMonth:''};
+  tonAmCache:null,tonAmMonth:'',tonAmFilter:{q:'',status:'all',nganh:'',sort:'value'}};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -946,11 +946,25 @@ function rKKTonAm(){
       </div>
     </div>`).join(''):'<div style="font-size:12px;color:#15803d;padding:8px">✅ Không có cảnh báo nghiêm trọng cho tháng này</div>';
 
-  const topST=(md.stores||[]).slice(0,10);
-  const topLD=Object.entries(md.lyDo||{}).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  const topNG=Object.entries(md.nganh||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const maxLD=topLD[0]?.[1]||1;
-  const stRows=topST.map((s,i)=>{
+  // ── Filter logic ──
+  const F=S.tonAmFilter;
+  const allNG=Object.entries(md.nganh||{}).sort((a,b)=>b[1]-a[1]);
+  const allLD=Object.entries(md.lyDo||{}).sort((a,b)=>b[1]-a[1]);
+  const allST=md.stores||[];
+  const qLow=(F.q||'').toLowerCase();
+
+  const filtST=allST.filter(s=>{
+    const mQ=!qLow||(s.ten||'').toLowerCase().includes(qLow)||(s.ma||'').toLowerCase().includes(qLow);
+    const mS=F.status==='all'||(F.status==='qh'&&s.qh>0)||(F.status==='ch'&&s.ch>0);
+    return mQ&&mS;
+  }).sort((a,b)=>F.sort==='sku'?b.count-a.count:(b.value||0)-(a.value||0));
+
+  const filtLD=allLD.filter(([ld])=>!qLow||ld.toLowerCase().includes(qLow))
+    .sort((a,b)=>F.sort==='sku'?b[1]-a[1]:(lyDoValue[b[0]]||0)-(lyDoValue[a[0]]||0));
+
+  const filtNG=F.nganh?allNG.filter(([ng])=>ng===F.nganh):allNG;
+  const maxLD=filtLD[0]?.[1]||1;
+  const stRows=filtST.map((s,i)=>{
     const pq=s.count>0?(s.qh/s.count*100).toFixed(0):'0';
     const pc=s.count>0?(s.ch/s.count*100).toFixed(0):'0';
     const risk=+pq>50?'#dc2626':+pq>25?'#f97316':'#15803d';
@@ -964,7 +978,7 @@ function rKKTonAm(){
       <td style="padding:7px 10px"><div style="width:60px;height:6px;background:#f0f0f0;border-radius:3px"><div style="width:${pq}%;height:100%;background:${risk};border-radius:3px"></div></div></td>
     </tr>`;
   }).join('');
-  const ldRows=topLD.map(([ld,cnt])=>{
+  const ldRows=filtLD.map(([ld,cnt])=>{
     const pct=Math.round(cnt/maxLD*100);
     const pctTotal=md.total>0?(cnt/md.total*100).toFixed(1):'0';
     const val=lyDoValue[ld]||0;
@@ -980,12 +994,44 @@ function rKKTonAm(){
       <div style="background:#f0f0f0;border-radius:3px;height:8px"><div style="width:${pct}%;height:100%;background:${c};border-radius:3px"></div></div>
     </div>`;
   }).join('');
-  const ngRows=topNG.map(([ng,cnt])=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f5f5f5;font-size:12px">
-      <span style="color:var(--t1)">${ng}</span>
-      <span style="font-weight:700;color:#1a2558">${cnt.toLocaleString()}</span>
-    </div>`).join('');
+  const nganhValue=md.nganhValue||{};
+  const ngRows=filtNG.map(([ng,cnt])=>{
+    const nv=nganhValue[ng]||0;
+    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f5f5f5;font-size:12px;gap:8px">
+      <span style="color:var(--t1);flex:1">${ng}</span>
+      <span style="color:#6b7280">${cnt.toLocaleString()} SKU</span>
+      ${nv>0?`<span style="font-weight:700;color:#7c3aed;white-space:nowrap">${fmtV(nv)}</span>`:''}
+    </div>`;
+  }).join('');
   const valueColor=pctValue!=='—'&&+pctValue>15?'#dc2626':+pctValue>10?'#f97316':'#7c3aed';
+  // ── Filter bar HTML ──
+  const ngOptions=allNG.map(([ng])=>`<option value="${ng}" ${F.nganh===ng?'selected':''}>${ng}</option>`).join('');
+  const hasFilter=F.q||F.status!=='all'||F.nganh;
+  const filterBar=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px">
+    <span style="font-size:11px;font-weight:700;color:#64748b;white-space:nowrap">🔍 BỘ LỌC</span>
+    <input type="text" placeholder="Tìm siêu thị, lý do..." value="${F.q||''}"
+      oninput="S.tonAmFilter.q=this.value;go('kk','Tồn âm')"
+      style="flex:1;min-width:140px;padding:5px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;outline:none">
+    <select onchange="S.tonAmFilter.status=this.value;go('kk','Tồn âm')"
+      style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#fff">
+      <option value="all" ${F.status==='all'?'selected':''}>Tất cả trạng thái</option>
+      <option value="qh" ${F.status==='qh'?'selected':''}>Có quá hạn</option>
+      <option value="ch" ${F.status==='ch'?'selected':''}>Có cận hạn</option>
+    </select>
+    <select onchange="S.tonAmFilter.nganh=this.value;go('kk','Tồn âm')"
+      style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#fff">
+      <option value="">Tất cả ngành</option>${ngOptions}
+    </select>
+    <select onchange="S.tonAmFilter.sort=this.value;go('kk','Tồn âm')"
+      style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#fff">
+      <option value="value" ${F.sort==='value'?'selected':''}>↓ Giá trị</option>
+      <option value="sku" ${F.sort==='sku'?'selected':''}>↓ SKU</option>
+    </select>
+    ${hasFilter?`<button onclick="S.tonAmFilter={q:'',status:'all',nganh:'',sort:'value'};go('kk','Tồn âm')"
+      style="padding:5px 10px;border:1px solid #dc2626;border-radius:6px;font-size:11px;color:#dc2626;background:#fff;cursor:pointer;white-space:nowrap">✕ Xoá lọc</button>`:''}
+    <span style="font-size:11px;color:#64748b;white-space:nowrap;margin-left:auto">${filtST.length} ST · ${filtLD.length} lý do</span>
+  </div>`;
+
   return`
 <div class="card" style="margin-bottom:14px">${syncBar}
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${mBtns}</div>
@@ -1000,11 +1046,12 @@ function rKKTonAm(){
   <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:10px">⚡ Cảnh báo & Nhận định — ${m}/2026</div>
   ${alertHtml}
 </div>
+${filterBar}
 <div class="g2" style="margin-bottom:14px">
   <div class="card" style="padding:16px">
-    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">🏪 ST tồn âm nhiều nhất — ${m}/2026</div>
-    ${topST.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
-      <thead><tr style="background:#f8f9fa;font-size:11px;color:#6b7280;text-transform:uppercase">
+    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">🏪 Siêu thị tồn âm — ${m}/2026 <span style="font-size:11px;font-weight:400;color:#64748b">(${filtST.length}/${allST.length} ST)</span></div>
+    ${filtST.length?`<div style="overflow-x:auto;max-height:480px;overflow-y:auto"><table style="width:100%;border-collapse:collapse">
+      <thead style="position:sticky;top:0;z-index:1"><tr style="background:#f8f9fa;font-size:11px;color:#6b7280;text-transform:uppercase">
         <th style="padding:6px 10px;text-align:left">#</th>
         <th style="padding:6px 10px;text-align:left">Siêu thị</th>
         <th style="padding:6px 10px;text-align:right">SKU âm</th>
@@ -1013,12 +1060,15 @@ function rKKTonAm(){
         <th style="padding:6px 10px">Rủi ro</th>
       </tr></thead>
       <tbody>${stRows}</tbody>
-    </table></div>`:'<div class="empty-state"><p>Không có dữ liệu siêu thị</p></div>'}
+    </table></div>`:'<div class="empty-state"><p>Không khớp bộ lọc</p></div>'}
   </div>
   <div class="card" style="padding:16px">
-    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">🔍 Lý do gây tồn âm — ${m}/2026</div>
-    ${topLD.length?ldRows:'<div class="empty-state"><p>Không có dữ liệu lý do</p></div>'}
-    ${topNG.length?`<div style="font-size:13px;font-weight:700;color:var(--t1);margin:14px 0 10px">📦 Theo ngành hàng</div>${ngRows}`:''}
+    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">🔍 Lý do tồn âm — ${m}/2026 <span style="font-size:11px;font-weight:400;color:#64748b">(${filtLD.length}/${allLD.length} lý do)</span></div>
+    <div style="max-height:340px;overflow-y:auto;padding-right:4px">
+    ${filtLD.length?ldRows:'<div class="empty-state"><p>Không khớp bộ lọc</p></div>'}
+    </div>
+    ${filtNG.length?`<div style="font-size:13px;font-weight:700;color:var(--t1);margin:14px 0 10px">📦 Theo ngành hàng <span style="font-size:11px;font-weight:400;color:#64748b">(${filtNG.length})</span></div>
+    <div style="max-height:220px;overflow-y:auto">${ngRows}</div>`:''}
   </div>
 </div>`;
 }
