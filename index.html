@@ -889,9 +889,30 @@ function rKKTonAm(){
   const cache=S.tonAmCache;
   const months=cache?.months||{};
   const avail=Object.keys(months).sort();
-  if(!S.tonAmMonth||!months[S.tonAmMonth])S.tonAmMonth=avail[avail.length-1]||'';
+  if(!S.tonAmMonth||(S.tonAmMonth!=='ALL'&&!months[S.tonAmMonth]))S.tonAmMonth=avail[avail.length-1]||'';
   const m=S.tonAmMonth;
-  const md=months[m];
+  // ── ALL aggregation ──
+  let md;
+  if(m==='ALL'){
+    const agg={total:0,qh:0,ch:0,totalValue:0,lyDo:{},lyDoValue:{},nganh:{},nganhValue:{},stores:{}};
+    for(const mo of avail){
+      const d=months[mo];
+      agg.total+=d.total; agg.qh+=d.qh; agg.ch+=d.ch; agg.totalValue+=d.totalValue||0;
+      for(const[k,v]of Object.entries(d.lyDo||{})) agg.lyDo[k]=(agg.lyDo[k]||0)+v;
+      for(const[k,v]of Object.entries(d.lyDoValue||{})) agg.lyDoValue[k]=(agg.lyDoValue[k]||0)+v;
+      for(const[k,v]of Object.entries(d.nganh||{})) agg.nganh[k]=(agg.nganh[k]||0)+v;
+      for(const[k,v]of Object.entries(d.nganhValue||{})) agg.nganhValue[k]=(agg.nganhValue[k]||0)+v;
+      for(const s of(d.stores||[])){
+        if(!agg.stores[s.ma])agg.stores[s.ma]={ten:s.ten,count:0,qh:0,ch:0,value:0};
+        agg.stores[s.ma].count+=s.count; agg.stores[s.ma].qh+=s.qh; agg.stores[s.ma].ch+=s.ch; agg.stores[s.ma].value+=(s.value||0);
+      }
+    }
+    agg.stores=Object.entries(agg.stores).sort((a,b)=>b[1].count-a[1].count)
+      .map(([ma,v])=>({ma,ten:v.ten,count:v.count,qh:v.qh,ch:v.ch,value:Math.round(v.value)}));
+    md=agg;
+  } else {
+    md=months[m];
+  }
   const age=cache?.ts?Math.round((Date.now()-cache.ts)/60000):null;
   const ageStr=age!=null?(age<60?age+'p trước':Math.round(age/60)+'h trước'):'chưa đồng bộ';
   const syncBar=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
@@ -903,15 +924,19 @@ function rKKTonAm(){
   const rev=cache?.revenue||{};
   const mNum={'T01':1,'T02':2,'T03':3,'T04':4,'T05':5,'T06':6};
   const fmtDT=v=>v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(0)+'M':'—';
-  const mBtns=ALL_M.map(t=>{const has=!!months[t],sel=t===m,dt=rev[t]||0;
+  const selAll=m==='ALL';
+  const allTotalDT=avail.reduce((s,mo)=>s+(rev[mo]||0),0);
+  const allBtn=`<button onclick="S.tonAmMonth='ALL';go('kk','Tồn âm')" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${selAll?'#1a2558':'rgba(0,0,0,.15)'};background:${selAll?'#1a2558':'#fff'};color:${selAll?'#fff':'var(--t1)'}">Tất cả${allTotalDT>0?`<div style="font-size:9px;opacity:.7">${fmtDT(allTotalDT)}</div>`:''}</button>`;
+  const mBtns=allBtn+ALL_M.map(t=>{const has=!!months[t],sel=t===m,dt=rev[t]||0;
     const dtLbl=dt>0?`<div style="font-size:9px;opacity:.7">${fmtDT(dt)}</div>`:'';
     return`<button onclick="${has?`S.tonAmMonth='${t}';go('kk','Tồn âm')`:'void 0'}" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${sel?'#e91e7b':has?'rgba(0,0,0,.15)':'rgba(0,0,0,.07)'};background:${sel?'#e91e7b':'#fff'};color:${sel?'#fff':has?'var(--t1)':'#ccc'};cursor:${has?'pointer':'default'}">${t}${dtLbl}</button>`;
   }).join('');
   const pctQH=md.total>0?(md.qh/md.total*100).toFixed(1):'0';
   const pctCH=md.total>0?(md.ch/md.total*100).toFixed(1):'0';
   const pctOk=md.total>0?(100-+pctQH-+pctCH).toFixed(1):'0';
-  const dtMonth=rev[m]||0;
+  const dtMonth=m==='ALL'?allTotalDT:(rev[m]||0);
   const skuPerB=dtMonth>0?(md.total/(dtMonth/1e9)).toFixed(0):'—';
+  const mLabel=m==='ALL'?`${avail[0]}–${avail[avail.length-1]}`:m;
   const totalValue=md.totalValue||0;
   const lyDoValue=md.lyDoValue||{};
   const pctValue=dtMonth>0?(totalValue/dtMonth*100).toFixed(1):'—';
@@ -929,7 +954,7 @@ function rKKTonAm(){
   const xinHangV=(lyDoValue['Xin hàng - ST']||0)+(lyDoValue['xin hàng - ST']||0);
   const p=v=>dtMonth>0?` · ${(v/dtMonth*100).toFixed(2)}% DT`:'';
   const alerts=[];
-  if(totalValue>0&&dtMonth>0&&totalValue/dtMonth>0.15)alerts.push({lv:'🔴 Giá trị nghiêm trọng',msg:`Tổng giá trị tồn âm ${fmtV(totalValue)} = ${pctValue}% doanh thu ${m} — vượt ngưỡng 15%`,act:'Đặt KPI xử lý giảm xuống dưới 10% DT trong tháng tới'});
+  if(totalValue>0&&dtMonth>0&&totalValue/dtMonth>0.15)alerts.push({lv:'🔴 Giá trị nghiêm trọng',msg:`Tổng giá trị tồn âm ${fmtV(totalValue)} = ${pctValue}% doanh thu ${mLabel} — vượt ngưỡng 15%`,act:'Đặt KPI xử lý giảm xuống dưới 10% DT trong tháng tới'});
   else if(totalValue>0&&dtMonth>0&&totalValue/dtMonth>0.10)alerts.push({lv:'🟠 Giá trị cao',msg:`Tổng giá trị tồn âm ${fmtV(totalValue)} = ${pctValue}% doanh thu — cần theo dõi chặt`,act:'Phân tích lý do top 3 và lên kế hoạch xử lý'});
   if(+pctQH>30)alerts.push({lv:'🔴 Quá hạn nghiêm trọng',msg:`${pctQH}% SKU quá hạn — rủi ro tài chính cao`,act:'Kiểm kê đột xuất toàn chuỗi, ưu tiên ST có QH >50%'});
   else if(+pctQH>15)alerts.push({lv:'🟠 Quá hạn cao',msg:`${pctQH}% SKU quá hạn — vượt ngưỡng an toàn 15%`,act:'Rà soát và xử lý các ST có quá hạn >50%'});
@@ -1036,20 +1061,20 @@ function rKKTonAm(){
 <div class="card" style="margin-bottom:14px">${syncBar}
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${mBtns}</div>
   <div class="g4" style="margin-bottom:0">
-    <div class="kpi" style="color:#1a2558"><div class="kpi-lb">Tổng SKU tồn âm</div><div class="kpi-v">${md.total.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr" style="color:#6b7280;font-size:11px">${m}/2026</div><div class="kpi-bg">📉</div></div>
+    <div class="kpi" style="color:#1a2558"><div class="kpi-lb">Tổng SKU tồn âm</div><div class="kpi-v">${md.total.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr" style="color:#6b7280;font-size:11px">${mLabel}/2026</div><div class="kpi-bg">📉</div></div>
     <div class="kpi" style="color:${valueColor}"><div class="kpi-lb">Giá trị tồn âm</div><div class="kpi-v" style="font-size:${totalValue>=1e9?'18px':'22px'}">${totalValue>0?fmtV(totalValue):'—'}<span class="kpi-u">VNĐ</span></div><div class="kpi-tr" style="color:${valueColor};font-size:11px">${pctValue!=='—'?pctValue+'% doanh thu':''}</div><div class="kpi-bg">💸</div></div>
     <div class="kpi" style="color:#dc2626"><div class="kpi-lb">Quá hạn</div><div class="kpi-v">${md.qh.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr tr-err" style="color:#dc2626">⚠️ ${pctQH}% tổng</div><div class="kpi-bg">🚨</div></div>
-    ${dtMonth>0?`<div class="kpi" style="color:#0369a1"><div class="kpi-lb">Doanh thu ${m}</div><div class="kpi-v" style="font-size:18px">${fmtDT(dtMonth)}<span class="kpi-u">VNĐ</span></div><div class="kpi-tr" style="color:#0369a1;font-size:11px">${skuPerB} SKU/tỷ DT</div><div class="kpi-bg">💰</div></div>`:`<div class="kpi" style="color:#f97316"><div class="kpi-lb">Cận hạn</div><div class="kpi-v">${md.ch.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr" style="color:#f97316;font-size:11px">${pctCH}% tổng</div><div class="kpi-bg">⚠️</div></div>`}
+    ${dtMonth>0?`<div class="kpi" style="color:#0369a1"><div class="kpi-lb">Doanh thu ${mLabel}</div><div class="kpi-v" style="font-size:18px">${fmtDT(dtMonth)}<span class="kpi-u">VNĐ</span></div><div class="kpi-tr" style="color:#0369a1;font-size:11px">${skuPerB} SKU/tỷ DT</div><div class="kpi-bg">💰</div></div>`:`<div class="kpi" style="color:#f97316"><div class="kpi-lb">Cận hạn</div><div class="kpi-v">${md.ch.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr" style="color:#f97316;font-size:11px">${pctCH}% tổng</div><div class="kpi-bg">⚠️</div></div>`}
   </div>
 </div>
 <div class="card" style="margin-bottom:14px;padding:16px">
-  <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:10px">⚡ Cảnh báo & Nhận định — ${m}/2026</div>
+  <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:10px">⚡ Cảnh báo & Nhận định — ${mLabel}/2026</div>
   ${alertHtml}
 </div>
 ${filterBar}
 <div class="g2" style="margin-bottom:14px">
   <div class="card" style="padding:16px">
-    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">🏪 Siêu thị tồn âm — ${m}/2026 <span style="font-size:11px;font-weight:400;color:#64748b">(${filtST.length}/${allST.length} ST)</span></div>
+    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">🏪 Siêu thị tồn âm — ${mLabel}/2026 <span style="font-size:11px;font-weight:400;color:#64748b">(${filtST.length}/${allST.length} ST)</span></div>
     ${filtST.length?`<div style="overflow-x:auto;max-height:480px;overflow-y:auto"><table style="width:100%;border-collapse:collapse">
       <thead style="position:sticky;top:0;z-index:1"><tr style="background:#f8f9fa;font-size:11px;color:#6b7280;text-transform:uppercase">
         <th style="padding:6px 10px;text-align:left">#</th>
@@ -1063,7 +1088,7 @@ ${filterBar}
     </table></div>`:'<div class="empty-state"><p>Không khớp bộ lọc</p></div>'}
   </div>
   <div class="card" style="padding:16px">
-    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">🔍 Lý do tồn âm — ${m}/2026 <span style="font-size:11px;font-weight:400;color:#64748b">(${filtLD.length}/${allLD.length} lý do)</span></div>
+    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">🔍 Lý do tồn âm — ${mLabel}/2026 <span style="font-size:11px;font-weight:400;color:#64748b">(${filtLD.length}/${allLD.length} lý do)</span></div>
     <div style="max-height:340px;overflow-y:auto;padding-right:4px">
     ${filtLD.length?ldRows:'<div class="empty-state"><p>Không khớp bộ lọc</p></div>'}
     </div>
