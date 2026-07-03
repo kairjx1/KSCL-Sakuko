@@ -2289,15 +2289,24 @@ async function syncTonAm(btn){
 async function syncBBKK(btn){
   if(btn){btn.disabled=true;btn.textContent='⏳ Đang đồng bộ...';}
   try{
-    const url='https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/bbkk-cache.json';
-    const r=await fetch(url+'?t='+Date.now());
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const d=await r.json();
+    let d=null;
+    // Thử gọi local bot_server (dữ liệu thật từ Lark)
+    try{
+      const r=await fetch('http://localhost:3001/api/sync-bbkk',{signal:AbortSignal.timeout(55000)});
+      if(r.ok){d=await r.json();if(d.error)d=null;}
+    }catch(_){}
+    // Fallback: GitHub raw cache
+    if(!d){
+      if(btn)btn.textContent='⏳ Tải cache GitHub...';
+      const r=await fetch('https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/bbkk-cache.json?t='+Date.now());
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      d=await r.json();
+    }
     if(!d||!Array.isArray(d.t1))throw new Error('Format không hợp lệ');
     localStorage.setItem('bbkk_cache',JSON.stringify(d));
     S.bbkkCache=d;
     go(S.page,S.tab);
-    toast('✅ Đồng bộ biên bản kiểm kê thành công ('+d.t1.length+' biên bản)','t-ok');
+    toast('✅ Cập nhật thành công từ Lark ('+d.t1.length+' biên bản)','t-ok');
   }catch(e){
     toast('❌ Lỗi đồng bộ: '+e.message,'t-err');
   }finally{
