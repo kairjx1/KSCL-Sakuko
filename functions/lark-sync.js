@@ -9,6 +9,31 @@ export async function onRequestOptions() {
   return new Response(null, { headers: CORS });
 }
 
+// Robust field parsers — Lark returns different shapes for number/lookup/formula/text fields
+function getNum(v) {
+  if (v == null) return null;
+  if (typeof v === 'number') return v;
+  if (v?.value != null) { const n = Array.isArray(v.value) ? v.value[0] : v.value; return n != null ? Number(n) : null; }
+  if (typeof v === 'string') { const n = Number(v); return isNaN(n) ? null : n; }
+  return null;
+}
+function getTxt(v) {
+  if (!v) return '';
+  if (typeof v === 'string') return v;
+  if (Array.isArray(v)) return v[0]?.text ?? String(v[0] ?? '');
+  if (v?.value != null) return String(Array.isArray(v.value) ? (v.value[0]?.text ?? v.value[0] ?? '') : v.value);
+  return '';
+}
+function getArr(v) {
+  if (!v) return [];
+  if (Array.isArray(v)) return v.map(x => typeof x === 'string' ? x : (x?.text ?? String(x ?? '')));
+  if (typeof v === 'string') return [v];
+  return [];
+}
+
+const DK_FAIL   = new Set(['Sai phạm','Không đạt','CGT','Fail','fail','Có sai phạm']);
+const CTKM_FAIL = new Set(['Không tặng khách','Không đạt','CGT','Sai phạm','Fail','Có lỗi','Không tặng','Không tặng KH']);
+
 export async function onRequestPost(context) {
   try {
     const { secret } = await context.request.json();
@@ -24,7 +49,6 @@ export async function onRequestPost(context) {
     if (authJ.code !== 0) return json({ ok: false, error: 'Auth lỗi: ' + authJ.msg + ' (' + authJ.code + ')' }, 400);
     const aat = authJ.app_access_token;
 
-    // Fetch all records (paginated)
     const appToken = 'AGGAbC9BPaioxas1VW8lV6tOg7g';
     const fetchAll = async (tblId, fields) => {
       let all = [], pt = '', more = true;
@@ -46,33 +70,44 @@ export async function onRequestPost(context) {
     };
 
     const [dkRecs, ctkmRecs] = await Promise.all([
-      fetchAll('tblU0OlbMShM5ooe', ['Ngày kiểm tra', 'Tên Siêu thị', 'Kết quả check cam', 'Lỗi vi phạm', 'Tháng', 'Năm', 'Giải trình lý do']),
-      fetchAll('tblQxeGxroYYFpY6', ['Thời gian', 'Tên Siêu thị', 'Kết quả', 'Tháng', 'Năm'])
+      fetchAll('tblU0OlbMShM5ooe', ['Ngày kiểm tra','Tên Siêu thị','Kết quả check cam','Kết quả','Lỗi vi phạm','Tháng','Năm','Giải trình lý do']),
+      fetchAll('tblQxeGxroYYFpY6', ['Thời gian','Tên Siêu thị','Kết quả','Tháng','Năm'])
     ]);
 
-    // Aggregate by year/month
     const agg = {};
     const slot = (y, m) => {
       const k = `${y}/${m}`;
-      if (!agg[k]) agg[k] = { y, m, dk: { total: 0, sp: 0, dgt: 0, cgt: 0, loiVPs: {} }, ctkm: { total: 0, sp: 0, cgt: 0, loiVPs: {} } };
+      if (!agg[k]) agg[k] = { y, m, dk:{ total:0, sp:0, dgt:0, cgt:0, loiVPs:{} }, ctkm:{ total:0, sp:0, cgt:0, loiVPs:{} } };
       return agg[k];
     };
+
     for (const r of dkRecs) {
-      const f = r.fields, y = f['Năm']?.value?.[0], m = f['Tháng'];
-      if (!y || y === 1899 || !m) continue;
+      const f = r.fields;
+      const y = getNum(f['Năm']); const m = getNum(f['Tháng']);
+      if (!y || y < 2020 || !m) continue;
       const s = slot(y, m); s.dk.total++;
-      if (f['Kết quả check cam'] === 'Sai phạm') {
+      const kq = getTxt(f['Kết quả check cam'] ?? f['Kết quả']).trim();
+      if (DK_FAIL.has(kq)) {
         s.dk.sp++;
-        const hasGT = Array.isArray(f['Giải trình lý do']) && f['Giải trình lý do'].length > 0;
+        const gt = f['Giải trình lý do'];
+        const hasGT = Array.isArray(gt) ? gt.length > 0 : !!getTxt(gt);
         if (hasGT) s.dk.dgt++; else s.dk.cgt++;
-        for (const l of (Array.isArray(f['Lỗi vi phạm']) ? f['Lỗi vi phạm'] : [])) s.dk.loiVPs[l] = (s.dk.loiVPs[l] || 0) + 1;
+        for (const l of getArr(f['Lỗi vi phạm'])) {
+          const lk = l.trim(); if (lk) s.dk.loiVPs[lk] = (s.dk.loiVPs[lk]||0)+1;
+        }
       }
     }
+
     for (const r of ctkmRecs) {
-      const f = r.fields, y = f['Năm']?.value?.[0], m = f['Tháng'];
-      if (!y || y === 1899 || !m || !f['Kết quả']) continue;
+      const f = r.fields;
+      const y = getNum(f['Năm']); const m = getNum(f['Tháng']);
+      if (!y || y < 2020 || !m) continue;
       const s = slot(y, m); s.ctkm.total++;
-      if (f['Kết quả'] === 'Không tặng khách') { s.ctkm.sp++; s.ctkm.cgt++; s.ctkm.loiVPs['Không tặng khách'] = (s.ctkm.loiVPs['Không tặng khách'] || 0) + 1; }
+      const kq = getTxt(f['Kết quả']).trim();
+      if (CTKM_FAIL.has(kq)) {
+        s.ctkm.sp++; s.ctkm.cgt++;
+        if (kq) s.ctkm.loiVPs[kq] = (s.ctkm.loiVPs[kq]||0)+1;
+      }
     }
 
     return json({ ok: true, data: agg, counts: { dk: dkRecs.length, ctkm: ctkmRecs.length } });
