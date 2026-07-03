@@ -912,23 +912,31 @@ function rKKTonAm(){
   const pctOk=md.total>0?(100-+pctQH-+pctCH).toFixed(1):'0';
   const dtMonth=rev[m]||0;
   const skuPerB=dtMonth>0?(md.total/(dtMonth/1e9)).toFixed(0):'—';
+  const totalValue=md.totalValue||0;
+  const lyDoValue=md.lyDoValue||{};
+  const pctValue=dtMonth>0?(totalValue/dtMonth*100).toFixed(1):'—';
+  const fmtV=v=>v>=1e9?(v/1e9).toFixed(2)+' tỷ':v>=1e6?(v/1e6).toFixed(0)+' tr':'—';
 
-  // ── Cảnh báo thông minh ──
+  // ── Cảnh báo thông minh (dựa trên giá trị VNĐ + SKU) ──
   const lyDoMap=md.lyDo||{};
   const banNham=(lyDoMap['bán nhầm - ST']||0)+(lyDoMap['Bán nhầm - ST']||0);
   const chuaGT=(lyDoMap['chưa giải trình - ST']||0)+(lyDoMap['Chưa giải trình - ST']||0);
   const chuaNhan=(lyDoMap['chưa nhận đơn -ST']||0)+(lyDoMap['Chưa nhận đơn -ST']||0);
   const xinHang=(lyDoMap['Xin hàng - ST']||0)+(lyDoMap['xin hàng - ST']||0);
+  const banNhamV=(lyDoValue['bán nhầm - ST']||0)+(lyDoValue['Bán nhầm - ST']||0);
+  const chuaGTV=(lyDoValue['chưa giải trình - ST']||0)+(lyDoValue['Chưa giải trình - ST']||0);
+  const chuaNhanV=(lyDoValue['chưa nhận đơn -ST']||0)+(lyDoValue['Chưa nhận đơn -ST']||0);
+  const xinHangV=(lyDoValue['Xin hàng - ST']||0)+(lyDoValue['xin hàng - ST']||0);
+  const p=v=>dtMonth>0?(v/dtMonth*100).toFixed(2)+'% DT':'';
   const alerts=[];
-  if(+pctQH>30)alerts.push({lv:'🔴 Nghiêm trọng',msg:`${pctQH}% SKU quá hạn — rủi ro tài chính cao, cần xử lý ngay`,act:'Lên kế hoạch kiểm kê đột xuất toàn chuỗi'});
-  else if(+pctQH>15)alerts.push({lv:'🟠 Cảnh báo',msg:`${pctQH}% SKU quá hạn — mức cao hơn ngưỡng an toàn 15%`,act:'Rà soát và xử lý các ST có quá hạn >50%'});
-  if(banNham>500)alerts.push({lv:'🔴 Nghiệp vụ',msg:`${banNham.toLocaleString()} SKU tồn âm do bán nhầm — lỗi thao tác POS nghiêm trọng`,act:'Training nghiệp vụ bán hàng, kiểm tra cài đặt POS tại các ST top'});
-  else if(banNham>200)alerts.push({lv:'🟠 Nghiệp vụ',msg:`${banNham.toLocaleString()} SKU do bán nhầm — cần rà soát quy trình bán hàng`,act:'Họp briefing ST có lỗi bán nhầm > 50 SKU'});
-  if(chuaGT>300)alerts.push({lv:'🟡 Kiểm soát',msg:`${chuaGT.toLocaleString()} SKU chưa được giải trình — tồn đọng cao`,act:'Yêu cầu ST hoàn thành giải trình trong vòng 3 ngày'});
-  if(chuaNhan>100)alerts.push({lv:'🟠 Chuỗi cung ứng',msg:`${chuaNhan.toLocaleString()} SKU do chưa nhận đơn — lỗi xác nhận kho`,act:'Đối chiếu đơn hàng tồn với bộ phận logistics'});
-  if(xinHang>100)alerts.push({lv:'🔵 Vận hành',msg:`${xinHang.toLocaleString()} SKU do ST xin hàng — phân bổ hàng chưa cân đối`,act:'Review lại định mức hàng tại các ST có xin hàng nhiều'});
-  if(dtMonth>0&&+skuPerB>30)alerts.push({lv:'🔴 Hiệu quả',msg:`${skuPerB} SKU tồn âm / tỷ DT — tỷ lệ cao bất thường (ngưỡng an toàn ≤25)`,act:'Tăng tần suất kiểm kê, đặc biệt với ngành THỰC PHẨM'});
-  else if(dtMonth>0&&+skuPerB>20)alerts.push({lv:'🟡 Hiệu quả',msg:`${skuPerB} SKU / tỷ DT — tỷ lệ cần theo dõi (ngưỡng tốt ≤20)`,act:'Duy trì kiểm kê định kỳ, chú ý các ST DT cao'});
+  if(totalValue>0&&dtMonth>0&&totalValue/dtMonth>0.15)alerts.push({lv:'🔴 Giá trị nghiêm trọng',msg:`Tổng giá trị tồn âm ${fmtV(totalValue)} = ${pctValue}% doanh thu ${m} — vượt ngưỡng 15%`,act:'Đặt KPI xử lý giảm xuống dưới 10% DT trong tháng tới'});
+  else if(totalValue>0&&dtMonth>0&&totalValue/dtMonth>0.10)alerts.push({lv:'🟠 Giá trị cao',msg:`Tổng giá trị tồn âm ${fmtV(totalValue)} = ${pctValue}% doanh thu — cần theo dõi chặt`,act:'Phân tích lý do top 3 và lên kế hoạch xử lý'});
+  if(+pctQH>30)alerts.push({lv:'🔴 Quá hạn nghiêm trọng',msg:`${pctQH}% SKU quá hạn — rủi ro tài chính cao`,act:'Kiểm kê đột xuất toàn chuỗi, ưu tiên ST có QH >50%'});
+  else if(+pctQH>15)alerts.push({lv:'🟠 Quá hạn cao',msg:`${pctQH}% SKU quá hạn — vượt ngưỡng an toàn 15%`,act:'Rà soát và xử lý các ST có quá hạn >50%'});
+  if(banNhamV>0)alerts.push({lv:'🔴 Nghiệp vụ',msg:`Bán nhầm: ${banNham.toLocaleString()} SKU · ${fmtV(banNhamV)} (${p(banNhamV)}) — lỗi thao tác POS`,act:'Training POS + kiểm tra cài đặt tại ST top bán nhầm'});
+  if(chuaGTV>0)alerts.push({lv:'🟡 Kiểm soát',msg:`Chưa giải trình: ${chuaGT.toLocaleString()} SKU · ${fmtV(chuaGTV)} (${p(chuaGTV)}) — tồn đọng giải trình`,act:'Deadline giải trình 3 ngày, theo dõi qua Lark base'});
+  if(chuaNhanV>0)alerts.push({lv:'🟠 Chuỗi cung ứng',msg:`Chưa nhận đơn: ${chuaNhan.toLocaleString()} SKU · ${fmtV(chuaNhanV)} (${p(chuaNhanV)}) — lỗi xác nhận kho`,act:'Đối chiếu đơn hàng tồn với logistics, xác nhận kho ngay'});
+  if(xinHangV>0)alerts.push({lv:'🔵 Vận hành',msg:`Xin hàng: ${xinHang.toLocaleString()} SKU · ${fmtV(xinHangV)} (${p(xinHangV)}) — phân bổ hàng chưa cân đối`,act:'Review định mức hàng tại các ST có xin hàng nhiều'});
   const alertHtml=alerts.length?alerts.map(a=>`
     <div style="display:flex;gap:10px;padding:10px 12px;background:#fafafa;border-radius:8px;border-left:3px solid ${a.lv.includes('🔴')?'#dc2626':a.lv.includes('🟠')?'#f97316':a.lv.includes('🟡')?'#eab308':'#3b82f6'};margin-bottom:8px">
       <div style="flex:1">
@@ -946,24 +954,28 @@ function rKKTonAm(){
     const pq=s.count>0?(s.qh/s.count*100).toFixed(0):'0';
     const pc=s.count>0?(s.ch/s.count*100).toFixed(0):'0';
     const risk=+pq>50?'#dc2626':+pq>25?'#f97316':'#15803d';
+    const sv=s.value||0;
     return`<tr style="border-bottom:1px solid #f0f0f0">
       <td style="padding:7px 10px;font-size:12px;color:#6b7280">${i+1}</td>
       <td style="padding:7px 10px;font-size:13px;font-weight:600;color:var(--t1)">${s.ten||s.ma}</td>
       <td style="padding:7px 10px;font-size:12px;text-align:right;color:var(--t1)">${s.count.toLocaleString()}</td>
+      <td style="padding:7px 10px;font-size:12px;text-align:right;color:#7c3aed;font-weight:600">${sv>0?fmtV(sv):'—'}</td>
       <td style="padding:7px 10px;font-size:12px;text-align:right;color:#dc2626;font-weight:600">${s.qh.toLocaleString()} <span style="font-weight:400;color:#9ca3af">(${pq}%)</span></td>
-      <td style="padding:7px 10px;font-size:12px;text-align:right;color:#f97316">${s.ch.toLocaleString()} <span style="font-weight:400;color:#9ca3af">(${pc}%)</span></td>
       <td style="padding:7px 10px"><div style="width:60px;height:6px;background:#f0f0f0;border-radius:3px"><div style="width:${pq}%;height:100%;background:${risk};border-radius:3px"></div></div></td>
     </tr>`;
   }).join('');
   const ldRows=topLD.map(([ld,cnt])=>{
     const pct=Math.round(cnt/maxLD*100);
     const pctTotal=md.total>0?(cnt/md.total*100).toFixed(1):'0';
+    const val=lyDoValue[ld]||0;
+    const pctDT=dtMonth>0&&val>0?(val/dtMonth*100).toFixed(2):'';
     const c=ld.includes('bán nhầm')||ld.includes('Bán nhầm')?'#dc2626':ld.includes('chưa nhận')||ld.includes('Chưa nhận')?'#f97316':ld.includes('Xin hàng')||ld.includes('xin hàng')?'#f59e0b':ld.includes('giải trình')?'#8b5cf6':'#64748b';
     const tag=ld.includes('bán nhầm')||ld.includes('Bán nhầm')?'Nghiệp vụ':ld.includes('chưa nhận')||ld.includes('Chưa nhận')?'Cung ứng':ld.includes('Xin hàng')||ld.includes('xin hàng')?'Vận hành':ld.includes('giải trình')?'Kiểm soát':'';
     return`<div style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;align-items:center">
-        <span style="color:var(--t1);font-weight:500">${ld}${tag?`<span style="font-size:9px;padding:1px 5px;background:${c}22;color:${c};border-radius:4px;margin-left:6px">${tag}</span>`:''}</span>
-        <span style="color:var(--t2)">${cnt.toLocaleString()} SKU <span style="color:#9ca3af">(${pctTotal}%)</span></span>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;align-items:center;gap:8px">
+        <span style="color:var(--t1);font-weight:500;flex:1;min-width:0">${ld}${tag?`<span style="font-size:9px;padding:1px 5px;background:${c}22;color:${c};border-radius:4px;margin-left:6px">${tag}</span>`:''}</span>
+        <span style="color:var(--t2);white-space:nowrap">${cnt.toLocaleString()} SKU <span style="color:#9ca3af">(${pctTotal}%)</span></span>
+        ${val>0?`<span style="color:#7c3aed;font-weight:600;white-space:nowrap;font-size:11.5px">${fmtV(val)}${pctDT?` <span style="color:#dc2626;font-size:10px">${pctDT}% DT</span>`:''}</span>`:''}
       </div>
       <div style="background:#f0f0f0;border-radius:3px;height:8px"><div style="width:${pct}%;height:100%;background:${c};border-radius:3px"></div></div>
     </div>`;
@@ -973,16 +985,15 @@ function rKKTonAm(){
       <span style="color:var(--t1)">${ng}</span>
       <span style="font-weight:700;color:#1a2558">${cnt.toLocaleString()}</span>
     </div>`).join('');
-  const dtKpi=dtMonth>0?`
-    <div class="kpi" style="color:#0369a1"><div class="kpi-lb">Doanh thu ${m}</div><div class="kpi-v" style="font-size:20px">${fmtDT(dtMonth)}<span class="kpi-u">VNĐ</span></div><div class="kpi-tr" style="color:#0369a1;font-size:11px">${skuPerB} SKU/tỷ</div><div class="kpi-bg">💰</div></div>`:'';
+  const valueColor=pctValue!=='—'&&+pctValue>15?'#dc2626':+pctValue>10?'#f97316':'#7c3aed';
   return`
 <div class="card" style="margin-bottom:14px">${syncBar}
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${mBtns}</div>
   <div class="g4" style="margin-bottom:0">
     <div class="kpi" style="color:#1a2558"><div class="kpi-lb">Tổng SKU tồn âm</div><div class="kpi-v">${md.total.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr" style="color:#6b7280;font-size:11px">${m}/2026</div><div class="kpi-bg">📉</div></div>
+    <div class="kpi" style="color:${valueColor}"><div class="kpi-lb">Giá trị tồn âm</div><div class="kpi-v" style="font-size:${totalValue>=1e9?'18px':'22px'}">${totalValue>0?fmtV(totalValue):'—'}<span class="kpi-u">VNĐ</span></div><div class="kpi-tr" style="color:${valueColor};font-size:11px">${pctValue!=='—'?pctValue+'% doanh thu':''}</div><div class="kpi-bg">💸</div></div>
     <div class="kpi" style="color:#dc2626"><div class="kpi-lb">Quá hạn</div><div class="kpi-v">${md.qh.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr tr-err" style="color:#dc2626">⚠️ ${pctQH}% tổng</div><div class="kpi-bg">🚨</div></div>
-    <div class="kpi" style="color:#f97316"><div class="kpi-lb">Cận hạn</div><div class="kpi-v">${md.ch.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr" style="color:#f97316;font-size:11px">${pctCH}% tổng</div><div class="kpi-bg">⚠️</div></div>
-    ${dtKpi||`<div class="kpi" style="color:#15803d"><div class="kpi-lb">Bình thường</div><div class="kpi-v">${(md.total-md.qh-md.ch).toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr tr-ok" style="color:#15803d">${pctOk}% tổng</div><div class="kpi-bg">✅</div></div>`}
+    ${dtMonth>0?`<div class="kpi" style="color:#0369a1"><div class="kpi-lb">Doanh thu ${m}</div><div class="kpi-v" style="font-size:18px">${fmtDT(dtMonth)}<span class="kpi-u">VNĐ</span></div><div class="kpi-tr" style="color:#0369a1;font-size:11px">${skuPerB} SKU/tỷ DT</div><div class="kpi-bg">💰</div></div>`:`<div class="kpi" style="color:#f97316"><div class="kpi-lb">Cận hạn</div><div class="kpi-v">${md.ch.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr" style="color:#f97316;font-size:11px">${pctCH}% tổng</div><div class="kpi-bg">⚠️</div></div>`}
   </div>
 </div>
 <div class="card" style="margin-bottom:14px;padding:16px">
@@ -997,8 +1008,8 @@ function rKKTonAm(){
         <th style="padding:6px 10px;text-align:left">#</th>
         <th style="padding:6px 10px;text-align:left">Siêu thị</th>
         <th style="padding:6px 10px;text-align:right">SKU âm</th>
+        <th style="padding:6px 10px;text-align:right;color:#7c3aed">Giá trị</th>
         <th style="padding:6px 10px;text-align:right">Quá hạn</th>
-        <th style="padding:6px 10px;text-align:right">Cận hạn</th>
         <th style="padding:6px 10px">Rủi ro</th>
       </tr></thead>
       <tbody>${stRows}</tbody>
