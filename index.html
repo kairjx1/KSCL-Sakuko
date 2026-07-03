@@ -1034,9 +1034,12 @@ function rKKBienBan(){
   </div>`;
   if(!C)return`<div class="card">${syncBar}<div style="text-align:center;padding:32px 0"><div style="font-size:48px;margin-bottom:10px">📋</div><p style="color:var(--t2);font-size:13px">Bấm <strong>Đồng bộ Lark</strong> để tải dữ liệu biên bản kiểm kê từ Lark.</p><p style="color:var(--t3);font-size:11px;margin-top:6px">Hoặc chạy <code>node automation/sync-bbkk.js</code> rồi push lên GitHub.</p></div></div>`;
   const t1=C.t1||[]; const t2=C.t2||[]; const t4=C.t4||[];
-  const months=[...new Set(t1.map(r=>r.thang))].sort((a,b)=>a-b);
+  const years=[...new Set(t1.map(r=>r.nam))].sort((a,b)=>a-b);
+  const selY=S.bbkkYear||(years[years.length-1]||2026);
+  const t1y=t1.filter(r=>r.nam===selY);
+  const months=[...new Set(t1y.map(r=>r.thang))].sort((a,b)=>a-b);
   const selM=S.bbkkMonth||0;
-  const rows=selM?t1.filter(r=>r.thang===selM):t1;
+  const rows=selM?t1y.filter(r=>r.thang===selM):t1y;
   const bbTab=S.bbkkTab||'bienban';
   /* KPIs */
   const totDenBu=rows.reduce((s,r)=>s+(r.denBu||0),0);
@@ -1044,17 +1047,27 @@ function rKKBienBan(){
   const totCLp=rows.reduce((s,r)=>s+(r.clPlus||0),0);
   const totCLm=rows.reduce((s,r)=>s+(r.clMinus||0),0);
   const totNet=totCLp+totCLm;
-  const totDT=t2.reduce((s,r)=>s+(r.tongDT||0),0);
-  const totQuy=t2.reduce((s,r)=>s+(r.quyHT||0),0);
-  const totHTong=t2.reduce((s,r)=>s+(r.htTong||0),0);
-  const totConLai=t2.reduce((s,r)=>s+(r.conLai||0),0);
+  const t2y=t2.filter(r=>r.nam===selY);
+  const totDT=t2y.reduce((s,r)=>s+(r.tongDT||0),0);
+  const totQuy=t2y.reduce((s,r)=>s+(r.quyHT||0),0);
+  const totHTong=t2y.reduce((s,r)=>s+(r.htTong||0),0);
+  const totConLai=t2y.reduce((s,r)=>s+(r.conLai||0),0);
   /* header bar */
-  const mBtns=[{v:0,lb:'Tất cả'},...months.map(m=>({v:m,lb:'T'+m}))].map(({v,lb})=>
-    `<button onclick="S.bbkkMonth=${v};go('kk','Biên bản kiểm kê')" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${selM===v?'#e91e7b':'rgba(0,0,0,.15)'};background:${selM===v?'#e91e7b':'#fff'};color:${selM===v?'#fff':'var(--t1)'}">${lb}</button>`).join('');
+  const mBtns=`<span style="display:inline-flex;align-items:center;gap:6px">
+    <label style="font-size:11.5px;color:var(--t2)">Tháng:</label>
+    <select onchange="S.bbkkMonth=+this.value;S.bbkkYear=${selY};go('kk','Biên bản kiểm kê')" style="padding:3px 8px;font-size:12px;border-radius:6px;border:1px solid rgba(0,0,0,.15);background:#fff;color:var(--t1);cursor:pointer">
+      <option value="0" ${selM===0?'selected':''}>Tất cả</option>
+      ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}" ${selM===m?'selected':''}${!months.includes(m)?' style="color:#bbb"':''}>Tháng ${m}</option>`).join('')}
+    </select>
+    <label style="font-size:11.5px;color:var(--t2)">Năm:</label>
+    <select onchange="S.bbkkYear=+this.value;S.bbkkMonth=0;go('kk','Biên bản kiểm kê')" style="padding:3px 8px;font-size:12px;border-radius:6px;border:1px solid rgba(0,0,0,.15);background:#fff;color:var(--t1);cursor:pointer">
+      ${[...new Set([...years,selY])].sort((a,b)=>a-b).map(y=>`<option value="${y}" ${selY===y?'selected':''}>${y}</option>`).join('')}
+    </select>
+  </span>`;
   const tabBtns=[{v:'bienban',lb:'📋 Biên bản'},{v:'quy',lb:'💰 Quỹ hỗ trợ'},{v:'dt',lb:'📊 Doanh thu'}].map(({v,lb})=>
     `<button onclick="S.bbkkTab='${v}';go('kk','Biên bản kiểm kê')" style="padding:6px 14px;font-size:12.5px;border-radius:8px;border:none;background:${bbTab===v?'var(--pri)':'#f0f2f7'};color:${bbTab===v?'#fff':'var(--t2)'};font-weight:${bbTab===v?700:500}">${lb}</button>`).join('');
   const kpis=`<div class="g4" style="margin-bottom:0">
-    <div class="kpi" style="color:#1a2558"><div class="kpi-lb">Số biên bản</div><div class="kpi-v">${rows.length}<span class="kpi-u">BB</span></div><div class="kpi-tr" style="font-size:11px;color:#6b7280">${selM?'T'+selM+'/2026':'Năm 2026'}</div><div class="kpi-bg">📋</div></div>
+    <div class="kpi" style="color:#1a2558"><div class="kpi-lb">Số biên bản</div><div class="kpi-v">${rows.length}<span class="kpi-u">BB</span></div><div class="kpi-tr" style="font-size:11px;color:#6b7280">${selM?'T'+selM+'/'+selY:'Năm '+selY}</div><div class="kpi-bg">📋</div></div>
     <div class="kpi" style="color:${totNet<0?'#dc2626':'#16a34a'}"><div class="kpi-lb">Chênh lệch ròng</div><div class="kpi-v">${totNet>=0?'+':'−'}${fmt(totNet)}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="font-size:10px;color:#6b7280">CL+ ${fmt(totCLp)} / CL− ${fmt(Math.abs(totCLm))}</div><div class="kpi-bg">⚖️</div></div>
     <div class="kpi" style="color:#dc2626"><div class="kpi-lb">ST đền bù</div><div class="kpi-v">${totDenBu<0?fmt(totDenBu):'0'}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="color:#dc2626;font-size:11px">Tổng đền bù</div><div class="kpi-bg">⚠️</div></div>
     <div class="kpi" style="color:#f97316"><div class="kpi-lb">Công ty hỗ trợ</div><div class="kpi-v">${totCT<0?fmt(Math.abs(totCT)):'0'}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="color:#f97316;font-size:11px">Dùng quỹ</div><div class="kpi-bg">🏢</div></div>
@@ -1095,7 +1108,7 @@ function rKKBienBan(){
     <div class="kpi" style="color:#f97316"><div class="kpi-lb">Đã dùng quỹ</div><div class="kpi-v" style="font-size:18px">${fmt(Math.abs(totHTong))}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="font-size:10px;color:#f97316">${totQuy>0?Math.round(Math.abs(totHTong)/totQuy*100)+'% quỹ':''}</div><div class="kpi-bg">📤</div></div>
     <div class="kpi" style="color:#16a34a"><div class="kpi-lb">Quỹ còn lại</div><div class="kpi-v" style="font-size:18px">${fmt(totConLai)}<span class="kpi-u">đ</span></div><div class="kpi-tr tr-ok" style="font-size:10px">${totQuy>0?Math.round(totConLai/totQuy*100)+'% còn':''}</div><div class="kpi-bg">✅</div></div>
   </div>`;
-  const quyRows=[...t2].sort((a,b)=>Math.abs(b.htTong||0)+Math.abs(b.stDen||0)-Math.abs(a.htTong||0)-Math.abs(a.stDen||0)).map(r=>{
+  const quyRows=[...t2y].sort((a,b)=>Math.abs(b.htTong||0)+Math.abs(b.stDen||0)-Math.abs(a.htTong||0)-Math.abs(a.stDen||0)).map(r=>{
     const tn=(r.ten||r.ma||'').replace(/^[^_-]+[_-]/,'');
     const pct=r.quyHT>0?Math.round(Math.abs(r.htTong||0)/r.quyHT*100):0;
     const danger=r.conLai<100000;
@@ -1138,7 +1151,7 @@ function rKKBienBan(){
   return`
 <div class="card" style="margin-bottom:14px">${syncBar}
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-    <span style="font-size:11px;color:var(--t2);margin-right:2px">Tháng:</span>${mBtns}
+    ${mBtns}
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">${tabBtns}</div>
   ${kpis}
