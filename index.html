@@ -920,17 +920,33 @@ function rKKTonAm(){
     <button onclick="syncTonAm(this)" style="background:#1a2558;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer">🔄 Đồng bộ Lark</button>
   </div>`;
   if(!avail.length)return`<div class="card">${syncBar}<div style="text-align:center;padding:32px 0"><div style="font-size:48px;margin-bottom:10px">📉</div><p style="color:var(--t2);font-size:13px">Bấm <strong>Đồng bộ Lark</strong> để tải dữ liệu tồn âm từ Lark bitable.</p><p style="color:var(--t3);font-size:11px;margin-top:6px">Chạy <code>node automation/sync-tonam.js</code> để tạo cache nếu chưa có.</p></div></div>`;
-  const ALL_M=['T01','T02','T03','T04','T05','T06'];
   const rev=cache?.revenue||{};
-  const mNum={'T01':1,'T02':2,'T03':3,'T04':4,'T05':5,'T06':6};
   const fmtDT=v=>v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(0)+'M':'—';
-  const selAll=m==='ALL';
   const allTotalDT=avail.reduce((s,mo)=>s+(rev[mo]||0),0);
-  const allBtn=`<button onclick="S.tonAmMonth='ALL';go('kk','Tồn âm')" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${selAll?'#1a2558':'rgba(0,0,0,.15)'};background:${selAll?'#1a2558':'#fff'};color:${selAll?'#fff':'var(--t1)'}">Tất cả${allTotalDT>0?`<div style="font-size:9px;opacity:.7">${fmtDT(allTotalDT)}</div>`:''}</button>`;
-  const mBtns=allBtn+ALL_M.map(t=>{const has=!!months[t],sel=t===m,dt=rev[t]||0;
-    const dtLbl=dt>0?`<div style="font-size:9px;opacity:.7">${fmtDT(dt)}</div>`:'';
-    return`<button onclick="${has?`S.tonAmMonth='${t}';go('kk','Tồn âm')`:'void 0'}" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${sel?'#e91e7b':has?'rgba(0,0,0,.15)':'rgba(0,0,0,.07)'};background:${sel?'#e91e7b':'#fff'};color:${sel?'#fff':has?'var(--t1)':'#ccc'};cursor:${has?'pointer':'default'}">${t}${dtLbl}</button>`;
-  }).join('');
+  // Tên tháng — tự động cho T01-T12
+  const mNames={T01:'Tháng 1',T02:'Tháng 2',T03:'Tháng 3',T04:'Tháng 4',T05:'Tháng 5',T06:'Tháng 6',
+    T07:'Tháng 7',T08:'Tháng 8',T09:'Tháng 9',T10:'Tháng 10',T11:'Tháng 11',T12:'Tháng 12'};
+  // Năm — đọc từ cache timestamp, tự cập nhật khi sync
+  const cacheYear=cache?.ts?new Date(cache.ts).getFullYear():new Date().getFullYear();
+  const mOpts=`<option value="ALL" ${m==='ALL'?'selected':''}>Tất cả</option>`+
+    avail.map(t=>`<option value="${t}" ${t===m?'selected':''}>${mNames[t]||t}</option>`).join('');
+  const mBtns=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="font-size:12px;color:#64748b;font-weight:500">Tháng:</span>
+      <select onchange="S.tonAmMonth=this.value;go('kk','Tồn âm')"
+        style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff;color:var(--t1);cursor:pointer;font-weight:500">
+        ${mOpts}
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="font-size:12px;color:#64748b;font-weight:500">Năm:</span>
+      <select style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff;color:var(--t1);font-weight:500">
+        <option value="${cacheYear}">${cacheYear}</option>
+      </select>
+    </div>
+    ${allTotalDT>0&&m==='ALL'?`<span style="font-size:11px;color:#64748b">· DT tổng: ${fmtDT(allTotalDT)}</span>`:''}
+    ${m!=='ALL'&&(rev[m]||0)>0?`<span style="font-size:11px;color:#64748b">· DT ${mNames[m]||m}: ${fmtDT(rev[m])}</span>`:''}
+  </div>`;
   const pctQH=md.total>0?(md.qh/md.total*100).toFixed(1):'0';
   const pctCH=md.total>0?(md.ch/md.total*100).toFixed(1):'0';
   const pctOk=md.total>0?(100-+pctQH-+pctCH).toFixed(1):'0';
