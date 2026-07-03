@@ -927,16 +927,16 @@ function rKKTonAm(){
   const chuaGTV=(lyDoValue['chưa giải trình - ST']||0)+(lyDoValue['Chưa giải trình - ST']||0);
   const chuaNhanV=(lyDoValue['chưa nhận đơn -ST']||0)+(lyDoValue['Chưa nhận đơn -ST']||0);
   const xinHangV=(lyDoValue['Xin hàng - ST']||0)+(lyDoValue['xin hàng - ST']||0);
-  const p=v=>dtMonth>0?(v/dtMonth*100).toFixed(2)+'% DT':'';
+  const p=v=>dtMonth>0?` · ${(v/dtMonth*100).toFixed(2)}% DT`:'';
   const alerts=[];
   if(totalValue>0&&dtMonth>0&&totalValue/dtMonth>0.15)alerts.push({lv:'🔴 Giá trị nghiêm trọng',msg:`Tổng giá trị tồn âm ${fmtV(totalValue)} = ${pctValue}% doanh thu ${m} — vượt ngưỡng 15%`,act:'Đặt KPI xử lý giảm xuống dưới 10% DT trong tháng tới'});
   else if(totalValue>0&&dtMonth>0&&totalValue/dtMonth>0.10)alerts.push({lv:'🟠 Giá trị cao',msg:`Tổng giá trị tồn âm ${fmtV(totalValue)} = ${pctValue}% doanh thu — cần theo dõi chặt`,act:'Phân tích lý do top 3 và lên kế hoạch xử lý'});
   if(+pctQH>30)alerts.push({lv:'🔴 Quá hạn nghiêm trọng',msg:`${pctQH}% SKU quá hạn — rủi ro tài chính cao`,act:'Kiểm kê đột xuất toàn chuỗi, ưu tiên ST có QH >50%'});
   else if(+pctQH>15)alerts.push({lv:'🟠 Quá hạn cao',msg:`${pctQH}% SKU quá hạn — vượt ngưỡng an toàn 15%`,act:'Rà soát và xử lý các ST có quá hạn >50%'});
-  if(banNhamV>0)alerts.push({lv:'🔴 Nghiệp vụ',msg:`Bán nhầm: ${banNham.toLocaleString()} SKU · ${fmtV(banNhamV)} (${p(banNhamV)}) — lỗi thao tác POS`,act:'Training POS + kiểm tra cài đặt tại ST top bán nhầm'});
-  if(chuaGTV>0)alerts.push({lv:'🟡 Kiểm soát',msg:`Chưa giải trình: ${chuaGT.toLocaleString()} SKU · ${fmtV(chuaGTV)} (${p(chuaGTV)}) — tồn đọng giải trình`,act:'Deadline giải trình 3 ngày, theo dõi qua Lark base'});
-  if(chuaNhanV>0)alerts.push({lv:'🟠 Chuỗi cung ứng',msg:`Chưa nhận đơn: ${chuaNhan.toLocaleString()} SKU · ${fmtV(chuaNhanV)} (${p(chuaNhanV)}) — lỗi xác nhận kho`,act:'Đối chiếu đơn hàng tồn với logistics, xác nhận kho ngay'});
-  if(xinHangV>0)alerts.push({lv:'🔵 Vận hành',msg:`Xin hàng: ${xinHang.toLocaleString()} SKU · ${fmtV(xinHangV)} (${p(xinHangV)}) — phân bổ hàng chưa cân đối`,act:'Review định mức hàng tại các ST có xin hàng nhiều'});
+  if(banNhamV>0)alerts.push({lv:'🔴 Nghiệp vụ',msg:`Bán nhầm: ${banNham.toLocaleString()} SKU · ${fmtV(banNhamV)}${p(banNhamV)} — lỗi thao tác POS`,act:'Training POS + kiểm tra cài đặt tại ST top bán nhầm'});
+  if(chuaGTV>0)alerts.push({lv:'🟡 Kiểm soát',msg:`Chưa giải trình: ${chuaGT.toLocaleString()} SKU · ${fmtV(chuaGTV)}${p(chuaGTV)} — tồn đọng giải trình`,act:'Deadline giải trình 3 ngày, theo dõi qua Lark base'});
+  if(chuaNhanV>0)alerts.push({lv:'🟠 Chuỗi cung ứng',msg:`Chưa nhận đơn: ${chuaNhan.toLocaleString()} SKU · ${fmtV(chuaNhanV)}${p(chuaNhanV)} — lỗi xác nhận kho`,act:'Đối chiếu đơn hàng tồn với logistics, xác nhận kho ngay'});
+  if(xinHangV>0)alerts.push({lv:'🔵 Vận hành',msg:`Xin hàng: ${xinHang.toLocaleString()} SKU · ${fmtV(xinHangV)}${p(xinHangV)} — phân bổ hàng chưa cân đối`,act:'Review định mức hàng tại các ST có xin hàng nhiều'});
   const alertHtml=alerts.length?alerts.map(a=>`
     <div style="display:flex;gap:10px;padding:10px 12px;background:#fafafa;border-radius:8px;border-left:3px solid ${a.lv.includes('🔴')?'#dc2626':a.lv.includes('🟠')?'#f97316':a.lv.includes('🟡')?'#eab308':'#3b82f6'};margin-bottom:8px">
       <div style="flex:1">
