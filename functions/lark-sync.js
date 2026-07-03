@@ -70,7 +70,7 @@ export async function onRequestPost(context) {
     };
 
     const [dkRecs, ctkmRecs] = await Promise.all([
-      fetchAll('tblU0OlbMShM5ooe', ['Ngày kiểm tra','Tên Siêu thị','Kết quả check cam','Kết quả','Lỗi vi phạm','Tháng','Năm','Giải trình lý do']),
+      fetchAll('tblU0OlbMShM5ooe', ['Ngày kiểm tra','Tên Siêu thị','Kết quả check cam','Lỗi vi phạm','Tháng','Năm','Giải trình lý do']),
       fetchAll('tblQxeGxroYYFpY6', ['Thời gian','Tên Siêu thị','Kết quả','Tháng','Năm'])
     ]);
 
