@@ -2368,15 +2368,18 @@ async function syncLarkDate(btn){
       if(r.ok){d=await r.json();if(d.error)d=null;}
     }catch(_){}
     if(!d){
-      if(btn)btn.innerHTML='⏳ Tải cache GitHub...';
-      const r=await fetch('https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/date-cache.json?t='+Date.now());
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      d=await r.json();
+      if(btn)btn.innerHTML='⏳ Lấy từ Lark...';
+      const r=await fetch('/api/lark-date',{signal:AbortSignal.timeout(30000)});
+      if(r.ok){const j=await r.json();if(j.ok&&j.monthly?.length)d=j;}
     }
-    if(!d.monthly?.length)throw new Error('Dữ liệu rỗng');
+    if(!d){
+      if(btn)btn.innerHTML='⏳ Tải cache...';
+      const r=await fetch('https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/date-cache.json?t='+Date.now());
+      if(r.ok)d=await r.json();
+    }
+    if(!d?.monthly?.length)throw new Error('Không lấy được dữ liệu');
     localStorage.setItem('lark_date_cache',JSON.stringify({...d,ts:Date.now()}));
-    S.dateCache=d;
-    go(S.page,S.tab);
+    S.dateCache=d;go(S.page,S.tab);
     toast('✅ Đồng bộ thành công ('+d.monthly.length+' tháng)','t-ok');
   }catch(e){
     toast('❌ Lỗi đồng bộ: '+e.message,'t-err');
@@ -2394,18 +2397,22 @@ async function syncTonAm(btn){
       if(r.ok){d=await r.json();if(d.error)d=null;}
     }catch(_){}
     if(!d){
-      if(btn)btn.textContent='⏳ Tải cache GitHub...';
-      const r=await fetch('https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/tonam-cache.json?t='+Date.now());
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      d=await r.json();
+      if(btn)btn.textContent='⏳ Lấy từ Lark...';
+      const r=await fetch('/api/lark-tonam',{signal:AbortSignal.timeout(60000)});
+      if(r.ok){const j=await r.json();if(j.ok&&j.months)d=j;}
     }
-    if(!d||typeof d.months!=='object')throw new Error('Format không hợp lệ');
+    if(!d){
+      if(btn)btn.textContent='⏳ Tải cache...';
+      const r=await fetch('https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/tonam-cache.json?t='+Date.now());
+      if(r.ok)d=await r.json();
+    }
+    if(!d||typeof d.months!=='object')throw new Error('Không lấy được dữ liệu');
     localStorage.setItem('tonam_cache',JSON.stringify(d));
     S.tonAmCache=d;
     const ms=Object.keys(d.months).sort();
     if(!S.tonAmMonth||!d.months[S.tonAmMonth])S.tonAmMonth=ms[ms.length-1]||'';
     go(S.page,S.tab);
-    toast('✅ Đồng bộ tồn âm thành công ('+ms.join(', ')+')','t-ok');
+    toast('✅ Đồng bộ tồn âm ('+ms.join(', ')+')','t-ok');
   }catch(e){
     toast('❌ Lỗi đồng bộ: '+e.message,'t-err');
   }finally{
@@ -2417,19 +2424,21 @@ async function syncBBKK(btn){
   if(btn){btn.disabled=true;btn.textContent='⏳ Đang đồng bộ...';}
   try{
     let d=null;
-    // Thử gọi local bot_server (dữ liệu thật từ Lark)
     try{
       const r=await fetch('http://localhost:3001/api/sync-bbkk',{signal:AbortSignal.timeout(55000)});
       if(r.ok){d=await r.json();if(d.error)d=null;}
     }catch(_){}
-    // Fallback: GitHub raw cache
     if(!d){
-      if(btn)btn.textContent='⏳ Tải cache GitHub...';
-      const r=await fetch('https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/bbkk-cache.json?t='+Date.now());
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      d=await r.json();
+      if(btn)btn.textContent='⏳ Lấy từ Lark...';
+      const r=await fetch('/api/lark-bbkk',{signal:AbortSignal.timeout(30000)});
+      if(r.ok){const j=await r.json();if(j.ok&&Array.isArray(j.t1))d=j;}
     }
-    if(!d||!Array.isArray(d.t1))throw new Error('Format không hợp lệ');
+    if(!d){
+      if(btn)btn.textContent='⏳ Tải cache...';
+      const r=await fetch('https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/bbkk-cache.json?t='+Date.now());
+      if(r.ok)d=await r.json();
+    }
+    if(!d||!Array.isArray(d.t1))throw new Error('Không lấy được dữ liệu');
     localStorage.setItem('bbkk_cache',JSON.stringify(d));
     S.bbkkCache=d;
     go(S.page,S.tab);

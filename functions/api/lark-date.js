@@ -1,89 +1,106 @@
 /**
- * CF Pages Function: /api/lark-date
- * Proxy Lark Bitable → JSON (avoids CORS from browser)
- * Env vars needed in Cloudflare Pages:
- *   LARK_APP_ID     = cli_aaa0cdd424b81eed
- *   LARK_APP_SECRET = <your app secret from Lark console>
+ * CF Pages Function: GET /api/lark-date
+ * Env vars: LARK_APP_ID, LARK_APP_SECRET
  */
-const LARK = 'https://open.larksuite.com';
-const BITABLE = 'UovdbGVvNaJsmrsBHM2lPgkogHe';
-const TABLES = {
-  stores:  'tbl3lzO5w4cujQNR',  // Base 1: cumulative per store
-  detail:  'tbl6WUAU40sXbdde',  // Base 2: monthly detail per store
-  monthly: 'tblzIFsZXkyv7EKd',  // Base 3: monthly aggregate
+const LARK      = 'https://open.larksuite.com';
+const APP_TOKEN = 'Gxgcwfo3Qihm6HkB9o9lNB9zgyg';
+const TABLES    = { stores:'tbl3lzO5w4cujQNR', detail:'tbl6WUAU40sXbdde', monthly:'tblzIFsZXkyv7EKd' };
+const CORS      = { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,OPTIONS','Content-Type':'application/json' };
+
+const STORE_NAMES = {
+  S1001:'Đội Cấn',S1002:'Linh Đàm',S1004:'Mandarin',S1005:'Thái Hà',
+  S1006:'Trần Đăng Ninh',S1007:'Nguyễn Du',S1008:'Hàng Bông',S1011:'Văn Phú',
+  S1015:'Hàm Nghi',S1018:'Nguyễn Tuân',S1020:'Đỗ Quang',S1021:'Ngoại Giao Đoàn',
+  S1022:'Trần Duy Hưng',S1023:'Nguyễn Văn Lộc',S1025:'T6 Timecity',
+  S1026:'Ecohome 3',S1027:'Green Bay',S1030:'Xuân La',S1035:'Nguyễn Khuyến',
+  S1036:'Sài Đồng',S1037:'Bạch Mai',S1038:'Vũ Phạm Hàm',S2201:'Bắc Ninh',
 };
 
-const hdrs = (t) => ({
-  headers: {
-    'Authorization': `Bearer ${t}`,
-    'Content-Type': 'application/json',
-  }
-});
+function num(v){
+  if(v==null)return 0;
+  if(typeof v==='number')return v;
+  if(typeof v==='string'){const n=parseFloat(v);return isNaN(n)?0:n;}
+  if(v?.value!=null){const x=Array.isArray(v.value)?v.value[0]:v.value;return x!=null?Number(x):0;}
+  return 0;
+}
+function txt(v){if(!v)return'';if(typeof v==='string')return v;if(Array.isArray(v))return v[0]?.text??'';return'';}
 
-const cors = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Content-Type': 'application/json',
-};
-
-async function fetchAll(token, tableId) {
-  const records = [];
-  let pageToken = null;
-  let page = 0;
-  do {
-    const body = { page_size: 200 };
-    if (pageToken) body.page_token = pageToken;
-    const r = await fetch(
-      `${LARK}/open-apis/bitable/v1/apps/${BITABLE}/tables/${tableId}/records/search`,
-      { method: 'POST', ...hdrs(token), body: JSON.stringify(body) }
-    );
-    const d = await r.json();
-    if (d.code !== 0) throw new Error(`Bitable error ${d.code}: ${d.msg}`);
-    (d.data?.items || []).forEach(item => records.push(item.fields));
-    pageToken = d.data?.has_more ? d.data.page_token : null;
-    page++;
-  } while (pageToken && page < 10);
-  return records;
+async function getToken(id,secret){
+  const r=await fetch(`${LARK}/open-apis/auth/v3/tenant_access_token/internal`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({app_id:id,app_secret:secret})
+  });
+  const j=await r.json();
+  if(j.code!==0)throw new Error('Auth: '+j.msg);
+  return j.tenant_access_token;
 }
 
-export async function onRequest({ request, env }) {
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: cors });
-  }
-
-  const APP_ID     = env.LARK_APP_ID     || 'cli_aaa0cdd424b81eed';
-  const APP_SECRET = env.LARK_APP_SECRET || '';
-
-  if (!APP_SECRET) {
-    return new Response(JSON.stringify({
-      ok: false, error: 'LARK_APP_SECRET chưa được cấu hình trong Cloudflare Pages → Settings → Environment Variables'
-    }), { status: 500, headers: cors });
-  }
-
-  try {
-    // 1. Get tenant_access_token
-    const tRes = await fetch(`${LARK}/open-apis/auth/v3/tenant_access_token/internal`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ app_id: APP_ID, app_secret: APP_SECRET }),
+async function fetchAll(token,tableId){
+  const all=[];let pt='',more=true;
+  while(more){
+    const body={page_size:200};if(pt)body.page_token=pt;
+    const r=await fetch(`${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${tableId}/records/search`,{
+      method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify(body)
     });
-    const tData = await tRes.json();
-    if (tData.code !== 0) throw new Error(`Auth error ${tData.code}: ${tData.msg}`);
-    const token = tData.tenant_access_token;
+    const j=await r.json();
+    if(j.code!==0)throw new Error('Bitable: '+j.msg);
+    all.push(...(j.data?.items||[]));
+    more=!!j.data?.has_more;pt=j.data?.page_token||'';
+  }
+  return all;
+}
 
-    // 2. Fetch all 3 tables in parallel
-    const [stores, detail, monthly] = await Promise.all([
-      fetchAll(token, TABLES.stores),
-      fetchAll(token, TABLES.detail),
-      fetchAll(token, TABLES.monthly),
+export async function onRequest({request,env}){
+  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:CORS});
+  const APP_ID=env.LARK_APP_ID||'cli_aaa0cdd424b81eed';
+  const APP_SECRET=env.LARK_APP_SECRET||'';
+  if(!APP_SECRET)return new Response(JSON.stringify({ok:false,error:'LARK_APP_SECRET chưa cấu hình'}),{status:500,headers:CORS});
+  try{
+    const token=await getToken(APP_ID,APP_SECRET);
+    const [b3,b2,b1]=await Promise.all([
+      fetchAll(token,TABLES.monthly),
+      fetchAll(token,TABLES.detail),
+      fetchAll(token,TABLES.stores),
     ]);
-
-    return new Response(JSON.stringify({ ok: true, stores, detail, monthly, ts: Date.now() }), {
-      headers: { ...cors, 'Cache-Control': 'no-store' },
-    });
-  } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: e.message }), {
-      status: 500, headers: cors,
-    });
+    const yr='2026';
+    // Còn lại by month từ detail
+    const conlaiByMonth={};
+    for(const rec of b2){
+      const f=rec.fields;
+      const y=txt(f['Năm']||'');if(y&&y!==yr)continue;
+      const m=txt(f['Tháng']).padStart(2,'0');if(!m||m==='00')continue;
+      conlaiByMonth['T'+m]=(conlaiByMonth['T'+m]||0)+num(f['Tồn kho dự kiến']);
+    }
+    const monthly=b3
+      .filter(rec=>{const y=txt(rec.fields['Năm']||'');return!y||y===yr;})
+      .map(rec=>{
+        const f=rec.fields;
+        const m=txt(f['Tháng']).padStart(2,'0');if(!m||m==='00')return null;
+        const t='T'+m;
+        const dt=num(f['Doanh thu']),gv=num(f['Giá vốn']),tv=num(f['Thu về']),huy=num(f['Hủy']);
+        const conlai=conlaiByMonth[t]||num(f['Còn lại theo mã DG'])||0;
+        const dinhmuc=Math.round(num(f['Định mức tối đa']));
+        const cp=gv-tv;
+        if(dt===0&&gv===0)return null;
+        return{t,dt,gv,tv,huy,cp,dinhmuc,conlai};
+      })
+      .filter(Boolean).sort((a,b)=>a.t.localeCompare(b.t));
+    const stores=b1
+      .filter(rec=>{const y=txt(rec.fields['Năm']||'');return!y||y===yr;})
+      .map(rec=>{
+        const f=rec.fields;
+        const m=txt(f['Mã kho']);
+        const dt=num(f['Doanh thu']);
+        const cp=Math.round(num(f['Chi phí đổi code']));
+        const tl=+num(f['Tỷ lệ đổi code/DT']).toFixed(6);
+        const cb=f['Cảnh báo(0.21%)']?1:0;
+        const s=STORE_NAMES[m]||m;
+        return{s,m,dt,cp,tl,cb};
+      })
+      .sort((a,b)=>a.m.localeCompare(b.m));
+    return new Response(JSON.stringify({ok:true,monthly,stores,ts:Date.now()}),{headers:{...CORS,'Cache-Control':'no-store'}});
+  }catch(e){
+    return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:CORS});
   }
 }
