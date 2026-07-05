@@ -2043,20 +2043,11 @@ async function qcGLSync(btn){
       const r=await fetch('http://localhost:3001/api/sync-gl',{signal:AbortSignal.timeout(90000)});
       if(r.ok){const c=await r.json();if(c.agg){agg=c.agg;counts=c.counts;syncedAt=c.syncedAt||syncedAt;}}
     }catch(_){}
-    // Fallback: Cloudflare Pages Function (needs App Secret)
+    // Fallback: Cloudflare Pages Function (dùng env var, không cần secret)
     if(!agg){
-      let secret=localStorage.getItem('lark_gl_secret');
-      if(!secret){
-        secret=prompt('Nhập Lark App Secret:\n→ open.larksuite.com/app/cli_aaa0cdd424b81eed/baseinfo\n→ Credentials & Basic Info → 👁️ App Secret');
-        if(!secret){if(btn){btn.disabled=false;btn.textContent='🔄 Đồng bộ Lark';}return;}
-        localStorage.setItem('lark_gl_secret',secret);
-      }
-      const r=await fetch('/lark-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret})});
+      const r=await fetch('/lark-sync',{signal:AbortSignal.timeout(60000)});
       const j=await r.json();
-      if(!j.ok){
-        if((j.error||'').includes('Auth')){localStorage.removeItem('lark_gl_secret');}
-        throw new Error(j.error||'Lỗi không xác định');
-      }
+      if(!j.ok) throw new Error(j.error||'Lỗi không xác định');
       agg=j.data;counts=j.counts;
     }
     const db2=getQCDB();

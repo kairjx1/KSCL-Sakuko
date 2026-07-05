@@ -1,15 +1,15 @@
+/**
+ * CF Pages Function: GET /lark-sync
+ * Env vars: LARK_APP_ID, LARK_APP_SECRET
+ */
+const LARK      = 'https://open.larksuite.com';
+const APP_TOKEN = 'AGGAbC9BPaioxas1VW8lV6tOg7g';
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Content-Type': 'application/json'
 };
 
-export async function onRequestOptions() {
-  return new Response(null, { headers: CORS });
-}
-
-// Robust field parsers — Lark returns different shapes for number/lookup/formula/text fields
 function getNum(v) {
   if (v == null) return null;
   if (typeof v === 'number') return v;
@@ -34,44 +34,46 @@ function getArr(v) {
 const DK_FAIL   = new Set(['Sai phạm','Không đạt','CGT','Fail','fail','Có sai phạm']);
 const CTKM_FAIL = new Set(['Không tặng khách','Không đạt','CGT','Sai phạm','Fail','Có lỗi','Không tặng','Không tặng KH']);
 
-export async function onRequestPost(context) {
-  try {
-    const { secret } = await context.request.json();
-    if (!secret) return json({ ok: false, error: 'Missing app_secret' }, 400);
+async function getToken(id, secret) {
+  const r = await fetch(`${LARK}/open-apis/auth/v3/tenant_access_token/internal`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ app_id: id, app_secret: secret })
+  });
+  const j = await r.json();
+  if (j.code !== 0) throw new Error('Auth lỗi: ' + j.msg + ' (' + j.code + ')');
+  return j.tenant_access_token;
+}
 
-    // Get app_access_token
-    const authR = await fetch('https://open.larksuite.com/open-apis/auth/v3/app_access_token/internal', {
+async function fetchAll(token, tblId, fields) {
+  let all = [], pt = '', more = true;
+  while (more) {
+    const body = { field_names: fields, page_size: 200 };
+    if (pt) body.page_token = pt;
+    const r = await fetch(`${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${tblId}/records/search`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ app_id: 'cli_aaa0cdd424b81eed', app_secret: secret })
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
     });
-    const authJ = await authR.json();
-    if (authJ.code !== 0) return json({ ok: false, error: 'Auth lỗi: ' + authJ.msg + ' (' + authJ.code + ')' }, 400);
-    const aat = authJ.app_access_token;
+    const j = await r.json();
+    if (j.code !== 0) throw new Error('Bitable: ' + j.msg);
+    all = all.concat(j.data?.items || []);
+    more = !!j.data?.has_more;
+    pt = j.data?.page_token || '';
+  }
+  return all;
+}
 
-    const appToken = 'AGGAbC9BPaioxas1VW8lV6tOg7g';
-    const fetchAll = async (tblId, fields) => {
-      let all = [], pt = '', more = true;
-      while (more) {
-        const body = { field_names: fields, page_size: 200 };
-        if (pt) body.page_token = pt;
-        const r = await fetch(`https://open.larksuite.com/open-apis/bitable/v1/apps/${appToken}/tables/${tblId}/records/search`, {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + aat, 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        const j = await r.json();
-        if (j.code !== 0) throw new Error('Bitable: ' + j.msg);
-        all = all.concat(j.data?.items || []);
-        more = !!j.data?.has_more;
-        pt = j.data?.page_token || '';
-      }
-      return all;
-    };
-
+export async function onRequest({ request, env }) {
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+  const APP_ID     = env.LARK_APP_ID     || 'cli_aaa0cdd424b81eed';
+  const APP_SECRET = env.LARK_APP_SECRET || '';
+  if (!APP_SECRET) return new Response(JSON.stringify({ ok: false, error: 'LARK_APP_SECRET chưa cấu hình' }), { status: 500, headers: CORS });
+  try {
+    const token = await getToken(APP_ID, APP_SECRET);
     const [dkRecs, ctkmRecs] = await Promise.all([
-      fetchAll('tblU0OlbMShM5ooe', ['Ngày kiểm tra','Tên Siêu thị','Kết quả check cam','Lỗi vi phạm','Tháng','Năm','Giải trình lý do']),
-      fetchAll('tblQxeGxroYYFpY6', ['Thời gian','Tên Siêu thị','Kết quả','Tháng','Năm'])
+      fetchAll(token, 'tblU0OlbMShM5ooe', ['Ngày kiểm tra','Tên Siêu thị','Kết quả check cam','Lỗi vi phạm','Tháng','Năm','Giải trình lý do']),
+      fetchAll(token, 'tblQxeGxroYYFpY6', ['Thời gian','Tên Siêu thị','Kết quả','Tháng','Năm'])
     ]);
 
     const agg = {};
@@ -110,12 +112,8 @@ export async function onRequestPost(context) {
       }
     }
 
-    return json({ ok: true, data: agg, counts: { dk: dkRecs.length, ctkm: ctkmRecs.length } });
+    return new Response(JSON.stringify({ ok: true, data: agg, counts: { dk: dkRecs.length, ctkm: ctkmRecs.length } }), { headers: { ...CORS, 'Cache-Control': 'no-store' } });
   } catch (e) {
-    return json({ ok: false, error: e.message }, 500);
+    return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: CORS });
   }
-}
-
-function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), { status, headers: CORS });
 }
