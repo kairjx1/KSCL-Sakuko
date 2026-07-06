@@ -67,6 +67,7 @@ async function discoverTables(token){
   });
   const j=await r.json();
   if(j.code!==0)throw new Error('Bitable: '+j.msg+' ('+j.code+')');
+  globalThis.__tblNames=(j.data?.items||[]).length+' bảng: '+(j.data?.items||[]).slice(0,8).map(t=>t.name).join(' | ');
   const tables=[];
   for(const t of j.data?.items||[]){
     const name=t.name||'';
@@ -116,7 +117,10 @@ export async function onRequest({request,env}){
   try{
     const token=await getToken(APP_ID,APP_SECRET);
     const tables=await discoverTables(token);
-    if(!tables.length)throw new Error('Không tìm thấy bảng tồn âm 2026');
+    if(!tables.length){
+      const all=(j2=>j2)(null);
+      throw new Error('Không tìm thấy bảng tồn âm 2026 — bot thấy '+(globalThis.__tblNames||'0 bảng'));
+    }
     const months={};
     await Promise.all(tables.map(async({month,tableId})=>{
       try{
