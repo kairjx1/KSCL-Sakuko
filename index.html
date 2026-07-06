@@ -836,36 +836,205 @@ function rKK(){
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('kk','${tb}')">${tb}</div>`).join('')}</div>
 ${t==='Tổng quan'?rKKOv():t==='Tồn âm'?rKKTonAm():t==='Biên bản kiểm kê'?rKKBienBan():rKKXuatHuy()}`;
 }
-function rKKOv(){return`
-<div class="g4" style="margin-bottom:18px">
-  ${kpi('Đợt KK tháng này','0','đợt','#16a34a','kpi-kk','')}
-  ${kpi('SKU đã kiểm','0','SKU','#0284c7','kpi-search','')}
-  ${kpi('Chênh lệch','0','SKU','#ea580c','kpi-warn','')}
-  ${kpi('Tỉ lệ khớp kho','—','%','#7c3aed','kpi-check','')}
+/* ══ BÁO CÁO TỔNG QUAN KIỂM KÊ — gộp Tồn âm + BBKK + Xuất hủy + Đổi Date ══ */
+function rKKOv(){
+  // Nạp 4 nguồn cache
+  if(!S.tonAmCache){try{S.tonAmCache=JSON.parse(localStorage.getItem('tonam_cache')||'null');}catch(e){}}
+  if(!S.bbkkCache){try{S.bbkkCache=JSON.parse(localStorage.getItem('bbkk_cache')||'null');}catch(e){}}
+  if(!S.xhCache){try{S.xhCache=JSON.parse(localStorage.getItem('xuathuy_cache')||'null');}catch(e){}}
+  if(!S.dateCache){try{S.dateCache=JSON.parse(localStorage.getItem('lark_date_cache')||'null');}catch(e){}}
+  const TA=S.tonAmCache,BB=S.bbkkCache,XH=S.xhCache,DD=S.dateCache;
+  const srcs=[['Tồn âm',!!TA],['Biên bản KK',!!BB],['Xuất hủy',!!XH],['Đổi Date',!!DD]];
+  const nSrc=srcs.filter(s=>s[1]).length;
+  const syncBar=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+    <span style="font-size:12px;color:var(--t2)">${srcs.map(([n,ok])=>`<span style="margin-right:10px">${ok?'✅':'⚠️'} ${n}</span>`).join('')}</span>
+    <button onclick="syncKKAll(this)" style="background:#1a2558;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer">🔄 Đồng bộ tất cả</button>
+  </div>`;
+  if(!nSrc)return`<div class="card">${syncBar}<div style="text-align:center;padding:32px 0"><div style="font-size:48px;margin-bottom:10px">📊</div><p style="color:var(--t2);font-size:13px">Bấm <strong>Đồng bộ tất cả</strong> để tải 4 nguồn dữ liệu (Tồn âm · Biên bản KK · Xuất hủy · Đổi Date).</p></div></div>`;
+
+  const fmtV=v=>Math.abs(v)>=1e9?(v/1e9).toFixed(2)+' tỷ':Math.abs(v)>=1e6?(v/1e6).toFixed(1)+' tr':Math.abs(v)>0?Math.round(v/1e3)+'k':'—';
+  const fmtB=v=>v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(0)+'M':'—';
+  const mNames={T01:'Tháng 1',T02:'Tháng 2',T03:'Tháng 3',T04:'Tháng 4',T05:'Tháng 5',T06:'Tháng 6',T07:'Tháng 7',T08:'Tháng 8',T09:'Tháng 9',T10:'Tháng 10',T11:'Tháng 11',T12:'Tháng 12'};
+
+  // Danh sách tháng có dữ liệu (hợp 3 nguồn theo tháng)
+  const taM=Object.keys(TA?.months||{});
+  const xhY=Object.keys(XH?.data||{}).sort().pop();
+  const xhM=xhY?Object.keys(XH.data[xhY]):[];
+  const ddM=(DD?.monthly||[]).map(r=>r.t);
+  const months=[...new Set([...taM,...xhM,...ddM])].sort();
+  if(!S.kkOvMonth||!months.includes(S.kkOvMonth))S.kkOvMonth=taM.sort().pop()||months[months.length-1]||'';
+  const m=S.kkOvMonth;
+  const rev=TA?.revenue||{};
+  const dt=rev[m]||0;
+
+  // ── Số liệu tháng chọn ──
+  const ta=TA?.months?.[m]||null;
+  const taVal=ta?.totalValue||0, taPct=dt>0&&taVal>0?taVal/dt*100:null;
+  const xh=xhY?XH?.data?.[xhY]?.[m]:null;
+  const xhVal=xh?.value||0, xhPct=dt>0&&xhVal>0?xhVal/dt*100:null;
+  const dd=(DD?.monthly||[]).find(r=>r.t===m)||null;
+  const ddPct=dd&&dd.dt>0?dd.cp/dd.dt*100:null; // tỷ lệ đổi date thực
+  const bbYear=Math.max(0,...(BB?.t1||[]).map(r=>r.nam||0))||2026;
+  const bbRows=(BB?.t1||[]).filter(r=>r.thang===+m.slice(1)&&r.nam===bbYear);
+  const bbCnt=bbRows.length;
+  const bbDenBu=bbRows.reduce((s,r)=>s+(r.denBu||0),0);
+  const bbCL=bbRows.reduce((s,r)=>s+(r.clMinus||0),0);
+
+  // ── Điểm sức khỏe tồn kho (0-100) ──
+  const sc=[];
+  if(taPct!=null)sc.push([taPct<=5?100:taPct<=10?80:taPct<=15?55:taPct<=20?30:10,35,'Tồn âm']);
+  if(ddPct!=null)sc.push([ddPct<=0.21?100:ddPct<=0.3?70:ddPct<=0.5?45:20,25,'Đổi date']);
+  if(xhPct!=null)sc.push([xhPct<=0.3?100:xhPct<=0.5?80:xhPct<=1?50:20,20,'Xuất hủy']);
+  if(bbCnt>0||bbDenBu>0)sc.push([bbDenBu<=0?100:bbDenBu<5e6?70:bbDenBu<2e7?45:20,20,'Biên bản KK']);
+  const totalW=sc.reduce((s,x)=>s+x[1],0);
+  const health=sc.length>=2?Math.round(sc.reduce((s,x)=>s+x[0]*x[1],0)/totalW):null;
+  const grade=health==null?['—','#9ca3af']:health>=85?['A','#16a34a']:health>=70?['B','#65a30d']:health>=55?['C','#f97316']:['D','#dc2626'];
+
+  // ── Xu hướng theo tháng ──
+  const trend=months.map(mo=>{
+    const _dt=rev[mo]||0;
+    const _ta=TA?.months?.[mo]?.totalValue||0;
+    const _xh=xhY?(XH?.data?.[xhY]?.[mo]?.value||0):0;
+    const _dd=(DD?.monthly||[]).find(r=>r.t===mo);
+    const _bb=(BB?.t1||[]).filter(r=>r.thang===+mo.slice(1)&&r.nam===bbYear);
+    return {mo,dt:_dt,ta:_ta,taP:_dt>0?_ta/_dt*100:null,xh:_xh,xhP:_dt>0?_xh/_dt*100:null,
+      ddCp:_dd?.cp||0,ddP:_dd&&_dd.dt>0?_dd.cp/_dd.dt*100:null,bbCnt:_bb.length,bbDB:_bb.reduce((s,r)=>s+(r.denBu||0),0)};
+  });
+  const maxTa=Math.max(...trend.map(r=>r.ta),1);
+  const bar=(v,max,c)=>`<div style="background:#f0f0f0;border-radius:2px;height:5px;min-width:50px"><div style="width:${Math.min(100,v/max*100)}%;height:100%;background:${c};border-radius:2px"></div></div>`;
+  const trendRows=trend.map(r=>{
+    const sel=r.mo===m;
+    return`<tr style="border-bottom:1px solid #f0f0f0;${sel?'background:#eff6ff':''};cursor:pointer" onclick="S.kkOvMonth='${r.mo}';go('kk','Tổng quan')">
+    <td style="padding:7px 10px;font-size:12.5px;font-weight:600">${mNames[r.mo]||r.mo}</td>
+    <td style="padding:7px 10px;font-size:12px;text-align:right;color:#0369a1">${fmtB(r.dt)}</td>
+    <td style="padding:7px 10px;font-size:12px;text-align:right;color:#7c3aed;font-weight:600">${fmtV(r.ta)}${bar(r.ta,maxTa,'#7c3aed')}</td>
+    <td style="padding:7px 10px;font-size:12px;text-align:right;font-weight:700;color:${r.taP==null?'#9ca3af':r.taP>15?'#dc2626':r.taP>10?'#f97316':'#15803d'}">${r.taP!=null?r.taP.toFixed(1)+'%':'—'}</td>
+    <td style="padding:7px 10px;font-size:12px;text-align:right;color:#b45309">${fmtV(r.xh)}</td>
+    <td style="padding:7px 10px;font-size:12px;text-align:right;color:${r.xhP==null?'#9ca3af':r.xhP>1?'#dc2626':r.xhP>0.5?'#f97316':'#15803d'}">${r.xhP!=null?r.xhP.toFixed(2)+'%':'—'}</td>
+    <td style="padding:7px 10px;font-size:12px;text-align:right;color:#be185d">${fmtV(r.ddCp)}</td>
+    <td style="padding:7px 10px;font-size:12px;text-align:right;color:${r.ddP==null?'#9ca3af':r.ddP>0.21?'#dc2626':'#15803d'}">${r.ddP!=null?r.ddP.toFixed(2)+'%':'—'}</td>
+    <td style="padding:7px 10px;font-size:12px;text-align:right">${r.bbCnt||'—'}${r.bbDB>0?` <span style="color:#dc2626;font-size:10px">(${fmtV(r.bbDB)})</span>`:''}</td>
+  </tr>`;}).join('');
+
+  // ── Bản đồ rủi ro ST (join theo mã kho) ──
+  const risk={};
+  const addRisk=(ma,ten,src,detail)=>{if(!ma)return;const k=ma.trim();if(!risk[k])risk[k]={ten,srcs:{}};risk[k].srcs[src]=detail;if(ten&&!risk[k].ten.includes('SKK')&&ten.length>risk[k].ten.length)risk[k].ten=ten;};
+  (ta?.stores||[]).slice(0,8).forEach(s=>addRisk(s.ma,s.ten,'ta',fmtV(s.value||0)));
+  (xh?.stores||[]).slice(0,8).forEach(s=>addRisk(s.ma,s.ten,'xh',fmtV(s.value)));
+  (DD?.stores||[]).filter(s=>s.cb).forEach(s=>addRisk(s.m,s.s,'dd',(s.tl*100).toFixed(2)+'%'));
+  bbRows.filter(r=>(r.denBu||0)>0||(r.clMinus||0)<0).forEach(r=>addRisk(r.ma,r.tenST,'bb',fmtV(Math.abs(r.denBu||r.clMinus))));
+  const riskRows=Object.entries(risk).filter(([,v])=>Object.keys(v.srcs).length>=2)
+    .sort((a,b)=>Object.keys(b[1].srcs).length-Object.keys(a[1].srcs).length).slice(0,12)
+    .map(([ma,v])=>{const n=Object.keys(v.srcs).length;
+    return`<tr style="border-bottom:1px solid #f0f0f0">
+      <td style="padding:7px 10px;font-size:12.5px;font-weight:600">${v.ten||ma} <span style="font-size:10px;color:#9ca3af">${ma}</span></td>
+      <td style="padding:7px 10px;text-align:center"><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:${n>=3?'#fee2e2':'#ffedd5'};color:${n>=3?'#dc2626':'#ea580c'}">${n>=3?'🔴 Rủi ro '+n+' nguồn':'🟠 Rủi ro kép'}</span></td>
+      <td style="padding:7px 10px;font-size:11.5px;color:#7c3aed">${v.srcs.ta?'Tồn âm '+v.srcs.ta:''}</td>
+      <td style="padding:7px 10px;font-size:11.5px;color:#b45309">${v.srcs.xh?'Hủy '+v.srcs.xh:''}</td>
+      <td style="padding:7px 10px;font-size:11.5px;color:#be185d">${v.srcs.dd?'Đổi date '+v.srcs.dd:''}</td>
+      <td style="padding:7px 10px;font-size:11.5px;color:#dc2626">${v.srcs.bb?'BB '+v.srcs.bb:''}</td>
+    </tr>`;}).join('');
+
+  // ── Nhận định & Mục tiêu ──
+  const insights=[],goals=[];
+  if(taPct!=null&&taPct>15){insights.push(['🔴',`Tồn âm ${fmtV(taVal)} = <strong>${taPct.toFixed(1)}% doanh thu</strong> — vượt xa ngưỡng 15%, đang làm méo COGS và báo cáo tài chính`]);goals.push(['Kiểm kê',`Giảm giá trị tồn âm về <10% DT (xử lý tối thiểu ${fmtV(taVal-dt*0.1)})`,'Deadline giải trình 3 ngày/SKU · đối chiếu đơn logistics hàng tuần']);}
+  else if(taPct!=null&&taPct>10){insights.push(['🟠',`Tồn âm ${fmtV(taVal)} = ${taPct.toFixed(1)}% DT — cần kéo về dưới 10%`]);goals.push(['Kiểm kê','Đưa tồn âm về <10% DT trong tháng tới','Ưu tiên nhóm "bán nhầm" (lỗi POS) và "chưa nhận đơn"']);}
+  if(ta){const bn=(ta.lyDo?.['bán nhầm - ST']||0);if(bn>500)insights.push(['🔴',`Bán nhầm ${bn.toLocaleString()} SKU (${fmtV(ta.lyDoValue?.['bán nhầm - ST']||0)}) — lỗi thao tác POS lặp lại quy mô lớn`]);}
+  if(ddPct!=null&&ddPct>0.21){insights.push(['🟠',`Tỷ lệ đổi date <strong>${ddPct.toFixed(2)}%</strong> vượt ngưỡng 0.21% — CP ${fmtV(dd.cp)}`]);goals.push(['QC date',`Kéo tỷ lệ đổi date về ≤0.21% (tiết kiệm ~${fmtV(dd.cp-dd.dt*0.0021)})`,'Siết FIFO + điều chỉnh định mức đặt các ST vượt ngưỡng']);}
+  else if(ddPct!=null)insights.push(['✅',`Đổi date ${ddPct.toFixed(2)}% — trong ngưỡng cho phép`]);
+  if(xhPct!=null&&xhPct>0.5){insights.push(['🟠',`Xuất hủy ${fmtV(xhVal)} = ${xhPct.toFixed(2)}% DT — trên mục tiêu 0.5%`]);goals.push(['Kiểm kê','Giảm giá trị xuất hủy về <0.5% DT','Rà mã hủy lặp lại · điều chỉnh định mức nhập']);}
+  if(bbDenBu>0)insights.push(['🟡',`Biên bản KK: ${bbCnt} BB tháng ${+m.slice(1)}, đền bù ${fmtV(bbDenBu)}`]);
+  const nRisk=Object.values(risk).filter(v=>Object.keys(v.srcs).length>=2).length;
+  if(nRisk>0){insights.push(['🔴',`<strong>${nRisk} siêu thị rủi ro kép</strong> (xuất hiện ≥2 nguồn cảnh báo) — xem bản đồ rủi ro bên dưới`]);goals.push(['KSCL',`Kiểm kê đột xuất ${Math.min(nRisk,3)} ST rủi ro cao nhất`,'Ưu tiên ST có mặt ở 3+ nguồn cảnh báo']);}
+  const insightHtml=insights.map(([ic,t])=>`<div style="display:flex;gap:8px;padding:8px 10px;background:#fafafa;border-radius:8px;margin-bottom:6px;font-size:12.5px;color:var(--t1)"><span>${ic}</span><span style="flex:1">${t}</span></div>`).join('')||'<div style="font-size:12px;color:#15803d">✅ Các chỉ số trong tầm kiểm soát</div>';
+  const goalHtml=goals.map(([own,g,act],i)=>`<div style="display:flex;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;background:#fff">
+    <div style="width:26px;height:26px;border-radius:50%;background:#1a2558;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${i+1}</div>
+    <div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:var(--t1)">${g}</div>
+    <div style="font-size:11.5px;color:#6b7280;margin-top:2px">→ ${act}</div></div>
+    <span style="font-size:10px;padding:3px 8px;background:#eff6ff;color:#1d4ed8;border-radius:6px;height:fit-content;white-space:nowrap">${own}</span>
+  </div>`).join('')||'<div style="font-size:12px;color:#15803d">✅ Duy trì kiểm soát hiện tại</div>';
+
+  const mOpts=months.map(t=>`<option value="${t}" ${t===m?'selected':''}>${mNames[t]||t}</option>`).join('');
+  const scoreDetail=sc.map(x=>`${x[2]}: ${x[0]}`).join(' · ');
+  return`
+<div class="card" style="margin-bottom:14px">${syncBar}
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    <span style="font-size:12px;color:#64748b;font-weight:500">Tháng:</span>
+    <select onchange="S.kkOvMonth=this.value;go('kk','Tổng quan')" style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff;font-weight:500;cursor:pointer">${mOpts}</select>
+    <span style="font-size:11px;color:#9ca3af">Báo cáo gộp 4 nguồn: Tồn âm · Biên bản KK · Xuất hủy · Đổi Date</span>
+  </div>
+  <div style="display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;margin-bottom:14px;padding:14px;background:linear-gradient(90deg,#1a2558,#1e40af);border-radius:12px">
+    <div style="text-align:center;padding:0 18px">
+      <div style="font-size:40px;font-weight:800;color:${grade[1]};line-height:1">${grade[0]}</div>
+      <div style="font-size:22px;font-weight:700;color:#fff">${health!=null?health+'/100':'—'}</div>
+      <div style="font-size:10px;color:#bfdbfe;text-transform:uppercase">Sức khỏe tồn kho</div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:4px">Điểm thành phần — ${mNames[m]||m}/2026</div>
+      <div style="font-size:11.5px;color:#bfdbfe">${health!=null?scoreDetail:dt<=0?'⚠️ Chưa nhập doanh thu tháng này — chưa đủ dữ liệu tính điểm':'Chưa đủ dữ liệu (cần ≥2 nguồn)'}</div>
+      <div style="font-size:11px;color:#93c5fd;margin-top:4px">Trọng số: Tồn âm 35% · Đổi date 25% · Xuất hủy 20% · Biên bản KK 20%</div>
+    </div>
+  </div>
+  <div class="g4" style="margin-bottom:0">
+    <div class="kpi" style="color:${taPct!=null&&taPct>15?'#dc2626':taPct!=null&&taPct>10?'#f97316':'#7c3aed'}"><div class="kpi-lb">Tồn âm</div><div class="kpi-v" style="font-size:${taVal>=1e9?'18px':'22px'}">${fmtV(taVal)}<span class="kpi-u">VNĐ</span></div><div class="kpi-tr" style="font-size:11px">${taPct!=null?taPct.toFixed(1)+'% DT':''} · ${(ta?.total||0).toLocaleString()} SKU</div><div class="kpi-bg">📉</div></div>
+    <div class="kpi" style="color:${xhPct!=null&&xhPct>1?'#dc2626':xhPct!=null&&xhPct>0.5?'#f97316':'#b45309'}"><div class="kpi-lb">Xuất hủy</div><div class="kpi-v" style="font-size:${xhVal>=1e9?'18px':'22px'}">${fmtV(xhVal)}<span class="kpi-u">VNĐ</span></div><div class="kpi-tr" style="font-size:11px">${xhPct!=null?xhPct.toFixed(2)+'% DT':''} · ${(xh?.total||0).toLocaleString()} lượt</div><div class="kpi-bg">🗑️</div></div>
+    <div class="kpi" style="color:${ddPct!=null&&ddPct>0.21?'#dc2626':'#be185d'}"><div class="kpi-lb">Đổi date (CP)</div><div class="kpi-v" style="font-size:${(dd?.cp||0)>=1e9?'18px':'22px'}">${fmtV(dd?.cp||0)}<span class="kpi-u">VNĐ</span></div><div class="kpi-tr" style="font-size:11px">${ddPct!=null?ddPct.toFixed(2)+'% DT · ngưỡng 0.21%':''}</div><div class="kpi-bg">📆</div></div>
+    <div class="kpi" style="color:${bbDenBu>0?'#dc2626':'#16a34a'}"><div class="kpi-lb">Biên bản KK</div><div class="kpi-v">${bbCnt}<span class="kpi-u">BB</span></div><div class="kpi-tr" style="font-size:11px">${bbDenBu>0?'Đền bù '+fmtV(bbDenBu):bbCnt>0?'Không phát sinh đền bù':'—'}</div><div class="kpi-bg">📋</div></div>
+  </div>
 </div>
-<div class="g2">
-  <div class="card">
-    <div style="font-weight:700;font-size:14px;margin-bottom:14px">📅 Lịch kiểm kê gần đây</div>
-    <div class="empty-state"><div class="es-ic">📦</div><p>Chưa có dữ liệu kiểm kê.<br>Import Excel để bắt đầu.</p></div>
+<div class="g2" style="margin-bottom:14px">
+  <div class="card" style="padding:16px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">💡 Nhận định — ${mNames[m]||m}/2026</div>
+    ${insightHtml}
   </div>
-  <div class="card">
-    <div style="font-weight:700;font-size:14px;margin-bottom:14px">🚨 Cảnh báo chênh lệch tồn kho</div>
-    <div class="alert a-ok"><span class="a-ic">✅</span><div class="a-bd"><strong>Không có cảnh báo</strong><p>Hệ thống sẽ tự cảnh báo khi chênh lệch > 2%</p></div></div>
+  <div class="card" style="padding:16px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">🎯 Mục tiêu & Quyết định tháng tới</div>
+    ${goalHtml}
   </div>
 </div>
-<div class="card" style="margin-top:16px">
-  <div style="font-weight:700;font-size:14px;margin-bottom:14px">📊 KPI Kiểm kê tháng này</div>
-  <div class="g3">
-    <div><div class="stat-row"><span class="label">Kế hoạch KK</span><span class="value">0 đợt</span></div>
-    <div class="stat-row"><span class="label">Thực hiện</span><span class="value">0 đợt</span></div>
-    <div class="stat-row"><span class="label">Hoàn thành</span><span class="value"><span class="bdg b-gray">—</span></span></div></div>
-    <div><div class="stat-row"><span class="label">Tổng SKU kiểm</span><span class="value">0</span></div>
-    <div class="stat-row"><span class="label">SKU khớp</span><span class="value">0</span></div>
-    <div class="stat-row"><span class="label">SKU chênh lệch</span><span class="value">0</span></div></div>
-    <div><div class="stat-row"><span class="label">Tỉ lệ khớp</span><span class="value">—%</span></div>
-    <div class="stat-row"><span class="label">Trạng thái</span><span class="value"><span class="bdg b-info">Chờ dữ liệu</span></span></div></div>
-  </div>
-</div>`;}
+<div class="card" style="margin-bottom:14px;padding:16px">
+  <div style="font-size:13px;font-weight:700;margin-bottom:12px">📈 Xu hướng theo tháng — 2026 <span style="font-size:11px;font-weight:400;color:#64748b">(click dòng để chọn tháng)</span></div>
+  <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+    <thead><tr style="background:#f8f9fa;font-size:10.5px;color:#6b7280;text-transform:uppercase">
+      <th style="padding:6px 10px;text-align:left">Tháng</th>
+      <th style="padding:6px 10px;text-align:right;color:#0369a1">Doanh thu</th>
+      <th style="padding:6px 10px;text-align:right;color:#7c3aed">Tồn âm</th>
+      <th style="padding:6px 10px;text-align:right">% DT</th>
+      <th style="padding:6px 10px;text-align:right;color:#b45309">Xuất hủy</th>
+      <th style="padding:6px 10px;text-align:right">% DT</th>
+      <th style="padding:6px 10px;text-align:right;color:#be185d">CP đổi date</th>
+      <th style="padding:6px 10px;text-align:right">Tỷ lệ</th>
+      <th style="padding:6px 10px;text-align:right">BB KK</th>
+    </tr></thead>
+    <tbody>${trendRows}</tbody>
+  </table></div>
+</div>
+${riskRows?`<div class="card" style="margin-bottom:14px;padding:16px">
+  <div style="font-size:13px;font-weight:700;margin-bottom:12px">⚡ Bản đồ rủi ro chéo — ST xuất hiện ≥2 nguồn cảnh báo (${mNames[m]||m}/2026)</div>
+  <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+    <thead><tr style="background:#f8f9fa;font-size:10.5px;color:#6b7280;text-transform:uppercase">
+      <th style="padding:6px 10px;text-align:left">Siêu thị</th>
+      <th style="padding:6px 10px;text-align:center">Mức độ</th>
+      <th style="padding:6px 10px;text-align:left">Tồn âm</th>
+      <th style="padding:6px 10px;text-align:left">Xuất hủy</th>
+      <th style="padding:6px 10px;text-align:left">Đổi date</th>
+      <th style="padding:6px 10px;text-align:left">Biên bản</th>
+    </tr></thead>
+    <tbody>${riskRows}</tbody>
+  </table></div>
+</div>`:''}`;
+}
+async function syncKKAll(btn){
+  if(btn){btn.disabled=true;}
+  const steps=[['Tồn âm',syncTonAm],['Biên bản KK',syncBBKK],['Xuất hủy',syncXuatHuy],['Đổi Date',syncLarkDate]];
+  for(const[name,fn]of steps){
+    if(btn)btn.textContent=`⏳ ${name}...`;
+    try{await fn(null);}catch(e){}
+  }
+  if(btn){btn.disabled=false;btn.innerHTML='🔄 Đồng bộ tất cả';}
+  go('kk','Tổng quan');
+  toast('✅ Đã đồng bộ 4 nguồn dữ liệu','t-ok');
+}
 function rKKChart(){return`
 <div class="g2" style="margin-bottom:16px">
   <div class="chart-box"><div class="chart-title">📊 Số lượng kiểm kê theo tháng</div><div class="chart-wrap"><canvas id="c-kk-bar"></canvas></div></div>
