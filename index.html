@@ -1938,7 +1938,7 @@ function rDateDH(){
 `;}
 
 function rBaoCao(){
-  const tabs=['Executive QC','Nhập liệu','Báo cáo EBIT','Exec. KK','EBIT Kiểm kê','Nhập liệu KK','Đổi Date','Tổng hợp','KPI tháng','Kiểm kê','QC','Xuất báo cáo'];
+  const tabs=['Executive QC','Báo cáo EBIT','Exec. KK','EBIT Kiểm kê','Đổi Date','Tổng hợp','KPI tháng','Kiểm kê','QC','Xuất báo cáo'];
   const t=S.tab||'Executive QC';
   const qd=S.qcExecData;
   const eM=String(S.qcExecMonth||'5');
@@ -2064,8 +2064,12 @@ function rBaoCao(){
   if(kkPctTangTA>30)kkAlerts.push({c:'#d97706',t:'⚠️ Tồn âm tăng <strong>+'+kkPctTangTA+'%</strong> ('+kkTonAmPrev+'→'+kkTonAm+' SKU) — xu hướng đáng lo'});
   if(kkSoSTVuot>=15)kkAlerts.push({c:'#d97706',t:'🟡 '+kkSoSTVuot+'/23 ST vượt ngưỡng kiểm soát 1.53% GT thiếu/DT tháng này'});
   if(!kkAlerts.length)kkAlerts.push({c:'#15803d',t:'✅ Không có cảnh báo đỏ — kết quả kiểm kê tốt tháng này!',ok:true});
-  // precompute biên bản table HTML (always uses kkD sample data; input form has no bienBan rows)
-  const kkBBHtml='<div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px;margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:#d4af37;margin-bottom:10px">📋 Chi tiết biên bản kiểm kê '+(hasKD?'(dữ liệu mẫu T3–4/2026)':'T3–4/2026')+'</div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#0d1117"><th style="text-align:left;padding:7px 10px;color:#6b7280">Siêu thị</th><th style="padding:7px 8px;color:#6b7280">Ngày</th><th style="padding:7px 8px;color:#6b7280">Loại</th><th style="text-align:right;padding:7px 10px;color:#6b7280">Đền bù thu hồi</th><th style="text-align:right;padding:7px 10px;color:#6b7280">Tổn thất thuần</th><th style="text-align:center;padding:7px 8px;color:#6b7280">Rủi ro</th></tr></thead><tbody>'+kkD.bienBan.map(b=>{const bg=b.risk==='R2'?'rgba(200,16,46,.12)':b.risk==='R1'?'rgba(200,16,46,.08)':b.risk==='ok'?'rgba(16,185,129,.06)':'';const tonClr=b.ton<0?'#f87171':b.ton>0?'#4ade80':'#6b7280';const tonStr=b.ton<0?b.ton.toLocaleString('vi-VN')+'₫':'+'+b.ton.toLocaleString('vi-VN')+'₫';const badge=b.risk==='R2'?'<span style="background:#c8102e;color:#fff;padding:1px 6px;border-radius:8px;font-size:10px">🔴 KÉP</span>':b.risk==='R1'?'<span style="background:#ea580c;color:#fff;padding:1px 6px;border-radius:8px;font-size:10px">🟠 CAO</span>':b.risk==='ok'?'<span style="background:#14532d;color:#86efac;padding:1px 6px;border-radius:8px;font-size:10px">🟢 ĐB</span>':'<span style="background:#374151;color:#9ca3af;padding:1px 6px;border-radius:8px;font-size:10px">⚪</span>';return '<tr style="background:'+bg+'"><td style="padding:7px 10px;color:#e2e8f0;border-top:1px solid #222">'+b.st+'</td><td style="text-align:center;padding:7px 8px;color:#6b7280;border-top:1px solid #222">'+b.ngay+'</td><td style="padding:7px 8px;color:#9ca3af;border-top:1px solid #222">'+b.loai+'</td><td style="text-align:right;padding:7px 10px;color:#4ade80;border-top:1px solid #222">'+(b.denBu>0?'+'+b.denBu.toLocaleString('vi-VN')+'₫':'—')+'</td><td style="text-align:right;padding:7px 10px;color:'+tonClr+';font-weight:700;border-top:1px solid #222">'+tonStr+'</td><td style="text-align:center;padding:7px 8px;border-top:1px solid #222">'+badge+'</td></tr>';}).join('')+'<tr style="background:#0d1117"><td colspan="3" style="padding:8px 10px;color:#d4af37;font-weight:700;border-top:2px solid #333">TỔNG CỘNG</td><td style="text-align:right;padding:8px 10px;color:#4ade80;font-weight:700;border-top:2px solid #333">+22,163,295₫</td><td style="text-align:right;padding:8px 10px;color:#f87171;font-weight:700;border-top:2px solid #333">−3,952,760₫ ròng</td><td style="border-top:2px solid #333"></td></tr></tbody></table></div></div>';
+  // precompute biên bản table HTML — dữ liệu thật từ Lark (kd.bienBan) khi có, fallback mẫu
+  const kkBB=(hasKD&&Array.isArray(kd.bienBan)&&kd.bienBan.length)?kd.bienBan:kkD.bienBan;
+  const _bbLive=kkBB!==kkD.bienBan;
+  const _bbTH=kkBB.reduce((a,b)=>a+(b.denBu>0?b.denBu:0),0);
+  const _bbTon=kkBB.reduce((a,b)=>a+(b.ton||0),0);
+  const kkBBHtml='<div style="background:#1a1818;border:1px solid #2a2828;border-radius:10px;padding:14px;margin-bottom:14px"><div style="font-size:13px;font-weight:700;color:#d4af37;margin-bottom:10px">📋 Chi tiết biên bản kiểm kê '+(_bbLive?'T'+kM+'/'+kY+' — tự động từ Lark ('+kkBB.length+' biên bản)':'(dữ liệu mẫu T3–4/2026)')+'</div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#0d1117"><th style="text-align:left;padding:7px 10px;color:#6b7280">Siêu thị</th><th style="padding:7px 8px;color:#6b7280">Ngày</th><th style="padding:7px 8px;color:#6b7280">Loại</th><th style="text-align:right;padding:7px 10px;color:#6b7280">Đền bù thu hồi</th><th style="text-align:right;padding:7px 10px;color:#6b7280">Tổn thất thuần</th><th style="text-align:center;padding:7px 8px;color:#6b7280">Rủi ro</th></tr></thead><tbody>'+kkBB.map(b=>{const bg=b.risk==='R2'?'rgba(200,16,46,.12)':b.risk==='R1'?'rgba(200,16,46,.08)':b.risk==='ok'?'rgba(16,185,129,.06)':'';const tonClr=b.ton<0?'#f87171':b.ton>0?'#4ade80':'#6b7280';const tonStr=b.ton<0?b.ton.toLocaleString('vi-VN')+'₫':'+'+b.ton.toLocaleString('vi-VN')+'₫';const badge=b.risk==='R2'?'<span style="background:#c8102e;color:#fff;padding:1px 6px;border-radius:8px;font-size:10px">🔴 KÉP</span>':b.risk==='R1'?'<span style="background:#ea580c;color:#fff;padding:1px 6px;border-radius:8px;font-size:10px">🟠 CAO</span>':b.risk==='ok'?'<span style="background:#14532d;color:#86efac;padding:1px 6px;border-radius:8px;font-size:10px">🟢 ĐB</span>':'<span style="background:#374151;color:#9ca3af;padding:1px 6px;border-radius:8px;font-size:10px">⚪</span>';return '<tr style="background:'+bg+'"><td style="padding:7px 10px;color:#e2e8f0;border-top:1px solid #222">'+b.st+'</td><td style="text-align:center;padding:7px 8px;color:#6b7280;border-top:1px solid #222">'+b.ngay+'</td><td style="padding:7px 8px;color:#9ca3af;border-top:1px solid #222">'+b.loai+'</td><td style="text-align:right;padding:7px 10px;color:#4ade80;border-top:1px solid #222">'+(b.denBu>0?'+'+b.denBu.toLocaleString('vi-VN')+'₫':'—')+'</td><td style="text-align:right;padding:7px 10px;color:'+tonClr+';font-weight:700;border-top:1px solid #222">'+tonStr+'</td><td style="text-align:center;padding:7px 8px;border-top:1px solid #222">'+badge+'</td></tr>';}).join('')+'<tr style="background:#0d1117"><td colspan="3" style="padding:8px 10px;color:#d4af37;font-weight:700;border-top:2px solid #333">TỔNG CỘNG</td><td style="text-align:right;padding:8px 10px;color:#4ade80;font-weight:700;border-top:2px solid #333">'+(_bbTH>0?'+'+_bbTH.toLocaleString('vi-VN')+'₫':'—')+'</td><td style="text-align:right;padding:8px 10px;color:'+(_bbTon<0?'#f87171':'#4ade80')+';font-weight:700;border-top:2px solid #333">'+(_bbTon<0?'−':'+')+Math.abs(_bbTon).toLocaleString('vi-VN')+'₫ ròng</td><td style="border-top:2px solid #333"></td></tr></tbody></table></div></div>';
 
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Báo cáo</div>
@@ -2076,7 +2080,7 @@ function rBaoCao(){
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('baocao','${tb}')">${tb}</div>`).join('')}</div>
 ${t==='Executive QC'?`
 <div style="background:${hasQD?'#f0fdf4':'#fef3c7'};border:1px solid ${hasQD?'#86efac':'#fcd34d'};border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-  <span style="font-size:13px;color:${hasQD?'#15803d':'#92400e'}">${hasQD?`✅ Dữ liệu Firebase — T${eM}/${eY}${exec.savedAt?' · '+new Date(exec.savedAt).toLocaleDateString('vi-VN'):''}`:` ⚠️ Dữ liệu mẫu T5/2026 — Bấm ⚡ Tổng hợp từ Nghiệp vụ để lấy số liệu tự động từ QC`}</span>
+  <span style="font-size:13px;color:${hasQD?'#15803d':'#92400e'}">${hasQD?`${exec._autoAgg?'⚡ Tự động từ nghiệp vụ QC':'✅ Dữ liệu Firebase'} — T${eM}/${eY}${exec.savedAt?' · '+new Date(exec.savedAt).toLocaleString('vi-VN'):''}`:` ⚠️ Dữ liệu mẫu — T${eM}/${eY} chưa có số liệu nghiệp vụ (vào QC → Chấm điểm dịch vụ để nhập)`}</span>
   <div style="display:flex;gap:8px;align-items:center">
     <select id="exec-m" class="fi" style="width:65px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
     <select id="exec-y" class="fi" style="width:80px">${yearOpts(eY)}</select>
@@ -2433,13 +2437,12 @@ ${hasQD?`
 </div>
 `:t==='Exec. KK'?`
 <div style="background:${hasKD?'#f0fdf4':'#fef3c7'};border:1px solid ${hasKD?'#86efac':'#fcd34d'};border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-  <span style="font-size:13px;color:${hasKD?'#15803d':'#92400e'}">${hasKD?('✅ Firebase: T'+kM+'/'+kY+(kd.savedAt?' · Cập nhật '+new Date(kd.savedAt).toLocaleDateString('vi-VN'):'')):'⚠️ Dữ liệu mẫu (KK T3-4/2026 · Tồn âm T5/2025) — Chọn tháng và bấm Tải'}</span>
+  <span style="font-size:13px;color:${hasKD?'#15803d':'#92400e'}">${hasKD?((kd._auto?'⚡ Tự động từ Lark (BBKK + Tồn âm + Xuất hủy)':'✅ Firebase')+': T'+kM+'/'+kY+(kd.savedAt?' · Cập nhật '+new Date(kd.savedAt).toLocaleString('vi-VN'):'')):'⚠️ Dữ liệu mẫu — T'+kM+'/'+kY+' chưa có dữ liệu Lark (chạy đồng bộ BBKK/Tồn âm trước)'}</span>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <select id="kk-exec-m" class="fi" style="width:65px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===kM?' selected':''}>T${m}</option>`).join('')}</select>
     <select id="kk-exec-y" class="fi" style="width:80px">${yearOpts(kY)}</select>
     <button onclick="kkLoadExecAndRefresh(document.getElementById('kk-exec-y').value,document.getElementById('kk-exec-m').value)" class="btn b-pri b-sm">🔄 Tải</button>
     <button onclick="go('baocao','EBIT Kiểm kê')" class="btn b-out b-sm">📊 EBIT →</button>
-    <button onclick="go('baocao','Nhập liệu KK')" class="btn b-out b-sm">✏️ Nhập liệu</button>
   </div>
 </div>
 ${kkAlerts.filter(a=>!a.ok).map(a=>'<div style="background:rgba(0,0,0,.02);border:1px solid '+a.c+'44;border-left:3px solid '+a.c+';border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;line-height:1.5">'+a.t+'</div>').join('')}
@@ -2455,7 +2458,7 @@ ${kpi('SKU tồn âm',kkTonAm.toLocaleString(),'+'+kkPctTangTA+'% vs T.trước 
 </div>
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
   <div style="padding:12px 16px;background:linear-gradient(90deg,#1e3a5f,#1e40af);display:flex;align-items:center;justify-content:space-between"><span style="font-size:14px;font-weight:700;color:#fff">⚡ Bản đồ rủi ro chéo — Thất thoát × Tồn âm T${kM}/${kY}</span><span style="font-size:11px;color:#bfdbfe">Kết hợp biên bản KK + bán nhầm mã</span></div>
-  ${kkStores.length?'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#eff6ff"><th style="padding:10px 14px;text-align:left;color:#1e40af">Siêu thị</th><th style="padding:10px 8px;text-align:center;color:#1e40af">Rủi ro</th><th style="padding:10px 14px;text-align:right;color:#1e40af">Thất thoát</th><th style="padding:10px 8px;text-align:center;color:#1e40af">GT thiếu/DT</th><th style="padding:10px 8px;text-align:center;color:#1e40af">SKU tồn âm</th><th style="padding:10px 14px;text-align:left;color:#1e40af">Ghi chú</th></tr></thead><tbody>'+kkStores.map(s=>{const isDual=(s.thatthoat||0)<-5000000&&(s.ratio||0)>1.53;const isHigh=(s.thatthoat||0)<-5000000||(s.ratio||0)>3;const isWarn=(s.ratio||0)>1.53;const bg=isDual?'#fff1f2':isHigh?'#fff7ed':isWarn?'#fffbeb':'';const badge=isDual?'<span style="background:#c8102e;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🔴 RỦI RO KÉP</span>':isHigh?'<span style="background:#ea580c;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🟠 CAO</span>':isWarn?'<span style="background:#ca8a04;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🟡 CẢNH BÁO</span>':'<span style="background:#14532d;color:#86efac;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🟢 ỔN</span>';const tt=(s.thatthoat||0)<0?'<span style="color:#dc2626;font-weight:700">'+(s.thatthoat||0).toLocaleString('vi-VN')+'₫</span>':(s.thatthoat||0)>0?'<span style="color:#16a34a;font-weight:700">+'+(s.thatthoat||0).toLocaleString('vi-VN')+'₫</span>':'<span style="color:#94a3b8">—</span>';const rc=(s.ratio||0)>=5?'#dc2626':(s.ratio||0)>=2?'#ea580c':(s.ratio||0)>1.53?'#ca8a04':'#16a34a';return '<tr style="background:'+bg+'"><td style="padding:10px 14px;font-weight:600;border-top:1px solid #e0e7ff">'+(s.st||'')+'</td><td style="text-align:center;padding:10px 8px;border-top:1px solid #e0e7ff">'+badge+'</td><td style="text-align:right;padding:10px 14px;border-top:1px solid #e0e7ff">'+tt+'</td><td style="text-align:center;padding:10px 8px;font-weight:700;color:'+rc+';border-top:1px solid #e0e7ff">'+((s.ratio||0)>0?(s.ratio||0)+'%':'—')+'</td><td style="text-align:center;padding:10px 8px;border-top:1px solid #e0e7ff">'+((s.tonAmSKU||0)>0?(s.tonAmSKU||0)+' SKU':'—')+'</td><td style="padding:10px 14px;font-size:12px;color:#4b5563;border-top:1px solid #e0e7ff">'+(s.note||'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div style="padding:20px;text-align:center;color:#94a3b8">Chưa có dữ liệu siêu thị — nhập liệu KK để xem</div>'}
+  ${kkStores.length?'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#eff6ff"><th style="padding:10px 14px;text-align:left;color:#1e40af">Siêu thị</th><th style="padding:10px 8px;text-align:center;color:#1e40af">Rủi ro</th><th style="padding:10px 14px;text-align:right;color:#1e40af">Thất thoát</th><th style="padding:10px 8px;text-align:center;color:#1e40af">GT thiếu/DT</th><th style="padding:10px 8px;text-align:center;color:#1e40af">SKU tồn âm</th><th style="padding:10px 14px;text-align:left;color:#1e40af">Ghi chú</th></tr></thead><tbody>'+kkStores.map(s=>{const isDual=(s.thatthoat||0)<-5000000&&(s.ratio||0)>1.53;const isHigh=(s.thatthoat||0)<-5000000||(s.ratio||0)>3;const isWarn=(s.ratio||0)>1.53;const bg=isDual?'#fff1f2':isHigh?'#fff7ed':isWarn?'#fffbeb':'';const badge=isDual?'<span style="background:#c8102e;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🔴 RỦI RO KÉP</span>':isHigh?'<span style="background:#ea580c;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🟠 CAO</span>':isWarn?'<span style="background:#ca8a04;color:#fff;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🟡 CẢNH BÁO</span>':'<span style="background:#14532d;color:#86efac;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700">🟢 ỔN</span>';const tt=(s.thatthoat||0)<0?'<span style="color:#dc2626;font-weight:700">'+(s.thatthoat||0).toLocaleString('vi-VN')+'₫</span>':(s.thatthoat||0)>0?'<span style="color:#16a34a;font-weight:700">+'+(s.thatthoat||0).toLocaleString('vi-VN')+'₫</span>':'<span style="color:#94a3b8">—</span>';const rc=(s.ratio||0)>=5?'#dc2626':(s.ratio||0)>=2?'#ea580c':(s.ratio||0)>1.53?'#ca8a04':'#16a34a';return '<tr style="background:'+bg+'"><td style="padding:10px 14px;font-weight:600;border-top:1px solid #e0e7ff">'+(s.st||'')+'</td><td style="text-align:center;padding:10px 8px;border-top:1px solid #e0e7ff">'+badge+'</td><td style="text-align:right;padding:10px 14px;border-top:1px solid #e0e7ff">'+tt+'</td><td style="text-align:center;padding:10px 8px;font-weight:700;color:'+rc+';border-top:1px solid #e0e7ff">'+((s.ratio||0)>0?(s.ratio||0)+'%':'—')+'</td><td style="text-align:center;padding:10px 8px;border-top:1px solid #e0e7ff">'+((s.tonAmSKU||0)>0?(s.tonAmSKU||0)+' SKU':'—')+'</td><td style="padding:10px 14px;font-size:12px;color:#4b5563;border-top:1px solid #e0e7ff">'+(s.note||'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div style="padding:20px;text-align:center;color:#94a3b8">Chưa có dữ liệu siêu thị tháng này từ Lark</div>'}
 </div>
 `:t==='EBIT Kiểm kê'?`
 <div style="background:#0f0d0e;border-radius:14px;padding:20px;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
@@ -2472,7 +2475,7 @@ ${kpi('SKU tồn âm',kkTonAm.toLocaleString(),'+'+kkPctTangTA+'% vs T.trước 
       <button onclick="go('baocao','Exec. KK')" style="padding:7px 12px;background:#1a1818;color:#d4af37;border:1px solid #3a3838;border-radius:7px;cursor:pointer;font-size:12px">← Dashboard KK</button>
     </div>
   </div>
-  ${!hasKD?'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:9px 14px;margin-bottom:12px;color:#92400e;font-size:12px">⚠️ Đang hiển thị dữ liệu mẫu (KK T3-4/2026 + Tồn âm T5/2025) — nhập liệu KK để xem phân tích thực tế</div>':''}
+  ${!hasKD?'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:9px 14px;margin-bottom:12px;color:#92400e;font-size:12px">⚠️ Đang hiển thị dữ liệu mẫu — T'+kM+'/'+kY+' chưa có dữ liệu Lark (BBKK/Tồn âm/Xuất hủy)</div>':''}
   ${kkAlerts.map(a=>'<div style="background:rgba(0,0,0,.3);border:1px solid '+a.c+'44;border-left:3px solid '+a.c+';border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;line-height:1.5;color:#e2e8f0">'+a.t+'</div>').join('')}
   <div class="g4 g-sm2" style="margin-bottom:14px">${[
     {lb:'Thất thoát phát hiện',v:(kkTT/1e6).toFixed(1)+'M₫',sub:'Thu hồi '+(kkTR/1e6).toFixed(1)+'M ('+kkPctThuHoi+'%) · Ròng '+(kkTonRong/1e6).toFixed(2)+'M',clr:kkPctTTNum>0.4?'#f87171':'#d4af37',bd:kkPctTTNum>0.4?'#c8102e':'#2a4a2a'},
@@ -2996,25 +2999,55 @@ function getQCDB(){
   try{return db;}
   catch(e){return null;}
 }
-function qcLoadExecAndRefresh(year,month){
+/* Tải Executive QC: LUÔN tổng hợp tự động từ nghiệp vụ; fallback qc_data cũ nếu chưa có */
+async function qcLoadExecAndRefresh(year,month){
   const m=String(month||S.qcExecMonth||'5');
   const y=String(year||S.qcExecYear||'2026');
   S.qcExecMonth=m;S.qcExecYear=y;
   const qcdb=getQCDB();
   if(!qcdb){alert('Không kết nối được Firebase');return;}
-  const ref=qcdb.ref(`qc_data/${y}/${m}`);
-  ref.get().then(snap=>{
-    if(snap.exists()){
-      S.qcExecData=snap.val();
-      go('baocao',S.tab||'Executive QC');
-    }else{
-      S.qcExecData=null;
-      go('baocao',S.tab||'Executive QC');
-      setTimeout(()=>{const b=document.querySelector('.sec-hdr');if(b){const n=document.createElement('div');n.style.cssText='background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 16px;margin-top:10px;font-size:13px;color:#dc2626';n.textContent=`⚠️ Chưa có dữ liệu T${m}/${y} trên Firebase. Hãy nhập liệu trước.`;b.after(n);setTimeout(()=>n.remove(),4000);}},200);
-    }
-  }).catch(e=>{console.error(e);alert('Lỗi tải dữ liệu: '+e.message);});
+  try{
+    let data=await qcBuildExec(qcdb,y,m);
+    if(!data){const snap=await qcdb.ref(`qc_data/${y}/${m}`).get();data=snap.exists()?snap.val():null;}
+    S.qcExecData=data;
+    go('baocao',S.tab||'Executive QC');
+    if(!data)setTimeout(()=>{const b=document.querySelector('.sec-hdr');if(b){const n=document.createElement('div');n.style.cssText='background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 16px;margin-top:10px;font-size:13px;color:#dc2626';n.textContent=`⚠️ Chưa có dữ liệu T${m}/${y} — vào mục QC → Chấm điểm dịch vụ nhập/import điểm tháng này.`;b.after(n);setTimeout(()=>n.remove(),5000);}},200);
+  }catch(e){console.error(e);alert('Lỗi tải dữ liệu: '+e.message);}
 }
-/* ⚡ Tổng hợp tự động từ nghiệp vụ QC (qc_diem + qc_doitra + qc_gianlantctm) → qc_data */
+/* Tổng hợp từ nghiệp vụ QC (qc_diem + qc_doitra + qc_gianlantctm/gl-cache) → cấu trúc exec */
+async function qcBuildExec(qcdb,y,m){
+  const pm=+m===1?'12':String(+m-1),py=+m===1?String(+y-1):y;
+  const[dS,dPS,dtS,glS]=await Promise.all([
+    qcdb.ref(`qc_diem/${y}/${m}`).get(),qcdb.ref(`qc_diem/${py}/${pm}`).get(),
+    qcdb.ref(`qc_doitra/${y}/${m}`).get(),qcdb.ref(`qc_gianlantctm/${y}/${m}`).get()
+  ]);
+  const diem=dS.exists()?dS.val():null;
+  if(!diem||!Array.isArray(diem.rows)||!diem.rows.length)return null;
+  const pct=r=>{const mx=parseFloat(r.max),th=parseFloat(r.thuc);return mx>0&&isFinite(th)?+(th/mx*100).toFixed(2):null;};
+  const prevMap={};((dPS.exists()?dPS.val():{}).rows||[]).forEach(r=>{const p=pct(r);if(p!=null)prevMap[r.st]=p;});
+  const stores={},names=[];let sum=0,cnt=0;
+  diem.rows.forEach((r,i)=>{const c=pct(r);names.push(r.st);stores['st'+i]={name:r.st,prev:prevMap[r.st]!=null?prevMap[r.st]:null,curr:c};if(c!=null){sum+=c;cnt++;}});
+  const loi=(diem.loiHM||[]).slice().sort((a,b)=>(+b.soLoi||0)-(+a.soLoi||0)).slice(0,3).map(l=>({ten:l.cat||'',soST:+l.soLoi||0})).filter(l=>l.ten);
+  const dt=(dtS.exists()?dtS.val():{}).st||{};
+  let gl=glS.exists()?glS.val():null;
+  if(!gl){try{const r=await fetch('gl-cache.json?_='+Date.now());if(r.ok){const j=await r.json();gl=j.agg&&j.agg[`${y}/${m}`]||null;}}catch(e){}}
+  const dk=gl&&gl.dk||{},ctkm=gl&&gl.ctkm||{};
+  const allLoi={...(dk.loiVPs||{})};for(const[k,v]of Object.entries(ctkm.loiVPs||{}))allLoi[k]=(allLoi[k]||0)+v;
+  const stLoi=Object.entries(allLoi).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({name:k,loi:v+' lần'}));
+  const k2=+dt.pctKhach||0,s2=+dt.pctST||0;
+  const auto='Tự động tổng hợp '+new Date().toLocaleString('vi-VN');
+  return{
+    s1_storeNames:names,s1_tongluot:cnt,s1_diemtb:cnt?+(sum/cnt).toFixed(2):0,
+    s1_stores:stores,s1_loi:loi,s1_note:`${auto} · QC → Chấm điểm dịch vụ (${cnt}/${names.length} ST, so với T${pm}/${py})`,
+    s2_tongdon:+dt.tongDon||0,s2_pct_khach:k2,s2_pct_st:s2,s2_pct_khac:+Math.max(0,100-k2-s2).toFixed(2),
+    s2_topST:(dt.top||[]).map(t=>({name:t.name,count:+t.don||0})),
+    s2_note:dtS.exists()?`${auto} · QC → Đổi trả (Siêu thị)`:'⚠️ Chưa có dữ liệu Đổi trả tháng này',
+    s3_tongST:+dk.total||0,s3_soSTLoi:+dk.cgt||0,s3_stLoi:stLoi,
+    s3_note:gl?`${auto} · Check gian lận: ĐK ${dk.total||0} check/${dk.cgt||0} cần GT · CTKM ${ctkm.total||0}/${ctkm.cgt||0}`:'⚠️ Chưa đồng bộ Check gian lận tháng này',
+    savedAt:Date.now(),_autoAgg:true
+  };
+}
+/* ⚡ Nút tổng hợp thủ công: build + lưu snapshot vào qc_data */
 async function qcAggFromModules(btn){
   const m=String(document.getElementById('exec-m')?.value||S.qcExecMonth||'5');
   const y=String(document.getElementById('exec-y')?.value||S.qcExecYear||'2026');
@@ -3022,43 +3055,57 @@ async function qcAggFromModules(btn){
   if(btn){btn.disabled=true;btn.textContent='⏳ Đang tổng hợp...';}
   const done=()=>{if(btn){btn.disabled=false;btn.textContent='⚡ Tổng hợp từ Nghiệp vụ';}};
   try{
-    const pm=+m===1?'12':String(+m-1),py=+m===1?String(+y-1):y;
-    const[dS,dPS,dtS,glS]=await Promise.all([
-      qcdb.ref(`qc_diem/${y}/${m}`).get(),qcdb.ref(`qc_diem/${py}/${pm}`).get(),
-      qcdb.ref(`qc_doitra/${y}/${m}`).get(),qcdb.ref(`qc_gianlantctm/${y}/${m}`).get()
-    ]);
-    const diem=dS.exists()?dS.val():null;
-    if(!diem||!Array.isArray(diem.rows)||!diem.rows.length){alert(`Chưa có dữ liệu Chấm điểm dịch vụ T${m}/${y}.\nVào QC → Chấm điểm dịch vụ để nhập trước.`);done();return;}
-    const pct=r=>{const mx=parseFloat(r.max),th=parseFloat(r.thuc);return mx>0&&isFinite(th)?+(th/mx*100).toFixed(2):null;};
-    const prevMap={};((dPS.exists()?dPS.val():{}).rows||[]).forEach(r=>{const p=pct(r);if(p!=null)prevMap[r.st]=p;});
-    const stores={},names=[];let sum=0,cnt=0;
-    diem.rows.forEach((r,i)=>{const c=pct(r);names.push(r.st);stores['st'+i]={name:r.st,prev:prevMap[r.st]!=null?prevMap[r.st]:null,curr:c};if(c!=null){sum+=c;cnt++;}});
-    const loi=(diem.loiHM||[]).slice().sort((a,b)=>(+b.soLoi||0)-(+a.soLoi||0)).slice(0,3).map(l=>({ten:l.cat||'',soST:+l.soLoi||0})).filter(l=>l.ten);
-    const dt=(dtS.exists()?dtS.val():{}).st||{};
-    const gl=glS.exists()?glS.val():{},dk=gl.dk||{},ctkm=gl.ctkm||{};
-    const allLoi={...(dk.loiVPs||{})};for(const[k,v]of Object.entries(ctkm.loiVPs||{}))allLoi[k]=(allLoi[k]||0)+v;
-    const stLoi=Object.entries(allLoi).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({name:k,loi:v+' lần'}));
-    const k2=+dt.pctKhach||0,s2=+dt.pctST||0;
-    const auto='Tự động tổng hợp '+new Date().toLocaleString('vi-VN');
-    const data={
-      s1_storeNames:names,s1_tongluot:cnt,s1_diemtb:cnt?+(sum/cnt).toFixed(2):0,
-      s1_stores:stores,s1_loi:loi,s1_note:`${auto} · từ QC → Chấm điểm dịch vụ (${cnt}/${names.length} ST có điểm, tháng trước: T${pm}/${py})`,
-      s2_tongdon:+dt.tongDon||0,s2_pct_khach:k2,s2_pct_st:s2,s2_pct_khac:+Math.max(0,100-k2-s2).toFixed(2),
-      s2_topST:(dt.top||[]).map(t=>({name:t.name,count:+t.don||0})),
-      s2_note:dtS.exists()?`${auto} · từ QC → Đổi trả (Siêu thị)`:'⚠️ Chưa có dữ liệu Đổi trả tháng này',
-      s3_tongST:+dk.total||0,s3_soSTLoi:+dk.cgt||0,s3_stLoi:stLoi,
-      s3_note:glS.exists()?`${auto} · từ Check gian lận: ĐK ${dk.total||0} check/${dk.cgt||0} cần GT · CTKM ${ctkm.total||0}/${ctkm.cgt||0} · Lỗi tổng hợp theo loại`:'⚠️ Chưa đồng bộ Check gian lận tháng này',
-      savedAt:Date.now(),_autoAgg:true
-    };
+    const data=await qcBuildExec(qcdb,y,m);
+    if(!data){alert(`Chưa có dữ liệu Chấm điểm dịch vụ T${m}/${y}.\nVào QC → Chấm điểm dịch vụ để nhập trước.`);done();return;}
     const ref=qcdb.ref(`qc_data/${y}/${m}`);
     const old=await ref.get();
     if(old.exists())await qcdb.ref(`qc_history/${y}/${m}`).push({...old.val(),_snapshotAt:Date.now(),_by:(S.profile?.name||S.user?.email||'?')+' (trước tổng hợp tự động)'});
     await ref.set(data);
     S.qcExecData=data;S.qcExecMonth=m;S.qcExecYear=y;
-    const miss=[];if(!dtS.exists())miss.push('Đổi trả');if(!glS.exists())miss.push('Check gian lận (bấm Đồng bộ Lark)');
-    alert(`✅ Đã tổng hợp T${m}/${y} từ nghiệp vụ:\n· Chấm điểm: ${cnt} ST, điểm TB ${data.s1_diemtb}%\n· Đổi trả: ${data.s2_tongdon} đơn\n· Gian lận: ${data.s3_tongST} check, ${data.s3_soSTLoi} cần GT${miss.length?'\n\n⚠️ Thiếu: '+miss.join(', '):''}`);
     done();go('baocao','Executive QC');
   }catch(e){done();alert('Lỗi tổng hợp: '+e.message);}
+}
+/* ── KIỂM KÊ: tổng hợp tự động từ cache Lark (BBKK + tồn âm + xuất hủy + doanh thu) ── */
+async function kkFetchCache(name){
+  try{const r=await fetch(name+'?_='+Date.now());if(r.ok)return await r.json();}catch(e){}
+  try{const r=await fetch('https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/'+name);if(r.ok)return await r.json();}catch(e){}
+  return null;
+}
+async function kkAutoAgg(year,month){
+  const m=String(month||S.kkExecMonth||'5'),y=String(year||S.kkExecYear||'2026');
+  const[bb,ta,xh,dc]=await Promise.all(['bbkk-cache.json','tonam-cache.json','xuathuy-cache.json','date-cache.json'].map(kkFetchCache));
+  const Tm='T'+m.padStart(2,'0'),pm=+m===1?12:+m-1,pTm='T'+String(pm).padStart(2,'0');
+  const recs=(bb&&bb.t1||[]).filter(r=>+r.nam===+y&&+r.thang===+m);
+  let tt=0,th=0;
+  const bienBan=recs.map(r=>{
+    const ton=(+r.denBu||0)+(+r.congtyHT||0);
+    const denBu=Math.abs(Math.min(0,+r.denBu||0));
+    if(ton<0)tt+=-ton;th+=denBu;
+    const d=r.ngay?new Date(+r.ngay):null;
+    return{st:(r.tenST||r.ten||'').replace(/^S\d+_/,''),ngay:d?String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'):'',loai:r.loai||'',denBu,ton,risk:ton<-5e6?'R2':ton<-1e6?'R1':ton>0?'ok':'W'};
+  }).sort((a,b)=>a.ton-b.ton);
+  const kkTong=recs.filter(r=>/tổng/i.test(r.loai||'')).length;
+  const taM=ta&&ta.months&&ta.months[Tm]||null,taP=ta&&ta.months&&ta.months[pTm]||null;
+  const xhM=xh&&xh.data&&xh.data[y]&&xh.data[y][Tm]||null;
+  const dcM=(dc&&dc.monthly||[]).find(r=>r.t===Tm)||null;
+  if(!recs.length&&!taM&&!xhM){S.kkExecData=null;S.kkExecMonth=m;S.kkExecYear=y;go(S.page,S.tab);return;}
+  const ttByST={};bienBan.forEach(b=>{if(b.ton<0)ttByST[b.st]=(ttByST[b.st]||0)+b.ton;});
+  const s3=(taM&&taM.stores||[]).slice(0,8).map(s=>{const nm=(s.ten||'').replace(/^SKK\s*/,'');return{st:nm,thatthoat:ttByST[nm]||0,ratio:0,tonAmSKU:+s.count||0,note:'Tồn âm '+(+s.count||0)+' SKU · GT '+((+s.value||0)/1e6).toFixed(1)+'M₫'+(ttByST[nm]?' · BBKK '+(ttByST[nm]/1e6).toFixed(1)+'M₫':'')};});
+  S.kkExecData={
+    s1_doanhThu:dcM?+dcM.dt||0:0,
+    s1_soBienBan:recs.length,s1_kkTong:kkTong,s1_kkDotXuat:recs.length-kkTong,
+    s1_tongThatthoat:tt,s1_thuHoi:th,
+    s1_note:'Tự động từ Lark: '+recs.length+' biên bản KK'+(xhM?' · Xuất hủy '+((+xhM.value||0)/1e6).toFixed(1)+'M₫/'+(xhM.total||0)+' phiếu':''),
+    s2_tongTonAm:taM?+taM.total||0:0,s2_tongTonAmPrev:taP?+taP.total||0:0,
+    s2_banNhamMa:0,s2_chuaGiaiTrinh:taM?(+taM.qh||0)+(+taM.ch||0):0,s2_chuaGiaiTrinhPrev:taP?(+taP.qh||0)+(+taP.ch||0):0,
+    s2_chuaNhanDon:0,s2_gtThua:0,s2_gtThieu:0,s2_soSTVuotNguong:0,
+    s2_note:'Tồn âm tự động từ Lark'+(taM?' · GT '+((+taM.totalValue||0)/1e9).toFixed(2)+' tỷ₫':''),
+    s3_stores:s3,s3_note:'Top tồn âm theo ST — tự động từ Lark',
+    bienBan,xuathuy:xhM?{value:+xhM.value||0,total:+xhM.total||0,qty:+xhM.qty||0}:null,
+    savedAt:Date.now(),_auto:true
+  };
+  S.kkExecMonth=m;S.kkExecYear=y;
+  go(S.page,S.tab);
 }
 let qcStoreList=['Đỗ Quang','Đội Cấn','Linh Đàm','Mandarin C1','Thái Hà','Trần Đăng Ninh','Nguyễn Du','Hàng Bông','Văn Phú','Hàm Nghi','Nguyễn Tuân','Ngoại Giao Đoàn','Trần Duy Hưng','Nguyễn Văn Lộc','T6 Timecity','Ecohome 3','Green Bay','Xuân La','Bắc Ninh 02','Nguyễn Khuyến','Sài Đồng','Bạch Mai','Vũ Phạm Hàm'];
 function qcLoadStores(cb){
@@ -3190,15 +3237,19 @@ function qcDataLoad(){
   }).catch(e=>alert('Lỗi tải: '+e.message));
 }
 function getKKDB(){try{return db;}catch(e){return null;}}
-function kkLoadExecAndRefresh(yearIn,monthIn){
+/* Tải Exec KK: LUÔN tổng hợp tự động từ cache Lark; fallback kk_data cũ nếu chưa có */
+async function kkLoadExecAndRefresh(yearIn,monthIn){
   const m=monthIn||document.getElementById('kk-exec-m')?.value||S.kkExecMonth;
   const y=yearIn||document.getElementById('kk-exec-y')?.value||S.kkExecYear;
-  const kkdb=getKKDB();if(!kkdb)return;
-  kkdb.ref('kk_data/'+y+'/'+m).get().then(snap=>{
-    S.kkExecData=snap.exists()?snap.val():null;
-    S.kkExecMonth=String(m);S.kkExecYear=String(y);
-    go(S.page,S.tab);
-  }).catch(e=>console.error('KK load error:',e));
+  await kkAutoAgg(y,m);
+  if(!S.kkExecData){
+    const kkdb=getKKDB();if(!kkdb)return;
+    try{
+      const snap=await kkdb.ref('kk_data/'+y+'/'+m).get();
+      S.kkExecData=snap.exists()?snap.val():null;
+      go(S.page,S.tab);
+    }catch(e){console.error('KK load error:',e);}
+  }
 }
 function kkDataSave(btn){
   const month=document.getElementById('kk-month')?.value,year=document.getElementById('kk-year')?.value;
@@ -3432,6 +3483,12 @@ function afterRender(){
   mkC('c-bc-pie','doughnut',['Đạt','Không đạt','Cảnh báo'],[{data:[0,0,0],bg:[CC[1],CC[2],CC[3]]}]);
   mkC('c-bc-bar','bar',T6,[{label:'Đợt KK',data:[...Z6]},{label:'Phiếu QC',data:[...Z6],bg:CC[1]}]);
   // Executive QC Dashboard + EBIT tab — data-driven, Firebase when loaded
+  if((S.tab==='Executive QC'||S.tab==='Báo cáo EBIT'||!S.tab)&&!S.qcExecData&&!S._qcAutoLoad){
+    S._qcAutoLoad=1;
+    const _n=new Date(),_pm=_n.getMonth()||12,_py=_pm===12?_n.getFullYear()-1:_n.getFullYear();
+    if(!S.qcExecMonth){S.qcExecMonth=String(_pm);S.qcExecYear=String(_py);}
+    qcLoadExecAndRefresh(S.qcExecYear,S.qcExecMonth);
+  }
   {
     const qd=S.qcExecData;
     const eM=String(S.qcExecMonth||'5');
@@ -3506,6 +3563,12 @@ function afterRender(){
   }
   // KK Exec charts — only on KK exec tabs (avoids c-kk-cat conflict with old KK tab)
   if(S.tab==='Exec. KK'||S.tab==='EBIT Kiểm kê'){
+    if(!S.kkExecData&&!S._kkAutoLoad){
+      S._kkAutoLoad=1;
+      const _n=new Date(),_pm=_n.getMonth()||12,_py=_pm===12?_n.getFullYear()-1:_n.getFullYear();
+      if(!S.kkExecMonth){S.kkExecMonth=String(_pm);S.kkExecYear=String(_py);}
+      kkLoadExecAndRefresh(S.kkExecYear,S.kkExecMonth);
+    }
     const kd=S.kkExecData;
     const kM=String(S.kkExecMonth||'5');
     const kY=String(S.kkExecYear||'2026');
