@@ -356,9 +356,7 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:'5',qcBBYear:'2026',qcBBList:[],qcBBYearData:{},qcDocsData:{},qcDocLists:{},
-  qcOvMonth:'6',qcOvYear:'2026',qcOvData:null,qcOv2Month:'6',qcOv2Year:'2025',qcOv2Data:null,
-  tonAmCache:null,tonAmMonth:'',tonAmFilter:{q:'',status:'all',nganh:'',sort:'value'}};
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:'5',qcBBYear:'2026',qcBBList:[],qcBBYearData:{},qcDocsData:{}};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -377,19 +375,19 @@ auth.onAuthStateChanged(async u=>{
           S.profile.role=ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer';
           db.ref(`profiles/${u.uid}/role`).set(S.profile.role);
         }
-        go('dashboard');
+        go('dashboard');window.chatShowFab?.(true);
       } else {
         S.profile={name:'',email:u.email,role:ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer',dept:'',phone:'',createdAt:Date.now()};
-        render(); showFirstLogin();
+        render(); showFirstLogin();window.chatShowFab?.(true);
       }
     }catch(e){
       // DB rules chưa cấu hình hoặc mạng lỗi — vẫn cho vào với quyền tối thiểu
       S.profile={name:'',email:u.email,role:ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer',dept:'',phone:'',createdAt:Date.now()};
-      render();
+      render();window.chatShowFab?.(true);
       toast('Không thể kết nối database. Vui lòng liên hệ Admin.','t-err');
       if(ADMIN_EMAILS.includes(u.email))go('dashboard');
     }
-  } else go('login');
+  } else {go('login');window.chatShowFab?.(false);}
 });
 
 /* ══════════════════════════════════════════
@@ -821,7 +819,7 @@ function kpi(lb,val,unit,color,ic,trend){
    KIỂM KÊ MODULE
 ══════════════════════════════════════════ */
 function rKK(){
-  const tabs=['Tổng quan','Tồn âm','Biên bản kiểm kê','Xuất hủy - lỗi hỏng'];
+  const tabs=['Tổng quan','Biểu đồ','Danh sách','Import Excel'];
   const t=S.tab||'Tổng quan';
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Kiểm kê</div>
@@ -833,7 +831,7 @@ function rKK(){
   </div>
 </div>
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('kk','${tb}')">${tb}</div>`).join('')}</div>
-${t==='Tổng quan'?rKKOv():t==='Tồn âm'?rKKTonAm():t==='Biên bản kiểm kê'?rKKBienBan():rKKXuatHuy()}`;
+${t==='Tổng quan'?rKKOv():t==='Biểu đồ'?rKKChart():t==='Danh sách'?rKKList():rImport('kk')}`;
 }
 function rKKOv(){return`
 <div class="g4" style="margin-bottom:18px">
@@ -884,372 +882,6 @@ function rKKList(){return`
 <thead><tr><th>STT</th><th>Mã đợt KK</th><th>Ngày KK</th><th>Loại</th><th>Kho</th><th>Số SKU</th><th>SKU chênh</th><th>Tỉ lệ khớp</th><th>Trạng thái</th><th>NV thực hiện</th></tr></thead>
 <tbody id="kk-list"><tr><td colspan="10"><div class="empty-state"><div class="es-ic">📂</div><p>Chưa có dữ liệu. Import Excel để bắt đầu.</p></div></td></tr></tbody>
 </table></div></div>`;}
-function rKKTonAm(){
-  if(!S.tonAmCache){try{S.tonAmCache=JSON.parse(localStorage.getItem('tonam_cache')||'null');}catch(e){}}
-  const cache=S.tonAmCache;
-  const months=cache?.months||{};
-  const avail=Object.keys(months).sort();
-  if(!S.tonAmMonth||(S.tonAmMonth!=='ALL'&&!months[S.tonAmMonth]))S.tonAmMonth=avail[avail.length-1]||'';
-  const m=S.tonAmMonth;
-  // ── ALL aggregation ──
-  let md;
-  if(m==='ALL'){
-    const agg={total:0,qh:0,ch:0,totalValue:0,lyDo:{},lyDoValue:{},nganh:{},nganhValue:{},stores:{}};
-    for(const mo of avail){
-      const d=months[mo];
-      agg.total+=d.total; agg.qh+=d.qh; agg.ch+=d.ch; agg.totalValue+=d.totalValue||0;
-      for(const[k,v]of Object.entries(d.lyDo||{})) agg.lyDo[k]=(agg.lyDo[k]||0)+v;
-      for(const[k,v]of Object.entries(d.lyDoValue||{})) agg.lyDoValue[k]=(agg.lyDoValue[k]||0)+v;
-      for(const[k,v]of Object.entries(d.nganh||{})) agg.nganh[k]=(agg.nganh[k]||0)+v;
-      for(const[k,v]of Object.entries(d.nganhValue||{})) agg.nganhValue[k]=(agg.nganhValue[k]||0)+v;
-      for(const s of(d.stores||[])){
-        if(!agg.stores[s.ma])agg.stores[s.ma]={ten:s.ten,count:0,qh:0,ch:0,value:0};
-        agg.stores[s.ma].count+=s.count; agg.stores[s.ma].qh+=s.qh; agg.stores[s.ma].ch+=s.ch; agg.stores[s.ma].value+=(s.value||0);
-      }
-    }
-    agg.stores=Object.entries(agg.stores).sort((a,b)=>b[1].count-a[1].count)
-      .map(([ma,v])=>({ma,ten:v.ten,count:v.count,qh:v.qh,ch:v.ch,value:Math.round(v.value)}));
-    md=agg;
-  } else {
-    md=months[m];
-  }
-  const age=cache?.ts?Math.round((Date.now()-cache.ts)/60000):null;
-  const ageStr=age!=null?(age<60?age+'p trước':Math.round(age/60)+'h trước'):'chưa đồng bộ';
-  const syncBar=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
-    <span style="font-size:12px;color:var(--t2)">${avail.length?'✅ Dữ liệu Lark · '+ageStr:'⚠️ Chưa có dữ liệu'}</span>
-    <button onclick="syncTonAm(this)" style="background:#1a2558;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer">🔄 Đồng bộ Lark</button>
-  </div>`;
-  if(!avail.length)return`<div class="card">${syncBar}<div style="text-align:center;padding:32px 0"><div style="font-size:48px;margin-bottom:10px">📉</div><p style="color:var(--t2);font-size:13px">Bấm <strong>Đồng bộ Lark</strong> để tải dữ liệu tồn âm từ Lark bitable.</p><p style="color:var(--t3);font-size:11px;margin-top:6px">Chạy <code>node automation/sync-tonam.js</code> để tạo cache nếu chưa có.</p></div></div>`;
-  const rev=cache?.revenue||{};
-  const fmtDT=v=>v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(0)+'M':'—';
-  const allTotalDT=avail.reduce((s,mo)=>s+(rev[mo]||0),0);
-  // Tên tháng — tự động cho T01-T12
-  const mNames={T01:'Tháng 1',T02:'Tháng 2',T03:'Tháng 3',T04:'Tháng 4',T05:'Tháng 5',T06:'Tháng 6',
-    T07:'Tháng 7',T08:'Tháng 8',T09:'Tháng 9',T10:'Tháng 10',T11:'Tháng 11',T12:'Tháng 12'};
-  // Năm — đọc từ cache timestamp, tự cập nhật khi sync
-  const cacheYear=cache?.ts?new Date(cache.ts).getFullYear():new Date().getFullYear();
-  const mOpts=`<option value="ALL" ${m==='ALL'?'selected':''}>Tất cả</option>`+
-    avail.map(t=>`<option value="${t}" ${t===m?'selected':''}>${mNames[t]||t}</option>`).join('');
-  const mBtns=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-    <div style="display:flex;align-items:center;gap:6px">
-      <span style="font-size:12px;color:#64748b;font-weight:500">Tháng:</span>
-      <select onchange="S.tonAmMonth=this.value;go('kk','Tồn âm')"
-        style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff;color:var(--t1);cursor:pointer;font-weight:500">
-        ${mOpts}
-      </select>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px">
-      <span style="font-size:12px;color:#64748b;font-weight:500">Năm:</span>
-      <select style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff;color:var(--t1);font-weight:500">
-        <option value="${cacheYear}">${cacheYear}</option>
-      </select>
-    </div>
-    ${allTotalDT>0&&m==='ALL'?`<span style="font-size:11px;color:#64748b">· DT tổng: ${fmtDT(allTotalDT)}</span>`:''}
-    ${m!=='ALL'&&(rev[m]||0)>0?`<span style="font-size:11px;color:#64748b">· DT ${mNames[m]||m}: ${fmtDT(rev[m])}</span>`:''}
-  </div>`;
-  const pctQH=md.total>0?(md.qh/md.total*100).toFixed(1):'0';
-  const pctCH=md.total>0?(md.ch/md.total*100).toFixed(1):'0';
-  const pctOk=md.total>0?(100-+pctQH-+pctCH).toFixed(1):'0';
-  const dtMonth=m==='ALL'?allTotalDT:(rev[m]||0);
-  const skuPerB=dtMonth>0?(md.total/(dtMonth/1e9)).toFixed(0):'—';
-  const mLabel=m==='ALL'?`${avail[0]}–${avail[avail.length-1]}`:m;
-  const totalValue=md.totalValue||0;
-  const lyDoValue=md.lyDoValue||{};
-  const pctValue=dtMonth>0?(totalValue/dtMonth*100).toFixed(1):'—';
-  const fmtV=v=>v>=1e9?(v/1e9).toFixed(2)+' tỷ':v>=1e6?(v/1e6).toFixed(0)+' tr':'—';
-
-  // ── Cảnh báo thông minh (dựa trên giá trị VNĐ + SKU) ──
-  const lyDoMap=md.lyDo||{};
-  const banNham=(lyDoMap['bán nhầm - ST']||0)+(lyDoMap['Bán nhầm - ST']||0);
-  const chuaGT=(lyDoMap['chưa giải trình - ST']||0)+(lyDoMap['Chưa giải trình - ST']||0);
-  const chuaNhan=(lyDoMap['chưa nhận đơn -ST']||0)+(lyDoMap['Chưa nhận đơn -ST']||0);
-  const xinHang=(lyDoMap['Xin hàng - ST']||0)+(lyDoMap['xin hàng - ST']||0);
-  const banNhamV=(lyDoValue['bán nhầm - ST']||0)+(lyDoValue['Bán nhầm - ST']||0);
-  const chuaGTV=(lyDoValue['chưa giải trình - ST']||0)+(lyDoValue['Chưa giải trình - ST']||0);
-  const chuaNhanV=(lyDoValue['chưa nhận đơn -ST']||0)+(lyDoValue['Chưa nhận đơn -ST']||0);
-  const xinHangV=(lyDoValue['Xin hàng - ST']||0)+(lyDoValue['xin hàng - ST']||0);
-  const p=v=>dtMonth>0?` · ${(v/dtMonth*100).toFixed(2)}% DT`:'';
-  const alerts=[];
-  if(totalValue>0&&dtMonth>0&&totalValue/dtMonth>0.15)alerts.push({lv:'🔴 Giá trị nghiêm trọng',msg:`Tổng giá trị tồn âm ${fmtV(totalValue)} = ${pctValue}% doanh thu ${mLabel} — vượt ngưỡng 15%`,act:'Đặt KPI xử lý giảm xuống dưới 10% DT trong tháng tới'});
-  else if(totalValue>0&&dtMonth>0&&totalValue/dtMonth>0.10)alerts.push({lv:'🟠 Giá trị cao',msg:`Tổng giá trị tồn âm ${fmtV(totalValue)} = ${pctValue}% doanh thu — cần theo dõi chặt`,act:'Phân tích lý do top 3 và lên kế hoạch xử lý'});
-  if(+pctQH>30)alerts.push({lv:'🔴 Quá hạn nghiêm trọng',msg:`${pctQH}% SKU quá hạn — rủi ro tài chính cao`,act:'Kiểm kê đột xuất toàn chuỗi, ưu tiên ST có QH >50%'});
-  else if(+pctQH>15)alerts.push({lv:'🟠 Quá hạn cao',msg:`${pctQH}% SKU quá hạn — vượt ngưỡng an toàn 15%`,act:'Rà soát và xử lý các ST có quá hạn >50%'});
-  if(banNhamV>0)alerts.push({lv:'🔴 Nghiệp vụ',msg:`Bán nhầm: ${banNham.toLocaleString()} SKU · ${fmtV(banNhamV)}${p(banNhamV)} — lỗi thao tác POS`,act:'Training POS + kiểm tra cài đặt tại ST top bán nhầm'});
-  if(chuaGTV>0)alerts.push({lv:'🟡 Kiểm soát',msg:`Chưa giải trình: ${chuaGT.toLocaleString()} SKU · ${fmtV(chuaGTV)}${p(chuaGTV)} — tồn đọng giải trình`,act:'Deadline giải trình 3 ngày, theo dõi qua Lark base'});
-  if(chuaNhanV>0)alerts.push({lv:'🟠 Chuỗi cung ứng',msg:`Chưa nhận đơn: ${chuaNhan.toLocaleString()} SKU · ${fmtV(chuaNhanV)}${p(chuaNhanV)} — lỗi xác nhận kho`,act:'Đối chiếu đơn hàng tồn với logistics, xác nhận kho ngay'});
-  if(xinHangV>0)alerts.push({lv:'🔵 Vận hành',msg:`Xin hàng: ${xinHang.toLocaleString()} SKU · ${fmtV(xinHangV)}${p(xinHangV)} — phân bổ hàng chưa cân đối`,act:'Review định mức hàng tại các ST có xin hàng nhiều'});
-  const alertHtml=alerts.length?alerts.map(a=>`
-    <div style="display:flex;gap:10px;padding:10px 12px;background:#fafafa;border-radius:8px;border-left:3px solid ${a.lv.includes('🔴')?'#dc2626':a.lv.includes('🟠')?'#f97316':a.lv.includes('🟡')?'#eab308':'#3b82f6'};margin-bottom:8px">
-      <div style="flex:1">
-        <div style="font-size:11.5px;font-weight:700;color:${a.lv.includes('🔴')?'#dc2626':a.lv.includes('🟠')?'#f97316':a.lv.includes('🟡')?'#ca8a04':'#1d4ed8'};margin-bottom:2px">${a.lv}</div>
-        <div style="font-size:12px;color:var(--t1);margin-bottom:3px">${a.msg}</div>
-        <div style="font-size:11px;color:#6b7280">→ ${a.act}</div>
-      </div>
-    </div>`).join(''):'<div style="font-size:12px;color:#15803d;padding:8px">✅ Không có cảnh báo nghiêm trọng cho tháng này</div>';
-
-  // ── Filter logic ──
-  const F=S.tonAmFilter;
-  const allNG=Object.entries(md.nganh||{}).sort((a,b)=>b[1]-a[1]);
-  const allLD=Object.entries(md.lyDo||{}).sort((a,b)=>b[1]-a[1]);
-  const allST=md.stores||[];
-  const qLow=(F.q||'').toLowerCase();
-
-  const filtST=allST.filter(s=>{
-    const mQ=!qLow||(s.ten||'').toLowerCase().includes(qLow)||(s.ma||'').toLowerCase().includes(qLow);
-    const mS=F.status==='all'||(F.status==='qh'&&s.qh>0)||(F.status==='ch'&&s.ch>0);
-    return mQ&&mS;
-  }).sort((a,b)=>F.sort==='sku'?b.count-a.count:(b.value||0)-(a.value||0));
-
-  const filtLD=allLD.filter(([ld])=>!qLow||ld.toLowerCase().includes(qLow))
-    .sort((a,b)=>F.sort==='sku'?b[1]-a[1]:(lyDoValue[b[0]]||0)-(lyDoValue[a[0]]||0));
-
-  const filtNG=F.nganh?allNG.filter(([ng])=>ng===F.nganh):allNG;
-  const maxLD=filtLD[0]?.[1]||1;
-  const stRows=filtST.map((s,i)=>{
-    const pq=s.count>0?(s.qh/s.count*100).toFixed(0):'0';
-    const pc=s.count>0?(s.ch/s.count*100).toFixed(0):'0';
-    const risk=+pq>50?'#dc2626':+pq>25?'#f97316':'#15803d';
-    const sv=s.value||0;
-    return`<tr style="border-bottom:1px solid #f0f0f0">
-      <td style="padding:7px 10px;font-size:12px;color:#6b7280">${i+1}</td>
-      <td style="padding:7px 10px;font-size:13px;font-weight:600;color:var(--t1)">${s.ten||s.ma}</td>
-      <td style="padding:7px 10px;font-size:12px;text-align:right;color:var(--t1)">${s.count.toLocaleString()}</td>
-      <td style="padding:7px 10px;font-size:12px;text-align:right;color:#7c3aed;font-weight:600">${sv>0?fmtV(sv):'—'}</td>
-      <td style="padding:7px 10px;font-size:12px;text-align:right;color:#dc2626;font-weight:600">${s.qh.toLocaleString()} <span style="font-weight:400;color:#9ca3af">(${pq}%)</span></td>
-      <td style="padding:7px 10px"><div style="width:60px;height:6px;background:#f0f0f0;border-radius:3px"><div style="width:${pq}%;height:100%;background:${risk};border-radius:3px"></div></div></td>
-    </tr>`;
-  }).join('');
-  const ldRows=filtLD.map(([ld,cnt])=>{
-    const pct=Math.round(cnt/maxLD*100);
-    const pctTotal=md.total>0?(cnt/md.total*100).toFixed(1):'0';
-    const val=lyDoValue[ld]||0;
-    const pctDT=dtMonth>0&&val>0?(val/dtMonth*100).toFixed(2):'';
-    const c=ld.includes('bán nhầm')||ld.includes('Bán nhầm')?'#dc2626':ld.includes('chưa nhận')||ld.includes('Chưa nhận')?'#f97316':ld.includes('Xin hàng')||ld.includes('xin hàng')?'#f59e0b':ld.includes('giải trình')?'#8b5cf6':'#64748b';
-    const tag=ld.includes('bán nhầm')||ld.includes('Bán nhầm')?'Nghiệp vụ':ld.includes('chưa nhận')||ld.includes('Chưa nhận')?'Cung ứng':ld.includes('Xin hàng')||ld.includes('xin hàng')?'Vận hành':ld.includes('giải trình')?'Kiểm soát':'';
-    return`<div style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;align-items:center;gap:8px">
-        <span style="color:var(--t1);font-weight:500;flex:1;min-width:0">${ld}${tag?`<span style="font-size:9px;padding:1px 5px;background:${c}22;color:${c};border-radius:4px;margin-left:6px">${tag}</span>`:''}</span>
-        <span style="color:var(--t2);white-space:nowrap">${cnt.toLocaleString()} SKU <span style="color:#9ca3af">(${pctTotal}%)</span></span>
-        ${val>0?`<span style="color:#7c3aed;font-weight:600;white-space:nowrap;font-size:11.5px">${fmtV(val)}${pctDT?` <span style="color:#dc2626;font-size:10px">${pctDT}% DT</span>`:''}</span>`:''}
-      </div>
-      <div style="background:#f0f0f0;border-radius:3px;height:8px"><div style="width:${pct}%;height:100%;background:${c};border-radius:3px"></div></div>
-    </div>`;
-  }).join('');
-  const nganhValue=md.nganhValue||{};
-  const ngRows=filtNG.map(([ng,cnt])=>{
-    const nv=nganhValue[ng]||0;
-    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f5f5f5;font-size:12px;gap:8px">
-      <span style="color:var(--t1);flex:1">${ng}</span>
-      <span style="color:#6b7280">${cnt.toLocaleString()} SKU</span>
-      ${nv>0?`<span style="font-weight:700;color:#7c3aed;white-space:nowrap">${fmtV(nv)}</span>`:''}
-    </div>`;
-  }).join('');
-  const valueColor=pctValue!=='—'&&+pctValue>15?'#dc2626':+pctValue>10?'#f97316':'#7c3aed';
-  // ── Filter bar HTML ──
-  const ngOptions=allNG.map(([ng])=>`<option value="${ng}" ${F.nganh===ng?'selected':''}>${ng}</option>`).join('');
-  const hasFilter=F.q||F.status!=='all'||F.nganh;
-  const filterBar=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px">
-    <span style="font-size:11px;font-weight:700;color:#64748b;white-space:nowrap">🔍 BỘ LỌC</span>
-    <input type="text" placeholder="Tìm siêu thị, lý do..." value="${F.q||''}"
-      oninput="S.tonAmFilter.q=this.value;go('kk','Tồn âm')"
-      style="flex:1;min-width:140px;padding:5px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;outline:none">
-    <select onchange="S.tonAmFilter.status=this.value;go('kk','Tồn âm')"
-      style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#fff">
-      <option value="all" ${F.status==='all'?'selected':''}>Tất cả trạng thái</option>
-      <option value="qh" ${F.status==='qh'?'selected':''}>Có quá hạn</option>
-      <option value="ch" ${F.status==='ch'?'selected':''}>Có cận hạn</option>
-    </select>
-    <select onchange="S.tonAmFilter.nganh=this.value;go('kk','Tồn âm')"
-      style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#fff">
-      <option value="">Tất cả ngành</option>${ngOptions}
-    </select>
-    <select onchange="S.tonAmFilter.sort=this.value;go('kk','Tồn âm')"
-      style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#fff">
-      <option value="value" ${F.sort==='value'?'selected':''}>↓ Giá trị</option>
-      <option value="sku" ${F.sort==='sku'?'selected':''}>↓ SKU</option>
-    </select>
-    ${hasFilter?`<button onclick="S.tonAmFilter={q:'',status:'all',nganh:'',sort:'value'};go('kk','Tồn âm')"
-      style="padding:5px 10px;border:1px solid #dc2626;border-radius:6px;font-size:11px;color:#dc2626;background:#fff;cursor:pointer;white-space:nowrap">✕ Xoá lọc</button>`:''}
-    <span style="font-size:11px;color:#64748b;white-space:nowrap;margin-left:auto">${filtST.length} ST · ${filtLD.length} lý do</span>
-  </div>`;
-
-  return`
-<div class="card" style="margin-bottom:14px">${syncBar}
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${mBtns}</div>
-  <div class="g4" style="margin-bottom:0">
-    <div class="kpi" style="color:#1a2558"><div class="kpi-lb">Tổng SKU tồn âm</div><div class="kpi-v">${md.total.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr" style="color:#6b7280;font-size:11px">${mLabel}/2026</div><div class="kpi-bg">📉</div></div>
-    <div class="kpi" style="color:${valueColor}"><div class="kpi-lb">Giá trị tồn âm</div><div class="kpi-v" style="font-size:${totalValue>=1e9?'18px':'22px'}">${totalValue>0?fmtV(totalValue):'—'}<span class="kpi-u">VNĐ</span></div><div class="kpi-tr" style="color:${valueColor};font-size:11px">${pctValue!=='—'?pctValue+'% doanh thu':''}</div><div class="kpi-bg">💸</div></div>
-    <div class="kpi" style="color:#dc2626"><div class="kpi-lb">Quá hạn</div><div class="kpi-v">${md.qh.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr tr-err" style="color:#dc2626">⚠️ ${pctQH}% tổng</div><div class="kpi-bg">🚨</div></div>
-    ${dtMonth>0?`<div class="kpi" style="color:#0369a1"><div class="kpi-lb">Doanh thu ${mLabel}</div><div class="kpi-v" style="font-size:18px">${fmtDT(dtMonth)}<span class="kpi-u">VNĐ</span></div><div class="kpi-tr" style="color:#0369a1;font-size:11px">${skuPerB} SKU/tỷ DT</div><div class="kpi-bg">💰</div></div>`:`<div class="kpi" style="color:#f97316"><div class="kpi-lb">Cận hạn</div><div class="kpi-v">${md.ch.toLocaleString()}<span class="kpi-u">SKU</span></div><div class="kpi-tr" style="color:#f97316;font-size:11px">${pctCH}% tổng</div><div class="kpi-bg">⚠️</div></div>`}
-  </div>
-</div>
-<div class="card" style="margin-bottom:14px;padding:16px">
-  <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:10px">⚡ Cảnh báo & Nhận định — ${mLabel}/2026</div>
-  ${alertHtml}
-</div>
-${filterBar}
-<div class="g2" style="margin-bottom:14px">
-  <div class="card" style="padding:16px">
-    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">🏪 Siêu thị tồn âm — ${mLabel}/2026 <span style="font-size:11px;font-weight:400;color:#64748b">(${filtST.length}/${allST.length} ST)</span></div>
-    ${filtST.length?`<div style="overflow-x:auto;max-height:480px;overflow-y:auto"><table style="width:100%;border-collapse:collapse">
-      <thead style="position:sticky;top:0;z-index:1"><tr style="background:#f8f9fa;font-size:11px;color:#6b7280;text-transform:uppercase">
-        <th style="padding:6px 10px;text-align:left">#</th>
-        <th style="padding:6px 10px;text-align:left">Siêu thị</th>
-        <th style="padding:6px 10px;text-align:right">SKU âm</th>
-        <th style="padding:6px 10px;text-align:right;color:#7c3aed">Giá trị</th>
-        <th style="padding:6px 10px;text-align:right">Quá hạn</th>
-        <th style="padding:6px 10px">Rủi ro</th>
-      </tr></thead>
-      <tbody>${stRows}</tbody>
-    </table></div>`:'<div class="empty-state"><p>Không khớp bộ lọc</p></div>'}
-  </div>
-  <div class="card" style="padding:16px">
-    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">🔍 Lý do tồn âm — ${mLabel}/2026 <span style="font-size:11px;font-weight:400;color:#64748b">(${filtLD.length}/${allLD.length} lý do)</span></div>
-    <div style="max-height:340px;overflow-y:auto;padding-right:4px">
-    ${filtLD.length?ldRows:'<div class="empty-state"><p>Không khớp bộ lọc</p></div>'}
-    </div>
-    ${filtNG.length?`<div style="font-size:13px;font-weight:700;color:var(--t1);margin:14px 0 10px">📦 Theo ngành hàng <span style="font-size:11px;font-weight:400;color:#64748b">(${filtNG.length})</span></div>
-    <div style="max-height:220px;overflow-y:auto">${ngRows}</div>`:''}
-  </div>
-</div>`;
-}
-function rKKBienBan(){
-  if(!S.bbkkCache){try{S.bbkkCache=JSON.parse(localStorage.getItem('bbkk_cache')||'null');}catch(e){}}
-  const C=S.bbkkCache;
-  const age=C?.ts?Math.round((Date.now()-C.ts)/3600000):null;
-  const fmt=v=>Math.abs(Math.round(v||0)).toLocaleString('vi-VN');
-  const fmtDT=v=>v>=1e9?(v/1e9).toFixed(1)+' tỷ':v>=1e6?(v/1e6).toFixed(0)+' tr':'—';
-  const syncBar=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-    <span style="font-size:12px;color:var(--t2)">${C?`✅ Cập nhật ${age!=null?(age<24?age+'h':Math.round(age/24)+'d'):''} trước · ${(C.t1||[]).length} biên bản`:'⚠️ Chưa có dữ liệu — bấm Đồng bộ'}</span>
-    <button class="btn b-ok b-sm" onclick="syncBBKK(this)">🔄 Đồng bộ Lark</button>
-  </div>`;
-  if(!C)return`<div class="card">${syncBar}<div style="text-align:center;padding:32px 0"><div style="font-size:48px;margin-bottom:10px">📋</div><p style="color:var(--t2);font-size:13px">Bấm <strong>Đồng bộ Lark</strong> để tải dữ liệu biên bản kiểm kê từ Lark.</p><p style="color:var(--t3);font-size:11px;margin-top:6px">Hoặc chạy <code>node automation/sync-bbkk.js</code> rồi push lên GitHub.</p></div></div>`;
-  const t1=C.t1||[]; const t2=C.t2||[]; const t4=C.t4||[];
-  const years=[...new Set(t1.map(r=>r.nam))].sort((a,b)=>a-b);
-  const selY=S.bbkkYear||(years[years.length-1]||2026);
-  const t1y=t1.filter(r=>r.nam===selY);
-  const months=[...new Set(t1y.map(r=>r.thang))].sort((a,b)=>a-b);
-  const selM=S.bbkkMonth||0;
-  const rows=selM?t1y.filter(r=>r.thang===selM):t1y;
-  const bbTab=S.bbkkTab||'bienban';
-  /* KPIs */
-  const totDenBu=rows.reduce((s,r)=>s+(r.denBu||0),0);
-  const totCT=rows.reduce((s,r)=>s+(r.congtyHT||0),0);
-  const totCLp=rows.reduce((s,r)=>s+(r.clPlus||0),0);
-  const totCLm=rows.reduce((s,r)=>s+(r.clMinus||0),0);
-  const totNet=totCLp+totCLm;
-  const t2y=t2.filter(r=>r.nam===selY);
-  const totDT=t2y.reduce((s,r)=>s+(r.tongDT||0),0);
-  const totQuy=t2y.reduce((s,r)=>s+(r.quyHT||0),0);
-  const totHTong=t2y.reduce((s,r)=>s+(r.htTong||0),0);
-  const totConLai=t2y.reduce((s,r)=>s+(r.conLai||0),0);
-  /* header bar */
-  const mBtns=`<span style="display:inline-flex;align-items:center;gap:6px">
-    <label style="font-size:11.5px;color:var(--t2)">Tháng:</label>
-    <select onchange="S.bbkkMonth=+this.value;S.bbkkYear=${selY};go('kk','Biên bản kiểm kê')" style="padding:3px 8px;font-size:12px;border-radius:6px;border:1px solid rgba(0,0,0,.15);background:#fff;color:var(--t1);cursor:pointer">
-      <option value="0" ${selM===0?'selected':''}>Tất cả</option>
-      ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}" ${selM===m?'selected':''}${!months.includes(m)?' style="color:#bbb"':''}>Tháng ${m}</option>`).join('')}
-    </select>
-    <label style="font-size:11.5px;color:var(--t2)">Năm:</label>
-    <select onchange="S.bbkkYear=+this.value;S.bbkkMonth=0;go('kk','Biên bản kiểm kê')" style="padding:3px 8px;font-size:12px;border-radius:6px;border:1px solid rgba(0,0,0,.15);background:#fff;color:var(--t1);cursor:pointer">
-      ${[...new Set([...years,selY])].sort((a,b)=>a-b).map(y=>`<option value="${y}" ${selY===y?'selected':''}>${y}</option>`).join('')}
-    </select>
-  </span>`;
-  const tabBtns=[{v:'bienban',lb:'📋 Biên bản'},{v:'quy',lb:'💰 Quỹ hỗ trợ'},{v:'dt',lb:'📊 Doanh thu'}].map(({v,lb})=>
-    `<button onclick="S.bbkkTab='${v}';go('kk','Biên bản kiểm kê')" style="padding:6px 14px;font-size:12.5px;border-radius:8px;border:none;background:${bbTab===v?'var(--pri)':'#f0f2f7'};color:${bbTab===v?'#fff':'var(--t2)'};font-weight:${bbTab===v?700:500}">${lb}</button>`).join('');
-  const kpis=`<div class="g4" style="margin-bottom:0">
-    <div class="kpi" style="color:#1a2558"><div class="kpi-lb">Số biên bản</div><div class="kpi-v">${rows.length}<span class="kpi-u">BB</span></div><div class="kpi-tr" style="font-size:11px;color:#6b7280">${selM?'T'+selM+'/'+selY:'Năm '+selY}</div><div class="kpi-bg">📋</div></div>
-    <div class="kpi" style="color:${totNet<0?'#dc2626':'#16a34a'}"><div class="kpi-lb">Chênh lệch ròng</div><div class="kpi-v">${totNet>=0?'+':'−'}${fmt(totNet)}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="font-size:10px;color:#6b7280">CL+ ${fmt(totCLp)} / CL− ${fmt(Math.abs(totCLm))}</div><div class="kpi-bg">⚖️</div></div>
-    <div class="kpi" style="color:#dc2626"><div class="kpi-lb">ST đền bù</div><div class="kpi-v">${totDenBu<0?fmt(totDenBu):'0'}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="color:#dc2626;font-size:11px">Tổng đền bù</div><div class="kpi-bg">⚠️</div></div>
-    <div class="kpi" style="color:#f97316"><div class="kpi-lb">Công ty hỗ trợ</div><div class="kpi-v">${totCT<0?fmt(Math.abs(totCT)):'0'}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="color:#f97316;font-size:11px">Dùng quỹ</div><div class="kpi-bg">🏢</div></div>
-  </div>`;
-  /* TABLE 1 */
-  const bbRows=rows.length?[...rows].sort((a,b)=>b.ngay-a.ngay).map(r=>{
-    const net=(r.clPlus||0)+(r.clMinus||0);
-    const nc=net<0?'#dc2626':net>0?'#16a34a':'#6b7280';
-    const tn=(r.tenST||r.ma||'?').replace(/^[^_-]+[_-]/,'');
-    const hasCL=r.clPlus||r.clMinus;
-    return`<tr style="border-bottom:1px solid #f0f2f7">
-      <td style="padding:7px 6px;font-size:11px;color:var(--t2);white-space:nowrap">T${r.thang}</td>
-      <td style="padding:7px 6px"><div style="font-size:12px;font-weight:600;color:var(--t1)">${tn}</div><div style="font-size:10px;color:var(--t3)">${r.loai}</div></td>
-      <td style="padding:7px 6px;font-size:11px;color:var(--t2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.ten||''}</td>
-      <td style="padding:7px 6px;text-align:right;font-size:11.5px;color:#16a34a">${hasCL&&r.clPlus>0?'+'+fmt(r.clPlus):'-'}</td>
-      <td style="padding:7px 6px;text-align:right;font-size:11.5px;color:#dc2626">${hasCL&&r.clMinus<0?'−'+fmt(Math.abs(r.clMinus)):'-'}</td>
-      <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:700;color:${nc}">${hasCL?(net>=0?'+':'−')+fmt(Math.abs(net)):'-'}</td>
-      <td style="padding:7px 6px;text-align:right;font-size:11.5px;color:${r.denBu<0?'#dc2626':'var(--t3)'}">${r.denBu<0?'−'+fmt(Math.abs(r.denBu)):'-'}</td>
-      <td style="padding:7px 6px;text-align:right;font-size:11.5px;color:${r.congtyHT<0?'#f97316':'var(--t3)'}">${r.congtyHT<0?'−'+fmt(Math.abs(r.congtyHT)):'-'}</td>
-    </tr>`;
-  }).join(''):`<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--t2)">Không có dữ liệu cho tháng này</td></tr>`;
-  const bbTable=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
-    <thead><tr style="background:#f8f9fc;border-bottom:2px solid var(--border)">
-      <th style="padding:8px 6px;text-align:left;font-size:11px;color:var(--t2)">Tháng</th>
-      <th style="padding:8px 6px;text-align:left;font-size:11px;color:var(--t2)">Siêu thị</th>
-      <th style="padding:8px 6px;text-align:left;font-size:11px;color:var(--t2)">Biên bản</th>
-      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#16a34a">CL (+)</th>
-      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#dc2626">CL (−)</th>
-      <th style="padding:8px 6px;text-align:right;font-size:11px;color:var(--t2)">Ròng</th>
-      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#dc2626">Đền bù ST</th>
-      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#f97316">CT hỗ trợ</th>
-    </tr></thead><tbody>${bbRows}</tbody>
-  </table></div>`;
-  /* TABLE 2 */
-  const quyKpis=`<div class="g4" style="margin-bottom:14px">
-    <div class="kpi" style="color:#0369a1"><div class="kpi-lb">Tổng DT chuỗi</div><div class="kpi-v" style="font-size:18px">${fmtDT(totDT)}<span class="kpi-u">VNĐ</span></div><div class="kpi-bg">💰</div></div>
-    <div class="kpi" style="color:#0369a1"><div class="kpi-lb">Tổng quỹ HT</div><div class="kpi-v" style="font-size:18px">${fmt(totQuy)}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="font-size:10px;color:var(--t2)">${totDT>0?(totQuy/totDT*100).toFixed(2)+'% DT':''}</div><div class="kpi-bg">🏦</div></div>
-    <div class="kpi" style="color:#f97316"><div class="kpi-lb">Đã dùng quỹ</div><div class="kpi-v" style="font-size:18px">${fmt(Math.abs(totHTong))}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="font-size:10px;color:#f97316">${totQuy>0?Math.round(Math.abs(totHTong)/totQuy*100)+'% quỹ':''}</div><div class="kpi-bg">📤</div></div>
-    <div class="kpi" style="color:#16a34a"><div class="kpi-lb">Quỹ còn lại</div><div class="kpi-v" style="font-size:18px">${fmt(totConLai)}<span class="kpi-u">đ</span></div><div class="kpi-tr tr-ok" style="font-size:10px">${totQuy>0?Math.round(totConLai/totQuy*100)+'% còn':''}</div><div class="kpi-bg">✅</div></div>
-  </div>`;
-  const quyRows=[...t2y].sort((a,b)=>Math.abs(b.htTong||0)+Math.abs(b.stDen||0)-Math.abs(a.htTong||0)-Math.abs(a.stDen||0)).map(r=>{
-    const tn=(r.ten||r.ma||'').replace(/^[^_-]+[_-]/,'');
-    const pct=r.quyHT>0?Math.round(Math.abs(r.htTong||0)/r.quyHT*100):0;
-    const danger=r.conLai<100000;
-    const pctTag=pct>0?`<span style="background:${pct>80?'#fee2e2':pct>50?'#fef3c7':'#dcfce7'};color:${pct>80?'#dc2626':pct>50?'#d97706':'#16a34a'};padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700">${pct}%</span>`:'-';
-    return`<tr style="border-bottom:1px solid #f0f2f7;${danger?'background:#fff8f8':''}">
-      <td style="padding:7px 6px;font-size:12px;font-weight:600;color:${danger?'#dc2626':'var(--t1)'}">${tn}</td>
-      <td style="padding:7px 6px;text-align:right;font-size:11px">${fmt(r.tongDT)}</td>
-      <td style="padding:7px 6px;text-align:right;font-size:11px;color:#0369a1">${fmt(r.quyHT)}</td>
-      <td style="padding:7px 6px;text-align:right;font-size:11px;color:#f97316">${r.htTong<0?'−'+fmt(Math.abs(r.htTong)):'-'}</td>
-      <td style="padding:7px 6px;text-align:right;font-size:11px;color:#dc2626">${r.stDen<0?'−'+fmt(Math.abs(r.stDen)):'-'}</td>
-      <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:700;color:${danger?'#dc2626':'#16a34a'}">${fmt(r.conLai)}</td>
-      <td style="padding:7px 6px;text-align:center">${pctTag}</td>
-      <td style="padding:7px 6px;text-align:center;font-size:11px;color:var(--t2)">${r.htVaoThang?'T'+r.htVaoThang:'-'}</td>
-    </tr>`;
-  }).join('');
-  const quyTable=`${quyKpis}<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
-    <thead><tr style="background:#f8f9fc;border-bottom:2px solid var(--border)">
-      <th style="padding:8px 6px;text-align:left;font-size:11px;color:var(--t2)">Siêu thị</th>
-      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#0369a1">Tổng DT</th>
-      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#0369a1">Quỹ HT</th>
-      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#f97316">CT hỗ trợ</th>
-      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#dc2626">ST đền</th>
-      <th style="padding:8px 6px;text-align:right;font-size:11px;color:#16a34a">Còn lại</th>
-      <th style="padding:8px 6px;text-align:center;font-size:11px;color:var(--t2)">% Dùng quỹ</th>
-      <th style="padding:8px 6px;text-align:center;font-size:11px;color:var(--t2)">Tháng HT</th>
-    </tr></thead><tbody>${quyRows}</tbody>
-  </table></div>`;
-  /* TABLE 4 */
-  const maxDT=Math.max(...t4.map(r=>r.dt),1);
-  const dtBars=t4.filter(r=>r.dt>0).map(r=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5">
-      <div style="min-width:30px;font-size:12px;font-weight:700;color:var(--t2)">T${r.thang}</div>
-      <div style="flex:1;background:#f0f2f7;border-radius:4px;overflow:hidden">
-        <div style="height:10px;background:linear-gradient(90deg,#0066cc,#00c6ff);border-radius:4px;width:${Math.round(r.dt/maxDT*100)}%"></div>
-      </div>
-      <div style="min-width:90px;text-align:right;font-size:12px;font-weight:700;color:#1a2558">${fmtDT(r.dt)}</div>
-    </div>`).join('');
-  const dtSection=`<div style="font-size:13px;font-weight:700;margin-bottom:14px">📊 Doanh thu tháng (tỷ VNĐ)</div>${dtBars}`;
-  const content=bbTab==='bienban'?`<div class="card">${bbTable}</div>`:bbTab==='quy'?`<div class="card">${quyTable}</div>`:`<div class="card">${dtSection}</div>`;
-  return`
-<div class="card" style="margin-bottom:14px">${syncBar}
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-    ${mBtns}
-  </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">${tabBtns}</div>
-  ${kpis}
-</div>
-${content}`;
-}
-function rKKXuatHuy(){return`<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px;margin-bottom:12px">🗑️</div><div style="font-size:15px;font-weight:700;color:var(--t1);margin-bottom:6px">Xuất hủy - lỗi hỏng</div><p style="color:var(--t2);font-size:13px">Quản lý xuất hủy và hàng lỗi hỏng đang được phát triển.</p></div>`;}
 
 /* ══════════════════════════════════════════
    QC MODULE
@@ -1545,8 +1177,8 @@ function qcDTSave(btn){
   const db=getQCDB();if(!db){alert('Không kết nối Firebase!');return;}
   const readSec=(pfx)=>({
     tongDon:parseFloat(document.getElementById(pfx+'-tongDon')?.value)||0,
-    donKhach:parseFloat(document.getElementById(pfx+'-donKhach')?.value)||0,
-    donST:parseFloat(document.getElementById(pfx+'-donST')?.value)||0,
+    pctKhach:parseFloat(document.getElementById(pfx+'-pctKhach')?.value)||0,
+    pctST:parseFloat(document.getElementById(pfx+'-pctST')?.value)||0,
     top:[1,2,3].map(i=>({name:(document.getElementById(pfx+'-top'+i+'n')?.value||'').trim(),don:parseInt(document.getElementById(pfx+'-top'+i+'d')?.value)||0})).filter(r=>r.name),
     ghiChu:document.getElementById(pfx+'-ghiChu')?.value||''
   });
@@ -1562,57 +1194,27 @@ function qcDTSave(btn){
     if(btn){btn.disabled=false;btn.textContent='💾 Lưu';}
   }).catch(e=>{alert('Lỗi lưu: '+e.message);if(btn){btn.disabled=false;btn.textContent='💾 Lưu';}});
 }
-function qcDTCalc(pfx){
-  const tot=parseFloat(document.getElementById(pfx+'-tongDon')?.value)||0;
-  const k=parseFloat(document.getElementById(pfx+'-donKhach')?.value)||0;
-  const s=parseFloat(document.getElementById(pfx+'-donST')?.value)||0;
-  const khac=Math.max(0,tot-k-s);
-  const pct=n=>tot>0?(n/tot*100).toFixed(1)+'%':'—';
-  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
-  set(pfx+'-pctKhach',pct(k));
-  set(pfx+'-pctST',pct(s));
-  set(pfx+'-donKhac',khac>0?khac:'');
-  set(pfx+'-pctKhac',pct(khac));
+function qcDTCalcKhac(pfx){
+  const k=parseFloat(document.getElementById(pfx+'-pctKhach')?.value)||0;
+  const s=parseFloat(document.getElementById(pfx+'-pctST')?.value)||0;
+  const el=document.getElementById(pfx+'-pctKhac');
+  if(el)el.value=Math.max(0,100-k-s).toFixed(2);
 }
 function qcDTSec(pfx,title,d){
   const v=(k)=>d[k]||'';
   const top=Array.isArray(d.top)?d.top:[{},{},{}];
-  const tot=parseFloat(d.tongDon)||0;
-  const dk=parseFloat(d.donKhach)||0,ds=parseFloat(d.donST)||0,dkhac=Math.max(0,tot-dk-ds);
-  const pct=n=>tot>0?(n/tot*100).toFixed(1)+'%':'';
-  const ro='background:#f8f8ff;color:#6b7280;text-align:center';
+  const k=parseFloat(d.pctKhach)||0,st=parseFloat(d.pctST)||0;
+  const khac=Math.max(0,100-k-st).toFixed(2);
   return`
 <div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">
   <div class="qcd-sec-hdr" onclick="qcToggleSec('${pfx}-body')" style="background:linear-gradient(90deg,#1e3a8a,#2563eb)"><span>${title}</span><span id="${pfx}-body-ico">▼</span></div>
   <div id="${pfx}-body" class="qcd-sec-body">
-    <div style="margin-bottom:12px">
-      <label class="fi-lbl">Tổng số đơn đổi trả</label>
-      <input id="${pfx}-tongDon" type="number" class="fi" style="max-width:200px" value="${tot||''}" placeholder="Vd: 217" oninput="qcDTCalc('${pfx}')">
+    <div class="g2" style="gap:12px;margin-bottom:12px">
+      <div><label class="fi-lbl">Tổng số đơn đổi trả</label><input id="${pfx}-tongDon" type="number" class="fi" value="${v('tongDon')}" placeholder="Vd: 195"></div>
+      <div><label class="fi-lbl">% Do khách hàng</label><input id="${pfx}-pctKhach" type="number" step="0.01" class="fi" value="${v('pctKhach')}" placeholder="Vd: 72.31" oninput="qcDTCalcKhac('${pfx}')"></div>
+      <div><label class="fi-lbl">% Do siêu thị</label><input id="${pfx}-pctST" type="number" step="0.01" class="fi" value="${v('pctST')}" placeholder="Vd: 21.54" oninput="qcDTCalcKhac('${pfx}')"></div>
+      <div><label class="fi-lbl">% Nguyên nhân khác (tự tính)</label><input id="${pfx}-pctKhac" type="number" step="0.01" class="fi" value="${khac}" placeholder="Tự tính" readonly style="background:#f8f8ff;color:#6b7280"></div>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
-      <thead><tr style="background:var(--bg2)">
-        <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--t2)">Nguyên nhân</th>
-        <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--t2)">Số đơn</th>
-        <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--t2)">% (tự tính)</th>
-      </tr></thead>
-      <tbody>
-        <tr style="border-bottom:1px solid var(--br)">
-          <td style="padding:8px 10px;color:var(--t1)">👤 Do khách hàng</td>
-          <td style="padding:6px 10px"><input id="${pfx}-donKhach" type="number" class="fi" style="width:100%;text-align:center" value="${dk||''}" placeholder="0" oninput="qcDTCalc('${pfx}')"></td>
-          <td style="padding:6px 10px"><input id="${pfx}-pctKhach" class="fi" style="width:100%;${ro}" value="${pct(dk)}" readonly></td>
-        </tr>
-        <tr style="border-bottom:1px solid var(--br)">
-          <td style="padding:8px 10px;color:var(--t1)">🏪 Do siêu thị</td>
-          <td style="padding:6px 10px"><input id="${pfx}-donST" type="number" class="fi" style="width:100%;text-align:center" value="${ds||''}" placeholder="0" oninput="qcDTCalc('${pfx}')"></td>
-          <td style="padding:6px 10px"><input id="${pfx}-pctST" class="fi" style="width:100%;${ro}" value="${pct(ds)}" readonly></td>
-        </tr>
-        <tr>
-          <td style="padding:8px 10px;color:var(--t1)">❓ Nguyên nhân khác</td>
-          <td style="padding:6px 10px"><input id="${pfx}-donKhac" class="fi" style="width:100%;${ro}" value="${dkhac>0?dkhac:''}" readonly></td>
-          <td style="padding:6px 10px"><input id="${pfx}-pctKhac" class="fi" style="width:100%;${ro}" value="${pct(dkhac)}" readonly></td>
-        </tr>
-      </tbody>
-    </table>
     <div style="margin-bottom:12px">
       <label class="fi-lbl" style="margin-bottom:8px">Top ST có nhiều đổi trả nhất</label>
       ${[0,1,2].map(i=>`
@@ -1625,46 +1227,6 @@ function qcDTSec(pfx,title,d){
     <div><label class="fi-lbl">Ghi chú / Nhận xét</label><textarea id="${pfx}-ghiChu" class="fi" style="width:100%;min-height:70px;resize:vertical" placeholder="Nhận xét về tình hình đổi trả tháng này...">${v('ghiChu')}</textarea></div>
   </div>
 </div>`;
-}
-let _qcDTHistCache={};
-function qcDTShowHistory(){
-  const panel=document.getElementById('qcdt-hist-panel');if(!panel)return;
-  if(panel.style.display!=='none'){panel.style.display='none';return;}
-  const y=S.qcDTYear||'2026',m=S.qcDTMonth||'5';
-  const db=getQCDB();if(!db)return;
-  panel.innerHTML='<div style="padding:12px;text-align:center;color:#94a3b8;font-size:13px">⏳ Đang tải lịch sử T'+m+'/'+y+'...</div>';
-  panel.style.display='block';
-  db.ref(`qc_doitra_history/${y}/${m}`).get().then(snap=>{
-    if(!snap.exists()){panel.innerHTML='<div style="padding:12px;color:#94a3b8;font-size:13px">Chưa có phiên bản nào cho T'+m+'/'+y+'.</div>';return;}
-    _qcDTHistCache={};
-    const vers=[];
-    snap.forEach(child=>{_qcDTHistCache[child.key]=child.val();vers.push({key:child.key,...child.val()});});
-    vers.sort((a,b)=>(b._snapshotAt||0)-(a._snapshotAt||0));
-    panel.innerHTML='<div style="padding:8px 12px;background:#f0f0ff;font-size:12px;font-weight:700;color:#4f46e5;border-bottom:1px solid #e0e7ff">📋 Lịch sử đổi trả T'+m+'/'+y+' ('+vers.length+' bản)</div>'+
-    vers.slice(0,15).map(v=>{
-      const dt=v._snapshotAt?new Date(v._snapshotAt).toLocaleString('vi-VN'):'?';
-      const st=v.st||{},cvs=v.cvs||{};
-      const note=(st.ghiChu||'')+(cvs.ghiChu?((st.ghiChu?' · ':'')+cvs.ghiChu):'');
-      return`<div style="padding:9px 12px;border-bottom:1px solid #f0f0ff;font-size:12.5px">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div><strong>${dt}</strong> <span style="color:#94a3b8;font-size:11px">bởi ${v._by||'?'}</span><br>
-          <span style="color:#6b7280;font-size:11px">ST: ${st.tongDon||0} đơn · CVS: ${cvs.tongDon||0} đơn</span></div>
-          <button onclick="qcDTRestore('${v.key}')" class="btn b-sm" style="background:#6366f1;color:#fff;font-size:11px">⏪ Khôi phục</button>
-        </div>
-        ${note?`<div style="font-size:11px;color:#4f46e5;margin-top:4px;padding:4px 8px;background:#eef2ff;border-radius:4px;white-space:pre-wrap">💬 ${note.length>120?note.substring(0,120)+'…':note}</div>`:''}
-      </div>`;
-    }).join('');
-  }).catch(e=>{panel.innerHTML='<div style="padding:12px;color:#dc2626">Lỗi: '+e.message+'</div>';});
-}
-function qcDTRestore(key){
-  const data=_qcDTHistCache[key];
-  if(!data){alert('Không tìm thấy phiên bản!');return;}
-  const stNote=(data.st&&data.st.ghiChu)||'',cvsNote=(data.cvs&&data.cvs.ghiChu)||'';
-  const noteWarn=(!stNote&&!cvsNote)?'\n⚠️ Bản này không có Nhận xét — nếu bạn đã nhập Nhận xét, hãy copy lại trước khi khôi phục.':'';
-  if(!confirm('Khôi phục phiên bản này? Dữ liệu hiện tại trên form sẽ bị thay thế.'+noteWarn))return;
-  S.qcDTST=data.st||{};S.qcDTCVS=data.cvs||{};
-  go('qc','Đổi trả');
-  setTimeout(()=>{const s=document.getElementById('qcdt-saved');if(s){s.textContent='⏪ Đã khôi phục. Kiểm tra rồi bấm Lưu để ghi lại.';s.style.display='block';setTimeout(()=>s.style.display='none',6000);}},300);
 }
 function rQCDoiTra(){
   const eM=String(S.qcDTMonth||'5'),eY=String(S.qcDTYear||'2026');
@@ -1681,11 +1243,9 @@ function rQCDoiTra(){
       <label class="fi-lbl" style="margin:0">Năm</label>
       <select id="qcdt-year" class="fi" style="width:85px" onchange="qcDTLoad(this.value,document.getElementById('qcdt-month').value)">${yearOpts(eY)}</select>
       <button onclick="qcDTSave(this)" class="btn b-pri b-sm">💾 Lưu</button>
-      <button onclick="qcDTShowHistory()" class="btn b-sm" style="background:#6366f1;color:#fff">📋 Lịch sử</button>
     </div>
   </div>
   <div id="qcdt-saved" class="qcd-saved" style="margin-top:8px">✅ Đã lưu thành công!</div>
-  <div id="qcdt-hist-panel" style="display:none;border:1px solid #e0e7ff;border-radius:8px;margin-top:10px;overflow:hidden;max-height:320px;overflow-y:auto"></div>
 </div>
 ${qcDTSec('qcdt-st','🏪 I. Siêu thị',S.qcDTST)}
 ${qcDTSec('qcdt-cvs','🏬 II. CVS',S.qcDTCVS)}`;
@@ -1859,13 +1419,11 @@ function rQCBienBan(){
     <div class="g2" style="gap:20px">
       <div>
         <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--t1)">📜 Nội quy & Quy định</div>
-        ${(S.qcDocLists&&S.qcDocLists.noi_quy||BB_QDOCS).map((d,i)=>{const info=S.qcDocsData&&S.qcDocsData.noi_quy&&S.qcDocsData.noi_quy[i];return`<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:16px">📄</span><span style="font-size:13px;color:var(--t1);flex:1">${d}</span><button onclick="qcDocEditName('noi_quy',${i})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:0;opacity:.6" title="Sửa tên">✏️</button>${info&&info.url?`<a href="${info.url}" target="_blank" download style="font-size:12px;color:#0ea5e9;text-decoration:none;white-space:nowrap">⬇️ Tải xuống</a>`:'<span style="font-size:11px;color:var(--t2)">Chưa có file</span>'}<label style="cursor:pointer;font-size:11px;color:#6366f1;white-space:nowrap;margin-left:4px">📤 Upload<input type="file" accept=".pdf,.doc,.docx" style="display:none" onchange="qcDocUpload('noi_quy',${i},this)"></label></div>`;}).join('')}
-        <button onclick="qcDocAddItem('noi_quy')" style="margin-top:8px;width:100%;border:1px dashed var(--br);background:none;cursor:pointer;font-size:12px;color:var(--t2);padding:6px;border-radius:6px">+ Thêm tài liệu</button>
+        ${BB_QDOCS.map((d,i)=>{const info=S.qcDocsData&&S.qcDocsData.noi_quy&&S.qcDocsData.noi_quy[i];return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:16px">📄</span><span style="font-size:13px;color:var(--t1);flex:1">${d}</span>${info&&info.url?`<a href="${info.url}" target="_blank" download style="font-size:12px;color:#0ea5e9;text-decoration:none;white-space:nowrap">⬇️ Tải xuống</a>`:'<span style="font-size:11px;color:var(--t2)">Chưa có file</span>'}<label style="cursor:pointer;font-size:11px;color:#6366f1;white-space:nowrap;margin-left:8px">📤 Upload<input type="file" accept=".pdf,.doc,.docx" style="display:none" onchange="qcDocUpload('noi_quy',${i},this)"></label></div>`;}).join('')}
       </div>
       <div>
         <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--t1)">📝 Mẫu form biên bản</div>
-        ${(S.qcDocLists&&S.qcDocLists.mau_form||BB_TEMPS).map((d,i)=>{const info=S.qcDocsData&&S.qcDocsData.mau_form&&S.qcDocsData.mau_form[i];return`<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:16px">📝</span><span style="font-size:13px;color:var(--t1);flex:1">${d}</span><button onclick="qcDocEditName('mau_form',${i})" style="border:none;background:none;cursor:pointer;font-size:13px;padding:0;opacity:.6" title="Sửa tên">✏️</button>${info&&info.url?`<a href="${info.url}" target="_blank" download style="font-size:12px;color:#0ea5e9;text-decoration:none;white-space:nowrap">⬇️ Tải xuống</a>`:'<span style="font-size:11px;color:var(--t2)">Chưa có file</span>'}<label style="cursor:pointer;font-size:11px;color:#6366f1;white-space:nowrap;margin-left:4px">📤 Upload<input type="file" accept=".pdf,.doc,.docx" style="display:none" onchange="qcDocUpload('mau_form',${i},this)"></label></div>`;}).join('')}
-        <button onclick="qcDocAddItem('mau_form')" style="margin-top:8px;width:100%;border:1px dashed var(--br);background:none;cursor:pointer;font-size:12px;color:var(--t2);padding:6px;border-radius:6px">+ Thêm mẫu form</button>
+        ${BB_TEMPS.map((d,i)=>{const info=S.qcDocsData&&S.qcDocsData.mau_form&&S.qcDocsData.mau_form[i];return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--br)"><span style="font-size:16px">📝</span><span style="font-size:13px;color:var(--t1);flex:1">${d}</span>${info&&info.url?`<a href="${info.url}" target="_blank" download style="font-size:12px;color:#0ea5e9;text-decoration:none;white-space:nowrap">⬇️ Tải xuống</a>`:'<span style="font-size:11px;color:var(--t2)">Chưa có file</span>'}<label style="cursor:pointer;font-size:11px;color:#6366f1;white-space:nowrap;margin-left:8px">📤 Upload<input type="file" accept=".pdf,.doc,.docx" style="display:none" onchange="qcDocUpload('mau_form',${i},this)"></label></div>`;}).join('')}
       </div>
     </div>
   </div>
@@ -1931,13 +1489,18 @@ function rQCBienBan(){
 </div>`;
 }
 async function _driveUpload(file,filename){
-  const fd=new FormData();
-  fd.append('file',file,filename||file.name);
-  fd.append('name',filename||file.name);
-  const res=await fetch('/drive-upload',{method:'POST',body:fd});
+  const user=firebase.auth().currentUser;
+  if(!user)throw new Error('Chưa đăng nhập');
+  const idToken=await user.getIdToken();
+  const bucket='kscl---sakuko.firebasestorage.app';
+  const name=`bienbans/${Date.now()}_${(filename||file.name).replace(/[^a-zA-Z0-9._\-]/g,'_')}`;
+  const res=await fetch(
+    `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodeURIComponent(name)}`,
+    {method:'POST',headers:{'Authorization':'Bearer '+idToken,'Content-Type':file.type||'application/octet-stream'},body:file}
+  );
   const j=await res.json();
-  if(!j.ok)throw new Error(j.error||'Upload thất bại');
-  return j.viewUrl;
+  if(!res.ok)throw new Error('Upload thất bại: '+(j.error?.message||res.status));
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(name)}?alt=media&token=${j.downloadTokens}`;
 }
 async function qcDocsLoad(){
   const db2=getQCDB();if(!db2)return;
@@ -1962,34 +1525,15 @@ async function qcDocUpload(type,idx,inp){
 async function qcBBLoad(year,month){
   S.qcBBYear=String(year);S.qcBBMonth=String(month);
   const db2=getQCDB();if(!db2)return;
-  const[snap,ysnap,dsnap,nsnap]=await Promise.all([
+  const[snap,ysnap,dsnap]=await Promise.all([
     db2.ref(`qc_bienbans/${year}/${month}`).get(),
     db2.ref(`qc_bienbans/${year}`).get(),
-    db2.ref('qc_docs').get(),
-    db2.ref('qc_doc_names').get()
+    db2.ref('qc_docs').get()
   ]);
   S.qcBBList=snap.exists()?Object.entries(snap.val()).map(([id,v])=>({id,...v})):[];
   S.qcBBYearData=ysnap.exists()?ysnap.val():{};
   S.qcDocsData=dsnap.exists()?dsnap.val():{};
-  const nn=nsnap.exists()?nsnap.val():{};
-  S.qcDocLists={noi_quy:nn.noi_quy||BB_QDOCS.slice(),mau_form:nn.mau_form||BB_TEMPS.slice()};
   S._qcBBAutoLoaded=true;
-  go('qc','Biên bản xử lý vi phạm');
-}
-async function qcDocEditName(type,idx){
-  const cur=(S.qcDocLists[type]||[])[idx]||'';
-  const n=prompt('Sửa tên:',cur);
-  if(!n||n===cur)return;
-  S.qcDocLists[type][idx]=n;
-  await getQCDB().ref(`qc_doc_names/${type}`).set(S.qcDocLists[type]);
-  go('qc','Biên bản xử lý vi phạm');
-}
-async function qcDocAddItem(type){
-  const n=prompt('Tên tài liệu mới:');
-  if(!n)return;
-  if(!S.qcDocLists[type])S.qcDocLists[type]=[];
-  S.qcDocLists[type].push(n);
-  await getQCDB().ref(`qc_doc_names/${type}`).set(S.qcDocLists[type]);
   go('qc','Biên bản xử lý vi phạm');
 }
 async function qcBBSave(btn){
@@ -2035,192 +1579,48 @@ async function qcBBDelete(id,year,month,btn){
   }catch(e){btn.disabled=false;alert('Lỗi xóa: '+e.message);}
 }
 async function qcGLSync(btn){
+  const GL_APP_ID='cli_aaa0cdd424b81eed';
+  let secret=localStorage.getItem('lark_gl_secret');
+  if(!secret){
+    secret=prompt('Nhập Lark App Secret:\n\n→ Vào open.larksuite.com/app/cli_aaa0cdd424b81eed/baseinfo\n→ Mục "Credentials & Basic Info"\n→ Bấm icon 👁️ cạnh App Secret để hiện → Copy & dán vào đây');
+    if(!secret)return;
+    localStorage.setItem('lark_gl_secret',secret);
+  }
   if(btn){btn.disabled=true;btn.textContent='⏳ Đang đồng bộ...';}
   try{
-    let agg=null,counts=null,syncedAt=Date.now();
-    // Try local sync-server first (lark-cli, no secret needed)
-    try{
-      const r=await fetch('http://localhost:3001/api/sync-gl',{signal:AbortSignal.timeout(90000)});
-      if(r.ok){const c=await r.json();if(c.agg){agg=c.agg;counts=c.counts;syncedAt=c.syncedAt||syncedAt;}}
-    }catch(_){}
-    // Fallback: Cloudflare Pages Function (dùng env var, không cần secret)
-    if(!agg){
-      const r=await fetch('/lark-sync',{signal:AbortSignal.timeout(60000)});
-      const j=await r.json();
-      if(!j.ok) throw new Error(j.error||'Lỗi không xác định');
-      agg=j.data;counts=j.counts;
-    }
-    const db2=getQCDB();
-    await Promise.all(Object.values(agg).map(v=>db2.ref(`qc_gianlantctm/${v.y}/${v.m}`).set({...v,syncedAt})));
-    toast(`✅ Đồng bộ: ${Object.keys(agg).length} tháng · ĐK ${counts?.dk||0} · CTKM ${counts?.ctkm||0}`,'t-ok');
+    const r=await fetch('/lark-sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret})});
+    const j=await r.json();
+    if(!j.ok)throw new Error(j.error||'Unknown error');
+    const agg=j.data,db2=getQCDB(),now=Date.now();
+    await Promise.all(Object.values(agg).map(v=>db2.ref(`qc_gianlantctm/${v.y}/${v.m}`).set({...v,syncedAt:now})));
+    alert(`✅ Đồng bộ thành công!\n${Object.keys(agg).length} tháng · ${j.counts.dk} check ĐK · ${j.counts.ctkm} check CTKM`);
     await qcGLLoad(S.qcGLYear,S.qcGLMonth);
   }catch(e){
-    toast('❌ Đồng bộ thất bại: '+(e.message||''),'t-err');
+    const msg=e.message||'';
+    if(msg.includes('Auth lỗi')||msg.includes('app_secret')){localStorage.removeItem('lark_gl_secret');alert('App Secret không đúng. Vui lòng nhập lại.\n\n'+msg);}
+    else alert('Lỗi đồng bộ: '+msg);
     if(btn){btn.disabled=false;btn.textContent='🔄 Đồng bộ Lark';}
   }
 }
-async function qcOvLoad(year,month){
-  S.qcOvYear=String(year);S.qcOvMonth=String(month);
-  const db=getQCDB();if(!db){alert('Không kết nối Firebase!');return;}
-  const y=S.qcOvYear,m=S.qcOvMonth;
-  const[d1,d2,d3,d4,d5,d6]=await Promise.all([
-    db.ref(`qc_diem/${y}/${m}`).get(),
-    db.ref(`qc_doitra/${y}/${m}`).get(),
-    db.ref(`qc_gianlantctm/${y}/${m}`).get(),
-    db.ref(`qc_bienbans/${y}/${m}`).get(),
-    db.ref(`qc_gianlantctm/${y}`).get(),
-    db.ref(`qc_kh/${y}`).get()
-  ]);
-  S.qcOvData={
-    diem:d1.exists()?d1.val():null,
-    doitra:d2.exists()?d2.val():null,
-    gianlam:d3.exists()?d3.val():null,
-    bienbans:d4.exists()?Object.values(d4.val()):[],
-    glYear:d5.exists()?d5.val():{},
-    khYear:d6.exists()?d6.val():{}
-  };
-  go('qc','Tổng quan');
-}
-async function qcOv2Load(year,month){
-  S.qcOv2Year=String(year);S.qcOv2Month=String(month);
-  const db=getQCDB();if(!db)return;
-  const y=S.qcOv2Year,m=S.qcOv2Month;
-  const[d1,d2,d3,d4]=await Promise.all([
-    db.ref(`qc_diem/${y}/${m}`).get(),
-    db.ref(`qc_doitra/${y}/${m}`).get(),
-    db.ref(`qc_gianlantctm/${y}/${m}`).get(),
-    db.ref(`qc_bienbans/${y}/${m}`).get()
-  ]);
-  S.qcOv2Data={
-    diem:d1.exists()?d1.val():null,
-    doitra:d2.exists()?d2.val():null,
-    gianlam:d3.exists()?d3.val():null,
-    bienbans:d4.exists()?Object.values(d4.val()):[]
-  };
-  go('qc','Tổng quan');
-}
-function rQCOv(){
-  const eM=String(S.qcOvMonth||'6'),eY=String(S.qcOvYear||'2026');
-  const e2M=String(S.qcOv2Month||'6'),e2Y=String(S.qcOv2Year||'2025');
-  const d=S.qcOvData,d2=S.qcOv2Data;
-  const clr=v=>v>=90?'#16a34a':v>=85?'#d97706':'#dc2626';
-  const fmt=v=>v.toFixed(1)+'%';
-  const selPri=`<select id="qcov-month" class="fi" style="width:70px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select><select id="qcov-year" class="fi" style="width:85px">${yearOpts(eY)}</select>`;
-  const selCmp=`<select id="qcov2-month" class="fi" style="width:70px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===e2M?' selected':''}>T${m}</option>`).join('')}</select><select id="qcov2-year" class="fi" style="width:85px">${yearOpts(e2Y)}</select>`;
-  const selectorBar=`<div class="card" style="padding:12px 16px;margin-bottom:12px">
-    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px">
-      <span style="font-size:13px;font-weight:600;color:var(--t1)">📊 Tổng hợp KSCL</span>
-      <div style="display:flex;align-items:center;gap:6px;background:#f0f9ff;padding:6px 10px;border-radius:8px;border:1px solid #bae6fd">
-        <span style="font-size:12px;color:#0369a1;font-weight:600">Kỳ chính:</span>${selPri}
-        <button onclick="qcOvLoad(document.getElementById('qcov-year').value,document.getElementById('qcov-month').value)" class="btn b-pri b-sm">📥 Tải</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;background:#fdf4ff;padding:6px 10px;border-radius:8px;border:1px solid #e9d5ff">
-        <span style="font-size:12px;color:#7c3aed;font-weight:600">So sánh:</span>${selCmp}
-        <button onclick="qcOv2Load(document.getElementById('qcov2-year').value,document.getElementById('qcov2-month').value)" class="btn b-sm" style="background:#7c3aed;color:#fff">📊 Tải</button>
-        ${d2?`<button onclick="S.qcOv2Data=null;go('qc','Tổng quan')" class="btn b-sm" style="background:#e5e7eb;color:#6b7280">✕</button>`:''}
-      </div>
-    </div>
-  </div>`;
-  if(!d)return`${selectorBar}<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px">📊</div><p style="color:var(--t2);font-size:13px;margin:12px 0">Chọn kỳ chính và bấm Tải để xem báo cáo tổng hợp</p></div>`;
-  const rows=d.diem&&Array.isArray(d.diem.rows)?d.diem.rows:[];
-  const totMax=rows.reduce((s,r)=>s+(parseFloat(r.max)||0),0);
-  const totThuc=rows.reduce((s,r)=>s+(parseFloat(r.thuc)||0),0);
-  const diemTB=totMax>0?totThuc/totMax*100:0;
-  const stDuoi85=rows.filter(r=>{const mx=parseFloat(r.max),tx=parseFloat(r.thuc);return mx>0&&tx/mx<0.85;});
-  const stDuoi90=rows.filter(r=>{const mx=parseFloat(r.max),tx=parseFloat(r.thuc);return mx>0&&tx/mx>=0.85&&tx/mx<0.90;});
-  const dt=d.doitra||{},stDT=dt.st||{},cvsDT=dt.cvs||{};
-  const tongDT=(parseFloat(stDT.tongDon)||0)+(parseFloat(cvsDT.tongDon)||0);
-  const bbs=Array.isArray(d.bienbans)?d.bienbans:[];
-  const gl=d.gianlam||{};
-  const dkTotal=(gl.dk&&gl.dk.total)||0,dkCGT=(gl.dk&&gl.dk.cgt)||0;
-  const ctkmTotal=(gl.ctkm&&gl.ctkm.total)||0,ctkmCGT=(gl.ctkm&&gl.ctkm.cgt)||0;
-  const loiHM=d.diem&&Array.isArray(d.diem.loiHM)?d.diem.loiHM:[];
-  // Comparison deltas
-  let dD=null,dS85=null,dTongDT=null,dBB=null;
-  if(d2){
-    const rows2=d2.diem&&Array.isArray(d2.diem.rows)?d2.diem.rows:[];
-    const tot2Max=rows2.reduce((s,r)=>s+(parseFloat(r.max)||0),0);
-    const tot2Thuc=rows2.reduce((s,r)=>s+(parseFloat(r.thuc)||0),0);
-    const diem2=tot2Max>0?tot2Thuc/tot2Max*100:0;
-    dD=+(diemTB-diem2).toFixed(1);
-    dS85=stDuoi85.length-rows2.filter(r=>{const mx=parseFloat(r.max),tx=parseFloat(r.thuc);return mx>0&&tx/mx<0.85;}).length;
-    const dt2=d2.doitra||{},st2=dt2.st||{},cvs2=dt2.cvs||{};
-    dTongDT=tongDT-((parseFloat(st2.tongDon)||0)+(parseFloat(cvs2.tongDon)||0));
-    dBB=bbs.length-(Array.isArray(d2.bienbans)?d2.bienbans:[]).length;
-  }
-  const dTag=(v,inv)=>{if(v===null)return'';const good=inv?v<0:v>0;return v===0?'':`<span style="color:${good?'#16a34a':'#dc2626'};font-size:11px">${v>0?'▲':'▼'}${Math.abs(v)} vs T${e2M}/${e2Y}</span>`;};
-  const dTagF=(v)=>{if(v===null)return'';const good=v>0;return`<span style="color:${good?'#16a34a':'#dc2626'};font-size:11px">${v>0?'▲':'▼'}${Math.abs(v).toFixed(1)}% vs T${e2M}/${e2Y}</span>`;};
-  // KPI cards
-  const kpiCards=`<div class="g4" style="margin-bottom:12px">
-    <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Điểm TB dịch vụ</div><div style="font-size:28px;font-weight:800;color:${clr(diemTB)}">${fmt(diemTB)}</div><div style="font-size:11px;color:var(--t2)">${dD!==null?dTagF(dD):`${rows.length} ST được chấm`}</div></div>
-    <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">ST dưới 85%</div><div style="font-size:28px;font-weight:800;color:${stDuoi85.length?'#dc2626':'#16a34a'}">${stDuoi85.length}</div><div style="font-size:11px;color:var(--t2)">${dS85!==null?dTag(dS85,true):`${stDuoi90.length} ST trong 85–90%`}</div></div>
-    <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Tổng đổi trả</div><div style="font-size:28px;font-weight:800;color:#7c3aed">${tongDT||'—'}</div><div style="font-size:11px;color:var(--t2)">${dTongDT!==null?dTag(dTongDT,true):`ST: ${stDT.tongDon||0} · CVS: ${cvsDT.tongDon||0}`}</div></div>
-    <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Biên bản vi phạm</div><div style="font-size:28px;font-weight:800;color:${bbs.length?'#ea580c':'#16a34a'}">${bbs.length}</div><div style="font-size:11px;color:var(--t2)">${dBB!==null?dTag(dBB,true):`GL CGT: ${dkCGT+ctkmCGT}`}</div></div>
-  </div>`;
-  // Auto warnings
-  const warns=[];
-  if(stDuoi85.length>0)warns.push(`⚠️ <b>${stDuoi85.length} siêu thị dưới 85%</b> cần can thiệp ngay: ${stDuoi85.map(r=>(r.st||'').replace(/^Siêu thị\s+/i,'')).join(', ')}`);
-  if(stDuoi90.length>0)warns.push(`🔶 ${stDuoi90.length} ST vùng cảnh báo 85–90%: ${stDuoi90.map(r=>(r.st||'').replace(/^Siêu thị\s+/i,'')).join(', ')}`);
-  if(dkCGT>0||ctkmCGT>0)warns.push(`🚨 Phát hiện <b>${dkCGT+ctkmCGT} trường hợp gian lận</b> — ĐK: ${dkCGT} CGT · CTKM: ${ctkmCGT} CGT`);
-  if(d2&&dD!==null){if(dD>=3)warns.push(`✅ Điểm dịch vụ TB <b>cải thiện +${fmt(dD)}</b> so với T${e2M}/${e2Y}`);else if(dD<=-2)warns.push(`📉 Điểm dịch vụ TB <b>giảm ${fmt(Math.abs(dD))}</b> so với T${e2M}/${e2Y}, cần kiểm tra nguyên nhân`);}
-  if(loiHM.length>0){const topL=[...loiHM].sort((a,b)=>(parseFloat(b.soLoi)||0)-(parseFloat(a.soLoi)||0))[0];if(topL&&topL.cat)warns.push(`📋 Lỗi phát sinh nhiều nhất: <b>${topL.cat}</b> — ${topL.soLoi||0} lỗi (${topL.tyle||0}%)`);}
-  if(tongDT>50)warns.push(`📦 Tổng đổi trả <b>${tongDT} đơn</b> — cần rà soát nguyên nhân theo ST`);
-  const warnSection=warns.length?`<div class="card" style="padding:14px 16px;margin-bottom:12px;border-left:3px solid #f59e0b;background:#fffbeb">
-    <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px">💡 Nhận xét & Cảnh báo tự động</div>
-    ${warns.map(w=>`<div style="font-size:12.5px;color:#78350f;margin-bottom:5px;line-height:1.5">${w}</div>`).join('')}
-  </div>`:'';
-  // ST cần theo dõi
-  const hotST=[...stDuoi85.map(r=>({n:r.st,p:parseFloat(r.thuc)/parseFloat(r.max)*100})),...stDuoi90.map(r=>({n:r.st,p:parseFloat(r.thuc)/parseFloat(r.max)*100}))].sort((a,b)=>a.p-b.p);
-  // Lỗi phát sinh
-  const loiSection=loiHM.length?`<div class="card" style="padding:14px 16px;margin-bottom:12px">
-    <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px">📋 Lỗi phát sinh theo danh mục</div>
-    ${[...loiHM].sort((a,b)=>(parseFloat(b.soLoi)||0)-(parseFloat(a.soLoi)||0)).map(l=>{const p=parseFloat(l.tyle)||0;return`<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span>${l.cat||'—'}</span><b style="color:${p>=30?'#dc2626':p>=15?'#d97706':'#16a34a'}">${l.soLoi||0} lỗi (${p}%)</b></div><div style="height:6px;background:#e5e7eb;border-radius:3px"><div style="height:6px;width:${Math.min(p,100)}%;background:${p>=30?'#dc2626':p>=15?'#d97706':'#16a34a'};border-radius:3px"></div></div></div>`;}).join('')}
-  </div>`:'';
-  // Đổi trả breakdown
-  const topST=[...(stDT.top||[])].filter(x=>x&&x.name).sort((a,b)=>(b.don||0)-(a.don||0)).slice(0,5);
-  const topCVS=[...(cvsDT.top||[])].filter(x=>x&&x.name).sort((a,b)=>(b.don||0)-(a.don||0)).slice(0,5);
-  const dtSection=`<div class="card" style="padding:14px 16px;margin-bottom:12px">
-    <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px">🔄 Đổi trả hàng hóa — T${eM}/${eY}</div>
-    <div class="g2" style="gap:14px">
-      <div><div style="font-size:12px;font-weight:700;color:#6366f1;margin-bottom:6px">🏪 Siêu thị — ${stDT.tongDon||0} đơn</div>
-        ${stDT.donKhach!=null||stDT.donST!=null?`<div style="font-size:11.5px;color:var(--t2);margin-bottom:6px">Do khách: ${stDT.donKhach||0} · Do ST: ${stDT.donST||0}${stDT.donHT!=null?` · Lỗi HT: ${stDT.donHT||0}`:''}</div>`:''}
-        ${topST.length?topST.map((s,i)=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--br)"><span>${i+1}. ${s.name}</span><b>${s.don||0}</b></div>`).join(''):`<div style="font-size:12px;color:var(--t2)">Chưa có top</div>`}
-        ${stDT.ghiChu?`<div style="font-size:11px;color:#4f46e5;margin-top:6px;padding:6px 8px;background:#eef2ff;border-radius:4px">${stDT.ghiChu}</div>`:''}
-      </div>
-      <div><div style="font-size:12px;font-weight:700;color:#0891b2;margin-bottom:6px">🛒 CVS — ${cvsDT.tongDon||0} đơn</div>
-        ${cvsDT.donKhach!=null||cvsDT.donST!=null?`<div style="font-size:11.5px;color:var(--t2);margin-bottom:6px">Do khách: ${cvsDT.donKhach||0} · Do ST: ${cvsDT.donST||0}${cvsDT.donHT!=null?` · Lỗi HT: ${cvsDT.donHT||0}`:''}</div>`:''}
-        ${topCVS.length?topCVS.map((s,i)=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--br)"><span>${i+1}. ${s.name}</span><b>${s.don||0}</b></div>`).join(''):`<div style="font-size:12px;color:var(--t2)">Chưa có top</div>`}
-        ${cvsDT.ghiChu?`<div style="font-size:11px;color:#0891b2;margin-top:6px;padding:6px 8px;background:#ecfeff;border-radius:4px">${cvsDT.ghiChu}</div>`:''}
-      </div>
-    </div>
-  </div>`;
-  // GL breakdown DK + CTKM
-  const dkVPs=Object.entries((gl.dk&&gl.dk.loiVPs)||{}).sort((a,b)=>b[1]-a[1]);
-  const ctkmVPs=Object.entries((gl.ctkm&&gl.ctkm.loiVPs)||{}).sort((a,b)=>b[1]-a[1]);
-  const glSection=`<div class="card" style="padding:14px 16px;margin-bottom:12px">
-    <div style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:10px">🔍 Check gian lận — T${eM}/${eY}</div>
-    <div class="g2" style="gap:14px">
-      <div><div style="font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:8px">📅 Định kỳ (ĐK)</div>
-        <div style="display:flex;gap:10px;margin-bottom:8px">
-          <div style="flex:1;padding:8px;text-align:center;background:#eff6ff;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#1d4ed8">${dkTotal}</div><div style="font-size:10px;color:var(--t2)">Tổng check</div></div>
-          <div style="flex:1;padding:8px;text-align:center;background:#fef2f2;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#dc2626">${dkCGT}</div><div style="font-size:10px;color:var(--t2)">CGT (gian lận)</div></div>
-        </div>
-        ${dkVPs.length?`<div style="font-size:11px;color:var(--t2);font-weight:600;margin-bottom:4px">Top lỗi vi phạm:</div>${dkVPs.slice(0,3).map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;border-bottom:1px solid var(--br)"><span>• ${k}</span><b>${v}</b></div>`).join('')}`:''}
-      </div>
-      <div><div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:8px">🎁 CTKM</div>
-        <div style="display:flex;gap:10px;margin-bottom:8px">
-          <div style="flex:1;padding:8px;text-align:center;background:#fdf4ff;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#7c3aed">${ctkmTotal}</div><div style="font-size:10px;color:var(--t2)">Tổng check</div></div>
-          <div style="flex:1;padding:8px;text-align:center;background:#fef2f2;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#dc2626">${ctkmCGT}</div><div style="font-size:10px;color:var(--t2)">CGT (gian lận)</div></div>
-        </div>
-        ${ctkmVPs.length?`<div style="font-size:11px;color:var(--t2);font-weight:600;margin-bottom:4px">Top lỗi vi phạm:</div>${ctkmVPs.slice(0,3).map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;border-bottom:1px solid var(--br)"><span>• ${k}</span><b>${v}</b></div>`).join('')}`:''}
-      </div>
-    </div>
-  </div>`;
-  return`${selectorBar}${kpiCards}${warnSection}
-${hotST.length?`<div class="card" style="padding:14px 16px;margin-bottom:12px"><div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:10px">🚨 ST cần theo dõi (dưới 90%)</div>${hotST.slice(0,8).map(s=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br)"><span style="font-size:13px">${s.n}</span><span style="font-size:13px;font-weight:700;color:${clr(s.p)}">${fmt(s.p)}</span></div>`).join('')}</div>`:''}
-${rows.length?`<div class="chart-box" style="margin-bottom:12px"><div class="chart-title">📊 Điểm dịch vụ theo siêu thị — T${eM}/${eY}${d2?` vs T${e2M}/${e2Y}`:''}</div><div class="chart-wrap" style="height:260px"><canvas id="c-ov-diem"></canvas></div></div>`:''}
-${loiSection}${dtSection}${glSection}
-<div class="chart-box"><div class="chart-title">📈 Check gian lận định kỳ theo tháng — ${eY}</div><div class="chart-wrap" style="height:200px"><canvas id="c-ov-gl"></canvas></div></div>`;}
+function rQCOv(){return`
+<div class="g4" style="margin-bottom:18px">
+  ${kpi('Phiếu QC tháng này','0','phiếu','#0284c7','kpi-search','')}
+  ${kpi('Lỗi phát hiện','0','lỗi','#dc2626','kpi-error','')}
+  ${kpi('Tỉ lệ đạt','—','%','#16a34a','kpi-check','')}
+  ${kpi('Cảnh báo ngưỡng','0','mục','#f59e0b','kpi-warn','')}
+</div>
+<div class="g2" style="margin-bottom:16px">
+  <div class="card">
+    <div style="font-weight:700;font-size:14px;margin-bottom:14px">📋 Phiếu QC gần đây</div>
+    <div class="empty-state"><div class="es-ic">🔬</div><p>Chưa có phiếu QC nào.<br>Import Excel hoặc tạo phiếu mới.</p></div>
+  </div>
+  <div class="card">
+    <div style="font-weight:700;font-size:14px;margin-bottom:14px">🚨 Cảnh báo vượt ngưỡng</div>
+    <div class="alert a-warn"><span class="a-ic">⚠️</span><div class="a-bd"><strong>Thiết lập ngưỡng cảnh báo</strong><p>Vào tab "Tiêu chuẩn" để xem và chỉnh ngưỡng. Sau khi import Excel, hệ thống tự so sánh.</p></div></div>
+    <div class="alert a-ok" style="margin-top:10px"><span class="a-ic">✅</span><div class="a-bd"><strong>Không có vi phạm nghiêm trọng</strong></div></div>
+  </div>
+</div>
+<div class="chart-box"><div class="chart-title">📈 Lỗi QC theo ngày (7 ngày gần nhất)</div><div class="chart-wrap"><canvas id="c-qc-week"></canvas></div></div>`;}
 function rQCChart(){return`
 <div class="g2" style="margin-bottom:16px">
   <div class="chart-box"><div class="chart-title">📊 Phân loại lỗi QC</div><div class="chart-wrap"><canvas id="c-qc-cat"></canvas></div></div>
@@ -2353,87 +1753,16 @@ function parseLarkDate(raw){
 async function syncLarkDate(btn){
   if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang đồng bộ...';}
   try{
-    let d=null;
-    try{
-      const r=await fetch('http://localhost:3001/api/sync-date',{signal:AbortSignal.timeout(90000)});
-      if(r.ok){d=await r.json();if(d.error)d=null;}
-    }catch(_){}
-    if(!d){
-      if(btn)btn.innerHTML='⏳ Lấy từ Lark...';
-      const r=await fetch('/api/lark-date',{signal:AbortSignal.timeout(30000)});
-      if(r.ok){const j=await r.json();if(j.ok&&j.monthly?.length)d=j;}
-    }
-    if(!d){
-      if(btn)btn.innerHTML='⏳ Tải cache...';
-      const r=await fetch('https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/date-cache.json?t='+Date.now());
-      if(r.ok)d=await r.json();
-    }
-    if(!d?.monthly?.length)throw new Error('Không lấy được dữ liệu');
-    localStorage.setItem('lark_date_cache',JSON.stringify({...d,ts:Date.now()}));
-    S.dateCache=d;go(S.page,S.tab);
+    const url='https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/date-cache.json';
+    const r=await fetch(url+'?t='+Date.now());
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    if(!d.monthly?.length)throw new Error('Dữ liệu rỗng');
+    const cache={monthly:d.monthly,stores:d.stores||[],ts:Date.now()};
+    localStorage.setItem('lark_date_cache',JSON.stringify(cache));
+    S.dateCache=cache;
+    go(S.page,S.tab);
     toast('✅ Đồng bộ thành công ('+d.monthly.length+' tháng)','t-ok');
-  }catch(e){
-    toast('❌ Lỗi đồng bộ: '+e.message,'t-err');
-  }finally{
-    if(btn){btn.disabled=false;btn.innerHTML='🔄 Đồng bộ Lark';}
-  }
-}
-/* ── TỒNG ÂM SYNC ── */
-async function syncTonAm(btn){
-  if(btn){btn.disabled=true;btn.textContent='⏳ Đang đồng bộ...';}
-  try{
-    let d=null;
-    try{
-      const r=await fetch('http://localhost:3001/api/sync-tonam',{signal:AbortSignal.timeout(90000)});
-      if(r.ok){d=await r.json();if(d.error)d=null;}
-    }catch(_){}
-    if(!d){
-      if(btn)btn.textContent='⏳ Lấy từ Lark...';
-      const r=await fetch('/api/lark-tonam',{signal:AbortSignal.timeout(60000)});
-      if(r.ok){const j=await r.json();if(j.ok&&j.months)d=j;}
-    }
-    if(!d){
-      if(btn)btn.textContent='⏳ Tải cache...';
-      const r=await fetch('https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/tonam-cache.json?t='+Date.now());
-      if(r.ok)d=await r.json();
-    }
-    if(!d||typeof d.months!=='object')throw new Error('Không lấy được dữ liệu');
-    localStorage.setItem('tonam_cache',JSON.stringify(d));
-    S.tonAmCache=d;
-    const ms=Object.keys(d.months).sort();
-    if(!S.tonAmMonth||!d.months[S.tonAmMonth])S.tonAmMonth=ms[ms.length-1]||'';
-    go(S.page,S.tab);
-    toast('✅ Đồng bộ tồn âm ('+ms.join(', ')+')','t-ok');
-  }catch(e){
-    toast('❌ Lỗi đồng bộ: '+e.message,'t-err');
-  }finally{
-    if(btn){btn.disabled=false;btn.innerHTML='🔄 Đồng bộ Lark';}
-  }
-}
-/* ── BIÊN BẢN KIỂM KÊ SYNC ── */
-async function syncBBKK(btn){
-  if(btn){btn.disabled=true;btn.textContent='⏳ Đang đồng bộ...';}
-  try{
-    let d=null;
-    try{
-      const r=await fetch('http://localhost:3001/api/sync-bbkk',{signal:AbortSignal.timeout(55000)});
-      if(r.ok){d=await r.json();if(d.error)d=null;}
-    }catch(_){}
-    if(!d){
-      if(btn)btn.textContent='⏳ Lấy từ Lark...';
-      const r=await fetch('/api/lark-bbkk',{signal:AbortSignal.timeout(30000)});
-      if(r.ok){const j=await r.json();if(j.ok&&Array.isArray(j.t1))d=j;}
-    }
-    if(!d){
-      if(btn)btn.textContent='⏳ Tải cache...';
-      const r=await fetch('https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/bbkk-cache.json?t='+Date.now());
-      if(r.ok)d=await r.json();
-    }
-    if(!d||!Array.isArray(d.t1))throw new Error('Không lấy được dữ liệu');
-    localStorage.setItem('bbkk_cache',JSON.stringify(d));
-    S.bbkkCache=d;
-    go(S.page,S.tab);
-    toast('✅ Cập nhật thành công từ Lark ('+d.t1.length+' biên bản)','t-ok');
   }catch(e){
     toast('❌ Lỗi đồng bộ: '+e.message,'t-err');
   }finally{
@@ -4051,28 +3380,6 @@ function afterRender(){
   mkC('c-qc-cat','doughnut',['Ngoại quan','Trọng lượng','Bao bì','Vi sinh','Khác'],[{data:[0,0,0,0,0],bg:CC}]);
   mkC('c-qc-trend','line',T6,[{label:'Tổng lỗi',data:[...Z6],borderColor:CC[2]},{label:'Nghiêm trọng',data:[...Z6],borderColor:CC[3]}]);
   mkC('c-qc-dc','bar',['DC01','DC02','DC03','CH-Q1','CH-Q3','CH-HN'],[{label:'Số lỗi',data:[0,0,0,0,0,0],bg:CC[0]}]);
-  // QC Tổng quan
-  if(S.page==='qc'&&S.tab==='Tổng quan'&&S.qcOvData){
-    const od=S.qcOvData;
-    const orows=od.diem&&Array.isArray(od.diem.rows)?od.diem.rows:[];
-    if(orows.length){
-      const olbls=orows.map(r=>{const n=(r.st||'').replace(/^Siêu thị\s+/i,'');return n.substring(0,10)||r.st.substring(0,8);});
-      const opct=orows.map(r=>{const mx=parseFloat(r.max),tx=parseFloat(r.thuc);return mx>0?+(tx/mx*100).toFixed(1):0;});
-      const datasets=[{label:`T${S.qcOvMonth}/${S.qcOvYear}`,data:opct,bg:opct.map(v=>v>=90?'rgba(22,163,74,.7)':v>=85?'rgba(217,119,6,.7)':'rgba(220,38,38,.7)'),borderColor:opct.map(v=>v>=90?'#16a34a':v>=85?'#d97706':'#dc2626'),borderWidth:2}];
-      if(S.qcOv2Data){
-        const orows2=(S.qcOv2Data.diem&&Array.isArray(S.qcOv2Data.diem.rows))?S.qcOv2Data.diem.rows:[];
-        const pct2=orows.map(r=>{const r2=orows2.find(x=>x.st===r.st);if(!r2)return 0;const mx=parseFloat(r2.max),tx=parseFloat(r2.thuc);return mx>0?+(tx/mx*100).toFixed(1):0;});
-        datasets.unshift({label:`T${S.qcOv2Month}/${S.qcOv2Year}`,data:pct2,bg:'rgba(99,102,241,.3)',borderColor:'#6366f1',borderWidth:2});
-      }
-      mkC('c-ov-diem','bar',olbls,datasets,{scales:{y:{min:60,max:105,ticks:{callback:v=>v+'%'},grid:{color:'rgba(0,0,0,.06)'}},x:{grid:{display:false}}},plugins:{legend:{display:datasets.length>1}}});
-    }
-    const yd=od.glYear||{},kh=od.khYear||{};
-    mkC('c-ov-gl','bar',TH,[
-      {label:'Thực tế',data:TH.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].dk&&yd[String(i+1)].dk.total)||0),bg:'rgba(59,130,246,.7)',borderColor:'#3b82f6'},
-      {label:'Kế hoạch',data:TH.map((_,i)=>kh[String(i+1)]||0),bg:'rgba(234,179,8,.5)',borderColor:'#eab308'},
-      {label:'CGT',data:TH.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].dk&&yd[String(i+1)].dk.cgt)||0),bg:'rgba(220,38,38,.8)',borderColor:'#dc2626'}
-    ]);
-  }
   // Báo cáo
   mkC('c-bc-kpi','line',T6,[{label:'Đạt QC (%)',data:[...Z6],noFill:true},{label:'Khớp KK (%)',data:[...Z6],noFill:true,borderColor:CC[1]}]);
   mkC('c-bc-pie','doughnut',['Đạt','Không đạt','Cảnh báo'],[{data:[0,0,0],bg:[CC[1],CC[2],CC[3]]}]);
@@ -5573,7 +4880,7 @@ render();
     if(!id){id='u'+Math.random().toString(36).slice(2,9);localStorage.setItem('kscl_uid',id);}
     return id;
   })();
-  let myName=localStorage.getItem('kscl_name')||'';
+  let myName='';
 
   function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -5682,6 +4989,8 @@ render();
   }
 
   window.chatToggle=function(){
+    if(!S.user){toast('Vui lòng đăng nhập để sử dụng chat','t-warn');return;}
+    myName=S.profile?.name||S.user.email||'Ẩn danh';
     panelOpen=!panelOpen;
     const panel=document.getElementById('chat-panel');
     panel.style.display=panelOpen?'flex':'none';
@@ -5689,14 +4998,10 @@ render();
       unread=0;updateBadge();
       const box=document.getElementById('chat-msgs');
       setTimeout(()=>{box.scrollTop=box.scrollHeight;},50);
-      if(myName){
-        const dlg=document.getElementById('chat-name-dlg');
-        if(dlg)dlg.style.display='none';
-        document.getElementById('chat-inp')?.focus();
-        initFb();
-      } else {
-        document.getElementById('chat-name-input')?.focus();
-      }
+      const dlg=document.getElementById('chat-name-dlg');
+      if(dlg)dlg.style.display='none';
+      document.getElementById('chat-inp')?.focus();
+      initFb();
     }
   };
 
@@ -5868,11 +5173,10 @@ render();
     });
   };
 
-  // Show FAB after load
-  window.addEventListener('load',()=>{
+  window.chatShowFab=function(show){
     const fab=document.getElementById('chat-fab');
-    if(fab)fab.style.display='flex';
-  });
+    if(fab)fab.style.display=show?'flex':'none';
+  };
 })();
 </script>
 </body>
