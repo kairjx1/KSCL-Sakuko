@@ -33,18 +33,30 @@ async function getToken(id,secret){
   return j.tenant_access_token;
 }
 
-async function fetchAllFrom(token,appToken,tableId){
+const KNOWN_VIEWS={T01:'vewHqzX1XZ',T02:'vewvgrFCBc',T03:'vewqDpKLSv',T04:'vewuBDjb0W',T05:'vewHlcgIvH',T06:'vewbbA2pp3'};
+async function getViewId(token,month,tableId){
+  if(KNOWN_VIEWS[month])return KNOWN_VIEWS[month];
+  try{
+    const r=await fetch(`${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${tableId}/views`,{headers:{Authorization:'Bearer '+token}});
+    const j=await r.json();
+    const vs=j.data?.items||[];
+    const kv=vs.find(v=>{const n=(v.view_name||'').toLowerCase();return n.includes('kiểm soát')||n.includes('kscl')||n.includes('tồn âm');});
+    return (kv||vs[0])?.view_id||null;
+  }catch(e){return null;}
+}
+async function fetchAllFrom(token,appToken,tableId,viewId){
   const all=[];let pt='',more=true;
   while(more){
-    const body={page_size:200};if(pt)body.page_token=pt;
-    const r=await fetch(`${LARK}/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records/search`,{
-      method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
-      body:JSON.stringify(body)
-    });
+    let url=`${LARK}/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records?page_size=500`;
+    if(viewId)url+='&view_id='+encodeURIComponent(viewId);
+    if(pt)url+='&page_token='+encodeURIComponent(pt);
+    const r=await fetch(url,{headers:{Authorization:'Bearer '+token}});
     const j=await r.json();
-    if(j.code!==0)throw new Error('Bitable: '+j.msg);
+    if(j.code!==0)throw new Error('Bitable: '+j.msg+' ('+j.code+')');
     all.push(...(j.data?.items||[]));
-    more=!!j.data?.has_more;pt=j.data?.page_token||'';
+    const newPt=j.data?.page_token||'';
+    more=!!j.data?.has_more&&newPt!==pt&&all.length<50000;
+    pt=newPt;
   }
   return all;
 }
@@ -54,6 +66,7 @@ async function discoverTables(token){
     headers:{Authorization:'Bearer '+token}
   });
   const j=await r.json();
+  if(j.code!==0)throw new Error('Bitable: '+j.msg+' ('+j.code+')');
   const tables=[];
   for(const t of j.data?.items||[]){
     const name=t.name||'';
@@ -107,7 +120,8 @@ export async function onRequest({request,env}){
     const months={};
     await Promise.all(tables.map(async({month,tableId})=>{
       try{
-        const records=await fetchAllFrom(token,APP_TOKEN,tableId);
+        const viewId=await getViewId(token,month,tableId);
+        const records=await fetchAllFrom(token,APP_TOKEN,tableId,viewId);
         if(records.length)months[month]=aggregate(records);
       }catch(e){console.error(month,e.message);}
     }));

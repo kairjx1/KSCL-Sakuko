@@ -35,15 +35,15 @@ async function getToken(id,secret){
 async function fetchAll(token,tableId){
   const all=[];let pt='',more=true;
   while(more){
-    const body={page_size:200};if(pt)body.page_token=pt;
-    const r=await fetch(`${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${tableId}/records/search`,{
-      method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
-      body:JSON.stringify(body)
-    });
+    let url=`${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${tableId}/records?page_size=500`;
+    if(pt)url+='&page_token='+encodeURIComponent(pt);
+    const r=await fetch(url,{headers:{Authorization:'Bearer '+token}});
     const j=await r.json();
     if(j.code!==0)throw new Error('Bitable: '+j.msg+' ('+j.code+')');
     all.push(...(j.data?.items||[]));
-    more=!!j.data?.has_more;pt=j.data?.page_token||'';
+    const newPt=j.data?.page_token||'';
+    more=!!j.data?.has_more&&newPt!==pt&&all.length<50000;
+    pt=newPt;
   }
   return all;
 }
