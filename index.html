@@ -359,7 +359,7 @@ const MODS=[
 let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:'5',qcBBYear:'2026',qcBBList:[],qcBBYearData:{},qcDocsData:{},qcDocLists:{},
   qcOvMonth:'6',qcOvYear:'2026',qcOvData:null,qcOv2Month:'6',qcOv2Year:'2025',qcOv2Data:null,
   tonAmCache:null,tonAmMonth:'',tonAmFilter:{q:'',status:'all',nganh:'',sort:'value'},
-  xhCache:null,xhYear:'',xhMonth:'ALL',xhQ:''};
+  xhCache:null,xhYear:'',xhMonth:'ALL',xhQ:'',xhMode:'st'};
 
 /* ══════════════════════════════════════════
    FIREBASE
@@ -1261,14 +1261,25 @@ function rKKXuatHuy(){
   </div>`;
   if(!C||!C.data)return`<div class="card">${syncBar}<div style="text-align:center;padding:32px 0"><div style="font-size:48px;margin-bottom:10px">🗑️</div><p style="color:var(--t2);font-size:13px">Bấm <strong>Đồng bộ Lark</strong> để tải dữ liệu xuất hủy từ Lark bitable.</p></div></div>`;
 
-  const years=Object.keys(C.data).sort();
-  if(!S.xhYear||!C.data[S.xhYear])S.xhYear=years[years.length-1];
+  // ── Chế độ: ST (siêu thị) / CVS ──
+  const mode=S.xhMode==='cvs'?'cvs':'st';
+  const hasCVS=!!C.cvs&&Object.keys(C.cvs).length>0;
+  const modeBar=`<div style="display:flex;gap:6px;margin-bottom:12px">
+    <button onclick="S.xhMode='st';S.xhMonth='ALL';go('kk','Xuất hủy - lỗi hỏng')" style="padding:6px 16px;font-size:12.5px;font-weight:600;border-radius:8px;border:1px solid ${mode==='st'?'#1a2558':'#e2e8f0'};background:${mode==='st'?'#1a2558':'#fff'};color:${mode==='st'?'#fff':'var(--t1)'};cursor:pointer">🏪 Siêu thị</button>
+    <button onclick="S.xhMode='cvs';S.xhMonth='ALL';go('kk','Xuất hủy - lỗi hỏng')" style="padding:6px 16px;font-size:12.5px;font-weight:600;border-radius:8px;border:1px solid ${mode==='cvs'?'#e91e7b':'#e2e8f0'};background:${mode==='cvs'?'#e91e7b':'#fff'};color:${mode==='cvs'?'#fff':hasCVS?'var(--t1)':'#ccc'};cursor:${hasCVS?'pointer':'default'}">🏬 CVS${hasCVS?'':' (chưa có dữ liệu)'}</button>
+  </div>`;
+  const DS=mode==='cvs'?(C.cvs||{}):C.data;
+  const REVS=mode==='cvs'?(C.revenueCVS||{}):(C.revenue||{});
+  if(!Object.keys(DS).length)return`<div class="card">${syncBar}${modeBar}<div style="text-align:center;padding:24px 0"><p style="color:var(--t2);font-size:13px">Chưa có dữ liệu ${mode==='cvs'?'CVS':'siêu thị'} — bấm Đồng bộ Lark.</p></div></div>`;
+
+  const years=Object.keys(DS).sort();
+  if(!S.xhYear||!DS[S.xhYear])S.xhYear=years[years.length-1];
   const Y=S.xhYear;
-  const yData=C.data[Y]||{};
+  const yData=DS[Y]||{};
   const avail=Object.keys(yData).sort();
   if(S.xhMonth!=='ALL'&&!yData[S.xhMonth])S.xhMonth='ALL';
   const m=S.xhMonth;
-  const rev=(C.revenue||{})[Y]||{};
+  const rev=REVS[Y]||{};
   const mNames={T01:'Tháng 1',T02:'Tháng 2',T03:'Tháng 3',T04:'Tháng 4',T05:'Tháng 5',T06:'Tháng 6',T07:'Tháng 7',T08:'Tháng 8',T09:'Tháng 9',T10:'Tháng 10',T11:'Tháng 11',T12:'Tháng 12'};
   const fmtV=v=>v>=1e9?(v/1e9).toFixed(2)+' tỷ':v>=1e6?(v/1e6).toFixed(1)+' tr':v>0?Math.round(v/1e3)+'k':'—';
   const fmtDT=v=>v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(0)+'M':'—';
@@ -1379,7 +1390,7 @@ function rKKXuatHuy(){
   const vColor=pctDT!=='—'&&+pctDT>1?'#dc2626':pctDT!=='—'&&+pctDT>0.5?'#f97316':'#7c3aed';
 
   return`
-<div class="card" style="margin-bottom:14px">${syncBar}
+<div class="card" style="margin-bottom:14px">${syncBar}${modeBar}
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
     <div style="display:flex;align-items:center;gap:6px">
       <span style="font-size:12px;color:#64748b;font-weight:500">Tháng:</span>
@@ -1397,7 +1408,7 @@ function rKKXuatHuy(){
     <div class="kpi" style="color:#0369a1"><div class="kpi-lb">Số lượng hủy</div><div class="kpi-v">${md.qty.toLocaleString()}<span class="kpi-u">sp</span></div><div class="kpi-tr" style="color:#6b7280;font-size:11px">${stores.length} siêu thị</div><div class="kpi-bg">📦</div></div>
     <div class="kpi" style="color:${vColor}"><div class="kpi-lb">Giá trị xuất hủy</div><div class="kpi-v" style="font-size:${md.value>=1e9?'18px':'22px'}">${fmtV(md.value)}<span class="kpi-u">VNĐ</span></div><div class="kpi-tr" style="color:${vColor};font-size:11px">${pctDT!=='—'?pctDT+'% doanh thu':''}</div><div class="kpi-bg">💸</div></div>
     ${dtMonth>0?`<div class="kpi" style="color:#0369a1"><div class="kpi-lb">Doanh thu ${mLabel}</div><div class="kpi-v" style="font-size:18px">${fmtDT(dtMonth)}<span class="kpi-u">VNĐ</span></div><div class="kpi-tr" style="color:#0369a1;font-size:11px">${m==='ALL'?'TB hủy '+fmtV(avgPerMonth)+'/tháng':''}</div><div class="kpi-bg">💰</div></div>`
-    :`<div class="kpi" style="color:#9ca3af"><div class="kpi-lb">Doanh thu ${mLabel}</div><div class="kpi-v" style="font-size:18px">—</div><div class="kpi-tr" style="color:#9ca3af;font-size:11px">Chưa nhập DT tháng này</div><div class="kpi-bg">💰</div></div>`}
+    :`<div class="kpi" style="color:#9ca3af"><div class="kpi-lb">Doanh thu ${mLabel}</div><div class="kpi-v" style="font-size:18px">—</div><div class="kpi-tr" style="color:#9ca3af;font-size:11px">${mode==='cvs'?'Chưa điền "Doanh thu CVS" trong Lark':'Chưa nhập DT tháng này'}</div><div class="kpi-bg">💰</div></div>`}
   </div>
 </div>
 <div class="card" style="margin-bottom:14px;padding:16px">
@@ -1421,7 +1432,7 @@ function rKKXuatHuy(){
 </div>
 <div class="g2" style="margin-bottom:14px">
   <div class="card" style="padding:16px">
-    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">🏪 ST xuất hủy nhiều nhất — ${mLabel}/${Y} <span style="font-size:11px;font-weight:400;color:#64748b">(${stores.length} ST)</span></div>
+    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px">${mode==='cvs'?'🏬 Điểm CVS':'🏪 ST'} xuất hủy nhiều nhất — ${mLabel}/${Y} <span style="font-size:11px;font-weight:400;color:#64748b">(${stores.length})</span></div>
     ${stores.length?`<div style="overflow-x:auto;max-height:440px;overflow-y:auto"><table style="width:100%;border-collapse:collapse">
       <thead style="position:sticky;top:0;z-index:1"><tr style="background:#f8f9fa;font-size:11px;color:#6b7280;text-transform:uppercase">
         <th style="padding:6px 10px;text-align:left">#</th>

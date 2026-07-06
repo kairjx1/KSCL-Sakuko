@@ -55,7 +55,7 @@ async function fetchAll(token){
 }
 
 async function fetchRevenue(token){
-  const revenue={};
+  const revenue={},revenueCVS={};
   const r=await fetch(`${LARK}/open-apis/bitable/v1/apps/${REV_TOKEN}/tables/${REV_TABLE}/records?page_size=50`,{
     headers:{Authorization:'Bearer '+token}
   });
@@ -65,11 +65,98 @@ async function fetchRevenue(token){
     const y=String(num(f['Năm'])||2026);
     const t=num(f['Tháng']);
     if(t>=1&&t<=12){
+      const mk=`T${String(t).padStart(2,'0')}`;
       if(!revenue[y])revenue[y]={};
-      revenue[y][`T${String(t).padStart(2,'0')}`]=num(f['Doanh thu']);
+      if(!revenueCVS[y])revenueCVS[y]={};
+      revenue[y][mk]=num(f['Doanh thu']);
+      revenueCVS[y][mk]=num(f['Doanh thu CVS']);
     }
   }
-  return revenue;
+  return {revenue,revenueCVS};
+}
+
+// ═══ CVS xuất hủy ═══
+const CVS_APP='EKq5bGdLaa26lmsIKOCln3jGg0c';
+const CVS_TABLE='tblfWKMonJYhi2TZ';
+const CVS_VIEW='vewwXPAOEf';
+const CVS_ST_TABLE='tblduggsJ4Aab2GG';
+
+async function cvsOptionMap(token){
+  const map={};
+  const r=await fetch(`${LARK}/open-apis/bitable/v1/apps/${CVS_APP}/tables/${CVS_ST_TABLE}/fields?page_size=100`,{
+    headers:{Authorization:'Bearer '+token}
+  });
+  const j=await r.json();
+  for(const fl of j.data?.items||[]){
+    for(const o of fl.property?.options||[])map[o.id]=o.name;
+  }
+  return map;
+}
+function optTxt(v,map){
+  if(Array.isArray(v))return v.map(x=>map[x]||x).join(', ');
+  if(typeof v==='string')return map[v]||v;
+  return'';
+}
+
+async function fetchAllCVS(token){
+  const all=[];let pt='',more=true;
+  while(more){
+    let url=`${LARK}/open-apis/bitable/v1/apps/${CVS_APP}/tables/${CVS_TABLE}/records?page_size=500&view_id=${CVS_VIEW}`;
+    if(pt)url+='&page_token='+encodeURIComponent(pt);
+    const r=await fetch(url,{headers:{Authorization:'Bearer '+token}});
+    const j=await r.json();
+    if(j.code!==0)throw new Error('Bitable CVS: '+j.msg);
+    all.push(...(j.data?.items||[]));
+    const newPt=j.data?.page_token||'';
+    more=!!j.data?.has_more&&newPt!==pt&&all.length<20000;
+    pt=newPt;
+  }
+  return all;
+}
+
+function aggregateCVS(records,optMap){
+  const cvs={};
+  for(const rec of records){
+    const f=rec.fields||{};
+    const year=num(f['Năm'])||new Date(num(f['Ngày'])||Date.now()).getFullYear();
+    const thang=num(f['Tháng']);
+    if(!thang||thang<1||thang>12)continue;
+    const mKey=`T${String(thang).padStart(2,'0')}`,yKey=String(year);
+    if(!cvs[yKey])cvs[yKey]={};
+    if(!cvs[yKey][mKey])cvs[yKey][mKey]={total:0,qty:0,value:0,stores:{},items:{},tinhTrang:{},tinhTrangValue:{}};
+    const agg=cvs[yKey][mKey];
+    const st=optTxt(f['Mã Siêu thị'],optMap)||'?';
+    const stTen=optTxt(f['Tên ST'],optMap)||st;
+    const maHang=txt(f['Mã hàng']);
+    const tenSp=txt(f['Tên hàng']);
+    const qty=num(f['Số lượng']);
+    const value=num(f['Giá trị']);
+    const loai=txt(f['Loại'])||txt(f['Loại hàng']);
+    agg.total++;agg.qty+=qty;agg.value+=value;
+    if(!agg.stores[st])agg.stores[st]={ten:stTen,count:0,qty:0,value:0};
+    agg.stores[st].count++;agg.stores[st].qty+=qty;agg.stores[st].value+=value;
+    if(maHang){
+      if(!agg.items[maHang])agg.items[maHang]={ten:tenSp,count:0,qty:0,value:0};
+      agg.items[maHang].count++;agg.items[maHang].qty+=qty;agg.items[maHang].value+=value;
+    }
+    if(loai){
+      agg.tinhTrang[loai]=(agg.tinhTrang[loai]||0)+1;
+      agg.tinhTrangValue[loai]=(agg.tinhTrangValue[loai]||0)+value;
+    }
+  }
+  for(const y of Object.keys(cvs)){
+    for(const m of Object.keys(cvs[y])){
+      const agg=cvs[y][m];
+      agg.value=Math.round(agg.value);
+      agg.qty=Math.round(agg.qty*10)/10;
+      agg.stores=Object.entries(agg.stores).sort((a,b)=>b[1].value-a[1].value)
+        .map(([ma,v])=>({ma,ten:v.ten,count:v.count,qty:Math.round(v.qty),value:Math.round(v.value)}));
+      agg.items=Object.entries(agg.items).sort((a,b)=>b[1].value-a[1].value).slice(0,100)
+        .map(([ma,v])=>({ma,ten:v.ten,count:v.count,qty:Math.round(v.qty),value:Math.round(v.value)}));
+      for(const k of Object.keys(agg.tinhTrangValue))agg.tinhTrangValue[k]=Math.round(agg.tinhTrangValue[k]);
+    }
+  }
+  return cvs;
 }
 
 function aggregate(records){
@@ -126,8 +213,11 @@ export async function onRequest(context){
   try{
     if(!env.LARK_APP_ID||!env.LARK_APP_SECRET)throw new Error('Thiếu LARK_APP_ID/LARK_APP_SECRET env vars');
     const token=await getToken(env.LARK_APP_ID,env.LARK_APP_SECRET);
-    const [records,revenue]=await Promise.all([fetchAll(token),fetchRevenue(token)]);
-    const cache={ts:Date.now(),data:aggregate(records),revenue};
+    const [records,revs,optMap,cvsRecords]=await Promise.all([
+      fetchAll(token),fetchRevenue(token),cvsOptionMap(token),fetchAllCVS(token)
+    ]);
+    const cache={ts:Date.now(),data:aggregate(records),revenue:revs.revenue,
+      cvs:aggregateCVS(cvsRecords,optMap),revenueCVS:revs.revenueCVS};
     return new Response(JSON.stringify(cache),{status:200,headers:CORS});
   }catch(e){
     return new Response(JSON.stringify({error:e.message}),{status:500,headers:CORS});
