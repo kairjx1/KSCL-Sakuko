@@ -1052,7 +1052,7 @@ function rKKTonAm(){
   const filterBar=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px">
     <span style="font-size:11px;font-weight:700;color:#64748b;white-space:nowrap">🔍 BỘ LỌC</span>
     <input type="text" placeholder="Tìm siêu thị, lý do..." value="${F.q||''}"
-      oninput="S.tonAmFilter.q=this.value;go('kk','Tồn âm')"
+      id="ta-q" oninput="qDebounce(this,'tonAmFilter.q','ta-q','Tồn âm')"
       style="flex:1;min-width:140px;padding:5px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;outline:none">
     <select onchange="S.tonAmFilter.status=this.value;go('kk','Tồn âm')"
       style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#fff">
@@ -1389,7 +1389,7 @@ function rKKXuatHuy(){
       <span style="font-size:12px;color:#64748b;font-weight:500">Năm:</span>
       <select onchange="S.xhYear=this.value;S.xhMonth='ALL';go('kk','Xuất hủy - lỗi hỏng')" style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff;color:var(--t1);cursor:pointer;font-weight:500">${yOpts}</select>
     </div>
-    <input type="text" placeholder="Tìm siêu thị, mã hàng, tên SP..." value="${S.xhQ||''}" oninput="S.xhQ=this.value;go('kk','Xuất hủy - lỗi hỏng')" style="flex:1;min-width:160px;padding:5px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;outline:none">
+    <input id="xh-q" type="text" placeholder="Tìm siêu thị, mã hàng, tên SP..." value="${S.xhQ||''}" oninput="qDebounce(this,'xhQ','xh-q','Xuất hủy - lỗi hỏng')" style="flex:1;min-width:160px;padding:5px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;outline:none">
     ${S.xhQ?`<button onclick="S.xhQ='';go('kk','Xuất hủy - lỗi hỏng')" style="padding:5px 10px;border:1px solid #dc2626;border-radius:6px;font-size:11px;color:#dc2626;background:#fff;cursor:pointer">✕ Xoá lọc</button>`:''}
   </div>
   <div class="g4" style="margin-bottom:0">
@@ -1452,6 +1452,17 @@ ${ttRows?`<div class="card" style="margin-bottom:14px;padding:16px">
   <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:10px">🏷️ Tình trạng hàng hóa — ${mLabel}/${Y}</div>
   <div style="max-height:280px;overflow-y:auto">${ttRows}</div>
 </div>`:''}`;
+}
+// Debounced search: lưu giá trị ngay, chờ gõ xong mới re-render rồi focus lại
+function qDebounce(el,path,id,tab){
+  const v=el.value;
+  const p=path.split('.');let o=S;while(p.length>1)o=o[p.shift()];o[p[0]]=v;
+  clearTimeout(window._qDeb);
+  window._qDeb=setTimeout(()=>{
+    go('kk',tab);
+    const inp=document.getElementById(id);
+    if(inp){inp.focus();const n=inp.value.length;inp.setSelectionRange(n,n);}
+  },350);
 }
 async function syncXuatHuy(btn){
   if(btn){btn.disabled=true;btn.textContent='⏳ Đang đồng bộ...';}
