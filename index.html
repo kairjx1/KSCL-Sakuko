@@ -2076,11 +2076,12 @@ function rBaoCao(){
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('baocao','${tb}')">${tb}</div>`).join('')}</div>
 ${t==='Executive QC'?`
 <div style="background:${hasQD?'#f0fdf4':'#fef3c7'};border:1px solid ${hasQD?'#86efac':'#fcd34d'};border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-  <span style="font-size:13px;color:${hasQD?'#15803d':'#92400e'}">${hasQD?`✅ Dữ liệu Firebase — T${eM}/${eY}${exec.savedAt?' · '+new Date(exec.savedAt).toLocaleDateString('vi-VN'):''}`:` ⚠️ Dữ liệu mẫu T5/2026 — Nhập liệu tháng thực tế rồi bấm Tải`}</span>
+  <span style="font-size:13px;color:${hasQD?'#15803d':'#92400e'}">${hasQD?`✅ Dữ liệu Firebase — T${eM}/${eY}${exec.savedAt?' · '+new Date(exec.savedAt).toLocaleDateString('vi-VN'):''}`:` ⚠️ Dữ liệu mẫu T5/2026 — Bấm ⚡ Tổng hợp từ Nghiệp vụ để lấy số liệu tự động từ QC`}</span>
   <div style="display:flex;gap:8px;align-items:center">
     <select id="exec-m" class="fi" style="width:65px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
     <select id="exec-y" class="fi" style="width:80px">${yearOpts(eY)}</select>
     <button onclick="qcLoadExecAndRefresh(document.getElementById('exec-y').value,document.getElementById('exec-m').value)" class="btn b-pri b-sm">🔄 Tải</button>
+    <button onclick="qcAggFromModules(this)" class="btn b-ok2 b-sm" title="Tự động lấy số liệu từ QC: Chấm điểm dịch vụ + Đổi trả + Check gian lận — không cần nhập tay">⚡ Tổng hợp từ Nghiệp vụ</button>
     ${hasQD?`<button onclick="go('baocao','Báo cáo EBIT')" class="btn b-out b-sm">📊 Xem EBIT →</button>`:''}
   </div>
 </div>
@@ -3012,6 +3013,52 @@ function qcLoadExecAndRefresh(year,month){
       setTimeout(()=>{const b=document.querySelector('.sec-hdr');if(b){const n=document.createElement('div');n.style.cssText='background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 16px;margin-top:10px;font-size:13px;color:#dc2626';n.textContent=`⚠️ Chưa có dữ liệu T${m}/${y} trên Firebase. Hãy nhập liệu trước.`;b.after(n);setTimeout(()=>n.remove(),4000);}},200);
     }
   }).catch(e=>{console.error(e);alert('Lỗi tải dữ liệu: '+e.message);});
+}
+/* ⚡ Tổng hợp tự động từ nghiệp vụ QC (qc_diem + qc_doitra + qc_gianlantctm) → qc_data */
+async function qcAggFromModules(btn){
+  const m=String(document.getElementById('exec-m')?.value||S.qcExecMonth||'5');
+  const y=String(document.getElementById('exec-y')?.value||S.qcExecYear||'2026');
+  const qcdb=getQCDB();if(!qcdb){alert('Không kết nối được Firebase');return;}
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang tổng hợp...';}
+  const done=()=>{if(btn){btn.disabled=false;btn.textContent='⚡ Tổng hợp từ Nghiệp vụ';}};
+  try{
+    const pm=+m===1?'12':String(+m-1),py=+m===1?String(+y-1):y;
+    const[dS,dPS,dtS,glS]=await Promise.all([
+      qcdb.ref(`qc_diem/${y}/${m}`).get(),qcdb.ref(`qc_diem/${py}/${pm}`).get(),
+      qcdb.ref(`qc_doitra/${y}/${m}`).get(),qcdb.ref(`qc_gianlantctm/${y}/${m}`).get()
+    ]);
+    const diem=dS.exists()?dS.val():null;
+    if(!diem||!Array.isArray(diem.rows)||!diem.rows.length){alert(`Chưa có dữ liệu Chấm điểm dịch vụ T${m}/${y}.\nVào QC → Chấm điểm dịch vụ để nhập trước.`);done();return;}
+    const pct=r=>{const mx=parseFloat(r.max),th=parseFloat(r.thuc);return mx>0&&isFinite(th)?+(th/mx*100).toFixed(2):null;};
+    const prevMap={};((dPS.exists()?dPS.val():{}).rows||[]).forEach(r=>{const p=pct(r);if(p!=null)prevMap[r.st]=p;});
+    const stores={},names=[];let sum=0,cnt=0;
+    diem.rows.forEach((r,i)=>{const c=pct(r);names.push(r.st);stores['st'+i]={name:r.st,prev:prevMap[r.st]!=null?prevMap[r.st]:null,curr:c};if(c!=null){sum+=c;cnt++;}});
+    const loi=(diem.loiHM||[]).slice().sort((a,b)=>(+b.soLoi||0)-(+a.soLoi||0)).slice(0,3).map(l=>({ten:l.cat||'',soST:+l.soLoi||0})).filter(l=>l.ten);
+    const dt=(dtS.exists()?dtS.val():{}).st||{};
+    const gl=glS.exists()?glS.val():{},dk=gl.dk||{},ctkm=gl.ctkm||{};
+    const allLoi={...(dk.loiVPs||{})};for(const[k,v]of Object.entries(ctkm.loiVPs||{}))allLoi[k]=(allLoi[k]||0)+v;
+    const stLoi=Object.entries(allLoi).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({name:k,loi:v+' lần'}));
+    const k2=+dt.pctKhach||0,s2=+dt.pctST||0;
+    const auto='Tự động tổng hợp '+new Date().toLocaleString('vi-VN');
+    const data={
+      s1_storeNames:names,s1_tongluot:cnt,s1_diemtb:cnt?+(sum/cnt).toFixed(2):0,
+      s1_stores:stores,s1_loi:loi,s1_note:`${auto} · từ QC → Chấm điểm dịch vụ (${cnt}/${names.length} ST có điểm, tháng trước: T${pm}/${py})`,
+      s2_tongdon:+dt.tongDon||0,s2_pct_khach:k2,s2_pct_st:s2,s2_pct_khac:+Math.max(0,100-k2-s2).toFixed(2),
+      s2_topST:(dt.top||[]).map(t=>({name:t.name,count:+t.don||0})),
+      s2_note:dtS.exists()?`${auto} · từ QC → Đổi trả (Siêu thị)`:'⚠️ Chưa có dữ liệu Đổi trả tháng này',
+      s3_tongST:+dk.total||0,s3_soSTLoi:+dk.cgt||0,s3_stLoi:stLoi,
+      s3_note:glS.exists()?`${auto} · từ Check gian lận: ĐK ${dk.total||0} check/${dk.cgt||0} cần GT · CTKM ${ctkm.total||0}/${ctkm.cgt||0} · Lỗi tổng hợp theo loại`:'⚠️ Chưa đồng bộ Check gian lận tháng này',
+      savedAt:Date.now(),_autoAgg:true
+    };
+    const ref=qcdb.ref(`qc_data/${y}/${m}`);
+    const old=await ref.get();
+    if(old.exists())await qcdb.ref(`qc_history/${y}/${m}`).push({...old.val(),_snapshotAt:Date.now(),_by:(S.profile?.name||S.user?.email||'?')+' (trước tổng hợp tự động)'});
+    await ref.set(data);
+    S.qcExecData=data;S.qcExecMonth=m;S.qcExecYear=y;
+    const miss=[];if(!dtS.exists())miss.push('Đổi trả');if(!glS.exists())miss.push('Check gian lận (bấm Đồng bộ Lark)');
+    alert(`✅ Đã tổng hợp T${m}/${y} từ nghiệp vụ:\n· Chấm điểm: ${cnt} ST, điểm TB ${data.s1_diemtb}%\n· Đổi trả: ${data.s2_tongdon} đơn\n· Gian lận: ${data.s3_tongST} check, ${data.s3_soSTLoi} cần GT${miss.length?'\n\n⚠️ Thiếu: '+miss.join(', '):''}`);
+    done();go('baocao','Executive QC');
+  }catch(e){done();alert('Lỗi tổng hợp: '+e.message);}
 }
 let qcStoreList=['Đỗ Quang','Đội Cấn','Linh Đàm','Mandarin C1','Thái Hà','Trần Đăng Ninh','Nguyễn Du','Hàng Bông','Văn Phú','Hàm Nghi','Nguyễn Tuân','Ngoại Giao Đoàn','Trần Duy Hưng','Nguyễn Văn Lộc','T6 Timecity','Ecohome 3','Green Bay','Xuân La','Bắc Ninh 02','Nguyễn Khuyến','Sài Đồng','Bạch Mai','Vũ Phạm Hàm'];
 function qcLoadStores(cb){
