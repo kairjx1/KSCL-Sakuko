@@ -211,8 +211,10 @@ export async function onRequest(context){
   const {request,env}=context;
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:CORS});
   try{
-    if(!env.LARK_APP_ID||!env.LARK_APP_SECRET)throw new Error('Thiếu LARK_APP_ID/LARK_APP_SECRET env vars');
-    const token=await getToken(env.LARK_APP_ID,env.LARK_APP_SECRET);
+    const APP_ID=env.LARK_APP_ID||'cli_aaa0cdd424b81eed';
+    const APP_SECRET=env.LARK_APP_SECRET||'';
+    if(!APP_SECRET)throw new Error('LARK_APP_SECRET chưa cấu hình');
+    const token=await getToken(APP_ID,APP_SECRET);
     const [records,revs,optMap,cvsRecords]=await Promise.all([
       fetchAll(token),fetchRevenue(token),cvsOptionMap(token),fetchAllCVS(token)
     ]);
