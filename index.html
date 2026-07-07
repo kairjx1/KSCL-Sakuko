@@ -1658,8 +1658,8 @@ async function syncXuatHuy(btn){
         const r=await fetch('/api/lark-xuathuy',{signal:AbortSignal.timeout(60000)});
         if(r.ok){const j=await r.json();if(j.data&&!j.error)d=j;}
       }catch(_){}
-      // CF bot không đọc được view CVS → cvs:{} rỗng → fallback sang GitHub cache
-      if(d&&(!d.cvs||!Object.keys(d.cvs).length))d=null;
+      // CF bot không đọc được view CVS hoặc revenue base (Quyền nâng cao) → fallback GitHub
+      if(d&&((!d.cvs||!Object.keys(d.cvs).length)||(!d.revenue||!Object.keys(d.revenue).length)))d=null;
     }
     if(!d){
       if(btn)btn.textContent='⏳ Tải cache GitHub...';
