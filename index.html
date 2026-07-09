@@ -1889,9 +1889,24 @@ function qcDiemImportFile(input){
       }
       if(!newRows.length&&!newLoi.length){alert('File không có dữ liệu hoặc sai tên sheet (cần "Chấm điểm" và "Lỗi hạng mục")!');return;}
       if(month){S.qcDiemMonth=month;S.qcDiemYear=year;}
-      S.qcDiemRows=newRows;S.qcDiemLoiHM=newLoi;S._qcDiemAutoLoaded=true;
-      go('qc','Chấm điểm dịch vụ');
-      setTimeout(()=>{const s=document.getElementById('qcd-diem-saved');if(s){s.textContent=`✅ Đã import ${newRows.length} siêu thị & ${newLoi.length} hạng mục từ Excel!`;s.style.display='block';setTimeout(()=>s.style.display='none',5000);}},300);
+      S.qcDiemRows=newRows;S.qcDiemLoiHM=newLoi;S._qcDiemAutoLoaded=true;S._qcDiemLoading=false;
+      // Auto-save ngay sau import để Firebase luôn có data đúng tháng
+      const _qcdb=getQCDB();
+      if(_qcdb&&month){
+        const _y=S.qcDiemYear,_m=S.qcDiemMonth;
+        const _ref=_qcdb.ref(`qc_diem/${_y}/${_m}`);
+        _ref.get().then(old=>{
+          const ops=[];
+          if(old.exists())ops.push(_qcdb.ref(`qc_diem_history/${_y}/${_m}`).push({...old.val(),_snapshotAt:Date.now(),_by:S.profile?.name||S.user?.email||'?'}));
+          return Promise.all(ops).then(()=>_ref.set({rows:newRows,loiHM:newLoi,savedAt:Date.now()}));
+        }).then(()=>{
+          go('qc','Chấm điểm dịch vụ');
+          setTimeout(()=>{const s=document.getElementById('qcd-diem-saved');if(s){s.textContent=`✅ Import & lưu thành công: ${newRows.length} ST · ${newLoi.length} hạng mục lỗi (T${_m}/${_y})`;s.style.display='block';setTimeout(()=>s.style.display='none',5000);}},200);
+        }).catch(e=>alert('Import OK nhưng lưu Firebase lỗi: '+e.message));
+      }else{
+        go('qc','Chấm điểm dịch vụ');
+        setTimeout(()=>{const s=document.getElementById('qcd-diem-saved');if(s){s.textContent=`✅ Đã import ${newRows.length} ST · ${newLoi.length} hạng mục — bấm Lưu để ghi vào hệ thống`;s.style.display='block';setTimeout(()=>s.style.display='none',5000);}},200);
+      }
     }catch(err){alert('Lỗi đọc file Excel: '+err.message);}
   };
   reader.readAsBinaryString(file);
