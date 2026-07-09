@@ -1658,8 +1658,6 @@ async function syncXuatHuy(btn){
         const r=await fetch('/api/lark-xuathuy',{signal:AbortSignal.timeout(60000)});
         if(r.ok){const j=await r.json();if(j.data&&!j.error)d=j;}
       }catch(_){}
-      // CF bot không đọc được view CVS hoặc revenue base (Quyền nâng cao) → fallback GitHub
-      if(d&&((!d.cvs||!Object.keys(d.cvs).length)||(!d.revenue||!Object.keys(d.revenue).length)))d=null;
     }
     if(!d){
       if(btn)btn.textContent='⏳ Tải cache GitHub...';
@@ -5143,6 +5141,7 @@ function rAppKSCL(){
   if(t==='navsml')return rNavSml();
   if(t==='bbkk')return rBBKK();
   if(t==='kkdx')return rKKDX();
+  if(t==='kktong')return rKKTong();
   return`
 <div class="sec-hdr"><h1>${skIcn('appkscl',26,26)} APP KSCL</h1><p style="color:var(--t2);font-size:13px">Công cụ xử lý dữ liệu kiểm kê – chạy hoàn toàn trong trình duyệt</p></div>
 <div class="alert a-info" style="margin-bottom:16px"><span class="a-ic">🔒</span><div class="a-bd"><strong>Xử lý offline, bảo mật 100%</strong><br><span style="font-size:12px">Dữ liệu không rời khỏi máy tính. Toàn bộ tính toán chạy trong trình duyệt, không cần cài đặt.</span></div></div>
@@ -5161,6 +5160,11 @@ function rAppKSCL(){
     <div class="mc-ic" style="background:#f5f0ff">🔍</div>
     <div class="mc-lb">3. Kiểm kê đột xuất</div>
     <div class="mc-ds">File thô bắn hàng + file tồn HT → báo cáo chênh lệch theo ngành → tải về</div>
+  </div>
+  <div class="mc" onclick="go('appkscl','kktong')" style="border-color:#1a6b2a20">
+    <div class="mc-ic" style="background:#dcfce7">📊</div>
+    <div class="mc-lb">4. Kiểm kê tổng</div>
+    <div class="mc-ds">Toàn bộ ngành, phân theo khu vực (KhuVuc) → báo cáo chênh lệch sắp theo A-Z → tải về</div>
   </div>
 </div>`;
 }
@@ -5399,6 +5403,230 @@ async function kkdxRun(){
     LOG.push(`   ⚠ Cột "Ghi chú" = "TT=0 (chưa scan)" → hàng cần tô vàng`);
     kkdxLog(LOG);
   }catch(err){LOG.push(`❌ Lỗi: ${err.message}`);kkdxLog(LOG);}
+}
+
+/* ── KIỂM KÊ TỔNG ─────────────────────────────────────────────── */
+let _kktRawWb=null,_kktNavRaw=null,_kktCatMap=null;
+
+function rKKTong(){return`
+<div class="breadcrumb"><span onclick="go('appkscl')">APP KSCL</span> › Kiểm kê tổng</div>
+<div class="sec-hdr"><h1>📊 Kiểm kê tổng</h1><p style="color:var(--t2);font-size:13px">Toàn bộ ngành – phân theo khu vực</p></div>
+<div class="card" style="padding:20px;margin-bottom:16px">
+  <div style="margin-bottom:14px">
+    <label style="font-size:13px;color:var(--t2);display:block;margin-bottom:6px">① File thô (bắn hàng) — sheet "Data", cột <strong>MaVach</strong> + <strong>SoLuongKiem</strong> + <strong>KhuVuc</strong>:</label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label class="btn-upload" for="kkt-raw">📂 Chọn file thô</label>
+      <input type="file" id="kkt-raw" accept=".xls,.xlsx" style="display:none" onchange="kktRawLoad(this)">
+      <span id="kkt-rnm" style="color:var(--t2);font-size:13px;font-style:italic">Chưa chọn</span>
+    </div>
+  </div>
+  <div style="margin-bottom:14px">
+    <label style="font-size:13px;color:var(--t2);display:block;margin-bottom:6px">② File tồn hệ thống (NAV) — export đầy đủ cả store, tiêu đề dòng 6:</label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label class="btn-upload" for="kkt-nav">📂 Chọn file HT</label>
+      <input type="file" id="kkt-nav" accept=".xls,.xlsx" style="display:none" onchange="kktNavLoad(this)">
+      <span id="kkt-nnm" style="color:var(--t2);font-size:13px;font-style:italic">Chưa chọn</span>
+    </div>
+  </div>
+  <div style="margin-bottom:16px">
+    <label style="font-size:13px;color:var(--t2);display:block;margin-bottom:6px">③ File danh mục hàng hóa <em style="font-weight:400">(tùy chọn — tra tên hàng lạ)</em>:</label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label class="btn-upload" for="kkt-cat" style="background:#6b7a99">📂 Chọn danh mục</label>
+      <input type="file" id="kkt-cat" accept=".xls,.xlsx" style="display:none" onchange="kktCatLoad(this)">
+      <span id="kkt-cnm" style="color:var(--t2);font-size:13px;font-style:italic">Chưa chọn (tùy chọn)</span>
+    </div>
+  </div>
+  <button onclick="kktRun()" style="background:linear-gradient(135deg,#1a6b2a,#16a34a);color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:15px;font-weight:600;cursor:pointer;width:100%;letter-spacing:.3px">▶ CHẠY KIỂM KÊ TỔNG</button>
+</div>
+<div id="kkt-log" style="font-family:monospace;font-size:12px;background:#1a1a2e;color:#d0d0e8;padding:14px 16px;border-radius:8px;min-height:60px;white-space:pre-wrap;line-height:1.7"></div>`;}
+
+function kktLog(lines){const el=document.getElementById('kkt-log');if(el)el.textContent=Array.isArray(lines)?lines.join('\n'):String(lines);}
+
+async function kktRawLoad(inp){
+  const f=inp.files[0];if(!f)return;
+  document.getElementById('kkt-rnm').textContent=f.name;
+  const buf=await f.arrayBuffer();
+  _kktRawWb=XLSX.read(new Uint8Array(buf),{type:'array'});
+  kktLog(`✓ Đã tải file thô: ${f.name}`);
+}
+
+async function kktNavLoad(inp){
+  const f=inp.files[0];if(!f)return;
+  document.getElementById('kkt-nnm').textContent=f.name;
+  kktLog('⏳ Đang đọc file HT...');
+  const buf=await f.arrayBuffer();
+  const wb=XLSX.read(new Uint8Array(buf),{type:'array'});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  _kktNavRaw=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true});
+  kktLog(`✓ Đã tải file HT: ${f.name}  (${_kktNavRaw.length} dòng)`);
+}
+
+async function kktCatLoad(inp){
+  const f=inp.files[0];if(!f)return;
+  document.getElementById('kkt-cnm').textContent=f.name;
+  const buf=await f.arrayBuffer();
+  const wb=XLSX.read(new Uint8Array(buf),{type:'array'});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{defval:null});
+  _kktCatMap={};
+  for(const r of rows){
+    const bc=String(r['Barcode']||r['barcode']||'').split('.')[0].trim();
+    if(bc)_kktCatMap[bc]={nganh:String(r['Ngành']||''),maSP:String(r['Mã hàng']||r['Mã SP']||''),tenSP:String(r['Tên SP']||''),gia:parseFloat(r['Giá SBL bán lẻ']||r['Giá BL']||0)||0};
+  }
+  kktLog(`✓ Đã tải danh mục: ${f.name}  (${Object.keys(_kktCatMap).length} mã)`);
+}
+
+function kktZoneKey(z){
+  const m=/^([A-Za-z]+)(\d+)$/.exec((z||'').trim());
+  return m?[0,m[1].toUpperCase(),parseInt(m[2])]:[1,(z||''),0];
+}
+function kktZoneCmp(a,b){
+  const ka=kktZoneKey(a),kb=kktZoneKey(b);
+  if(ka[0]!==kb[0])return ka[0]-kb[0];
+  if(ka[1]<kb[1])return -1;if(ka[1]>kb[1])return 1;
+  return ka[2]-kb[2];
+}
+
+async function kktRun(){
+  if(!_kktRawWb){kktLog('❌ Chưa chọn file thô');return;}
+  if(!_kktNavRaw){kktLog('❌ Chưa chọn file HT');return;}
+  const LOG=['⏳ Đang xử lý...'];kktLog(LOG);
+  try{
+    // [1] Đọc file thô: consolidate barcode + zone map
+    const rawWs=_kktRawWb.Sheets['Data'];
+    if(!rawWs){LOG.push('❌ File thô không có sheet "Data"');kktLog(LOG);return;}
+    const rawRows=XLSX.utils.sheet_to_json(rawWs,{defval:null});
+    if(!rawRows.length){LOG.push('❌ Sheet "Data" trống');kktLog(LOG);return;}
+    const s0=rawRows[0]||{};
+    const keyMa=Object.keys(s0).find(k=>/mavach/i.test(k.replace(/\s/g,'')))||'MaVach';
+    const keyQty=Object.keys(s0).find(k=>/soluongkiem/i.test(k.replace(/\s/g,'')))||'SoLuongKiem';
+    const keyKV=Object.keys(s0).find(k=>/khuvuc/i.test(k.replace(/\s/g,'')))||'KhuVuc';
+    if(!(keyKV in s0)&&!rawRows.some(r=>keyKV in r)){LOG.push('❌ File thô thiếu cột "KhuVuc" – hãy dùng file bắn hàng kiểm kê TỔNG');kktLog(LOG);return;}
+    const actualMap={},bcOrder=[],zoneQty={};
+    for(const r of rawRows){
+      const bc=String(r[keyMa]||'').split('.')[0].trim();
+      if(!bc||bc==='null')continue;
+      const qty=parseFloat(r[keyQty])||0;
+      const kv=String(r[keyKV]||'').trim().toUpperCase();
+      if(!(bc in actualMap)){actualMap[bc]=0;bcOrder.push(bc);}
+      actualMap[bc]+=qty;
+      if(!zoneQty[bc])zoneQty[bc]={};
+      if(kv)zoneQty[bc][kv]=(zoneQty[bc][kv]||0)+qty;
+    }
+    // Build zone strings per barcode (sorted A1<A2<B1...)
+    const zoneMap={};
+    for(const bc of bcOrder){
+      const pairs=Object.entries(zoneQty[bc]||{}).sort((a,b)=>kktZoneCmp(a[0],b[0]));
+      zoneMap[bc]=pairs.filter(([,q])=>q>0).map(([kv,q])=>`${kv}(${Math.round(q)})`).join(', ');
+    }
+    LOG.push(`[1] File thô: ${rawRows.length} dòng → ${bcOrder.length} barcode duy nhất`);kktLog(LOG);
+
+    // [2] Parse header file HT — thử nhiều dòng header
+    let hdr=[],hdrIdx=5;
+    for(const h of[5,0,3,4,6,1,2]){
+      const row=_kktNavRaw[h]||[];
+      if(row.some(c=>c&&String(c).trim()==='Mã kho')){hdr=row;hdrIdx=h;break;}
+    }
+    if(!hdr.length){LOG.push('❌ File HT không tìm thấy cột "Mã kho" ở dòng 1–7');kktLog(LOG);return;}
+    const colOf=name=>{
+      let i=hdr.findIndex(h=>h&&String(h).trim()===name);
+      return i>=0?i:hdr.findIndex(h=>h&&String(h).toLowerCase().includes(name.toLowerCase()));
+    };
+    const cNg=colOf('Ngành'),cKho=colOf('Kho'),cMaKho=colOf('Mã kho'),cBc=colOf('Barcode');
+    const cMaSP=colOf('Mã SP'),cTen=colOf('Tên SP'),cGia=colOf('Giá BL');
+    const cAcc=colOf('Accounting Inventory'),cPOS=colOf('Qty On POS Sold Not Posted');
+    if(cBc<0){LOG.push('❌ File HT thiếu cột "Barcode"');kktLog(LOG);return;}
+
+    // [3] Tìm store khớp barcode nhiều nhất
+    const actualBcs=new Set(bcOrder);
+    const storeCnt={},storeKho={};
+    for(let r=hdrIdx+1;r<_kktNavRaw.length;r++){
+      const row=_kktNavRaw[r]||[];
+      const mk=cMaKho>=0?String(row[cMaKho]||'').trim():'';
+      if(!mk)continue;
+      const bc=String(row[cBc]||'').split('.')[0].trim();
+      if(actualBcs.has(bc))storeCnt[mk]=(storeCnt[mk]||0)+1;
+      if(!storeKho[mk]&&cKho>=0&&row[cKho])storeKho[mk]=String(row[cKho]).trim();
+    }
+    let bestStore='',bestCnt=0;
+    for(const[s,c]of Object.entries(storeCnt))if(c>bestCnt){bestCnt=c;bestStore=s;}
+    const storeName=bestStore?(storeKho[bestStore]||bestStore):'Tất cả kho';
+    const storeShort=storeName.replace(/^(SKK|CVS|Store JP)\s+/,'');
+    if(!bestStore){LOG.push('❌ Không tìm thấy store nào khớp barcode – kiểm tra lại file HT');kktLog(LOG);return;}
+    LOG.push(`[2] Store: ${bestStore} – ${storeName}  |  Khớp barcode: ${bestCnt}/${actualBcs.size}`);kktLog(LOG);
+
+    // [4] Lấy toàn bộ mã của store (dedup theo barcode), tính chênh lệch
+    const seenBc=new Set(),items=[];
+    for(let r=hdrIdx+1;r<_kktNavRaw.length;r++){
+      const row=_kktNavRaw[r]||[];
+      if(cMaKho>=0&&String(row[cMaKho]||'').trim()!==bestStore)continue;
+      const bc=String(row[cBc]||'').split('.')[0].trim();
+      if(!bc||seenBc.has(bc))continue;
+      seenBc.add(bc);
+      const ht=(parseInt(row[cAcc]||0)||0)+(parseInt(row[cPOS]||0)||0);
+      items.push({bc,nganh:cNg>=0?String(row[cNg]||''):'',maSP:cMaSP>=0?String(row[cMaSP]||''):'',tenSP:cTen>=0?String(row[cTen]||''):'',gia:cGia>=0?(parseFloat(row[cGia])||0):0,ht});
+    }
+    LOG.push(`[3] Hệ thống (${bestStore}): ${items.length} mã`);kktLog(LOG);
+
+    // [5] Tính chênh lệch + hàng lạ
+    const sysMap={};for(const it of items)sysMap[it.bc]=it;
+    const rows=[];
+    let nMatch=0,nEqual=0;
+    for(const it of items){
+      const tt=Math.round(actualMap[it.bc]||0);
+      if(it.bc in actualMap)nMatch++;
+      if(tt===it.ht){nEqual++;continue;}
+      rows.push({...it,tt,extra:false});
+    }
+    // Barcode kiểm được nhưng không có trong HT store (hàng lạ)
+    for(const bc of bcOrder){
+      if(sysMap[bc])continue;
+      const tt=Math.round(actualMap[bc]||0);
+      if(!tt)continue;
+      let info={bc,nganh:'',maSP:'',tenSP:'',gia:0};
+      if(_kktCatMap&&_kktCatMap[bc])info={...info,..._kktCatMap[bc]};
+      rows.push({...info,ht:0,tt,extra:true});
+    }
+    const nExtra=rows.filter(r=>r.extra).length;
+    LOG.push(`    Đã kiểm: ${nMatch}  |  CL=0 (bỏ qua): ${nEqual}  |  CL≠0: ${rows.length-nExtra}  |  Hàng lạ: ${nExtra}`);kktLog(LOG);
+
+    // [6] Sắp xếp: theo khu vực A-Z (khu đầu tiên); KTT cuối
+    rows.sort((a,b)=>{
+      const za=zoneMap[a.bc]||'',zb=zoneMap[b.bc]||'';
+      if(!za&&!zb)return(a.maSP||'').localeCompare(b.maSP||'');
+      if(!za)return 1;if(!zb)return -1;
+      const fa=za.split(',')[0].split('(')[0].trim();
+      const fb=zb.split(',')[0].split('(')[0].trim();
+      const cz=kktZoneCmp(fa,fb);
+      return cz!==0?cz:(a.maSP||'').localeCompare(b.maSP||'');
+    });
+
+    // [7] Xuất Excel
+    LOG.push('[4] Tạo file kết quả...');kktLog(LOG);
+    const hdrs=['STT','Ngành','Item No','Barcode','Tên sản phẩm','Giá bán','Tồn hệ thống','KL1','KL2','Chênh lệch','Chênh lệch tiền','Khu vực'];
+    const aoa=[hdrs];
+    rows.forEach((r,i)=>{
+      const cl=r.tt-r.ht;
+      const kv=zoneMap[r.bc]||(r.tt===0?'KTT':'');
+      aoa.push([i+1,r.nganh,r.maSP,r.bc,r.tenSP,r.gia||null,r.ht,r.tt,null,cl,cl*(r.gia||0)||null,kv]);
+    });
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[5,18,8,14,50,12,12,11,11,11,14,24].map(w=>({wch:w}));
+    ws['!freeze']={xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
+    const out=XLSX.utils.book_new();XLSX.utils.book_append_sheet(out,ws,'Báo cáo');
+    const buf=XLSX.write(out,{bookType:'xlsx',type:'array'});
+    const d=new Date();const ds=`${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
+    const fname=`KK tổng ${storeShort} ${ds}.xlsx`.replace(/\s+/g,' ').trim();
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    a.download=fname;a.click();
+    const nKTT=rows.filter(r=>!zoneMap[r.bc]&&r.tt===0).length;
+    LOG.push(`✅ HOÀN THÀNH!`);
+    LOG.push(`   File: ${fname}`);
+    LOG.push(`   Báo cáo: ${rows.length} mã CL≠0  |  Có khu vực: ${rows.length-nKTT}  |  KTT: ${nKTT}  |  Hàng lạ: ${nExtra}`);
+    LOG.push(`   ℹ Cột KL2 để trống – điền số đếm lần 2 nếu cần kiểm lại`);
+    kktLog(LOG);
+  }catch(err){LOG.push(`❌ Lỗi: ${err.message}`);kktLog(LOG);}
 }
 
 function rNavSml(){
