@@ -1747,15 +1747,20 @@ function qcDiemRemoveRow(i){
 function qcDiemLoad(year,month){
   const y=String(year||S.qcDiemYear||'2026'),m=String(month||S.qcDiemMonth||'5');
   S.qcDiemYear=y;S.qcDiemMonth=m;
-  const qcdb=getQCDB();if(!qcdb){alert('Không kết nối được Firebase!');return;}
+  // Clear ngay lập tức để tránh hiển thị data tháng cũ khi chờ Firebase
+  S.qcDiemRows=[];S.qcDiemLoiHM=[];S._qcDiemLoading=true;
+  go('qc','Chấm điểm dịch vụ');
+  const qcdb=getQCDB();if(!qcdb){alert('Không kết nối được Firebase!');S._qcDiemLoading=false;return;}
   qcdb.ref(`qc_diem/${y}/${m}`).get().then(snap=>{
     const d=snap.exists()?snap.val():null;
     S.qcDiemRows=d&&Array.isArray(d.rows)?d.rows:[];
     S.qcDiemLoiHM=d&&Array.isArray(d.loiHM)?d.loiHM:[];
+    S._qcDiemLoading=false;
     go('qc','Chấm điểm dịch vụ');
-  }).catch(e=>alert('Lỗi tải dữ liệu: '+e.message));
+  }).catch(e=>{S._qcDiemLoading=false;alert('Lỗi tải dữ liệu: '+e.message);});
 }
 function qcDiemSave(btn){
+  if(S._qcDiemLoading){toast('⏳ Đang tải dữ liệu tháng mới, vui lòng đợi...','t-warn');return;}
   const y=document.getElementById('qcd-year')?.value||S.qcDiemYear||'2026';
   const m=document.getElementById('qcd-month')?.value||S.qcDiemMonth||'5';
   S.qcDiemYear=y;S.qcDiemMonth=m;
