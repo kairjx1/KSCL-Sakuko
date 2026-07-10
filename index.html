@@ -361,7 +361,7 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'0',qcDiemYear:'2026',qcDiemLoiHM:[],qcDiemYearData:{},qcDTMonth:'0',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcDTYearData:{},qcGLMonth:'0',qcGLYear:'2026',qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:'0',qcBBYear:'2026',qcBBList:[],qcBBYearData:{},qcDocsData:{},qcDocLists:{},
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:'5',qcBBYear:'2026',qcBBList:[],qcBBYearData:{},qcDocsData:{},qcDocLists:{},
   qcOvMonth:'6',qcOvYear:'2026',qcOvData:null,qcOv2Month:'6',qcOv2Year:'2025',qcOv2Data:null,
   tonAmCache:null,tonAmMonth:'',tonAmFilter:{q:'',status:'all',nganh:'',sort:'value'},
   xhCache:null,xhYear:'',xhMonth:'ALL',xhQ:'',xhMode:'st'};
@@ -1745,29 +1745,17 @@ function qcDiemRemoveRow(i){
   const body=document.getElementById('qcd-diem-body');if(body)body.innerHTML=qcDiemRowsHTML();
 }
 function qcDiemLoad(year,month){
-  const y=String(year||S.qcDiemYear||'2026'),m=String(month!=null?month:(S.qcDiemMonth||'0'));
+  const y=String(year||S.qcDiemYear||'2026'),m=String(month||S.qcDiemMonth||'5');
   S.qcDiemYear=y;S.qcDiemMonth=m;
-  S.qcDiemRows=[];S.qcDiemLoiHM=[];S._qcDiemLoading=true;
-  go('qc','Chấm điểm dịch vụ');
-  const qcdb=getQCDB();if(!qcdb){alert('Không kết nối được Firebase!');S._qcDiemLoading=false;return;}
-  if(m==='0'){
-    qcdb.ref(`qc_diem/${y}`).get().then(snap=>{
-      S.qcDiemYearData=snap.exists()?snap.val():{};
-      S._qcDiemLoading=false;
-      go('qc','Chấm điểm dịch vụ');
-    }).catch(e=>{S._qcDiemLoading=false;alert('Lỗi tải dữ liệu: '+e.message);});
-  }else{
-    qcdb.ref(`qc_diem/${y}/${m}`).get().then(snap=>{
-      const d=snap.exists()?snap.val():null;
-      S.qcDiemRows=d&&Array.isArray(d.rows)?d.rows:[];
-      S.qcDiemLoiHM=d&&Array.isArray(d.loiHM)?d.loiHM:[];
-      S._qcDiemLoading=false;
-      go('qc','Chấm điểm dịch vụ');
-    }).catch(e=>{S._qcDiemLoading=false;alert('Lỗi tải dữ liệu: '+e.message);});
-  }
+  const qcdb=getQCDB();if(!qcdb){alert('Không kết nối được Firebase!');return;}
+  qcdb.ref(`qc_diem/${y}/${m}`).get().then(snap=>{
+    const d=snap.exists()?snap.val():null;
+    S.qcDiemRows=d&&Array.isArray(d.rows)?d.rows:[];
+    S.qcDiemLoiHM=d&&Array.isArray(d.loiHM)?d.loiHM:[];
+    go('qc','Chấm điểm dịch vụ');
+  }).catch(e=>alert('Lỗi tải dữ liệu: '+e.message));
 }
 function qcDiemSave(btn){
-  if(S._qcDiemLoading){toast('⏳ Đang tải dữ liệu tháng mới, vui lòng đợi...','t-warn');return;}
   const y=document.getElementById('qcd-year')?.value||S.qcDiemYear||'2026';
   const m=document.getElementById('qcd-month')?.value||S.qcDiemMonth||'5';
   S.qcDiemYear=y;S.qcDiemMonth=m;
@@ -1786,46 +1774,27 @@ function qcDiemSave(btn){
   }).catch(e=>{alert('Lỗi lưu: '+e.message);if(btn){btn.disabled=false;btn.textContent='💾 Lưu';}});
 }
 function rQCDiem(){
-  const eM=String(S.qcDiemMonth||'0');
+  const eM=String(S.qcDiemMonth||'5');
   const eY=String(S.qcDiemYear||'2026');
-  const monthSel=`<select id="qcd-month" class="fi" style="width:80px" onchange="qcDiemLoad(document.getElementById('qcd-year').value,this.value)"><option value="0"${eM==='0'?' selected':''}>Tất cả</option>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>`;
-  const yearSel=`<select id="qcd-year" class="fi" style="width:85px" onchange="qcDiemLoad(this.value,document.getElementById('qcd-month').value)">${yearOpts(eY)}</select>`;
-  const headerCard=`<div class="card" style="padding:16px 20px;margin-bottom:16px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px"><div><h2 style="font-size:15px;font-weight:700;color:var(--t1);margin:0">📋 Chấm điểm dịch vụ siêu thị</h2><p style="font-size:12px;color:var(--t2);margin:4px 0 0">Nhập điểm max / điểm thực chấm từng ST — hệ thống tự tính tỷ lệ đạt & tỷ lệ lỗi</p></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><label class="fi-lbl" style="margin:0">Tháng</label>${monthSel}<label class="fi-lbl" style="margin:0">Năm</label>${yearSel}${eM!=='0'?`<button onclick="qcDiemSave(this)" class="btn b-pri b-sm">💾 Lưu</button><button onclick="qcDiemShowHistory()" class="btn b-sm" style="background:#6366f1;color:#fff" title="Xem & khôi phục phiên bản cũ">🕐 Lịch sử</button>`:''}</div></div><div id="qcd-diem-saved" class="qcd-saved">✅ Đã lưu thành công!</div><div id="qcd-hist-panel" style="display:none;margin-top:10px;border:1px solid #e0e7ff;border-radius:8px;overflow:hidden;max-height:280px;overflow-y:auto"></div></div>`;
-  if(eM==='0'){
-    const yd=S.qcDiemYearData||{};
-    const hasData=Object.keys(yd).length>0;
-    if(!hasData)return`${headerCard}<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px">📋</div><p style="color:var(--t2);font-size:13px;margin:12px 0">Bấm <strong>Tải</strong> hoặc chọn tháng để xem dữ liệu</p><button onclick="qcDiemLoad('${eY}','0')" class="btn b-pri">📥 Tải dữ liệu năm ${eY}</button></div>`;
-    let totST=0,sumDiem=0,nDiem=0,totDuoi85=0,totDuoi90=0;
-    const mRows=[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>{
-      const d=yd[String(m)];if(!d||!Array.isArray(d.rows)||!d.rows.length)return null;
-      const rows=d.rows;
-      const mx=rows.reduce((s,r)=>s+(parseFloat(r.max)||0),0);
-      const tx=rows.reduce((s,r)=>s+(parseFloat(r.thuc)||0),0);
-      const avg=mx>0?tx/mx*100:0;
-      const d85=rows.filter(r=>{const _m=parseFloat(r.max),_t=parseFloat(r.thuc);return _m>0&&_t/_m<0.85;}).length;
-      const d90=rows.filter(r=>{const _m=parseFloat(r.max),_t=parseFloat(r.thuc);return _m>0&&_t/_m>=0.85&&_t/_m<0.90;}).length;
-      totST+=rows.length;sumDiem+=avg;nDiem++;totDuoi85+=d85;totDuoi90+=d90;
-      return{m,n:rows.length,avg,d85,d90,loi:Array.isArray(d.loiHM)?d.loiHM.length:0};
-    }).filter(Boolean);
-    const avgYear=nDiem?sumDiem/nDiem:0;
-    const clr=v=>v>=90?'#16a34a':v>=85?'#d97706':'#dc2626';
-    const fmt=v=>v.toFixed(1)+'%';
-    return`${headerCard}
-<div class="g4" style="margin-bottom:12px">
-  <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Tháng có dữ liệu</div><div style="font-size:28px;font-weight:800;color:#3b82f6">${nDiem}<span style="font-size:14px;font-weight:500;color:var(--t2)">/12</span></div><div style="font-size:11px;color:var(--t2)">Năm ${eY}</div></div>
-  <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Điểm TB cả năm</div><div style="font-size:28px;font-weight:800;color:${clr(avgYear)}">${fmt(avgYear)}</div><div style="font-size:11px;color:var(--t2)">${totST} lượt chấm</div></div>
-  <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">ST dưới 85%</div><div style="font-size:28px;font-weight:800;color:${totDuoi85?'#dc2626':'#16a34a'}">${totDuoi85}</div><div style="font-size:11px;color:var(--t2)">lượt (cộng dồn)</div></div>
-  <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">ST cảnh báo 85–90%</div><div style="font-size:28px;font-weight:800;color:#d97706">${totDuoi90}</div><div style="font-size:11px;color:var(--t2)">lượt (cộng dồn)</div></div>
+  return`
+<div class="card" style="padding:16px 20px;margin-bottom:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2 style="font-size:15px;font-weight:700;color:var(--t1);margin:0">📋 Chấm điểm dịch vụ siêu thị</h2>
+      <p style="font-size:12px;color:var(--t2);margin:4px 0 0">Nhập điểm max / điểm thực chấm từng ST — hệ thống tự tính tỷ lệ đạt & tỷ lệ lỗi</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label class="fi-lbl" style="margin:0">Tháng</label>
+      <select id="qcd-month" class="fi" style="width:70px" onchange="qcDiemLoad(document.getElementById('qcd-year').value,this.value)">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+      <label class="fi-lbl" style="margin:0">Năm</label>
+      <select id="qcd-year" class="fi" style="width:85px" onchange="qcDiemLoad(this.value,document.getElementById('qcd-month').value)">${yearOpts(eY)}</select>
+      <button onclick="qcDiemSave(this)" class="btn b-pri b-sm">💾 Lưu</button>
+      <button onclick="qcDiemShowHistory()" class="btn b-sm" style="background:#6366f1;color:#fff" title="Xem & khôi phục phiên bản cũ">🕐 Lịch sử</button>
+    </div>
+  </div>
+  <div id="qcd-diem-saved" class="qcd-saved">✅ Đã lưu thành công!</div>
+  <div id="qcd-hist-panel" style="display:none;margin-top:10px;border:1px solid #e0e7ff;border-radius:8px;overflow:hidden;max-height:280px;overflow-y:auto"></div>
 </div>
-<div class="card" style="padding:0;overflow-x:auto">
-  <table style="width:100%;border-collapse:collapse;font-size:13px">
-    <thead><tr style="background:#f0f0ff"><th style="padding:10px 14px;text-align:left;border-bottom:2px solid #e0e7ff;color:#4f46e5">Tháng</th><th style="padding:10px;border-bottom:2px solid #e0e7ff;text-align:right;color:#6b7280">Số ST</th><th style="padding:10px;border-bottom:2px solid #e0e7ff;text-align:right;color:#15803d;font-weight:700">Điểm TB</th><th style="padding:10px;border-bottom:2px solid #e0e7ff;text-align:right;color:#dc2626">ST &lt;85%</th><th style="padding:10px;border-bottom:2px solid #e0e7ff;text-align:right;color:#d97706">ST 85–90%</th><th style="padding:10px;border-bottom:2px solid #e0e7ff;text-align:right;color:#7c3aed">Hạng mục lỗi</th><th style="padding:10px;border-bottom:2px solid #e0e7ff;text-align:center;color:#6b7280">Chi tiết</th></tr></thead>
-    <tbody>${mRows.length?mRows.map(r=>`<tr style="border-bottom:1px solid var(--br)"><td style="padding:9px 14px;font-weight:600">T${r.m}/${eY}</td><td style="padding:9px;text-align:right">${r.n}</td><td style="padding:9px;text-align:right;font-weight:700;color:${clr(r.avg)}">${fmt(r.avg)}</td><td style="padding:9px;text-align:right;color:${r.d85?'#dc2626':'#6b7280'}">${r.d85||'—'}</td><td style="padding:9px;text-align:right;color:${r.d90?'#d97706':'#6b7280'}">${r.d90||'—'}</td><td style="padding:9px;text-align:right;color:#7c3aed">${r.loi||'—'}</td><td style="padding:9px;text-align:center"><button onclick="qcDiemLoad('${eY}','${r.m}')" class="btn b-sm" style="background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe">Xem T${r.m}</button></td></tr>`).join(''):`<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--t2)">Chưa có dữ liệu năm ${eY}</td></tr>`}</tbody>
-  </table>
-</div>
-<p style="font-size:12px;color:var(--t2);margin:10px 4px 0">💡 Chọn tháng cụ thể để xem chi tiết từng siêu thị và nhập/chỉnh sửa dữ liệu</p>`;
-  }
-  return`${headerCard}
 <div class="card" style="padding:14px 20px;margin-bottom:16px">
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <input id="qcd-new-st" list="qcd-st-list" class="fi" style="flex:1;min-width:220px" placeholder="Gõ tên siêu thị rồi bấm Thêm ST..." onkeydown="if(event.key==='Enter'){event.preventDefault();qcDiemAddRow();}">
@@ -1853,7 +1822,6 @@ function rQCDiem(){
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
       <input id="qcd-new-hm" class="fi" style="flex:1;min-width:200px" placeholder="Gõ tên hạng mục rồi bấm Thêm hạng mục..." onkeydown="if(event.key==='Enter'){event.preventDefault();qcLoiHMAddRow();}">
       <button onclick="qcLoiHMAddRow()" class="btn b-pri b-sm">➕ Thêm hạng mục</button>
-      <button onclick="if(confirm('Xóa toàn bộ hạng mục lỗi tháng này?')){S.qcDiemLoiHM=[];const b=document.getElementById('qcd-loihm-body');if(b)b.innerHTML=qcLoiHMRowsHTML();}" class="btn b-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca">🗑 Xóa tất cả</button>
     </div>
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
@@ -1916,24 +1884,9 @@ function qcDiemImportFile(input){
       }
       if(!newRows.length&&!newLoi.length){alert('File không có dữ liệu hoặc sai tên sheet (cần "Chấm điểm" và "Lỗi hạng mục")!');return;}
       if(month){S.qcDiemMonth=month;S.qcDiemYear=year;}
-      S.qcDiemRows=newRows;S.qcDiemLoiHM=newLoi;S._qcDiemAutoLoaded=true;S._qcDiemLoading=false;
-      // Auto-save ngay sau import để Firebase luôn có data đúng tháng
-      const _qcdb=getQCDB();
-      if(_qcdb&&month){
-        const _y=S.qcDiemYear,_m=S.qcDiemMonth;
-        const _ref=_qcdb.ref(`qc_diem/${_y}/${_m}`);
-        _ref.get().then(old=>{
-          const ops=[];
-          if(old.exists())ops.push(_qcdb.ref(`qc_diem_history/${_y}/${_m}`).push({...old.val(),_snapshotAt:Date.now(),_by:S.profile?.name||S.user?.email||'?'}));
-          return Promise.all(ops).then(()=>_ref.set({rows:newRows,loiHM:newLoi,savedAt:Date.now()}));
-        }).then(()=>{
-          go('qc','Chấm điểm dịch vụ');
-          setTimeout(()=>{const s=document.getElementById('qcd-diem-saved');if(s){s.textContent=`✅ Import & lưu thành công: ${newRows.length} ST · ${newLoi.length} hạng mục lỗi (T${_m}/${_y})`;s.style.display='block';setTimeout(()=>s.style.display='none',5000);}},200);
-        }).catch(e=>alert('Import OK nhưng lưu Firebase lỗi: '+e.message));
-      }else{
-        go('qc','Chấm điểm dịch vụ');
-        setTimeout(()=>{const s=document.getElementById('qcd-diem-saved');if(s){s.textContent=`✅ Đã import ${newRows.length} ST · ${newLoi.length} hạng mục — bấm Lưu để ghi vào hệ thống`;s.style.display='block';setTimeout(()=>s.style.display='none',5000);}},200);
-      }
+      S.qcDiemRows=newRows;S.qcDiemLoiHM=newLoi;S._qcDiemAutoLoaded=true;
+      go('qc','Chấm điểm dịch vụ');
+      setTimeout(()=>{const s=document.getElementById('qcd-diem-saved');if(s){s.textContent=`✅ Đã import ${newRows.length} siêu thị & ${newLoi.length} hạng mục từ Excel!`;s.style.display='block';setTimeout(()=>s.style.display='none',5000);}},300);
     }catch(err){alert('Lỗi đọc file Excel: '+err.message);}
   };
   reader.readAsBinaryString(file);
@@ -1979,8 +1932,8 @@ function qcLoiHMRowsHTML(){
   return S.qcDiemLoiHM.map((r,i)=>`<tr>
     <td style="padding:6px;border:1px solid #fecaca;text-align:center;color:#94a3b8">${i+1}</td>
     <td style="padding:6px 12px;border:1px solid #fecaca;font-weight:600">${r.cat}</td>
-    <td style="padding:4px;border:1px solid #fecaca"><input type="number" step="0.01" class="fi" style="width:120px;text-align:center" value="${r.tyle??''}" placeholder="Vd: 12.50" oninput="qcLoiHMUpdate(${i},'tyle',this.value)"></td>
-    <td style="padding:4px;border:1px solid #fecaca"><input type="number" class="fi" style="width:100px;text-align:center" value="${r.soLoi??''}" placeholder="Vd: 10" oninput="qcLoiHMUpdate(${i},'soLoi',this.value)"></td>
+    <td style="padding:4px;border:1px solid #fecaca"><input type="number" step="0.01" class="fi" style="width:120px;text-align:center" value="${r.tyle||''}" placeholder="Vd: 12.50" oninput="qcLoiHMUpdate(${i},'tyle',this.value)"></td>
+    <td style="padding:4px;border:1px solid #fecaca"><input type="number" class="fi" style="width:100px;text-align:center" value="${r.soLoi||''}" placeholder="Vd: 10" oninput="qcLoiHMUpdate(${i},'soLoi',this.value)"></td>
     <td style="padding:4px;border:1px solid #fecaca;text-align:center"><button onclick="qcLoiHMRemoveRow(${i})" style="background:none;border:none;color:#dc2626;cursor:pointer" title="Xóa">🗑</button></td>
   </tr>`).join('');
 }
@@ -2006,22 +1959,15 @@ function qcLoiHMRemoveRow(i){
 }
 /* ── QC ĐỔI TRẢ ── */
 function qcDTLoad(year,month){
-  const y=String(year||S.qcDTYear||'2026'),m=String(month!=null?month:(S.qcDTMonth||'0'));
+  const y=String(year||S.qcDTYear||'2026'),m=String(month||S.qcDTMonth||'5');
   S.qcDTYear=y;S.qcDTMonth=m;
   const db=getQCDB();if(!db){alert('Không kết nối Firebase!');return;}
-  if(m==='0'){
-    db.ref(`qc_doitra/${y}`).get().then(snap=>{
-      S.qcDTYearData=snap.exists()?snap.val():{};
-      go('qc','Đổi trả');
-    }).catch(e=>alert('Lỗi tải: '+e.message));
-  }else{
-    db.ref(`qc_doitra/${y}/${m}`).get().then(snap=>{
-      const d=snap.exists()?snap.val():null;
-      S.qcDTST=d&&d.st?d.st:{};
-      S.qcDTCVS=d&&d.cvs?d.cvs:{};
-      go('qc','Đổi trả');
-    }).catch(e=>alert('Lỗi tải: '+e.message));
-  }
+  db.ref(`qc_doitra/${y}/${m}`).get().then(snap=>{
+    const d=snap.exists()?snap.val():null;
+    S.qcDTST=d&&d.st?d.st:{};
+    S.qcDTCVS=d&&d.cvs?d.cvs:{};
+    go('qc','Đổi trả');
+  }).catch(e=>alert('Lỗi tải: '+e.message));
 }
 function qcDTSave(btn){
   const y=document.getElementById('qcdt-year')?.value||S.qcDTYear;
@@ -2152,43 +2098,32 @@ function qcDTRestore(key){
   setTimeout(()=>{const s=document.getElementById('qcdt-saved');if(s){s.textContent='⏪ Đã khôi phục. Kiểm tra rồi bấm Lưu để ghi lại.';s.style.display='block';setTimeout(()=>s.style.display='none',6000);}},300);
 }
 function rQCDoiTra(){
-  const eM=String(S.qcDTMonth||'0'),eY=String(S.qcDTYear||'2026');
-  const dtHdr=`<div class="card" style="padding:16px 20px;margin-bottom:16px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px"><div><h2 style="font-size:15px;font-weight:700;color:var(--t1);margin:0">🔄 Kiểm soát hoạt động đổi trả</h2><p style="font-size:12px;color:var(--t2);margin:4px 0 0">Nhập liệu đổi trả theo tháng — tách riêng Siêu thị & CVS</p></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><label class="fi-lbl" style="margin:0">Tháng</label><select id="qcdt-month" class="fi" style="width:80px" onchange="qcDTLoad(document.getElementById('qcdt-year').value,this.value)"><option value="0"${eM==='0'?' selected':''}>Tất cả</option>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select><label class="fi-lbl" style="margin:0">Năm</label><select id="qcdt-year" class="fi" style="width:85px" onchange="qcDTLoad(this.value,document.getElementById('qcdt-month').value)">${yearOpts(eY)}</select>${eM!=='0'?`<button onclick="qcDTSave(this)" class="btn b-pri b-sm">💾 Lưu</button><button onclick="qcDTShowHistory()" class="btn b-sm" style="background:#6366f1;color:#fff">📋 Lịch sử</button>`:''}</div></div><div id="qcdt-saved" class="qcd-saved" style="margin-top:8px">✅ Đã lưu thành công!</div><div id="qcdt-hist-panel" style="display:none;border:1px solid #e0e7ff;border-radius:8px;margin-top:10px;overflow:hidden;max-height:320px;overflow-y:auto"></div></div>`;
-  if(eM==='0'){
-    const yd=S.qcDTYearData||{};
-    const hasData=Object.keys(yd).length>0;
-    if(!hasData)return`${dtHdr}<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px">🔄</div><p style="color:var(--t2);font-size:13px;margin:12px 0">Bấm <strong>Tải</strong> hoặc chọn tháng để xem dữ liệu</p><button onclick="qcDTLoad('${eY}','0')" class="btn b-pri">📥 Tải dữ liệu năm ${eY}</button></div>`;
-    let totST=0,totCVS=0,totAll=0;
-    const mRows=[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>{
-      const d=yd[String(m)];if(!d)return null;
-      const st=d.st||{},cvs=d.cvs||{};
-      const s=parseFloat(st.tongDon)||0,c=parseFloat(cvs.tongDon)||0,tot=s+c;
-      if(!tot&&!s&&!c)return null;
-      totST+=s;totCVS+=c;totAll+=tot;
-      return{m,s,c,tot};
-    }).filter(Boolean);
-    return`${dtHdr}
-<div class="g4" style="margin-bottom:12px">
-  <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Tháng có dữ liệu</div><div style="font-size:28px;font-weight:800;color:#3b82f6">${mRows.length}<span style="font-size:14px;font-weight:500;color:var(--t2)">/12</span></div><div style="font-size:11px;color:var(--t2)">Năm ${eY}</div></div>
-  <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Tổng đơn Siêu thị</div><div style="font-size:28px;font-weight:800;color:#6366f1">${totST}</div><div style="font-size:11px;color:var(--t2)">đơn cả năm</div></div>
-  <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Tổng đơn CVS</div><div style="font-size:28px;font-weight:800;color:#0891b2">${totCVS}</div><div style="font-size:11px;color:var(--t2)">đơn cả năm</div></div>
-  <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Tổng cộng</div><div style="font-size:28px;font-weight:800;color:#7c3aed">${totAll}</div><div style="font-size:11px;color:var(--t2)">đơn cả năm</div></div>
+  const eM=String(S.qcDTMonth||'5'),eY=String(S.qcDTYear||'2026');
+  return`
+<div class="card" style="padding:16px 20px;margin-bottom:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2 style="font-size:15px;font-weight:700;color:var(--t1);margin:0">🔄 Kiểm soát hoạt động đổi trả</h2>
+      <p style="font-size:12px;color:var(--t2);margin:4px 0 0">Nhập liệu đổi trả theo tháng — tách riêng Siêu thị & CVS</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label class="fi-lbl" style="margin:0">Tháng</label>
+      <select id="qcdt-month" class="fi" style="width:70px" onchange="qcDTLoad(document.getElementById('qcdt-year').value,this.value)">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+      <label class="fi-lbl" style="margin:0">Năm</label>
+      <select id="qcdt-year" class="fi" style="width:85px" onchange="qcDTLoad(this.value,document.getElementById('qcdt-month').value)">${yearOpts(eY)}</select>
+      <button onclick="qcDTSave(this)" class="btn b-pri b-sm">💾 Lưu</button>
+      <button onclick="qcDTShowHistory()" class="btn b-sm" style="background:#6366f1;color:#fff">📋 Lịch sử</button>
+    </div>
+  </div>
+  <div id="qcdt-saved" class="qcd-saved" style="margin-top:8px">✅ Đã lưu thành công!</div>
+  <div id="qcdt-hist-panel" style="display:none;border:1px solid #e0e7ff;border-radius:8px;margin-top:10px;overflow:hidden;max-height:320px;overflow-y:auto"></div>
 </div>
-<div class="card" style="padding:0;overflow-x:auto">
-  <table style="width:100%;border-collapse:collapse;font-size:13px">
-    <thead><tr style="background:#f0f0ff"><th style="padding:10px 14px;text-align:left;border-bottom:2px solid #e0e7ff;color:#4f46e5">Tháng</th><th style="padding:10px;border-bottom:2px solid #e0e7ff;text-align:right;color:#6366f1;font-weight:700">Siêu thị</th><th style="padding:10px;border-bottom:2px solid #e0e7ff;text-align:right;color:#0891b2;font-weight:700">CVS</th><th style="padding:10px;border-bottom:2px solid #e0e7ff;text-align:right;color:#7c3aed;font-weight:700">Tổng</th><th style="padding:10px;border-bottom:2px solid #e0e7ff;text-align:center;color:#6b7280">Chi tiết</th></tr></thead>
-    <tbody>${mRows.length?[...mRows,{m:'Tổng',s:totST,c:totCVS,tot:totAll,_sum:true}].map(r=>r._sum?`<tr style="background:#f8f9fc;font-weight:700;border-top:2px solid #e0e7ff"><td style="padding:9px 14px">Tổng cộng</td><td style="padding:9px;text-align:right;color:#6366f1">${r.s}</td><td style="padding:9px;text-align:right;color:#0891b2">${r.c}</td><td style="padding:9px;text-align:right;color:#7c3aed">${r.tot}</td><td></td></tr>`:`<tr style="border-bottom:1px solid var(--br)"><td style="padding:9px 14px;font-weight:600">T${r.m}/${eY}</td><td style="padding:9px;text-align:right">${r.s||'—'}</td><td style="padding:9px;text-align:right">${r.c||'—'}</td><td style="padding:9px;text-align:right;font-weight:700">${r.tot}</td><td style="padding:9px;text-align:center"><button onclick="qcDTLoad('${eY}','${r.m}')" class="btn b-sm" style="background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe">Xem T${r.m}</button></td></tr>`).join(''):`<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--t2)">Chưa có dữ liệu năm ${eY}</td></tr>`}</tbody>
-  </table>
-</div>
-<p style="font-size:12px;color:var(--t2);margin:10px 4px 0">💡 Chọn tháng cụ thể để nhập/chỉnh sửa dữ liệu đổi trả</p>`;
-  }
-  return`${dtHdr}
 ${qcDTSec('qcdt-st','🏪 I. Siêu thị',S.qcDTST)}
 ${qcDTSec('qcdt-cvs','🏬 II. CVS',S.qcDTCVS)}`;
 }
 /* ── Check gian lận định kỳ & CTKM ── */
 function rQCGianLan(){
-  const d=S.qcGLData,eM=String(S.qcGLMonth||'0'),eY=String(S.qcGLYear||'2026');
+  const d=S.qcGLData,eM=String(S.qcGLMonth||'5'),eY=String(S.qcGLYear||'2026');
   const dk=d&&d.dk||{},ctkm=d&&d.ctkm||{};
   const syncAt=d&&d.syncedAt?new Date(d.syncedAt).toLocaleDateString('vi-VN'):'—';
   const yd=S.qcGLYearData||{};
@@ -2202,10 +2137,12 @@ function rQCGianLan(){
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <label class="fi-lbl" style="margin:0">Tháng</label>
-      <select id="qcgl-month" class="fi" style="width:80px" onchange="qcGLLoad(document.getElementById('qcgl-year').value,this.value)"><option value="0"${eM==='0'?' selected':''}>Tất cả</option>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+      <select id="qcgl-month" class="fi" style="width:70px" onchange="qcGLLoad(document.getElementById('qcgl-year').value,this.value)">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
       <label class="fi-lbl" style="margin:0">Năm</label>
       <select id="qcgl-year" class="fi" style="width:85px" onchange="qcGLLoad(this.value,document.getElementById('qcgl-month').value)">${yearOpts(eY)}</select>
-      ${eM!=='0'?`<label class="fi-lbl" style="margin:0">KH ĐK T${eM}</label><input id="qcgl-kh" type="number" class="fi" style="width:64px" min="0" value="${S.qcGLKHData[eM]||S.qcGLKH||''}"><button onclick="qcGLSaveKH(this)" class="btn b-sm" style="background:#16a34a;color:#fff">💾 Lưu KH</button>`:''}
+      <label class="fi-lbl" style="margin:0">KH ĐK T${eM}</label>
+      <input id="qcgl-kh" type="number" class="fi" style="width:64px" min="0" value="${S.qcGLKHData[eM]||S.qcGLKH||''}">
+      <button onclick="qcGLSaveKH(this)" class="btn b-sm" style="background:#16a34a;color:#fff">💾 Lưu KH</button>
       <button id="qcgl-sync-btn" onclick="qcGLSync(this)" class="btn b-pri b-sm">🔄 Đồng bộ Lark</button>
     </div>
   </div>
@@ -2262,20 +2199,18 @@ function rQCGianLan(){
   </div>
 </div>
 <div style="margin-bottom:16px">
-  ${eM==='0'?'':`<div style="margin-bottom:16px">
   <div class="qcd-sec-hdr" onclick="qcToggleSec('qcgl-s3')" style="background:linear-gradient(90deg,#dc2626,#ef4444)">
     <span>⚠️ Tổng hợp lỗi vi phạm tháng ${eM}/${eY}</span><span id="qcgl-s3-ico">▼</span>
   </div>
   <div id="qcgl-s3" class="qcd-sec-body">
-    ${!d?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có dữ liệu tháng ${eM}. Bấm 🔄 Đồng bộ Lark để tải.</div>`:`
+    ${!d?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có dữ liệu.</div>`:`
     <div class="g2" style="gap:12px;margin-bottom:12px">
       <div><div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--t1)">🔍 Định kỳ — Lỗi vi phạm</div>${_glLoiTable(dk.loiVPs||{})}</div>
       <div><div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--t1)">🎁 CTKM — Lỗi vi phạm</div>${_glLoiTable(ctkm.loiVPs||{})}</div>
     </div>
     <div class="chart-wrap" style="height:200px"><canvas id="c-gl-loi"></canvas></div>`}
   </div>
-</div>`}
-`;
+</div>`;
 }
 function _glCard(lb,v,unit,clr){
   return`<div class="card" style="padding:14px 16px;text-align:center"><div style="font-size:28px;font-weight:800;color:${clr}">${v}</div><div style="font-size:11px;color:var(--t2);margin-top:2px">${unit}</div><div style="font-size:12px;font-weight:600;color:var(--t1);margin-top:4px">${lb}</div></div>`;
@@ -2286,17 +2221,10 @@ function _glLoiTable(loiVPs){
   return`<table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left;padding:6px 8px;background:rgba(220,38,38,.06)">Loại lỗi</th><th style="text-align:center;width:60px;background:rgba(220,38,38,.06)">Số lần</th></tr></thead><tbody>${entries.map(([k,v])=>`<tr><td style="padding:5px 8px">${k}</td><td style="text-align:center;padding:5px 8px"><strong style="color:#dc2626">${v}</strong></td></tr>`).join('')}</tbody></table>`;
 }
 async function qcGLLoad(year,month){
-  const m=String(month!=null?month:(S.qcGLMonth||'0'));
-  S.qcGLYear=String(year);S.qcGLMonth=m;
+  S.qcGLYear=String(year);S.qcGLMonth=String(month);
   const db2=getQCDB();if(!db2)return;
-  if(m==='0'){
-    const[ysnap,khsnap]=await Promise.all([db2.ref(`qc_gianlantctm/${year}`).get(),db2.ref(`qc_kh/${year}`).get()]);
-    S.qcGLData=null;S.qcGLYearData=ysnap.exists()?ysnap.val():{};
-    S.qcGLKHData=khsnap.exists()?khsnap.val():{};
-    go('qc','Check gian lận định kỳ và CTKM');return;
-  }
   const[snap,ysnap,khsnap]=await Promise.all([
-    db2.ref(`qc_gianlantctm/${year}/${m}`).get(),
+    db2.ref(`qc_gianlantctm/${year}/${month}`).get(),
     db2.ref(`qc_gianlantctm/${year}`).get(),
     db2.ref(`qc_kh/${year}`).get()
   ]);
@@ -2336,7 +2264,7 @@ const BB_TEMPS=[
   'Biên bản xử lý dán sai date'
 ];
 function rQCBienBan(){
-  const eM=String(S.qcBBMonth||'0'),eY=String(S.qcBBYear||'2026');
+  const eM=String(S.qcBBMonth||'5'),eY=String(S.qcBBYear||'2026');
   const list=S.qcBBList||[];
   const yd=S.qcBBYearData||{};
   return`
@@ -2348,7 +2276,7 @@ function rQCBienBan(){
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <label class="fi-lbl" style="margin:0">Tháng</label>
-      <select id="qcbb-month" class="fi" style="width:80px" onchange="qcBBLoad(document.getElementById('qcbb-year').value,this.value)"><option value="0"${eM==='0'?' selected':''}>Tất cả</option>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+      <select id="qcbb-month" class="fi" style="width:70px" onchange="qcBBLoad(document.getElementById('qcbb-year').value,this.value)">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
       <label class="fi-lbl" style="margin:0">Năm</label>
       <select id="qcbb-year" class="fi" style="width:85px" onchange="qcBBLoad(this.value,document.getElementById('qcbb-month').value)">${yearOpts(eY)}</select>
     </div>
@@ -2383,7 +2311,7 @@ function rQCBienBan(){
         <div style="margin-bottom:12px"><label class="fi-lbl">Tên người vi phạm *</label><input id="bb-nguoi" class="fi" type="text" placeholder="Họ tên người vi phạm" style="width:100%;box-sizing:border-box"></div>
         <div style="margin-bottom:12px"><label class="fi-lbl">Siêu thị *</label><input id="bb-st" list="bb-st-list" class="fi" type="text" placeholder="Gõ tên siêu thị..." style="width:100%;box-sizing:border-box" autocomplete="off"><datalist id="bb-st-list">${BB_STORES.map(s=>`<option value="${s}">`).join('')}</datalist></div>
         <div style="margin-bottom:12px"><label class="fi-lbl">Loại xử lý *</label><select id="bb-loai" class="fi" style="width:100%;box-sizing:border-box"><option value="">— Chọn loại —</option>${BB_LOAI.map(l=>`<option value="${l}">${l}</option>`).join('')}</select></div>
-        <div style="margin-bottom:12px"><label class="fi-lbl">Tháng/Năm *</label><div style="display:flex;gap:8px"><select id="bb-month" class="fi" style="flex:1">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===(eM==='0'?String(new Date().getMonth()+1):eM)?' selected':''}>T${m}</option>`).join('')}</select><select id="bb-year" class="fi" style="flex:1">${yearOpts(eY)}</select></div></div>
+        <div style="margin-bottom:12px"><label class="fi-lbl">Tháng/Năm *</label><div style="display:flex;gap:8px"><select id="bb-month" class="fi" style="flex:1">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select><select id="bb-year" class="fi" style="flex:1">${yearOpts(eY)}</select></div></div>
       </div>
       <div>
         <div style="margin-bottom:12px"><label class="fi-lbl">Lý do xử phạt *</label><textarea id="bb-lydo" class="fi" rows="4" placeholder="Mô tả lý do vi phạm..." style="width:100%;box-sizing:border-box;resize:vertical"></textarea></div>
@@ -2408,10 +2336,10 @@ function rQCBienBan(){
 </div>
 <div style="margin-bottom:16px">
   <div class="qcd-sec-hdr" onclick="qcToggleSec('qcbb-s4')" style="background:linear-gradient(90deg,#dc2626,#ef4444)">
-    <span>📃 Danh sách biên bản ${eM==='0'?'Cả năm':('T'+eM)}/${eY} (${list.length})</span><span id="qcbb-s4-ico">▼</span>
+    <span>📃 Danh sách biên bản T${eM}/${eY} (${list.length})</span><span id="qcbb-s4-ico">▼</span>
   </div>
   <div id="qcbb-s4" class="qcd-sec-body">
-    ${!list.length?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có biên bản nào ${eM==='0'?'cả năm '+eY:'T'+eM+'/'+eY}. Nhập mới ở mục bên trên.</div>`:`
+    ${!list.length?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có biên bản nào T${eM}/${eY}. Nhập mới ở mục bên trên.</div>`:`
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="background:rgba(220,38,38,0.07)">
         <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--br)">Người vi phạm</th>
@@ -2463,22 +2391,16 @@ async function qcDocUpload(type,idx,inp){
   }catch(e){lbl.childNodes[0].textContent=origTxt;alert('Lỗi upload: '+e.message);}
 }
 async function qcBBLoad(year,month){
-  const m=String(month!=null?month:(S.qcBBMonth||'0'));
-  S.qcBBYear=String(year);S.qcBBMonth=m;
+  S.qcBBYear=String(year);S.qcBBMonth=String(month);
   const db2=getQCDB();if(!db2)return;
-  const[ysnap,dsnap,nsnap]=await Promise.all([
+  const[snap,ysnap,dsnap,nsnap]=await Promise.all([
+    db2.ref(`qc_bienbans/${year}/${month}`).get(),
     db2.ref(`qc_bienbans/${year}`).get(),
     db2.ref('qc_docs').get(),
     db2.ref('qc_doc_names').get()
   ]);
+  S.qcBBList=snap.exists()?Object.entries(snap.val()).map(([id,v])=>({id,...v})):[];
   S.qcBBYearData=ysnap.exists()?ysnap.val():{};
-  if(m!=='0'&&ysnap.exists()&&ysnap.val()[m]){
-    S.qcBBList=Object.entries(ysnap.val()[m]).map(([id,v])=>({id,...v}));
-  }else if(m==='0'&&ysnap.exists()){
-    // flatten all months
-    const all=[];Object.values(ysnap.val()).forEach(mv=>{if(mv&&typeof mv==='object')Object.entries(mv).forEach(([id,v])=>all.push({id,...v}));});
-    S.qcBBList=all;
-  }else{S.qcBBList=[];}
   S.qcDocsData=dsnap.exists()?dsnap.val():{};
   const nn=nsnap.exists()?nsnap.val():{};
   S.qcDocLists={noi_quy:nn.noi_quy||BB_QDOCS.slice(),mau_form:nn.mau_form||BB_TEMPS.slice()};
@@ -4952,7 +4874,7 @@ async function doAddUser(){
   if(!email||!pass||!name){if(errEl)errEl.innerHTML=`<div class="err-box">Vui lòng điền đầy đủ thông tin bắt buộc (*)</div>`;return;}
   try{
     const sec=firebase.initializeApp(FB,'sec-'+Date.now());
-    const secAuth=sec.auth();
+    const secAuth=firebase.auth(sec);
     const cred=await secAuth.createUserWithEmailAndPassword(email,pass);
     await db.ref(`profiles/${cred.user.uid}`).set({name,email,role,dept,phone:'',createdAt:Date.now()});
     await secAuth.signOut(); sec.delete();
