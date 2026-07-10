@@ -4873,15 +4873,21 @@ async function doAddUser(){
   const errEl=document.getElementById('au-err');
   if(!email||!pass||!name){if(errEl)errEl.innerHTML=`<div class="err-box">Vui lòng điền đầy đủ thông tin bắt buộc (*)</div>`;return;}
   try{
-    const sec=firebase.initializeApp(FB,'sec-'+Date.now());
-    const secAuth=firebase.auth(sec);
-    const cred=await secAuth.createUserWithEmailAndPassword(email,pass);
-    await db.ref(`profiles/${cred.user.uid}`).set({name,email,role,dept,phone:'',createdAt:Date.now()});
-    await secAuth.signOut(); sec.delete();
+    // Dùng REST API để tạo user mà không ảnh hưởng session hiện tại
+    const res=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FB.apiKey}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:pass,returnSecureToken:false})
+    });
+    const data=await res.json();
+    if(data.error){
+      const M={'EMAIL_EXISTS':'Email này đã có tài khoản','WEAK_PASSWORD':'Mật khẩu quá yếu (tối thiểu 6 ký tự)','INVALID_EMAIL':'Email không hợp lệ'};
+      const msg=data.error.message||'';
+      throw new Error(M[msg]||M[msg.split(' ')[0]]||msg);
+    }
+    await db.ref(`profiles/${data.localId}`).set({name,email,role,dept,phone:'',createdAt:Date.now()});
     closeModal(); toast(`✅ Đã tạo tài khoản: ${name}`,'t-ok'); loadUsers();
   }catch(e){
-    const M={'auth/email-already-in-use':'Email này đã có tài khoản','auth/weak-password':'Mật khẩu quá yếu (tối thiểu 6 ký tự)'};
-    if(errEl)errEl.innerHTML=`<div class="err-box">${M[e.code]||e.message}</div>`;
+    if(errEl)errEl.innerHTML=`<div class="err-box">${e.message}</div>`;
   }
 }
 async function setRole(uid,role){
