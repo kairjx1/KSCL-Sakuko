@@ -1654,7 +1654,7 @@ async function syncXuatHuy(btn){
   try{
     let d=null;
     try{
-      const r=await fetch('http://localhost:3001/api/sync-xuathuy',{signal:AbortSignal.timeout(120000)});
+      const r=await fetch('http://localhost:3002/api/sync-xuathuy',{signal:AbortSignal.timeout(120000)});
       if(r.ok){d=await r.json();if(d.error)d=null;}
     }catch(_){}
     if(!d){
@@ -2471,7 +2471,7 @@ async function qcGLSync(btn){
     let agg=null,counts=null,syncedAt=Date.now();
     // Try local sync-server first (lark-cli, no secret needed)
     try{
-      const r=await fetch('http://localhost:3001/api/sync-gl',{signal:AbortSignal.timeout(90000)});
+      const r=await fetch('http://localhost:3002/api/sync-gl',{signal:AbortSignal.timeout(90000)});
       if(r.ok){const c=await r.json();if(c.agg){agg=c.agg;counts=c.counts;syncedAt=c.syncedAt||syncedAt;}}
     }catch(_){}
     // Fallback: Cloudflare Pages Function (dùng env var, không cần secret)
@@ -2786,7 +2786,7 @@ async function syncLarkDate(btn){
   try{
     let d=null;
     try{
-      const r=await fetch('http://localhost:3001/api/sync-date',{signal:AbortSignal.timeout(90000)});
+      const r=await fetch('http://localhost:3002/api/sync-date',{signal:AbortSignal.timeout(90000)});
       if(r.ok){d=await r.json();if(d.error)d=null;}
     }catch(_){}
     if(!d){
@@ -2815,7 +2815,7 @@ async function syncTonAm(btn){
   try{
     let d=null;
     try{
-      const r=await fetch('http://localhost:3001/api/sync-tonam',{signal:AbortSignal.timeout(90000)});
+      const r=await fetch('http://localhost:3002/api/sync-tonam',{signal:AbortSignal.timeout(90000)});
       if(r.ok){d=await r.json();if(d.error)d=null;}
     }catch(_){}
     if(!d){
@@ -2847,7 +2847,7 @@ async function syncBBKK(btn){
   try{
     let d=null;
     try{
-      const r=await fetch('http://localhost:3001/api/sync-bbkk',{signal:AbortSignal.timeout(55000)});
+      const r=await fetch('http://localhost:3002/api/sync-bbkk',{signal:AbortSignal.timeout(55000)});
       if(r.ok){d=await r.json();if(d.error)d=null;}
     }catch(_){}
     if(!d){
