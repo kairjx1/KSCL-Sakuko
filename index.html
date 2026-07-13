@@ -3039,6 +3039,127 @@ function rDateDH(){
 </div>
 `;}
 
+/* ══ TỔNG HỢP: load all months từ QC Firebase + KK Lark caches ══ */
+async function tongHopLoadAll(){
+  S._thLoading=1; go(S.page,S.tab);
+  try{
+    const[bb,ta,xh,dc]=await Promise.all(['bbkk-cache.json','tonam-cache.json','xuathuy-cache.json','date-cache.json'].map(kkFetchCache));
+    const monthSet=new Set();
+    if(ta&&ta.months)Object.keys(ta.months).forEach(k=>{const m=+k.slice(1);if(m>=1&&m<=12)monthSet.add('2026/'+m);});
+    if(bb&&bb.t1)bb.t1.forEach(r=>{if(r.nam&&r.thang)monthSet.add(r.nam+'/'+r.thang);});
+    if(xh&&xh.data)Object.entries(xh.data).forEach(([y,ms])=>Object.keys(ms).forEach(k=>{const m=+k.slice(1);if(m>=1&&m<=12)monthSet.add(y+'/'+m);}));
+    if(dc&&dc.monthly)dc.monthly.forEach(r=>{if(r.t){const m=+r.t.slice(1);if(m>=1&&m<=12)monthSet.add('2026/'+m);}});
+    // add current + prev month even if no cache yet
+    const _now=new Date(),_cm=_now.getMonth()||12,_cy=_cm===12?_now.getFullYear()-1:_now.getFullYear();
+    monthSet.add(_cy+'/'+_cm);
+    const allData={};
+    for(const mk of monthSet){
+      const[y,m]=mk.split('/');
+      const Tm='T'+String(+m).padStart(2,'0'),pm=+m===1?12:+m-1,pTm='T'+String(pm).padStart(2,'0');
+      const recs=(bb&&bb.t1||[]).filter(r=>+r.nam===+y&&+r.thang===+m);
+      const taM=ta&&ta.months&&ta.months[Tm]||null;
+      const taP=ta&&ta.months&&ta.months[pTm]||null;
+      const xhM=xh&&xh.data&&xh.data[y]&&xh.data[y][Tm]||null;
+      const dcM=(dc&&dc.monthly||[]).find(r=>r.t===Tm)||null;
+      let tt=0,th=0;
+      recs.forEach(r=>{const ton=(+r.denBu||0)+(+r.congtyHT||0);if(ton<0)tt+=-ton;th+=Math.abs(Math.min(0,+r.denBu||0));});
+      allData[mk]={kk:{
+        soBienBan:recs.length,tongThatthoat:tt,thuHoi:th,
+        tongTonAm:taM?+taM.total||0:null,tongTonAmPrev:taP?+taP.total||0:null,
+        xuathuyValue:xhM?+xhM.value||0:null,xuathuyQty:xhM?+xhM.qty||0:null,
+        doanhThu:dcM?+dcM.dt||0:null,
+      }};
+    }
+    // QC từ Firebase — batch check tất cả months
+    const qcdb=getQCDB();
+    if(qcdb){
+      await Promise.all([...monthSet].map(async mk=>{
+        const[y,m]=mk.split('/');
+        try{
+          const[dS,dtS,glS]=await Promise.all([
+            qcdb.ref('qc_diem/'+y+'/'+m).get(),
+            qcdb.ref('qc_doitra/'+y+'/'+m).get(),
+            qcdb.ref('qc_gianlantctm/'+y+'/'+m).get()
+          ]);
+          if(!dS.exists())return;
+          const diem=dS.val(),dt=(dtS.exists()?dtS.val():{}).st||{};
+          const gl=glS.exists()?glS.val():null;
+          const pct=r=>{const mx=parseFloat(r.max),th=parseFloat(r.thuc);return mx>0&&isFinite(th)?+(th/mx*100).toFixed(2):null;};
+          let sum=0,cnt=0;
+          (diem.rows||[]).forEach(r=>{const c=pct(r);if(c!=null){sum+=c;cnt++;}});
+          const allLoi={...(gl&&gl.dk&&gl.dk.loiVPs||{})};
+          for(const[k,v]of Object.entries(gl&&gl.ctkm&&gl.ctkm.loiVPs||{}))allLoi[k]=(allLoi[k]||0)+v;
+          const topLoi=Object.entries(allLoi).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>({k,v}));
+          allData[mk].qc={
+            diemTB:cnt?+(sum/cnt).toFixed(2):0,tongLuot:cnt,
+            tongDoitra:+dt.tongDon||0,pctST:+dt.pctST||0,pctKhach:+dt.pctKhach||0,
+            soKiemTra:+((gl&&gl.dk&&gl.dk.total)||0),soSTLoi:+((gl&&gl.dk&&gl.dk.cgt)||0),
+            topLoi,
+          };
+        }catch(e){}
+      }));
+    }
+    const sortedKeys=Object.keys(allData).filter(k=>allData[k].qc||allData[k].kk.soBienBan||allData[k].kk.tongTonAm!=null).sort((a,b)=>{const[ya,ma]=a.split('/'),[yb,mb]=b.split('/');return(+ya*12+ +ma)-(+yb*12+ +mb);});
+    S.tongHopAllData={months:allData,sortedKeys,ts:Date.now()};
+    if(!S.tongHopMonth||!allData[S.tongHopMonth])S.tongHopMonth=sortedKeys[sortedKeys.length-1]||'';
+  }catch(e){console.error(e);}
+  S._thLoading=0; go(S.page,S.tab);
+}
+
+function rTongHop(){
+  if(!S.tongHopAllData&&!S._thLoading){S._thLoading=1;tongHopLoadAll();return`<div class="card" style="padding:32px;text-align:center;color:#64748b">⏳ Đang tải dữ liệu tổng hợp từ QC & Kiểm kê...</div>`;}
+  if(S._thLoading)return`<div class="card" style="padding:32px;text-align:center;color:#64748b">⏳ Đang tải dữ liệu tổng hợp...</div>`;
+  const th=S.tongHopAllData;
+  const sortedKeys=th.sortedKeys||[];
+  if(!sortedKeys.length)return`<div class="card" style="padding:24px;text-align:center">Không có dữ liệu. <button onclick="S.tongHopAllData=null;tongHopLoadAll()" class="btn b-pri b-sm">🔄 Tải lại</button></div>`;
+  const selM=S.tongHopMonth||sortedKeys[sortedKeys.length-1];
+  const d=th.months[selM]||{};
+  const qc=d.qc||null,kk=d.kk||null;
+  const[y,m]=selM.split('/');
+  const fmtM=v=>v!=null?(Math.abs(v)/1e6).toFixed(1)+'M₫':'—';
+  const fmtK=v=>v!=null?+v>0?Number(v).toLocaleString('vi-VN'):'0':'—';
+  const pDelta=(cur,prev)=>{if(cur==null||prev==null||prev===0)return'';const d=cur-prev;return(d>0?'▲+':'▼')+Math.abs(d).toLocaleString('vi-VN')+' vs trước';};
+  const monthBtns=sortedKeys.map(mk=>{const[ty,tm]=mk.split('/');const sel=mk===selM;return`<button onclick="S.tongHopMonth='${mk}';go('baocao','Tổng hợp')" style="padding:5px 11px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${sel?'#2563eb':'#e2e8f0'};background:${sel?'#2563eb':'#f8fafc'};color:${sel?'#fff':'#475569'};transition:.15s">T${tm}/${ty}</button>`;}).join('');
+  // trend data across all months
+  const T=sortedKeys;
+  const tLbls=T.map(k=>{const[ty,tm]=k.split('/');return`T${tm}`;});
+  const tDiem=JSON.stringify(T.map(k=>th.months[k]?.qc?.diemTB??null));
+  const tDT=JSON.stringify(T.map(k=>th.months[k]?.qc?.tongDoitra??null));
+  const tTA=JSON.stringify(T.map(k=>th.months[k]?.kk?.tongTonAm??null));
+  const tTT=JSON.stringify(T.map(k=>{const v=th.months[k]?.kk?.tongThatthoat??0;return+(v/1e6).toFixed(2);}));
+  // store trend data for afterRender
+  S.tongHopTrend={labels:tLbls,diem:T.map(k=>th.months[k]?.qc?.diemTB??null),doitra:T.map(k=>th.months[k]?.qc?.tongDoitra??null),tonAm:T.map(k=>th.months[k]?.kk?.tongTonAm??null),tt:T.map(k=>+(((th.months[k]?.kk?.tongThatthoat??0)/1e6).toFixed(2)))};
+  const qcDiemStr=qc?qc.diemTB+'%':'—';
+  const kkTonAmStr=kk&&kk.tongTonAm!=null?fmtK(kk.tongTonAm)+' SKU':'—';
+  const kkTADelta=kk?pDelta(kk.tongTonAm,kk.tongTonAmPrev):'';
+  const pctThuHoi=kk&&kk.tongThatthoat>0?Math.round(kk.thuHoi/kk.tongThatthoat*100):0;
+  return`
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+  <span style="font-size:12px;color:#64748b">📊 Tổng hợp KSCL · ${sortedKeys.length} tháng · Tải ${th.ts?new Date(th.ts).toLocaleString('vi-VN'):'—'}</span>
+  <button onclick="S.tongHopAllData=null;S._thLoading=0;tongHopLoadAll()" class="btn b-out b-sm">🔄 Tải lại</button>
+</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${monthBtns}</div>
+<div style="background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:8px 14px;margin-bottom:14px;font-size:13px;font-weight:600;color:#1d4ed8">📅 Tháng ${m}/${y}${qc?' — dữ liệu QC từ Firebase':''}</div>
+<div class="g4 g-sm2" style="margin-bottom:14px">
+  ${kpi('Điểm DV TB',qcDiemStr,`T${m}/${y}`,'#16a34a','⭐',qc?fmtK(qc.tongLuot)+' lượt QC':'Chưa có dữ liệu QC')}
+  ${kpi('Đổi trả',qc?fmtK(qc.tongDoitra)+' ca':'—',`T${m}/${y}`,'#0284c7','🔄',qc?`Do ST: ${qc.pctST||0}%`:'—')}
+  ${kpi('Tồn âm',kkTonAmStr,`T${m}/${y}`,'#f59e0b','⚠️',kkTADelta||'—')}
+  ${kpi('Thất thoát KK',kk?fmtM(kk.tongThatthoat):'—',`T${m}/${y}`,'#dc2626','📦',kk?'Thu hồi '+fmtM(kk.thuHoi)+' ('+pctThuHoi+'%)':'—')}
+</div>
+<div class="g2 g-sm2" style="margin-bottom:14px">
+  ${kpi('Xuất hủy',kk&&kk.xuathuyValue!=null?fmtM(kk.xuathuyValue):'—',`T${m}/${y}`,'#7c3aed','🗑️',kk&&kk.xuathuyQty!=null?fmtK(kk.xuathuyQty)+' sp':'—')}
+  ${kpi('Gian lận kiểm tra',qc&&qc.soKiemTra?qc.soSTLoi+'/'+qc.soKiemTra+' ST':'—',`T${m}/${y}`,'#be185d','🔍',qc&&qc.topLoi&&qc.topLoi.length?qc.topLoi.map(l=>l.k).join(', '):'—')}
+</div>
+<div class="g2" style="margin-bottom:14px">
+  <div class="chart-box"><div class="chart-title">📈 Điểm DV TB (%) & Đổi trả theo tháng</div><div class="chart-wrap" style="height:190px"><canvas id="c-th-qc"></canvas></div></div>
+  <div class="chart-box"><div class="chart-title">📦 Tồn âm (SKU) & Thất thoát (M₫) theo tháng</div><div class="chart-wrap" style="height:190px"><canvas id="c-th-kk"></canvas></div></div>
+</div>
+${qc&&qc.topLoi&&qc.topLoi.length?`<div class="card" style="padding:12px 16px;margin-bottom:14px">
+  <div style="font-size:13px;font-weight:700;color:#be185d;margin-bottom:8px">🔍 Top lỗi vi phạm gian lận T${m}/${y}</div>
+  ${qc.topLoi.map((l,i)=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f2f7;font-size:13px"><span style="color:#374151">${i+1}. ${l.k}</span><span style="font-weight:700;color:#dc2626">${l.v} lần</span></div>`).join('')}
+</div>`:''}
+`;}
+
 function rBaoCao(){
   const tabs=['Executive QC','Báo cáo EBIT','Exec. KK','EBIT Kiểm kê','Đổi Date','Tổng hợp','KPI tháng','Kiểm kê','QC','Xuất báo cáo'];
   const t=S.tab||'Executive QC';
@@ -3684,6 +3805,7 @@ ${kpi('SKU tồn âm',kkTonAm.toLocaleString(),'+'+kkPctTangTA+'% vs T.trước 
   <button onclick="kkDataSave(this)" class="btn b-pri">💾 Lưu tất cả & Cập nhật Dashboard KK</button>
 </div>
 `:(t==='Đổi Date')?rDateDH()
+:(t==='Tổng hợp')?rTongHop()
 :(t==='Kiểm kê'||t==='QC')?`
   ${isAdmin()?`<div class="alert a-info" style="margin-bottom:14px"><span class="a-ic">💡</span><div class="a-bd"><strong>Chế độ Admin – có thể chỉnh sửa cấu trúc</strong><p>Di chuột vào mục → hiện nút ✏️ đổi tên / 🗑 xóa / 📁📄 thêm con.</p></div></div>`:''}
   <div class="card">${tSection(t==='Kiểm kê'?'bc_kk':'bc_qc')}</div>
@@ -4748,6 +4870,21 @@ function afterRender(){
     for(const mData of Object.values(yd)){if(typeof mData!=='object')continue;for(const r of Object.values(mData)){if(r.sieu_thi)stCnt[r.sieu_thi]=(stCnt[r.sieu_thi]||0)+1;}}
     const top=Object.entries(stCnt).sort((a,b)=>b[1]-a[1]).slice(0,8);
     if(top.length)mkC('c-bb-stores','bar',top.map(s=>s[0]),[{label:'Số vi phạm',data:top.map(s=>s[1]),bg:'rgba(220,38,38,0.7)',borderColor:'#dc2626'}],{indexAxis:'y',plugins:{legend:{display:false}}});
+  }
+  // Tổng hợp tab charts
+  if(S.page==='baocao'&&S.tab==='Tổng hợp'){
+    if(!S.tongHopAllData&&!S._thLoading){S._thLoading=1;tongHopLoadAll();}
+    const tr=S.tongHopTrend;
+    if(tr){
+      mkC('c-th-qc','line',tr.labels,[
+        {label:'Điểm DV TB (%)',data:tr.diem,borderColor:'#16a34a',bg:'rgba(22,163,74,.1)',fill:true,tension:.3,pointRadius:4,yAxisID:'y'},
+        {label:'Đổi trả (ca)',data:tr.doitra,borderColor:'#3b82f6',borderDash:[4,3],tension:.3,pointRadius:4,yAxisID:'y1'}
+      ],{scales:{y:{position:'left',min:60,ticks:{callback:v=>v+'%'}},y1:{position:'right',grid:{drawOnChartArea:false}}}});
+      mkC('c-th-kk','bar',tr.labels,[
+        {label:'Tồn âm (SKU)',data:tr.tonAm,bg:'rgba(245,158,11,.65)',borderColor:'#f59e0b',borderWidth:1,yAxisID:'y'},
+        {label:'Thất thoát (M₫)',data:tr.tt,bg:'rgba(220,38,38,.65)',borderColor:'#dc2626',borderWidth:1,yAxisID:'y1'}
+      ],{scales:{y:{position:'left'},y1:{position:'right',grid:{drawOnChartArea:false}}}});
+    }
   }
   // Load saved import data
   if(S.user)db.ref(`imports/${S.user.uid}`).get().then(snap=>{if(snap.exists()){const d=snap.val();Object.keys(d).forEach(m=>{S.data[m]=d[m].data;updateChartFromData(m,S.data[m]);});}});
