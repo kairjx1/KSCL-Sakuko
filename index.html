@@ -3321,7 +3321,7 @@ ${t==='Executive QC'?`
     <select id="exec-y" class="fi" style="width:80px">${yearOpts(eY)}</select>
     <button onclick="qcLoadExecAndRefresh(document.getElementById('exec-y').value,document.getElementById('exec-m').value)" class="btn b-pri b-sm">🔄 Tải</button>
     <button onclick="qcAggFromModules(this)" class="btn b-ok2 b-sm" title="Tự động lấy số liệu từ QC: Chấm điểm dịch vụ + Đổi trả + Check gian lận — không cần nhập tay">⚡ Tổng hợp từ Nghiệp vụ</button>
-    ${hasQD?`<button onclick="go('baocao','Báo cáo EBIT')" class="btn b-out b-sm">📊 Xem EBIT →</button>`:''}
+    <button onclick="go('baocao','Báo cáo EBIT')" class="btn b-out b-sm" style="border-color:#d97706;color:#d97706;font-weight:700">📊 Báo cáo EBIT →</button>
   </div>
 </div>
 <div class="g4 g-sm2" style="margin-bottom:16px">
@@ -3678,7 +3678,7 @@ ${hasQD?`
     <select id="kk-exec-m" class="fi" style="width:70px"><option value="all"${kM==='all'?' selected':''}>Tất cả</option>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===kM?' selected':''}>T${m}</option>`).join('')}</select>
     <select id="kk-exec-y" class="fi" style="width:80px">${yearOpts(kY)}</select>
     <button onclick="kkLoadExecAndRefresh(document.getElementById('kk-exec-y').value,document.getElementById('kk-exec-m').value)" class="btn b-pri b-sm">🔄 Tải</button>
-    <button onclick="go('baocao','EBIT Kiểm kê')" class="btn b-out b-sm">📊 EBIT →</button>
+    <button onclick="go('baocao','EBIT Kiểm kê')" class="btn b-out b-sm" style="border-color:#d97706;color:#d97706;font-weight:700">📊 EBIT Kiểm kê →</button>
   </div>
 </div>
 ${kkAlerts.filter(a=>!a.ok).map(a=>'<div style="background:rgba(0,0,0,.02);border:1px solid '+a.c+'44;border-left:3px solid '+a.c+';border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;line-height:1.5">'+a.t+'</div>').join('')}
@@ -4335,6 +4335,7 @@ async function kkAutoAgg(year,month){
   const taM=ta&&ta.months&&ta.months[Tm]||null,taP=ta&&ta.months&&ta.months[pTm]||null;
   const xhM=xh&&xh.data&&xh.data[y]&&xh.data[y][Tm]||null;
   const dcM=(dc&&dc.monthly||[]).find(r=>r.t===Tm)||null;
+  const t2Rec=(bb&&bb.t2||[]).find(r=>+r.nam===+y&&+r.thang===+m);
   if(!recs.length&&!taM&&!xhM){S.kkExecData=null;S.kkExecMonth=m;S.kkExecYear=y;go(S.page,S.tab);return;}
   const ttByST={};bienBan.forEach(b=>{if(b.ton<0)ttByST[b.st]=(ttByST[b.st]||0)+b.ton;});
   const _taStores=taM&&taM.stores||[];
@@ -4342,7 +4343,7 @@ async function kkAutoAgg(year,month){
   const _extraST=Object.keys(ttByST).filter(nm=>nm&&!_taStoreNm.has(nm)).map(nm=>({st:nm,thatthoat:ttByST[nm]||0,ratio:0,tonAmSKU:0,note:'Biên bản KK '+((ttByST[nm]||0)/1e6).toFixed(1)+'M₫'}));
   const s3=[..._taStores.map(s=>{const nm=(s.ten||'').replace(/^SKK\s*/,'');return{st:nm,thatthoat:ttByST[nm]||0,ratio:0,tonAmSKU:+s.count||0,note:'Tồn âm '+(+s.count||0)+' SKU · GT '+((+s.value||0)/1e6).toFixed(1)+'M₫'+(ttByST[nm]?' · BBKK '+(ttByST[nm]/1e6).toFixed(1)+'M₫':'')};}),..._extraST];
   S.kkExecData={
-    s1_doanhThu:dcM?+dcM.dt||0:0,
+    s1_doanhThu:(dcM&&+dcM.dt)||(t2Rec&&+t2Rec.tongDT)||0,
     s1_soBienBan:recs.length,s1_kkTong:kkTong,s1_kkDotXuat:recs.length-kkTong,
     s1_tongThatthoat:tt,s1_thuHoi:th,
     s1_note:'Tự động từ Lark: '+recs.length+' biên bản KK'+(xhM?' · Xuất hủy '+((+xhM.value||0)/1e6).toFixed(1)+'M₫/'+(xhM.total||0)+' phiếu':''),
