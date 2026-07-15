@@ -3113,25 +3113,35 @@ function rTongHop(){
   const sortedKeys=th.sortedKeys||[];
   if(!sortedKeys.length)return`<div class="card" style="padding:24px;text-align:center">Không có dữ liệu. <button onclick="S.tongHopAllData=null;tongHopLoadAll()" class="btn b-pri b-sm">🔄 Tải lại</button></div>`;
   const selM=S.tongHopMonth||sortedKeys[sortedKeys.length-1];
-  const d=th.months[selM]||{};
-  const qc=d.qc||null,kk=d.kk||null;
-  const[y,m]=selM.split('/');
+  const isAll=selM==='all';
   const fmtM=v=>v!=null?(Math.abs(v)/1e6).toFixed(1)+'M₫':'—';
   const fmtK=v=>v!=null?+v>0?Number(v).toLocaleString('vi-VN'):'0':'—';
-  const pDelta=(cur,prev)=>{if(cur==null||prev==null||prev===0)return'';const d=cur-prev;return(d>0?'▲+':'▼')+Math.abs(d).toLocaleString('vi-VN')+' vs trước';};
-  const monthBtns=sortedKeys.map(mk=>{const[ty,tm]=mk.split('/');const sel=mk===selM;return`<button onclick="S.tongHopMonth='${mk}';go('baocao','Tổng hợp')" style="padding:5px 11px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${sel?'#2563eb':'#e2e8f0'};background:${sel?'#2563eb':'#f8fafc'};color:${sel?'#fff':'#475569'};transition:.15s">T${tm}/${ty}</button>`;}).join('');
-  // trend data across all months
+  const pDelta=(cur,prev)=>{if(cur==null||prev==null||prev===0)return'';const dv=cur-prev;return(dv>0?'▲+':'▼')+Math.abs(dv).toLocaleString('vi-VN')+' vs trước';};
+  let qc=null,kk=null,periodLabel='',y='',m='';
+  if(isAll){
+    let sd=0,cd=0,sdt=0,sl=0,skt=0,sloi=0,stt=0,sth=0,sxv=0,sxq=0,sbb=0,lastTA=null;
+    sortedKeys.forEach(k=>{
+      const q=th.months[k].qc,kd=th.months[k].kk||{};
+      if(q){if(q.diemTB!=null){sd+=q.diemTB;cd++;}sdt+=q.tongDoitra||0;sl+=q.tongLuot||0;skt+=q.soKiemTra||0;sloi+=q.soSTLoi||0;}
+      stt+=kd.tongThatthoat||0;sth+=kd.thuHoi||0;sxv+=kd.xuathuyValue||0;sxq+=kd.xuathuyQty||0;sbb+=kd.soBienBan||0;
+      if(kd.tongTonAm!=null)lastTA=kd.tongTonAm;
+    });
+    if(cd)qc={diemTB:+(sd/cd).toFixed(2),tongLuot:sl,tongDoitra:sdt,pctST:0,soKiemTra:skt,soSTLoi:sloi,topLoi:[]};
+    kk={soBienBan:sbb,tongThatthoat:stt,thuHoi:sth,tongTonAm:lastTA,tongTonAmPrev:null,xuathuyValue:sxv,xuathuyQty:sxq};
+    const yrs=[...new Set(sortedKeys.map(k=>k.split('/')[0]))];
+    periodLabel='Tổng hợp '+yrs.join(', ')+' ('+sortedKeys.length+' tháng)';
+  } else {
+    const d=th.months[selM]||{};
+    qc=d.qc||null;kk=d.kk||null;[y,m]=selM.split('/');
+    periodLabel='Tháng '+m+'/'+y;
+  }
+  const monthBtns=`<button onclick="S.tongHopMonth='all';go('baocao','Tổng hợp')" style="padding:5px 13px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid ${isAll?'#7c3aed':'#ddd8fe'};background:${isAll?'#7c3aed':'#f5f3ff'};color:${isAll?'#fff':'#5b21b6'}">📊 Tất cả</button> `+sortedKeys.map(mk=>{const[ty,tm]=mk.split('/');const sel=!isAll&&mk===selM;return`<button onclick="S.tongHopMonth='${mk}';go('baocao','Tổng hợp')" style="padding:5px 11px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${sel?'#2563eb':'#e2e8f0'};background:${sel?'#2563eb':'#f8fafc'};color:${sel?'#fff':'#475569'}">T${tm}/${ty}</button>`;}).join(' ');
   const T=sortedKeys;
   const tLbls=T.map(k=>{const[ty,tm]=k.split('/');return`T${tm}`;});
-  const tDiem=JSON.stringify(T.map(k=>th.months[k]?.qc?.diemTB??null));
-  const tDT=JSON.stringify(T.map(k=>th.months[k]?.qc?.tongDoitra??null));
-  const tTA=JSON.stringify(T.map(k=>th.months[k]?.kk?.tongTonAm??null));
-  const tTT=JSON.stringify(T.map(k=>{const v=th.months[k]?.kk?.tongThatthoat??0;return+(v/1e6).toFixed(2);}));
-  // store trend data for afterRender
   S.tongHopTrend={labels:tLbls,diem:T.map(k=>th.months[k]?.qc?.diemTB??null),doitra:T.map(k=>th.months[k]?.qc?.tongDoitra??null),tonAm:T.map(k=>th.months[k]?.kk?.tongTonAm??null),tt:T.map(k=>+(((th.months[k]?.kk?.tongThatthoat??0)/1e6).toFixed(2)))};
   const qcDiemStr=qc?qc.diemTB+'%':'—';
   const kkTonAmStr=kk&&kk.tongTonAm!=null?fmtK(kk.tongTonAm)+' SKU':'—';
-  const kkTADelta=kk?pDelta(kk.tongTonAm,kk.tongTonAmPrev):'';
+  const kkTADelta=!isAll&&kk?pDelta(kk.tongTonAm,kk.tongTonAmPrev):'';
   const pctThuHoi=kk&&kk.tongThatthoat>0?Math.round(kk.thuHoi/kk.tongThatthoat*100):0;
   return`
 <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -3139,23 +3149,23 @@ function rTongHop(){
   <button onclick="S.tongHopAllData=null;S._thLoading=0;tongHopLoadAll()" class="btn b-out b-sm">🔄 Tải lại</button>
 </div>
 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${monthBtns}</div>
-<div style="background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:8px 14px;margin-bottom:14px;font-size:13px;font-weight:600;color:#1d4ed8">📅 Tháng ${m}/${y}${qc?' — dữ liệu QC từ Firebase':''}</div>
+<div style="background:${isAll?'#f5f3ff':'#eff6ff'};border-left:4px solid ${isAll?'#7c3aed':'#3b82f6'};border-radius:6px;padding:8px 14px;margin-bottom:14px;font-size:13px;font-weight:600;color:${isAll?'#5b21b6':'#1d4ed8'}">📅 ${periodLabel}</div>
 <div class="g4 g-sm2" style="margin-bottom:14px">
-  ${kpi('Điểm DV TB',qcDiemStr,`T${m}/${y}`,'#16a34a','⭐',qc?fmtK(qc.tongLuot)+' lượt QC':'Chưa có dữ liệu QC')}
-  ${kpi('Đổi trả',qc?fmtK(qc.tongDoitra)+' ca':'—',`T${m}/${y}`,'#0284c7','🔄',qc?`Do ST: ${qc.pctST||0}%`:'—')}
-  ${kpi('Tồn âm',kkTonAmStr,`T${m}/${y}`,'#f59e0b','⚠️',kkTADelta||'—')}
-  ${kpi('Thất thoát KK',kk?fmtM(kk.tongThatthoat):'—',`T${m}/${y}`,'#dc2626','📦',kk?'Thu hồi '+fmtM(kk.thuHoi)+' ('+pctThuHoi+'%)':'—')}
+  ${kpi('Điểm DV TB',qcDiemStr,periodLabel,'#16a34a','⭐',qc?(isAll?'TB '+sortedKeys.length+' tháng':fmtK(qc.tongLuot)+' lượt QC'):'Chưa có dữ liệu QC')}
+  ${kpi(isAll?'Tổng đổi trả':'Đổi trả',qc?fmtK(qc.tongDoitra)+' ca':'—',periodLabel,'#0284c7','🔄',isAll?'Cộng dồn':'Do ST: '+(qc?.pctST||0)+'%')}
+  ${kpi('Tồn âm cuối kỳ',kkTonAmStr,periodLabel,'#f59e0b','⚠️',kkTADelta||'—')}
+  ${kpi(isAll?'Tổng thất thoát':'Thất thoát KK',kk?fmtM(kk.tongThatthoat):'—',periodLabel,'#dc2626','📦',kk?'Thu hồi '+fmtM(kk.thuHoi)+' ('+pctThuHoi+'%)':'—')}
 </div>
 <div class="g2 g-sm2" style="margin-bottom:14px">
-  ${kpi('Xuất hủy',kk&&kk.xuathuyValue!=null?fmtM(kk.xuathuyValue):'—',`T${m}/${y}`,'#7c3aed','🗑️',kk&&kk.xuathuyQty!=null?fmtK(kk.xuathuyQty)+' sp':'—')}
-  ${kpi('Gian lận kiểm tra',qc&&qc.soKiemTra?qc.soSTLoi+'/'+qc.soKiemTra+' ST':'—',`T${m}/${y}`,'#be185d','🔍',qc&&qc.topLoi&&qc.topLoi.length?qc.topLoi.map(l=>l.k).join(', '):'—')}
+  ${kpi(isAll?'Tổng xuất hủy':'Xuất hủy',kk&&kk.xuathuyValue!=null?fmtM(kk.xuathuyValue):'—',periodLabel,'#7c3aed','🗑️',kk&&kk.xuathuyQty!=null?fmtK(kk.xuathuyQty)+' sp':'—')}
+  ${kpi('Gian lận kiểm tra',qc&&qc.soKiemTra?qc.soSTLoi+'/'+qc.soKiemTra+' ST':'—',periodLabel,'#be185d','🔍',isAll?'Cộng dồn '+sortedKeys.length+' tháng':qc&&qc.topLoi&&qc.topLoi.length?qc.topLoi.map(l=>l.k).join(', '):'—')}
 </div>
 <div class="g2" style="margin-bottom:14px">
   <div class="chart-box"><div class="chart-title">📈 Điểm DV TB (%) & Đổi trả theo tháng</div><div class="chart-wrap" style="height:190px"><canvas id="c-th-qc"></canvas></div></div>
   <div class="chart-box"><div class="chart-title">📦 Tồn âm (SKU) & Thất thoát (M₫) theo tháng</div><div class="chart-wrap" style="height:190px"><canvas id="c-th-kk"></canvas></div></div>
 </div>
-${qc&&qc.topLoi&&qc.topLoi.length?`<div class="card" style="padding:12px 16px;margin-bottom:14px">
-  <div style="font-size:13px;font-weight:700;color:#be185d;margin-bottom:8px">🔍 Top lỗi vi phạm gian lận T${m}/${y}</div>
+${!isAll&&qc&&qc.topLoi&&qc.topLoi.length?`<div class="card" style="padding:12px 16px;margin-bottom:14px">
+  <div style="font-size:13px;font-weight:700;color:#be185d;margin-bottom:8px">🔍 Top lỗi vi phạm gian lận ${periodLabel}</div>
   ${qc.topLoi.map((l,i)=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f2f7;font-size:13px"><span style="color:#374151">${i+1}. ${l.k}</span><span style="font-weight:700;color:#dc2626">${l.v} lần</span></div>`).join('')}
 </div>`:''}
 `;}
@@ -3166,10 +3176,12 @@ function rBaoCao(){
   const qd=S.qcExecData;
   const eM=String(S.qcExecMonth||'5');
   const eY=String(S.qcExecYear||'2026');
+  const eMLabel=eM==='all'?'Năm '+eY:'T'+eM+'/'+eY;
   const hasQD=!!qd;
   const kd=S.kkExecData;
   const kM=String(S.kkExecMonth||'5');
   const kY=String(S.kkExecYear||'2026');
+  const kMLabel=kM==='all'?'Năm '+kY:'T'+kM+'/'+kY;
   const hasKD=!!(kd&&kd.savedAt);
   const exec={
     diemTB:hasQD?(+(qd.s1_diemtb||0)).toFixed(2)+'%':'93.17%',
@@ -3303,9 +3315,9 @@ function rBaoCao(){
 <div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('baocao','${tb}')">${tb}</div>`).join('')}</div>
 ${t==='Executive QC'?`
 <div style="background:${hasQD?'#f0fdf4':'#fef3c7'};border:1px solid ${hasQD?'#86efac':'#fcd34d'};border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-  <span style="font-size:13px;color:${hasQD?'#15803d':'#92400e'}">${hasQD?`${exec._autoAgg?'⚡ Tự động từ nghiệp vụ QC':'✅ Dữ liệu Firebase'} — T${eM}/${eY}${exec.savedAt?' · '+new Date(exec.savedAt).toLocaleString('vi-VN'):''}`:` ⚠️ Dữ liệu mẫu — T${eM}/${eY} chưa có số liệu nghiệp vụ (vào QC → Chấm điểm dịch vụ để nhập)`}</span>
+  <span style="font-size:13px;color:${hasQD?'#15803d':'#92400e'}">${hasQD?`${exec._allYear?'📊 Tổng hợp cả năm '+eY+' — '+exec._kkAgg:exec._autoAgg?'⚡ Tự động từ nghiệp vụ QC':'✅ Dữ liệu Firebase'} — ${eMLabel}${exec.savedAt?' · '+new Date(exec.savedAt).toLocaleString('vi-VN'):''}`:` ⚠️ Dữ liệu mẫu — ${eMLabel} chưa có số liệu nghiệp vụ (vào QC → Chấm điểm dịch vụ để nhập)`}</span>
   <div style="display:flex;gap:8px;align-items:center">
-    <select id="exec-m" class="fi" style="width:65px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
+    <select id="exec-m" class="fi" style="width:70px"><option value="all"${eM==='all'?' selected':''}>Tất cả</option>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select>
     <select id="exec-y" class="fi" style="width:80px">${yearOpts(eY)}</select>
     <button onclick="qcLoadExecAndRefresh(document.getElementById('exec-y').value,document.getElementById('exec-m').value)" class="btn b-pri b-sm">🔄 Tải</button>
     <button onclick="qcAggFromModules(this)" class="btn b-ok2 b-sm" title="Tự động lấy số liệu từ QC: Chấm điểm dịch vụ + Đổi trả + Check gian lận — không cần nhập tay">⚡ Tổng hợp từ Nghiệp vụ</button>
@@ -3313,15 +3325,15 @@ ${t==='Executive QC'?`
   </div>
 </div>
 <div class="g4 g-sm2" style="margin-bottom:16px">
-  ${kpi('Điểm DV TB',exec.diemTB,`T${eM}/${eY}`,'#16a34a','⭐',hasQD?`${exec.tongLuot} lượt QC`:'+3.48% vs T4')}
-  ${kpi('Ca đổi trả',String(exec.tongDoitra),`tháng ${eM}`,'#0284c7','🔄',`Do ST: ${exec.pctST}%`)}
-  ${kpi('ST lỗi thao tác',`${exec.soSTLoi}/${exec.soKiemTra}`,'đã kiểm tra','#dc2626','⚠️',`Theo dõi T${+eM+1}`)}
+  ${kpi('Điểm DV TB',exec.diemTB,eMLabel,'#16a34a','⭐',hasQD?`${exec.tongLuot} lượt QC`:'+3.48% vs T4')}
+  ${kpi('Ca đổi trả',String(exec.tongDoitra),eMLabel,'#0284c7','🔄',`Do ST: ${exec.pctST}%`)}
+  ${kpi('ST lỗi thao tác',`${exec.soSTLoi}/${exec.soKiemTra}`,'đã kiểm tra','#dc2626','⚠️',eM==='all'?'Theo dõi năm sau':`Theo dõi T${+eM+1}`)}
   ${kpi('ST dưới 80%',String(exec.stDuoi80),'siêu thị','#16a34a','✅',exec.stDuoi80===0?'Cải thiện hoàn toàn':'Cần can thiệp khẩn')}
 </div>
 <div class="g2" style="margin-bottom:16px">
-  <div class="chart-box"><div class="chart-title">📊 Điểm dịch vụ siêu thị — ${hasQD?`Tháng trước vs T${eM}/${eY}`:'T4 vs T5/2026'}</div><div class="chart-wrap" style="height:220px"><canvas id="c-exec-bar"></canvas></div></div>
+  <div class="chart-box"><div class="chart-title">📊 Điểm dịch vụ siêu thị — ${hasQD?`Tháng trước vs ${eMLabel}`:'T4 vs T5/2026'}</div><div class="chart-wrap" style="height:220px"><canvas id="c-exec-bar"></canvas></div></div>
   <div style="display:flex;flex-direction:column;gap:12px">
-    <div class="chart-box" style="flex:0 0 auto"><div class="chart-title">🔴 Nguyên nhân đổi trả T${eM}/${eY}</div><div class="chart-wrap" style="height:145px"><canvas id="c-exec-doitra"></canvas></div></div>
+    <div class="chart-box" style="flex:0 0 auto"><div class="chart-title">🔴 Nguyên nhân đổi trả ${eMLabel}</div><div class="chart-wrap" style="height:145px"><canvas id="c-exec-doitra"></canvas></div></div>
     <div class="card" style="padding:14px 16px;flex:1">
       <div style="font-size:13px;font-weight:700;color:#be123c;margin-bottom:11px">🔥 Điểm nóng đổi trả — Top 3 ST</div>
       ${exec.topDT.map((s,i)=>{const clr=i===0?'#dc2626':i===1?'#d97706':'#f59e0b';const n=s.name||s.n;const v=s.count||s.v||0;return`<div style="margin-bottom:11px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">${n}</span><span style="color:${clr};font-weight:700">${v} đơn</span></div><div style="height:10px;background:#fef2f2;border-radius:5px;overflow:hidden"><div style="height:100%;width:${Math.round(v/topDTMax*100)}%;background:${clr};border-radius:5px"></div></div></div>`;}).join('')}
@@ -3332,14 +3344,14 @@ ${t==='Executive QC'?`
 
 <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
   <div style="padding:14px 18px;background:linear-gradient(90deg,#1e1b4b,#312e81);display:flex;align-items:center;justify-content:space-between">
-    <span style="font-size:14px;font-weight:700;color:#fff">🗺️ Bản đồ rủi ro siêu thị — T${eM}/${eY}</span>
+    <span style="font-size:14px;font-weight:700;color:#fff">🗺️ Bản đồ rủi ro siêu thị — ${eMLabel}</span>
     <span style="font-size:11px;color:#c7d2fe">Xanh ≥90% · Vàng 80–89% · Đỏ &lt;80%</span>
   </div>
   <div style="overflow-x:auto">
   <table style="width:100%;border-collapse:collapse;font-size:13px">
     <thead><tr style="background:#f0f4ff">
       <th style="padding:10px 14px;text-align:left;color:#3730a3;font-weight:600">Siêu thị</th>
-      <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Điểm T${eM}</th>
+      <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Điểm ${eM==='all'?'TB':eM}</th>
       <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Tốc độ</th>
       <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Lỗi QC</th>
       <th style="padding:10px 14px;text-align:center;color:#3730a3;font-weight:600">Đổi trả</th>
@@ -3660,9 +3672,9 @@ ${hasQD?`
 </div>
 `:t==='Exec. KK'?`
 <div style="background:${hasKD?'#f0fdf4':'#fef3c7'};border:1px solid ${hasKD?'#86efac':'#fcd34d'};border-radius:8px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-  <span style="font-size:13px;color:${hasKD?'#15803d':'#92400e'}">${hasKD?((kd._auto?'⚡ Tự động từ Lark (BBKK + Tồn âm + Xuất hủy)':'✅ Firebase')+': T'+kM+'/'+kY+(kd.savedAt?' · Cập nhật '+new Date(kd.savedAt).toLocaleString('vi-VN'):'')):'⚠️ Dữ liệu mẫu — T'+kM+'/'+kY+' chưa có dữ liệu Lark (chạy đồng bộ BBKK/Tồn âm trước)'}</span>
+  <span style="font-size:13px;color:${hasKD?'#15803d':'#92400e'}">${hasKD?((kd._allYear?'📊 Tổng hợp cả năm '+kY+' — '+kd._kkAgg:kd._auto?'⚡ Tự động từ Lark (BBKK + Tồn âm + Xuất hủy)':'✅ Firebase')+': '+kMLabel+(kd.savedAt?' · Cập nhật '+new Date(kd.savedAt).toLocaleString('vi-VN'):'')):'⚠️ Dữ liệu mẫu — '+kMLabel+' chưa có dữ liệu Lark (chạy đồng bộ BBKK/Tồn âm trước)'}</span>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <select id="kk-exec-m" class="fi" style="width:65px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===kM?' selected':''}>T${m}</option>`).join('')}</select>
+    <select id="kk-exec-m" class="fi" style="width:70px"><option value="all"${kM==='all'?' selected':''}>Tất cả</option>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===kM?' selected':''}>T${m}</option>`).join('')}</select>
     <select id="kk-exec-y" class="fi" style="width:80px">${yearOpts(kY)}</select>
     <button onclick="kkLoadExecAndRefresh(document.getElementById('kk-exec-y').value,document.getElementById('kk-exec-m').value)" class="btn b-pri b-sm">🔄 Tải</button>
     <button onclick="go('baocao','EBIT Kiểm kê')" class="btn b-out b-sm">📊 EBIT →</button>
@@ -4228,6 +4240,16 @@ async function qcLoadExecAndRefresh(year,month){
   const m=String(month||S.qcExecMonth||'5');
   const y=String(year||S.qcExecYear||'2026');
   S.qcExecMonth=m;S.qcExecYear=y;
+  if(m==='all'){
+    if(!S.tongHopAllData)await tongHopLoadAll();
+    const ms=S.tongHopAllData?.months||{};
+    const ks=Object.keys(ms).filter(k=>k.startsWith(y+'/')&&ms[k].qc);
+    if(!ks.length){S.qcExecData=null;go('baocao',S.tab);return;}
+    let sd=0,cd=0,sdt=0,sl=0,skt=0,sloi=0;
+    ks.forEach(k=>{const q=ms[k].qc;if(q.diemTB!=null){sd+=q.diemTB;cd++;}sdt+=q.tongDoitra||0;sl+=q.tongLuot||0;skt+=q.soKiemTra||0;sloi+=q.soSTLoi||0;});
+    S.qcExecData={s1_diemtb:cd?+(sd/cd).toFixed(2):0,s1_tongluot:sl,s1_stores:{},s1_storeNames:[],s1_loi:[],s2_tongdon:sdt,s2_pct_st:0,s2_pct_khach:0,s2_pct_khac:0,s3_tongST:skt,s3_soSTLoi:sloi,s3_stLoi:[],_allYear:true,_kkAgg:ks.length+' tháng',savedAt:Date.now()};
+    go('baocao',S.tab);return;
+  }
   const qcdb=getQCDB();
   if(!qcdb){alert('Không kết nối được Firebase');return;}
   try{
@@ -4463,8 +4485,19 @@ function qcDataLoad(){
 function getKKDB(){try{return db;}catch(e){return null;}}
 /* Tải Exec KK: LUÔN tổng hợp tự động từ cache Lark; fallback kk_data cũ nếu chưa có */
 async function kkLoadExecAndRefresh(yearIn,monthIn){
-  const m=monthIn||document.getElementById('kk-exec-m')?.value||S.kkExecMonth;
-  const y=yearIn||document.getElementById('kk-exec-y')?.value||S.kkExecYear;
+  const m=String(monthIn||document.getElementById('kk-exec-m')?.value||S.kkExecMonth||'5');
+  const y=String(yearIn||document.getElementById('kk-exec-y')?.value||S.kkExecYear||'2026');
+  S.kkExecMonth=m;S.kkExecYear=y;
+  if(m==='all'){
+    if(!S.tongHopAllData)await tongHopLoadAll();
+    const ms=S.tongHopAllData?.months||{};
+    const ks=Object.keys(ms).filter(k=>k.startsWith(y+'/'));
+    if(!ks.length){S.kkExecData=null;go(S.page,S.tab);return;}
+    let stt=0,sth=0,sta=0,sxv=0,sxq=0,sbb=0,cnt=0,lastTA=null;
+    ks.forEach(k=>{const kk=ms[k].kk||{};stt+=kk.tongThatthoat||0;sth+=kk.thuHoi||0;sxv+=kk.xuathuyValue||0;sxq+=kk.xuathuyQty||0;sbb+=kk.soBienBan||0;if(kk.tongTonAm!=null){lastTA=kk.tongTonAm;cnt++;}sta+=kk.tongTonAm||0;});
+    S.kkExecData={s1_soBienBan:sbb,s1_tongThatthoat:stt,s1_thuHoi:sth,s2_tongTonAm:lastTA||0,s2_tongTonAmPrev:0,s3_stores:[],_allYear:true,_kkAgg:ks.length+' tháng',_auto:true,savedAt:Date.now(),xuathuySum:{value:sxv,qty:sxq}};
+    go(S.page,S.tab);return;
+  }
   await kkAutoAgg(y,m);
   if(!S.kkExecData){
     const kkdb=getKKDB();if(!kkdb)return;
