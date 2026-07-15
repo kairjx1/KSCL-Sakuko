@@ -3385,17 +3385,18 @@ ${t==='Executive QC'?`
         {st:'ST Bạch Mai',        t4:91,  t5:100, loi:'—',                  thaoTac:false, doitra:4,  risk:'green'},
       ].map(r=>{
         const delta=r.t5-r.t4;
-        const crossRisk=r.thaoTac&&r.doitra>15;
+        const _stFraud=_violSet.has(r.st.replace(/^ST\s*/i,'').toLowerCase());
+        const crossRisk=_stFraud&&r.doitra>15;
         const riskBg=crossRisk?'#ffe4e6':r.risk==='red'?'#fef2f2':r.risk==='yellow'?'#fffbeb':'#f0fdf4';
         const scoreClr=r.t5>=90?'#16a34a':r.t5>=80?'#d97706':'#dc2626';
         const velClr=delta>0?(r.t5>=90?'#16a34a':'#d97706'):delta<0?'#dc2626':'#6b7280';
         const velTxt=delta>0?(r.t5>=90?`▲+${delta} 📈 Tiến bộ`:`▲+${delta} 📊 Cải thiện dần`):delta<0?`▼${delta} 🚨 Cảnh báo`:`→ Ổn định`;
         const vel=`<span style="color:${velClr};font-weight:700">${velTxt}</span>`;
-        const thaoTacBadge=r.thaoTac?`<span style="background:#fee2e2;color:#dc2626;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600">Có lỗi</span>`:`<span style="background:#dcfce7;color:#16a34a;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600">OK</span>`;
+        const thaoTacBadge=_stFraud?`<span style="background:#fee2e2;color:#dc2626;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600">Có lỗi</span>`:`<span style="background:#dcfce7;color:#16a34a;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600">OK</span>`;
         const doitraClr=r.doitra>15?'#dc2626':r.doitra>0?'#d97706':'#94a3b8';
         const doitraTd=`<td style="padding:10px 14px;text-align:center;font-weight:700;color:${doitraClr}">${r.doitra>0?r.doitra+'đ':'—'}</td>`;
         const crossBadge=crossRisk?`<div style="font-size:10px;font-weight:700;color:#be123c;background:#ffe4e6;border:1px solid #fca5a5;border-radius:4px;padding:1px 6px;margin-top:3px;display:inline-block">🚨 CẢNH BÁO GIAN LẬN</div>`:'';
-        const alertBtn=(r.risk!=='green'||crossRisk)?`<button onclick="execAlert('${r.st}','${r.loi}',${r.t5},${r.thaoTac})" style="font-size:11px;padding:4px 10px;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;cursor:pointer;font-weight:600">📨 Gửi cảnh báo</button>`:`<span style="color:#94a3b8;font-size:12px">✓ Không cần</span>`;
+        const alertBtn=(r.risk!=='green'||crossRisk)?`<button onclick="execAlert('${r.st}','${r.loi}',${r.t5},${_stFraud})" style="font-size:11px;padding:4px 10px;background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;cursor:pointer;font-weight:600">📨 Gửi cảnh báo</button>`:`<span style="color:#94a3b8;font-size:12px">✓ Không cần</span>`;
         return`<tr style="background:${riskBg};border-bottom:1px solid #f0f4ff${crossRisk?';border-left:4px solid #dc2626':''}">
           <td style="padding:10px 14px;font-weight:600">${r.st}${crossBadge}</td>
           <td style="padding:10px 14px;text-align:center;font-weight:700;color:${scoreClr}">${r.t5}%</td>
@@ -4336,7 +4337,10 @@ async function kkAutoAgg(year,month){
   const dcM=(dc&&dc.monthly||[]).find(r=>r.t===Tm)||null;
   if(!recs.length&&!taM&&!xhM){S.kkExecData=null;S.kkExecMonth=m;S.kkExecYear=y;go(S.page,S.tab);return;}
   const ttByST={};bienBan.forEach(b=>{if(b.ton<0)ttByST[b.st]=(ttByST[b.st]||0)+b.ton;});
-  const s3=(taM&&taM.stores||[]).slice(0,8).map(s=>{const nm=(s.ten||'').replace(/^SKK\s*/,'');return{st:nm,thatthoat:ttByST[nm]||0,ratio:0,tonAmSKU:+s.count||0,note:'Tồn âm '+(+s.count||0)+' SKU · GT '+((+s.value||0)/1e6).toFixed(1)+'M₫'+(ttByST[nm]?' · BBKK '+(ttByST[nm]/1e6).toFixed(1)+'M₫':'')};});
+  const _taStores=taM&&taM.stores||[];
+  const _taStoreNm=new Set(_taStores.map(s=>(s.ten||'').replace(/^SKK\s*/,'')));
+  const _extraST=Object.keys(ttByST).filter(nm=>nm&&!_taStoreNm.has(nm)).map(nm=>({st:nm,thatthoat:ttByST[nm]||0,ratio:0,tonAmSKU:0,note:'Biên bản KK '+((ttByST[nm]||0)/1e6).toFixed(1)+'M₫'}));
+  const s3=[..._taStores.map(s=>{const nm=(s.ten||'').replace(/^SKK\s*/,'');return{st:nm,thatthoat:ttByST[nm]||0,ratio:0,tonAmSKU:+s.count||0,note:'Tồn âm '+(+s.count||0)+' SKU · GT '+((+s.value||0)/1e6).toFixed(1)+'M₫'+(ttByST[nm]?' · BBKK '+(ttByST[nm]/1e6).toFixed(1)+'M₫':'')};}),..._extraST];
   S.kkExecData={
     s1_doanhThu:dcM?+dcM.dt||0:0,
     s1_soBienBan:recs.length,s1_kkTong:kkTong,s1_kkDotXuat:recs.length-kkTong,
