@@ -4335,7 +4335,7 @@ async function kkAutoAgg(year,month){
   const taM=ta&&ta.months&&ta.months[Tm]||null,taP=ta&&ta.months&&ta.months[pTm]||null;
   const xhM=xh&&xh.data&&xh.data[y]&&xh.data[y][Tm]||null;
   const dcM=(dc&&dc.monthly||[]).find(r=>r.t===Tm)||null;
-  const t2Rec=(bb&&bb.t2||[]).find(r=>+r.nam===+y&&+r.thang===+m);
+  const t4Rec=(bb&&bb.t4||[]).find(r=>+r.nam===+y&&+r.thang===+m);
   if(!recs.length&&!taM&&!xhM){S.kkExecData=null;S.kkExecMonth=m;S.kkExecYear=y;go(S.page,S.tab);return;}
   const ttByST={};bienBan.forEach(b=>{if(b.ton<0)ttByST[b.st]=(ttByST[b.st]||0)+b.ton;});
   const _taStores=taM&&taM.stores||[];
@@ -4343,7 +4343,7 @@ async function kkAutoAgg(year,month){
   const _extraST=Object.keys(ttByST).filter(nm=>nm&&!_taStoreNm.has(nm)).map(nm=>({st:nm,thatthoat:ttByST[nm]||0,ratio:0,tonAmSKU:0,note:'Biên bản KK '+((ttByST[nm]||0)/1e6).toFixed(1)+'M₫'}));
   const s3=[..._taStores.map(s=>{const nm=(s.ten||'').replace(/^SKK\s*/,'');return{st:nm,thatthoat:ttByST[nm]||0,ratio:0,tonAmSKU:+s.count||0,note:'Tồn âm '+(+s.count||0)+' SKU · GT '+((+s.value||0)/1e6).toFixed(1)+'M₫'+(ttByST[nm]?' · BBKK '+(ttByST[nm]/1e6).toFixed(1)+'M₫':'')};}),..._extraST];
   S.kkExecData={
-    s1_doanhThu:(dcM&&+dcM.dt)||(t2Rec&&+t2Rec.tongDT)||0,
+    s1_doanhThu:(dcM&&+dcM.dt)||(t4Rec&&+t4Rec.dt)||0,
     s1_soBienBan:recs.length,s1_kkTong:kkTong,s1_kkDotXuat:recs.length-kkTong,
     s1_tongThatthoat:tt,s1_thuHoi:th,
     s1_note:'Tự động từ Lark: '+recs.length+' biên bản KK'+(xhM?' · Xuất hủy '+((+xhM.value||0)/1e6).toFixed(1)+'M₫/'+(xhM.total||0)+' phiếu':''),
