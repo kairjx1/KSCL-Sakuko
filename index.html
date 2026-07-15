@@ -1383,8 +1383,8 @@ function rKKBienBan(){
       <td style="padding:7px 6px;font-size:12px;font-weight:600;color:${danger?'#dc2626':'var(--t1)'}">${tn}</td>
       <td style="padding:7px 6px;text-align:right;font-size:11px">${fmt(r.tongDT)}</td>
       <td style="padding:7px 6px;text-align:right;font-size:11px;color:#0369a1">${fmt(r.quyHT)}</td>
-      <td style="padding:7px 6px;text-align:right;font-size:11px;color:#f97316">${r.htTong<0?'−'+fmt(Math.abs(r.htTong)):'-'}</td>
-      <td style="padding:7px 6px;text-align:right;font-size:11px;color:#dc2626">${r.stDen<0?'−'+fmt(Math.abs(r.stDen)):'-'}</td>
+      <td style="padding:7px 6px;text-align:right;font-size:11px;color:#f97316">${r.htTong>0?fmt(r.htTong):'-'}</td>
+      <td style="padding:7px 6px;text-align:right;font-size:11px;color:#dc2626">${r.stDen>0?fmt(r.stDen):'-'}</td>
       <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:700;color:${danger?'#dc2626':'#16a34a'}">${fmt(r.conLai)}</td>
       <td style="padding:7px 6px;text-align:center">${pctTag}</td>
       <td style="padding:7px 6px;text-align:center;font-size:11px;color:var(--t2)">${r.htVaoThang?'T'+r.htVaoThang:'-'}</td>
