@@ -361,8 +361,9 @@ const MODS=[
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:'5',qcExecYear:'2026',kkExecData:null,kkExecMonth:'5',kkExecYear:'2026',dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:'5',qcDiemYear:'2026',qcDiemLoiHM:[],qcDTMonth:'5',qcDTYear:'2026',qcDTST:{},qcDTCVS:{},qcGLMonth:'5',qcGLYear:'2026',qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:'5',qcBBYear:'2026',qcBBList:[],qcBBYearData:{},qcDocsData:{},qcDocLists:{},
-  qcOvMonth:'6',qcOvYear:'2026',qcOvData:null,qcOv2Month:'6',qcOv2Year:'2025',qcOv2Data:null,
+const _initDate=(()=>{const n=new Date(),m=n.getMonth()+1,y=n.getFullYear();return{m:String(m),y:String(y),py:String(y-1)};})();
+let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:_initDate.m,qcExecYear:_initDate.y,kkExecData:null,kkExecMonth:_initDate.m,kkExecYear:_initDate.y,dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:_initDate.m,qcDiemYear:_initDate.y,qcDiemLoiHM:[],qcDTMonth:_initDate.m,qcDTYear:_initDate.y,qcDTST:{},qcDTCVS:{},qcGLMonth:_initDate.m,qcGLYear:_initDate.y,qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:_initDate.m,qcBBYear:_initDate.y,qcBBList:[],qcBBYearData:{},qcDocsData:{},qcDocLists:{},
+  qcOvMonth:_initDate.m,qcOvYear:_initDate.y,qcOvData:null,qcOv2Month:_initDate.m,qcOv2Year:_initDate.py,qcOv2Data:null,
   tonAmCache:null,tonAmMonth:'',tonAmFilter:{q:'',status:'all',nganh:'',sort:'value'},
   xhCache:null,xhYear:'',xhMonth:'ALL',xhQ:'',xhMode:'st'};
 
