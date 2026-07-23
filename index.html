@@ -539,11 +539,13 @@ function rDashboard(){
   const DS=DC?.stores?.length?DC.stores:[];
   // ── Date range filter ──
   const _pF=n=>'T'+String(n).padStart(2,'0');
+  const _isAll=!S.dashFrom||(!S.dashTo)||(S.dashFrom===1&&S.dashTo===12);
   const _dFrom=_pF(S.dashFrom||1);
   const _dTo=_pF(S.dashTo||12);
   const DMF=DM.filter(r=>r.t>=_dFrom&&r.t<=_dTo);
-  const DMsrc=DMF.length?DMF:DM;
-  const isSingleM=S.dashFrom===S.dashTo&&DMsrc.length===1;
+  const DMsrc=_isAll?DM:(DMF.length?DMF:DM);
+  const isSingleM=S.dashFrom===S.dashTo&&S.dashFrom>0;
+  const noDateData=isSingleM&&DMF.length===0;
   const totDT=DMsrc.reduce((a,r)=>a+r.dt,0);
   const totCP=DMsrc.reduce((a,r)=>a+(r.gv-r.tv),0);
   const tonDG=DMsrc[DMsrc.length-1].conlai||0;
@@ -619,9 +621,9 @@ function rDashboard(){
   const fP=n=>(n*100).toFixed(2)+'%';
   const fMil=n=>n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(0)+'M':(n/1e3).toFixed(0)+'K';
   const fmtV=v=>Math.abs(v)>=1e9?(v/1e9).toFixed(2)+' tỷ':Math.abs(v)>=1e6?(v/1e6).toFixed(1)+' tr':Math.abs(v)>0?Math.round(v/1e3)+'k':'—';
-  const CURR_M=DMsrc[DMsrc.length-1]?.t||'T05';
-  const FIRST_M=DMsrc[0]?.t||'T01';
-  const rangeLabel=isSingleM?CURR_M:(FIRST_M===CURR_M?CURR_M:FIRST_M+'→'+CURR_M);
+  const CURR_M=isSingleM?_pF(S.dashFrom):(DMsrc[DMsrc.length-1]?.t||'T05');
+  const FIRST_M=_isAll?(DMsrc[0]?.t||'T01'):_pF(S.dashFrom||1);
+  const rangeLabel=isSingleM?CURR_M:(_isAll?(FIRST_M===CURR_M?CURR_M:FIRST_M+'→'+CURR_M):FIRST_M+'→'+_pF(S.dashTo||12));
   const ytdOk=tlDate<=NGUONG_DATE;
   const totCPnet=totCP-tonDG;
   const mTL=DMsrc.map(r=>r.dt>0?(r.gv-r.tv-r.conlai)/r.dt:0);
@@ -715,23 +717,17 @@ function rDashboard(){
 </div>
 
 <!-- Filter bar -->
-<div class="card" style="margin-bottom:12px;padding:10px 14px;background:rgba(26,37,88,.04)">
-  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-    <span style="font-size:11.5px;font-weight:700;color:var(--t2);white-space:nowrap">📅 Khung thời gian:</span>
-    <button onclick="dashFilter(1,12)" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${S.dashFrom===1&&S.dashTo===12?'#1a2558':'rgba(0,0,0,.15)'};background:${S.dashFrom===1&&S.dashTo===12?'#1a2558':'#fff'};color:${S.dashFrom===1&&S.dashTo===12?'#fff':'var(--t1)'};cursor:pointer;font-weight:600">Tất cả</button>
-    ${DM.map(r=>{const m=parseInt(r.t.slice(1));const sel=S.dashFrom===m&&S.dashTo===m;return`<button onclick="dashFilter(${m},${m})" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${sel?'#e91e7b':'rgba(0,0,0,.15)'};background:${sel?'#e91e7b':'#fff'};color:${sel?'#fff':'var(--t1)'};cursor:pointer">${r.t}</button>`;}).join('')}
-    <div style="display:flex;align-items:center;gap:5px;margin-left:6px;padding-left:10px;border-left:1px solid rgba(0,0,0,.1)">
-      <span style="font-size:11.5px;color:var(--t2)">Từ</span>
-      <select onchange="S.dashFrom=+this.value;dashFilter(S.dashFrom,S.dashTo)" style="font-size:11.5px;padding:3px 6px;border:1px solid rgba(0,0,0,.2);border-radius:5px;background:#fff">
-        ${DM.map(r=>{const m=parseInt(r.t.slice(1));return`<option value="${m}"${m===S.dashFrom?' selected':''}>${r.t}</option>`;}).join('')}
-      </select>
-      <span style="font-size:11.5px;color:var(--t2)">đến</span>
-      <select onchange="S.dashTo=+this.value;dashFilter(S.dashFrom,S.dashTo)" style="font-size:11.5px;padding:3px 6px;border:1px solid rgba(0,0,0,.2);border-radius:5px;background:#fff">
-        ${DM.map(r=>{const m=parseInt(r.t.slice(1));return`<option value="${m}"${m===S.dashTo?' selected':''}>${r.t}</option>`;}).join('')}
-      </select>
-    </div>
-    <span style="margin-left:auto;font-size:11px;color:var(--t3)">Đang xem: <strong style="color:#1a2558">${rangeLabel}/2026</strong> · ${DMsrc.length} tháng · ${isSingleM?'Tháng đơn':'Lũy kế'}</span>
-  </div>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+  <span style="font-size:12px;color:#64748b;font-weight:500">Tháng:</span>
+  <select onchange="if(this.value==='all'){dashFilter(1,12)}else{const m=+this.value;dashFilter(m,m)}" style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff;font-weight:500;cursor:pointer">
+    <option value="all"${S.dashFrom===1&&S.dashTo===12?' selected':''}>Tất cả</option>
+    ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${S.dashFrom===m&&S.dashTo===m?' selected':''}>Tháng ${m}</option>`).join('')}
+  </select>
+  <span style="font-size:12px;color:#64748b;font-weight:500">Năm:</span>
+  <select style="padding:5px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff;font-weight:500;cursor:pointer">
+    <option selected>2026</option><option>2025</option>
+  </select>
+  <span style="margin-left:auto;font-size:11px;color:var(--t3)">Đang xem: <strong style="color:#1a2558">${rangeLabel}/2026</strong> · ${isSingleM?'Tháng đơn':'Lũy kế '+DMsrc.length+' tháng'}</span>
 </div>
 
 <!-- 3 trụ cột EBIT -->
