@@ -619,7 +619,7 @@ function rDashboard(){
   // ── Helpers ──
   const fM=n=>(n/1e6).toFixed(1)+'M';
   const fP=n=>(n*100).toFixed(2)+'%';
-  const fMil=n=>n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(0)+'M':(n/1e3).toFixed(0)+'K';
+  const fMil=n=>{const a=Math.abs(n),s=n<0?'-':'';return a>=1e9?s+(a/1e9).toFixed(2)+'B':a>=1e6?s+(a/1e6).toFixed(0)+'M':a>=1e3?s+(a/1e3).toFixed(0)+'K':String(n);};
   const fmtV=v=>Math.abs(v)>=1e9?(v/1e9).toFixed(2)+' tỷ':Math.abs(v)>=1e6?(v/1e6).toFixed(1)+' tr':Math.abs(v)>0?Math.round(v/1e3)+'k':'—';
   const CURR_M=isSingleM?_pF(S.dashFrom):(DMsrc[DMsrc.length-1]?.t||'T05');
   const FIRST_M=_isAll?(DMsrc[0]?.t||'T01'):_pF(S.dashFrom||1);
