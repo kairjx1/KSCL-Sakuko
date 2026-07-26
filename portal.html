@@ -52,6 +52,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
 .topbar-user .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .topbar-user .logout{background:none;border:none;color:rgba(255,255,255,.8);font-size:13px;cursor:pointer;padding:4px 8px;border-radius:6px}
 .topbar-user .logout:hover{background:rgba(255,255,255,.15);color:#fff}
+.topbar-user .admin-btn{background:rgba(255,255,255,.15);border:none;color:#fff;font-size:13px;cursor:pointer;padding:4px 10px;border-radius:6px;font-weight:600}
+.topbar-user .admin-btn:hover{background:rgba(255,255,255,.25)}
 
 /* MAIN */
 .main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px}
@@ -63,7 +65,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
 .app-tile{background:#fff;border-radius:16px;padding:32px 24px;text-align:center;text-decoration:none;color:#1a2332;box-shadow:0 2px 12px rgba(0,0,0,.06);border:2px solid transparent;transition:all .2s ease;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:16px}
 .app-tile:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.12);border-color:#d0021b}
 .app-tile:active{transform:translateY(-1px)}
-.app-icon{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:36px}
+.app-icon{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center}
 .app-icon.blue{background:linear-gradient(135deg,#1a56db,#3b82f6)}
 .app-icon.red{background:linear-gradient(135deg,#d0021b,#ef4444)}
 .app-icon svg{width:40px;height:40px;fill:#fff}
@@ -72,6 +74,49 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
 .app-badge{font-size:11px;padding:3px 10px;border-radius:10px;font-weight:600}
 .app-badge.live{background:#dcfce7;color:#16a34a}
 .app-badge.new{background:#fef3c7;color:#b45309}
+
+/* PENDING */
+.pending-wrap{min-height:80vh;display:flex;align-items:center;justify-content:center;padding:40px 20px}
+.pending-card{background:#fff;border-radius:18px;padding:48px 40px;width:480px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,.08);text-align:center}
+.pending-icon{width:80px;height:80px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:40px}
+.pending-card h2{font-size:22px;font-weight:700;margin-bottom:8px;color:#1a2332}
+.pending-card p{font-size:14px;color:#6b7a99;line-height:1.6;margin-bottom:16px}
+.pending-info{background:#f8fafc;border-radius:10px;padding:14px 18px;font-size:13px;color:#475569;text-align:left;margin-bottom:20px}
+.pending-info strong{color:#1a2332}
+
+/* ADMIN PANEL */
+.admin-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200}
+.admin-panel{background:#fff;border-radius:16px;width:700px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2)}
+.admin-header{padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
+.admin-header h2{font-size:18px;font-weight:700}
+.admin-close{background:none;border:none;font-size:24px;cursor:pointer;color:#6b7a99;padding:4px 8px;border-radius:6px}
+.admin-close:hover{background:#f0f2f7}
+.admin-body{padding:20px 24px}
+.admin-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid #e5e7eb;padding-bottom:0}
+.admin-tab{padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:#6b7a99;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.2s}
+.admin-tab.active{color:#d0021b;border-bottom-color:#d0021b}
+.admin-tab .count{background:#e5e7eb;color:#475569;font-size:11px;padding:1px 7px;border-radius:8px;margin-left:6px}
+.admin-tab.active .count{background:#fef2f2;color:#d0021b}
+
+.user-table{width:100%;border-collapse:collapse;font-size:13px}
+.user-table th{text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7a99;border-bottom:2px solid #e5e7eb}
+.user-table td{padding:10px;border-bottom:1px solid #f0f2f7;vertical-align:middle}
+.user-table tr:hover td{background:#f8fafc}
+.user-name{display:flex;align-items:center;gap:8px}
+.user-name .av{width:28px;height:28px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#475569;overflow:hidden;flex-shrink:0}
+.user-name .av img{width:100%;height:100%;object-fit:cover}
+.status-pill{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600}
+.status-pill.pending{background:#fef3c7;color:#b45309}
+.status-pill.approved{background:#dcfce7;color:#16a34a}
+.status-pill.blocked{background:#fef2f2;color:#dc2626}
+.app-check{display:flex;gap:8px;flex-wrap:wrap}
+.app-check label{display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer}
+.app-check input{accent-color:#d0021b}
+.btn-sm{padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-approve{background:#dcfce7;color:#16a34a}.btn-approve:hover{background:#bbf7d0}
+.btn-block{background:#fef2f2;color:#dc2626}.btn-block:hover{background:#fecaca}
+.btn-unblock{background:#e0f2fe;color:#0284c7}.btn-unblock:hover{background:#bae6fd}
+.actions{display:flex;gap:4px}
 
 .footer{text-align:center;padding:20px;font-size:13px;color:#a8b5cc}
 .hidden{display:none!important}
@@ -84,6 +129,9 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
   .welcome h1{font-size:22px}
   .welcome p{font-size:14px}
   .login-card{padding:32px 24px}
+  .admin-panel{border-radius:12px}
+  .user-table{font-size:12px}
+  .user-table th,.user-table td{padding:6px 4px}
 }
 </style>
 </head>
@@ -126,7 +174,29 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
   <div class="topbar-user">
     <span id="userName">-</span>
     <div class="avatar" id="userAvatar">-</div>
+    <button class="admin-btn hidden" id="btnAdmin">Quản lý</button>
     <button class="logout" id="btnLogout">Đăng xuất</button>
+  </div>
+</div>
+
+<!-- PENDING APPROVAL -->
+<div class="pending-wrap hidden" id="pendingWrap">
+  <div class="pending-card">
+    <div class="pending-icon">&#9203;</div>
+    <h2>Đang chờ phê duyệt</h2>
+    <p>Tài khoản của bạn đã được ghi nhận. Vui lòng chờ quản trị viên phê duyệt quyền truy cập.</p>
+    <div class="pending-info" id="pendingInfo"></div>
+    <button class="btn-login" onclick="logout()" style="background:#64748b;margin-top:8px">Đăng xuất</button>
+  </div>
+</div>
+
+<!-- BLOCKED -->
+<div class="pending-wrap hidden" id="blockedWrap">
+  <div class="pending-card">
+    <div class="pending-icon" style="background:#fef2f2">&#128683;</div>
+    <h2>Tài khoản bị khóa</h2>
+    <p>Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.</p>
+    <button class="btn-login" onclick="logout()" style="background:#64748b;margin-top:8px">Đăng xuất</button>
   </div>
 </div>
 
@@ -136,27 +206,28 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
     <h1 id="welcomeMsg">Chào mừng đến với KSCL System</h1>
     <p>Hệ thống quản lý kiểm soát chất lượng Sakuko Vietnam. Chọn ứng dụng bên dưới để bắt đầu.</p>
   </div>
-  <div class="apps">
-    <a class="app-tile" href="index.html">
-      <div class="app-icon blue">
-        <svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
-      </div>
-      <div class="app-name">KSCL Academy</div>
-      <div class="app-desc">Đào tạo, kiểm tra năng lực, dashboard báo cáo</div>
-      <span class="app-badge live">Đang hoạt động</span>
-    </a>
-    <a class="app-tile" href="kiem-ke.html">
-      <div class="app-icon red">
-        <svg viewBox="0 0 24 24"><path d="M4 6h2V4H4c-1.1 0-2 .9-2 2v2h2V6zm0 12H2v2c0 1.1.9 2 2 2h2v-2H4v-2zm16-12V4h-2v2h2v2h2V6c0-1.1-.9-2-2-2zm0 14h-2v2h2c1.1 0 2-.9 2-2v-2h-2v2zM4 11h16v2H4zm3-4h10v2H7zm0 8h10v2H7z"/></svg>
-      </div>
-      <div class="app-name">App Kiểm Kê</div>
-      <div class="app-desc">Quét barcode, kiểm kê kho, đối chiếu tồn hệ thống</div>
-      <span class="app-badge new">Mới</span>
-    </a>
-  </div>
+  <div class="apps" id="appsGrid"></div>
 </div>
 
 <div class="footer hidden" id="footerEl">Sakuko Việt Nam &copy; 2025 &middot; KSCL System v2.0</div>
+
+<!-- ADMIN PANEL -->
+<div class="admin-overlay hidden" id="adminOverlay">
+  <div class="admin-panel">
+    <div class="admin-header">
+      <h2>Quản lý người dùng</h2>
+      <button class="admin-close" onclick="closeAdmin()">&times;</button>
+    </div>
+    <div class="admin-body">
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="pending" onclick="switchTab('pending')">Chờ duyệt <span class="count" id="countPending">0</span></button>
+        <button class="admin-tab" data-tab="approved" onclick="switchTab('approved')">Đã duyệt <span class="count" id="countApproved">0</span></button>
+        <button class="admin-tab" data-tab="blocked" onclick="switchTab('blocked')">Đã khóa <span class="count" id="countBlocked">0</span></button>
+      </div>
+      <div id="adminTable"></div>
+    </div>
+  </div>
+</div>
 
 <script>
 const FB_CONFIG = {
@@ -175,35 +246,126 @@ const db = firebase.database();
 
 const PORTAL_KEY = 'kscl_portal_session';
 const API = '/api';
+const ADMIN_EMAILS = ['kairjx1@gmail.com'];
 
-function showMain(user) {
-  document.getElementById('loginWrap').classList.add('hidden');
-  document.getElementById('topbar').classList.remove('hidden');
-  document.getElementById('mainContent').classList.remove('hidden');
-  document.getElementById('footerEl').classList.remove('hidden');
-  document.getElementById('userName').textContent = user.name || user.email || '-';
-  document.getElementById('welcomeMsg').textContent = `Xin chào, ${user.name || user.email}!`;
+const APPS = {
+  academy: { name: 'KSCL Academy', href: 'index.html', desc: 'Đào tạo, kiểm tra năng lực, dashboard báo cáo', icon: 'blue', badge: 'live', badgeText: 'Đang hoạt động',
+    svg: '<svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>' },
+  kiemke: { name: 'App Kiểm Kê', href: 'kiem-ke.html', desc: 'Quét barcode, kiểm kê kho, đối chiếu tồn hệ thống', icon: 'red', badge: 'new', badgeText: 'Mới',
+    svg: '<svg viewBox="0 0 24 24"><path d="M4 6h2V4H4c-1.1 0-2 .9-2 2v2h2V6zm0 12H2v2c0 1.1.9 2 2 2h2v-2H4v-2zm16-12V4h-2v2h2v2h2V6c0-1.1-.9-2-2-2zm0 14h-2v2h2c1.1 0 2-.9 2-2v-2h-2v2zM4 11h16v2H4zm3-4h10v2H7zm0 8h10v2H7z"/></svg>' }
+};
 
-  const av = document.getElementById('userAvatar');
-  if (user.avatar) {
-    av.innerHTML = `<img src="${user.avatar}" alt="">`;
-  } else {
-    av.textContent = (user.name || user.email || '-').charAt(0).toUpperCase();
-  }
+let currentSession = null;
+let isAdmin = false;
+let allUsers = {};
+let adminTab = 'pending';
+
+function hideAll() {
+  ['loginWrap','topbar','mainContent','footerEl','pendingWrap','blockedWrap'].forEach(id =>
+    document.getElementById(id).classList.add('hidden'));
 }
 
-function showLogin() {
-  document.getElementById('loginWrap').classList.remove('hidden');
-  document.getElementById('topbar').classList.add('hidden');
-  document.getElementById('mainContent').classList.add('hidden');
-  document.getElementById('footerEl').classList.add('hidden');
-}
+function showLogin() { hideAll(); document.getElementById('loginWrap').classList.remove('hidden'); }
 
 function showErr(msg) {
   document.getElementById('loginErr').innerHTML = msg ? `<div class="err-box">${msg}</div>` : '';
 }
 
-// Firebase auth state
+function setAvatar(el, user) {
+  if (user.avatar) el.innerHTML = `<img src="${user.avatar}" alt="">`;
+  else el.textContent = (user.name || user.email || '-').charAt(0).toUpperCase();
+}
+
+function showApproved(user, allowedApps) {
+  hideAll();
+  document.getElementById('topbar').classList.remove('hidden');
+  document.getElementById('mainContent').classList.remove('hidden');
+  document.getElementById('footerEl').classList.remove('hidden');
+  document.getElementById('userName').textContent = user.name || user.email || '-';
+  document.getElementById('welcomeMsg').textContent = `Xin chào, ${user.name || user.email}!`;
+  setAvatar(document.getElementById('userAvatar'), user);
+
+  if (isAdmin) document.getElementById('btnAdmin').classList.remove('hidden');
+  else document.getElementById('btnAdmin').classList.add('hidden');
+
+  const grid = document.getElementById('appsGrid');
+  grid.innerHTML = '';
+  const apps = isAdmin ? Object.keys(APPS) : (allowedApps || []);
+  apps.forEach(key => {
+    const a = APPS[key];
+    if (!a) return;
+    grid.innerHTML += `<a class="app-tile" href="${a.href}">
+      <div class="app-icon ${a.icon}">${a.svg}</div>
+      <div class="app-name">${a.name}</div>
+      <div class="app-desc">${a.desc}</div>
+      <span class="app-badge ${a.badge}">${a.badgeText}</span>
+    </a>`;
+  });
+
+  if (!apps.length && !isAdmin) {
+    grid.innerHTML = '<p style="color:#6b7a99;font-size:14px;text-align:center;grid-column:1/-1">Chưa được cấp quyền truy cập ứng dụng nào. Vui lòng liên hệ quản trị viên.</p>';
+  }
+}
+
+function showPending(user) {
+  hideAll();
+  document.getElementById('topbar').classList.remove('hidden');
+  document.getElementById('pendingWrap').classList.remove('hidden');
+  document.getElementById('userName').textContent = user.name || user.email || '-';
+  setAvatar(document.getElementById('userAvatar'), user);
+  document.getElementById('pendingInfo').innerHTML =
+    `<strong>Tên:</strong> ${user.name || '-'}<br><strong>Email:</strong> ${user.email || '-'}<br><strong>Loại tài khoản:</strong> ${user.type === 'lark' ? 'Lark' : 'Email'}`;
+}
+
+function showBlocked(user) {
+  hideAll();
+  document.getElementById('topbar').classList.remove('hidden');
+  document.getElementById('blockedWrap').classList.remove('hidden');
+  document.getElementById('userName').textContent = user.name || user.email || '-';
+  setAvatar(document.getElementById('userAvatar'), user);
+}
+
+function userKey(session) {
+  if (session.type === 'lark') return 'lark_' + session.open_id;
+  return 'fb_' + (session.uid || '').replace(/[.#$/\[\]]/g, '_');
+}
+
+async function checkPermission(session) {
+  currentSession = session;
+  const key = userKey(session);
+  isAdmin = ADMIN_EMAILS.includes(session.email);
+
+  if (isAdmin) {
+    showApproved(session, Object.keys(APPS));
+    listenUsers();
+    return;
+  }
+
+  const snap = await db.ref(`portal_users/${key}`).get();
+  if (snap.exists()) {
+    const u = snap.val();
+    if (u.status === 'approved') {
+      showApproved(session, u.apps || []);
+    } else if (u.status === 'blocked') {
+      showBlocked(session);
+    } else {
+      showPending(session);
+    }
+  } else {
+    await db.ref(`portal_users/${key}`).set({
+      name: session.name || '',
+      email: session.email || '',
+      type: session.type,
+      avatar: session.avatar || '',
+      status: 'pending',
+      apps: [],
+      created_at: Date.now()
+    });
+    showPending(session);
+  }
+}
+
+// Firebase auth
 auth.onAuthStateChanged(async u => {
   if (u) {
     let name = u.displayName || '';
@@ -213,21 +375,17 @@ auth.onAuthStateChanged(async u => {
     } catch (e) {}
     const session = { type: 'firebase', name: name || u.email, email: u.email, uid: u.uid, ts: Date.now() };
     localStorage.setItem(PORTAL_KEY, JSON.stringify(session));
-    showMain(session);
+    checkPermission(session);
   } else {
     const saved = localStorage.getItem(PORTAL_KEY);
     if (saved) {
       const s = JSON.parse(saved);
-      if (s.type === 'lark') {
-        showMain(s);
-        return;
-      }
+      if (s.type === 'lark') { checkPermission(s); return; }
     }
     showLogin();
   }
 });
 
-// Firebase email/password login
 async function doLogin() {
   const email = document.getElementById('inpEmail').value.trim();
   const pass = document.getElementById('inpPass').value;
@@ -247,75 +405,144 @@ async function doLogin() {
   }
 }
 
-// Lark OAuth login
 async function doLarkLogin() {
   try {
     const redirect = location.origin + '/portal.html';
     const r = await fetch(`${API}/lark-oauth?action=login_url&redirect=${encodeURIComponent(redirect)}`);
     const j = await r.json();
-    if (j.ok && j.url) {
-      location.href = j.url;
-    } else {
-      showErr('Không thể khởi tạo đăng nhập Lark: ' + (j.error || ''));
-    }
-  } catch (e) {
-    showErr('Lỗi kết nối: ' + e.message);
-  }
+    if (j.ok && j.url) location.href = j.url;
+    else showErr('Không thể khởi tạo đăng nhập Lark: ' + (j.error || ''));
+  } catch (e) { showErr('Lỗi kết nối: ' + e.message); }
 }
 
-// Handle Lark OAuth callback
 async function handleLarkCallback() {
   const params = new URLSearchParams(location.search);
   const code = params.get('code');
   if (!code) return false;
-
   try {
     const r = await fetch(`${API}/lark-oauth?action=callback&code=${encodeURIComponent(code)}`);
     const j = await r.json();
     if (j.ok && j.user) {
-      const session = {
-        type: 'lark',
-        name: j.user.name,
-        email: j.user.email,
-        avatar: j.user.avatar,
-        open_id: j.user.open_id,
-        ts: Date.now()
-      };
+      const session = { type: 'lark', name: j.user.name, email: j.user.email, avatar: j.user.avatar, open_id: j.user.open_id, ts: Date.now() };
       localStorage.setItem(PORTAL_KEY, JSON.stringify(session));
       history.replaceState(null, '', location.pathname);
-      showMain(session);
+      checkPermission(session);
       return true;
-    } else {
-      showErr('Đăng nhập Lark thất bại: ' + (j.error || ''));
-    }
-  } catch (e) {
-    showErr('Lỗi xác thực Lark: ' + e.message);
-  }
+    } else { showErr('Đăng nhập Lark thất bại: ' + (j.error || '')); }
+  } catch (e) { showErr('Lỗi xác thực Lark: ' + e.message); }
   return false;
 }
 
 function logout() {
   localStorage.removeItem(PORTAL_KEY);
+  currentSession = null;
+  isAdmin = false;
   auth.signOut().catch(() => {});
   showLogin();
 }
 
-// Event listeners
+// ═══════ ADMIN ═══════
+function listenUsers() {
+  db.ref('portal_users').on('value', snap => {
+    allUsers = snap.val() || {};
+    updateAdminCounts();
+  });
+}
+
+function updateAdminCounts() {
+  let p = 0, a = 0, b = 0;
+  Object.values(allUsers).forEach(u => {
+    if (u.status === 'pending') p++;
+    else if (u.status === 'approved') a++;
+    else if (u.status === 'blocked') b++;
+  });
+  document.getElementById('countPending').textContent = p;
+  document.getElementById('countApproved').textContent = a;
+  document.getElementById('countBlocked').textContent = b;
+}
+
+function openAdmin() {
+  document.getElementById('adminOverlay').classList.remove('hidden');
+  renderAdminTable();
+}
+function closeAdmin() { document.getElementById('adminOverlay').classList.add('hidden'); }
+
+function switchTab(tab) {
+  adminTab = tab;
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  renderAdminTable();
+}
+
+function renderAdminTable() {
+  const entries = Object.entries(allUsers).filter(([, u]) => u.status === adminTab);
+  if (!entries.length) {
+    document.getElementById('adminTable').innerHTML = `<p style="text-align:center;color:#6b7a99;padding:32px;font-size:14px">Không có người dùng nào</p>`;
+    return;
+  }
+
+  let html = `<table class="user-table"><thead><tr><th>Người dùng</th><th>Email</th><th>Loại</th><th>Quyền app</th><th>Thao tác</th></tr></thead><tbody>`;
+  entries.forEach(([key, u]) => {
+    const av = u.avatar ? `<img src="${u.avatar}" alt="">` : (u.name || '?').charAt(0).toUpperCase();
+    const checks = Object.entries(APPS).map(([k, a]) => {
+      const checked = (u.apps || []).includes(k) ? 'checked' : '';
+      return `<label><input type="checkbox" ${checked} onchange="toggleApp('${key}','${k}',this.checked)">${a.name}</label>`;
+    }).join('');
+
+    let actions = '';
+    if (adminTab === 'pending') {
+      actions = `<button class="btn-sm btn-approve" onclick="setStatus('${key}','approved')">Duyệt</button>
+                 <button class="btn-sm btn-block" onclick="setStatus('${key}','blocked')">Từ chối</button>`;
+    } else if (adminTab === 'approved') {
+      actions = `<button class="btn-sm btn-block" onclick="setStatus('${key}','blocked')">Khóa</button>`;
+    } else {
+      actions = `<button class="btn-sm btn-unblock" onclick="setStatus('${key}','approved')">Mở khóa</button>`;
+    }
+
+    html += `<tr>
+      <td><div class="user-name"><div class="av">${av}</div><span>${u.name || '-'}</span></div></td>
+      <td>${u.email || '-'}</td>
+      <td>${u.type === 'lark' ? 'Lark' : 'Email'}</td>
+      <td><div class="app-check">${checks}</div></td>
+      <td><div class="actions">${actions}</div></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('adminTable').innerHTML = html;
+}
+
+async function setStatus(key, status) {
+  const updates = { [`portal_users/${key}/status`]: status };
+  if (status === 'approved' && !(allUsers[key]?.apps || []).length) {
+    updates[`portal_users/${key}/apps`] = Object.keys(APPS);
+  }
+  if (status === 'approved') updates[`portal_users/${key}/approved_at`] = Date.now();
+  await db.ref().update(updates);
+  renderAdminTable();
+}
+
+async function toggleApp(key, app, checked) {
+  const apps = allUsers[key]?.apps || [];
+  let newApps;
+  if (checked) newApps = [...new Set([...apps, app])];
+  else newApps = apps.filter(a => a !== app);
+  await db.ref(`portal_users/${key}/apps`).set(newApps);
+}
+
+// Events
 document.getElementById('btnLogin').onclick = doLogin;
 document.getElementById('btnLark').onclick = doLarkLogin;
 document.getElementById('btnLogout').onclick = logout;
-document.getElementById('inpPass').onkeydown = function(e) { if (e.key === 'Enter') doLogin(); };
-document.getElementById('inpEmail').onkeydown = function(e) { if (e.key === 'Enter') document.getElementById('inpPass').focus(); };
+document.getElementById('btnAdmin').onclick = openAdmin;
+document.getElementById('inpPass').onkeydown = e => { if (e.key === 'Enter') doLogin(); };
+document.getElementById('inpEmail').onkeydown = e => { if (e.key === 'Enter') document.getElementById('inpPass').focus(); };
+document.getElementById('adminOverlay').onclick = e => { if (e.target === e.currentTarget) closeAdmin(); };
 
-// Init
 (async function init() {
   if (await handleLarkCallback()) return;
   const saved = localStorage.getItem(PORTAL_KEY);
   if (saved) {
     const s = JSON.parse(saved);
-    if (s.type === 'lark') {
-      showMain(s);
-    }
+    if (s.type === 'lark') checkPermission(s);
   }
 })();
 </script>
