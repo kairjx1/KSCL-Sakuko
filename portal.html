@@ -356,24 +356,29 @@ async function ensureUserRecord(key, session, role) {
 }
 
 // ═══════ AUTH ═══════
-auth.onAuthStateChanged(async u => {
-  if (u) {
-    let name = u.displayName || '';
-    try {
-      const snap = await db.ref(`profiles/${u.uid}`).get();
-      if (snap.exists()) name = snap.val().name || name;
-    } catch (e) {}
-    const session = { type: 'firebase', name: name || u.email, email: u.email, uid: u.uid, ts: Date.now() };
-    checkPermission(session);
-  } else {
-    const saved = localStorage.getItem(PORTAL_KEY);
-    if (saved) {
-      const s = JSON.parse(saved);
-      if (s.type === 'lark') { checkPermission(s); return; }
+let larkCallbackHandled = false;
+
+function startFirebaseListener() {
+  auth.onAuthStateChanged(async u => {
+    if (larkCallbackHandled) return;
+    if (u) {
+      let name = u.displayName || '';
+      try {
+        const snap = await db.ref(`profiles/${u.uid}`).get();
+        if (snap.exists()) name = snap.val().name || name;
+      } catch (e) {}
+      const session = { type: 'firebase', name: name || u.email, email: u.email, uid: u.uid, ts: Date.now() };
+      checkPermission(session);
+    } else {
+      const saved = localStorage.getItem(PORTAL_KEY);
+      if (saved) {
+        const s = JSON.parse(saved);
+        if (s.type === 'lark') { checkPermission(s); return; }
+      }
+      showLogin();
     }
-    showLogin();
-  }
-});
+  });
+}
 
 async function doLogin() {
   const email = document.getElementById('inpEmail').value.trim();
@@ -509,12 +514,14 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
 
 // ═══════ INIT ═══════
 (async function init() {
-  if (await handleLarkCallback()) return;
-  const saved = localStorage.getItem(PORTAL_KEY);
-  if (saved) {
-    const s = JSON.parse(saved);
-    if (s.type === 'lark') checkPermission(s);
+  const params = new URLSearchParams(location.search);
+  if (params.get('code')) {
+    larkCallbackHandled = true;
+    const ok = await handleLarkCallback();
+    if (ok) return;
+    larkCallbackHandled = false;
   }
+  startFirebaseListener();
 })();
 </script>
 </body>
