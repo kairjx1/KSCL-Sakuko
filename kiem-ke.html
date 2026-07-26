@@ -589,10 +589,14 @@ const APP = {
       $('#sessionList').innerHTML = '<div style="padding:20px;text-align:center;color:#999">Chưa có kho nào. Thêm mới bên dưới.</div>';
       return;
     }
+    const canDel = this.canDelete();
     $('#sessionList').innerHTML = items.map(s =>
-      `<button class="storeitem" data-ma="${esc(s.ma_dot)}" data-name="${esc(s.ten_dot || s.ma_dot)}">
-        <div><b>${esc(s.ten_dot || s.ma_dot)}</b> &middot; <small>${esc(s.ma_dot)}</small></div>
-      </button>`
+      `<div class="storeitem" style="display:flex;align-items:center">
+        <button style="flex:1;text-align:left;background:none;border:none;padding:0;font-size:17px" data-ma="${esc(s.ma_dot)}" data-name="${esc(s.ten_dot || s.ma_dot)}">
+          <b>${esc(s.ten_dot || s.ma_dot)}</b> &middot; <small>${esc(s.ma_dot)}</small>
+        </button>
+        ${canDel ? `<span class="adel" data-delstore="${esc(s.ma_dot)}" title="Xóa kho">&times;</span>` : ''}
+      </div>`
     ).join('');
   },
   async createSession() {
@@ -1297,10 +1301,29 @@ const APP = {
       await dbDelete('counts', c.id);
       if (c.record_id) await this.enqueue('delete', c);
     }
-    const la = this.getLocalAreas().filter(a => a.ma_khu_vuc !== code);
-    this.saveLocalAreas(la);
+    const allLocal = this.getAllLocalAreas().filter(a => a.ma_khu_vuc !== code);
+    localStorage.setItem('kk_areas', JSON.stringify(allLocal));
     this.toast('Đã xóa phiếu ' + code);
     await this.loadAreas();
+  },
+  async deleteStore(ma_dot) {
+    if (!confirm('Xóa kho "' + ma_dot + '" và toàn bộ dữ liệu?')) return;
+    const all = await dbGetAll('counts');
+    const toDelete = all.filter(c => c.ma_dot === ma_dot);
+    for (const c of toDelete) {
+      await dbDelete('counts', c.id);
+      if (c.record_id) await this.enqueue('delete', c);
+    }
+    const allAreas = this.getAllLocalAreas().filter(a => a.ma_dot !== ma_dot);
+    localStorage.setItem('kk_areas', JSON.stringify(allAreas));
+    const sessions = this.getLocalSessions().filter(s => s.ma_dot !== ma_dot);
+    this.saveLocalSessions(sessions);
+    if (this.session?.ma_dot === ma_dot) {
+      this.session = null;
+      localStorage.removeItem('kk_session');
+    }
+    this.toast('Đã xóa kho');
+    this.showSessions();
   },
 
   /* ---- Events ---- */
@@ -1309,7 +1332,11 @@ const APP = {
     $('#inpUser').onkeydown = e => { if (e.key === 'Enter') this.login(); };
 
     $('#btnStoreBack').onclick = () => location.href = 'index.html';
-    $('#sessionList').onclick = e => { const b = e.target.closest('.storeitem'); if (b) this.selectSession(b.dataset.ma, b.dataset.name); };
+    $('#sessionList').onclick = e => {
+      const del = e.target.closest('.adel[data-delstore]');
+      if (del) { e.stopPropagation(); this.deleteStore(del.dataset.delstore); return; }
+      const b = e.target.closest('[data-ma]'); if (b) this.selectSession(b.dataset.ma, b.dataset.name);
+    };
     $('#btnCreateSession').onclick = () => this.createSession();
 
     $('#btnMenu').onclick = () => this.openDrawer();
