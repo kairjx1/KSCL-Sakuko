@@ -218,21 +218,21 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   <div class="login-footer">Sakuko Việt Nam &copy; 2025</div>
 </div>
 
-<!-- ========== SESSION SELECT ========== -->
+<!-- ========== STORE SELECT ========== -->
 <div id="pStore" class="screen hidden">
   <div class="appbar">
     <button class="icon-btn" id="btnStoreBack"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="#fff" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
-    <h2>Chọn đợt kiểm kê</h2>
+    <h2>Chọn kho</h2>
     <div class="icon-btn"></div>
   </div>
   <div class="page light">
     <div class="plainlist" id="sessionList"></div>
     <details class="addbox">
-      <summary>+ Tạo đợt kiểm kê mới</summary>
+      <summary>&#9660; + Thêm kho mới</summary>
       <div class="addrow">
-        <input id="inpSessionName" placeholder="Tên đợt (VD: Kiểm kê T7/2025)">
-        <input id="inpSessionKho" placeholder="Kho (VD: KHO TỔNG)" value="KHO TỔNG">
-        <button class="btn-blue" id="btnCreateSession" style="margin-top:6px">Tạo</button>
+        <input id="inpSessionName" placeholder="Tên kho (vd Sakuko Thái Hà)">
+        <input id="inpSessionKho" placeholder="Mã kho — bỏ trống để tự tạo (tuỳ chọn)">
+        <button class="btn-blue" id="btnCreateSession" style="margin-top:6px">Thêm</button>
       </div>
     </details>
   </div>
@@ -242,12 +242,12 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 <div id="pHome" class="screen hidden">
   <div class="appbar">
     <button class="icon-btn" id="btnMenu"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="#fff" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></button>
-    <h2 id="homeTitle">Kiểm kê</h2>
-    <button class="icon-btn" id="btnProgress"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="#fff" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></button>
+    <h2 id="homeTitle">Kiểm kho</h2>
+    <button class="icon-btn" id="btnProgress"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="#fff" d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
   </div>
   <div class="page gray">
     <div class="datechip" id="sessionChip"></div>
-    <input class="homefilter" placeholder="Tìm khu vực..." id="homeSearch">
+    <input class="homefilter hidden" placeholder="Tìm khu vực..." id="homeSearch">
     <div class="cards" id="areaCards"></div>
   </div>
   <button class="fab" id="btnAddArea">+</button>
@@ -275,12 +275,12 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <button data-tab="diff">Lệch</button>
       <button data-tab="uncounted">Chưa kiểm</button>
     </div>
-    <div class="thead4"><span>Sản phẩm</span><span>Tồn</span><span>Thực</span><span>Lệch</span></div>
+    <div class="thead4"><span>Kiểm hàng</span><span>Tồn kho</span><span style="text-decoration:underline">Thực tế</span><span style="color:#e02424">Chênh lệch</span></div>
     <div class="sheetrows" id="sheetRows"></div>
   </div>
   <div class="bottombar">
-    <button class="btn-teal" id="btnNotePopup">Nhập barcode</button>
-    <button class="btn-blue" id="btnScan2">Quét mã</button>
+    <button class="btn-teal" id="btnNotePopup">Lưu tạm</button>
+    <button class="btn-blue" id="btnSave">Hoàn thành</button>
   </div>
 </div>
 
@@ -392,16 +392,15 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <div class="drawer-logo">KK</div>
       <div><div id="drawerUser" style="font-weight:600">-</div><small id="drawerRole">Nhân viên</small></div>
     </div>
-    <button class="drawer-item" id="dPull">Tải dữ liệu từ server</button>
+    <button class="drawer-item" id="dReport">Tổng hợp / Đối chiếu</button>
     <hr>
-    <button class="drawer-item" id="dImportStock">Import tồn hệ thống (Excel)</button>
-    <button class="drawer-item" id="dImportCatalog">Import danh mục hàng hoá</button>
+    <button class="drawer-item" id="dImportCatalog">Nhập danh mục hàng hóa</button>
+    <button class="drawer-item" id="dImportStock">Nhập tồn hệ thống</button>
+    <button class="drawer-item" id="dExport">Xuất file kết quả</button>
     <hr>
-    <button class="drawer-item" id="dPicker">Tìm sản phẩm</button>
-    <button class="drawer-item" id="dReport">Đối chiếu kết quả</button>
-    <button class="drawer-item" id="dExport">Xuất Excel kết quả</button>
+    <button class="drawer-item" id="dPicker">Tiến độ kiểm kê</button>
     <hr>
-    <button class="drawer-item" id="dChangeSession">Đổi đợt kiểm kê</button>
+    <button class="drawer-item" id="dChangeSession">Đổi kho</button>
     <button class="drawer-item danger" id="dLogout">Đăng xuất</button>
   </div>
 </div>
@@ -585,23 +584,21 @@ const APP = {
     for (const s of local) { if (!seen.has(s.ma_dot)) items.push(s); }
 
     if (!items.length) {
-      $('#sessionList').innerHTML = '<div style="padding:20px;text-align:center;color:#999">Chưa có đợt kiểm kê. Tạo mới bên dưới.</div>';
+      $('#sessionList').innerHTML = '<div style="padding:20px;text-align:center;color:#999">Chưa có kho nào. Thêm mới bên dưới.</div>';
       return;
     }
     $('#sessionList').innerHTML = items.map(s =>
       `<button class="storeitem" data-ma="${esc(s.ma_dot)}" data-name="${esc(s.ten_dot || s.ma_dot)}">
-        <div>${esc(s.ten_dot || s.ma_dot)}</div>
-        <small>${esc(s.kho || '')} &middot; ${esc(s.trang_thai || 'Local')}</small>
+        <div><b>${esc(s.ten_dot || s.ma_dot)}</b> &middot; <small>${esc(s.ma_dot)}</small></div>
       </button>`
     ).join('');
   },
   async createSession() {
     const name = $('#inpSessionName').value.trim();
-    const kho = $('#inpSessionKho').value.trim() || 'KHO TỔNG';
-    if (!name) return this.toast('Nhập tên đợt kiểm kê');
-    const now = new Date();
-    const ma_dot = 'KK' + now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-    const sess = { ma_dot, ten_dot: name, kho, trang_thai: 'Chuẩn bị' };
+    const kho = $('#inpSessionKho').value.trim();
+    if (!name) return this.toast('Nhập tên kho');
+    const ma_dot = kho || ('S' + String(Date.now()).slice(-4));
+    const sess = { ma_dot, ten_dot: name, kho: name, trang_thai: 'Chuẩn bị' };
 
     if (API) {
       try {
@@ -630,8 +627,12 @@ const APP = {
   async showHome() {
     this.show('pHome');
     this.currentArea = null;
-    $('#homeTitle').textContent = this.session?.ten_dot || 'Kiểm kê';
-    $('#sessionChip').textContent = this.session?.ma_dot || '';
+    $('#homeTitle').textContent = 'Kiểm kho';
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2,'0');
+    const mm = String(now.getMonth()+1).padStart(2,'0');
+    const yyyy = now.getFullYear();
+    $('#sessionChip').innerHTML = '&#128197; Hôm nay &middot; ' + dd + '/' + mm + '/' + yyyy;
     await this.loadAreas();
   },
   async loadAreas() {
@@ -648,8 +649,10 @@ const APP = {
     const countsByArea = {};
     counts.filter(c => c.ma_dot === this.session?.ma_dot).forEach(c => {
       const a = c.khu_vuc || 'KV01';
-      if (!countsByArea[a]) countsByArea[a] = { total: 0, scanned: 0 };
+      if (!countsByArea[a]) countsByArea[a] = { total: 0, scanned: 0, totalSL: 0, lastUpdate: 0 };
       countsByArea[a].total++;
+      countsByArea[a].totalSL += (c.so_luong || 0);
+      if (c.updated && c.updated > countsByArea[a].lastUpdate) countsByArea[a].lastUpdate = c.updated;
       if (c.so_luong > 0) countsByArea[a].scanned++;
     });
 
@@ -675,7 +678,9 @@ const APP = {
     let areas = allAreas.map(a => ({
       id: a.id, name: a.ten_khu_vuc || a.ma_khu_vuc, code: a.ma_khu_vuc,
       count: countsByArea[a.ma_khu_vuc]?.total || 0,
-      scanned: countsByArea[a.ma_khu_vuc]?.scanned || 0
+      scanned: countsByArea[a.ma_khu_vuc]?.scanned || 0,
+      totalSL: countsByArea[a.ma_khu_vuc]?.totalSL || 0,
+      lastUpdate: countsByArea[a.ma_khu_vuc]?.lastUpdate || 0
     }));
 
     if (!areas.length) {
@@ -688,13 +693,16 @@ const APP = {
 
     $('#areaCards').innerHTML = areas.map(a => {
       const status = a.scanned > 0 ? (a.scanned >= a.count && a.count > 0 ? 'done' : 'doing') : '';
+      const totalSL = a.totalSL || 0;
+      const ts = a.lastUpdate ? new Date(a.lastUpdate) : null;
+      const timeStr = ts ? (String(ts.getHours()).padStart(2,'0') + ':' + String(ts.getMinutes()).padStart(2,'0') + ':' + String(ts.getSeconds()).padStart(2,'0') + ' ' + String(ts.getDate()).padStart(2,'0') + '/' + String(ts.getMonth()+1).padStart(2,'0') + '/' + ts.getFullYear()) : '';
       return `<button class="areacard" data-area="${esc(a.code)}" data-name="${esc(a.name)}">
         <div>
-          <div class="atime">${esc(a.name)}</div>
-          <div class="acount">${a.scanned}/${a.count} SP đã quét</div>
-          <div class="anote"><b>${esc(a.code)}</b></div>
+          <div class="atime">${timeStr || esc(a.name)}</div>
+          <div class="acount">${a.count} sản phẩm &middot; SL ${totalSL} &middot; Kk</div>
+          <div class="anote">Ghi chú: <b>${esc(a.name)}</b></div>
         </div>
-        <div class="astatus ${status}">${status === 'doing' ? 'Đang kiểm' : status === 'done' ? 'Hoàn thành' : ''}</div>
+        <div class="astatus ${status}">${status === 'doing' ? '' : status === 'done' ? 'Hoàn thành' : ''}</div>
       </button>`;
     }).join('');
   },
@@ -726,7 +734,7 @@ const APP = {
   async openSheet(areaCode, areaName) {
     this.currentArea = { code: areaCode, name: areaName };
     this.show('pSheet');
-    $('#sheetTitle').textContent = areaName || areaCode;
+    $('#sheetTitle').textContent = 'Phiếu kiểm — ' + (areaName || areaCode);
     this.sheetFilter = 'all';
     this.searchText = '';
     $('#sheetSearch').value = '';
@@ -1243,12 +1251,8 @@ const APP = {
 
   /* ---- Drawer ---- */
   openDrawer() {
-    $('#drawerUser').textContent = this.user?.name || '-';
-    const isAdmin = this.user?.role === 'admin';
-    $('#drawerRole').textContent = isAdmin ? 'Quản trị viên' : 'Nhân viên';
-    $('#dImportStock').classList.toggle('hidden', !isAdmin);
-    $('#dReport').classList.toggle('hidden', !isAdmin);
-    $('#dExport').classList.toggle('hidden', !isAdmin);
+    $('#drawerUser').textContent = this.user?.name || 'kk';
+    $('#drawerRole').textContent = this.session?.ten_dot ? this.session.ten_dot + ' (' + this.session.ma_dot + ')' : '';
     $('#drawer').classList.remove('hidden');
   },
   closeDrawer() { $('#drawer').classList.add('hidden'); },
@@ -1299,8 +1303,8 @@ const APP = {
       if (d) this.showQtyPopup({ barcode: d.barcode, ma_hang: d.ma_hang, ten_sp: d.ten_sp, gia_ban_le: d.don_gia });
     };
     $('#btnScan').onclick = () => this.startScan('sheet');
-    $('#btnScan2').onclick = () => this.startScan('sheet');
-    $('#btnNotePopup').onclick = () => { $('#noteOverlay').classList.remove('hidden'); $('#noteInput').value = ''; setTimeout(() => $('#noteInput').focus(), 100); };
+    $('#btnSave').onclick = () => { this.flushQueue(); this.toast('Đã lưu & đồng bộ'); };
+    $('#btnNotePopup').onclick = () => { this.flushQueue(); this.toast('Đã lưu tạm'); };
 
     $('#btnPickerBack').onclick = () => { if (this.currentArea) this.show('pSheet'); else this.showHome(); };
     let pt; $('#pickerSearch').oninput = e => { clearTimeout(pt); pt = setTimeout(() => this.searchPicker(e.target.value.trim()), 300); };
@@ -1330,12 +1334,11 @@ const APP = {
     $('#btnProgressClose').onclick = () => $('#progressOverlay').classList.add('hidden');
 
     $('#drawerDim').onclick = () => this.closeDrawer();
-    $('#dPull').onclick = () => this.pullFromServer();
-    $('#dImportStock').onclick = () => this.importStock();
     $('#dImportCatalog').onclick = () => this.importCatalog();
-    $('#dPicker').onclick = () => { this.closeDrawer(); this.openPicker(); };
-    $('#dReport').onclick = () => this.showReport();
+    $('#dImportStock').onclick = () => this.importStock();
     $('#dExport').onclick = () => this.exportExcel();
+    $('#dPicker').onclick = () => { this.closeDrawer(); this.showProgress(); };
+    $('#dReport').onclick = () => this.showReport();
     $('#dChangeSession').onclick = () => { this.closeDrawer(); this.showSessions(); };
     $('#dLogout').onclick = () => this.logout();
 
