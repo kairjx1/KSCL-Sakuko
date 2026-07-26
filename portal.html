@@ -4,18 +4,47 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>KSCL System – Sakuko Vietnam</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f7;color:#1a2332;min-height:100vh;display:flex;flex-direction:column}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1b2a4a 0%,#0d5ea8 100%)}
+.login-card{background:#fff;border-radius:18px;padding:44px 40px;width:420px;max-width:94vw;box-shadow:0 32px 80px rgba(0,0,0,.25);text-align:center}
+.login-logo{margin:0 auto 12px}
+.login-logo svg{width:120px;height:48px}
+.login-title{font-size:19px;font-weight:700;color:#1a2558;margin-bottom:4px}
+.login-sub{font-size:13px;color:#6b7a99;margin-bottom:28px}
+.fg{margin-bottom:14px;text-align:left}
+.fg label{display:block;font-size:12px;font-weight:600;color:#6b7a99;margin-bottom:5px}
+.fg input{width:100%;padding:11px 14px;font-size:14px;border:1px solid #dde3ef;border-radius:8px;outline:none;transition:.2s}
+.fg input:focus{border-color:#0066cc;box-shadow:0 0 0 3px rgba(0,102,204,.12)}
+.btn-login{background:#e91e7b;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;width:100%;cursor:pointer;transition:.2s;margin-top:4px}
+.btn-login:hover{background:#d01a6e}
+.btn-login:active{transform:scale(.98)}
+.divider{display:flex;align-items:center;gap:12px;margin:22px 0;color:#a8b5cc;font-size:13px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:#dde3ef}
+.btn-lark{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s;background:#00d6b4;color:#fff}
+.btn-lark:hover{background:#00c4a5}
+.btn-lark:active{transform:scale(.98)}
+.btn-lark .dot{width:14px;height:14px;border-radius:50%;background:#8aff5f}
+.err-box{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;color:#dc2626;font-size:13px;margin-bottom:14px;text-align:left}
+.login-footer{color:#94a3b8;font-size:12px;margin-top:24px}
+
+/* TOPBAR */
 .topbar{background:linear-gradient(135deg,#d0021b 0%,#a00115 100%);color:#fff;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .topbar-logo{display:flex;align-items:center;gap:12px;font-weight:700;font-size:20px}
-.topbar-logo img{height:36px;border-radius:8px}
 .topbar-logo svg{width:36px;height:36px}
 .topbar-user{display:flex;align-items:center;gap:10px;font-size:14px}
-.topbar-user .avatar{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px}
+.topbar-user .avatar{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;overflow:hidden}
+.topbar-user .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .topbar-user .logout{background:none;border:none;color:rgba(255,255,255,.8);font-size:13px;cursor:pointer;padding:4px 8px;border-radius:6px}
 .topbar-user .logout:hover{background:rgba(255,255,255,.15);color:#fff}
 
+/* MAIN */
 .main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px}
 .welcome{text-align:center;margin-bottom:40px}
 .welcome h1{font-size:28px;font-weight:700;margin-bottom:8px;color:#1a2332}
@@ -28,9 +57,6 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
 .app-icon{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:36px}
 .app-icon.blue{background:linear-gradient(135deg,#1a56db,#3b82f6)}
 .app-icon.red{background:linear-gradient(135deg,#d0021b,#ef4444)}
-.app-icon.green{background:linear-gradient(135deg,#0f766e,#14b8a6)}
-.app-icon.purple{background:linear-gradient(135deg,#6d28d9,#8b5cf6)}
-.app-icon.orange{background:linear-gradient(135deg,#c2410c,#f97316)}
 .app-icon svg{width:40px;height:40px;fill:#fff}
 .app-name{font-size:17px;font-weight:600}
 .app-desc{font-size:13px;color:#6b7a99;line-height:1.4}
@@ -39,20 +65,6 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
 .app-badge.new{background:#fef3c7;color:#b45309}
 
 .footer{text-align:center;padding:20px;font-size:13px;color:#a8b5cc}
-
-/* Login overlay */
-.login-overlay{position:fixed;inset:0;background:#131c2b;display:flex;align-items:center;justify-content:center;z-index:100}
-.login-box{width:100%;max-width:400px;padding:24px;text-align:center}
-.login-logo{width:100px;height:100px;border-radius:50%;background:#d0021b;color:#fff;font-size:52px;font-weight:800;font-style:italic;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 4px 18px rgba(208,2,27,.45)}
-.login-title{color:#fff;font-size:22px;font-weight:700;margin-bottom:36px}
-.login-field{display:flex;align-items:center;gap:10px;background:#e5e5e8;border-radius:12px;padding:14px 16px;margin-bottom:14px}
-.login-field svg{flex:0 0 22px;fill:#555}
-.login-field input{flex:1;border:none;outline:none;background:transparent;font-size:16px;color:#111}
-.login-remember{display:flex;align-items:center;gap:8px;color:#cbd5e1;font-size:15px;margin:8px 0 28px}
-.login-remember input{width:18px;height:18px;accent-color:#6d28d9}
-.login-btn{width:100%;background:#d0021b;color:#fff;border:none;border-radius:12px;padding:15px;font-size:17px;font-weight:700;cursor:pointer}
-.login-btn:active{background:#a00115}
-.login-footer{color:#475569;font-size:12px;margin-top:24px}
 .hidden{display:none!important}
 
 @media(max-width:600px){
@@ -62,28 +74,50 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
   .app-icon svg{width:32px;height:32px}
   .welcome h1{font-size:22px}
   .welcome p{font-size:14px}
+  .login-card{padding:32px 24px}
 }
 </style>
 </head>
 <body>
 
 <!-- LOGIN -->
-<div class="login-overlay" id="loginOverlay">
-  <div class="login-box">
-    <div class="login-logo">KK</div>
-    <div class="login-title">KSCL System – Sakuko</div>
-    <div class="login-field">
-      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v2h20v-2c0-3.3-6.7-5-10-5z"/></svg>
-      <input type="text" id="inpUser" placeholder="Nhập tên đăng nhập" autocomplete="off">
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 260 80" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="32" r="5" fill="#e91e7b" opacity=".7"/>
+        <circle cx="30" cy="26" r="5" fill="#e91e7b" opacity=".8"/>
+        <circle cx="38" cy="34" r="5" fill="#e91e7b" opacity=".7"/>
+        <circle cx="30" cy="40" r="5" fill="#e91e7b" opacity=".6"/>
+        <circle cx="22" cy="38" r="5" fill="#e91e7b" opacity=".6"/>
+        <circle cx="30" cy="33" r="3" fill="#fff"/>
+        <text x="52" y="46" font-size="36" font-weight="800" fill="#1a2558" font-family="Segoe UI,system-ui,sans-serif">SAKUK</text>
+        <text x="207" y="46" font-size="36" font-weight="800" fill="#e91e7b" font-family="Segoe UI,system-ui,sans-serif">O</text>
+      </svg>
     </div>
-    <label class="login-remember"><input type="checkbox" id="chkRemember" checked> Ghi nhớ đăng nhập</label>
-    <button class="login-btn" id="btnLogin">Đăng nhập</button>
+    <div class="login-title">KSCL System</div>
+    <div class="login-sub">Đăng nhập bằng tài khoản được cấp</div>
+    <div id="loginErr"></div>
+    <div class="fg">
+      <label>Tên đăng nhập</label>
+      <input type="email" id="inpEmail" placeholder="email@sakuko.vn" autocomplete="email">
+    </div>
+    <div class="fg">
+      <label>Mật khẩu</label>
+      <input type="password" id="inpPass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-login" id="btnLogin">Vào hệ thống</button>
+    <div class="divider">hoặc</div>
+    <button class="btn-lark" id="btnLark">
+      <span class="dot"></span>
+      Đăng nhập bằng Lark
+    </button>
     <div class="login-footer">Sakuko Việt Nam &copy; 2025</div>
   </div>
 </div>
 
 <!-- TOPBAR -->
-<div class="topbar" id="topbar">
+<div class="topbar hidden" id="topbar">
   <div class="topbar-logo">
     <svg viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#fff" fill-opacity=".15"/><text x="50" y="68" text-anchor="middle" font-size="48" font-weight="800" font-style="italic" fill="#fff">KK</text></svg>
     KSCL System
@@ -96,9 +130,9 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
 </div>
 
 <!-- MAIN -->
-<div class="main" id="mainContent">
+<div class="main hidden" id="mainContent">
   <div class="welcome">
-    <h1>Chào mừng đến với KSCL System</h1>
+    <h1 id="welcomeMsg">Chào mừng đến với KSCL System</h1>
     <p>Hệ thống quản lý kiểm soát chất lượng Sakuko Vietnam. Chọn ứng dụng bên dưới để bắt đầu.</p>
   </div>
   <div class="apps">
@@ -121,50 +155,168 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
   </div>
 </div>
 
-<div class="footer">Sakuko Việt Nam &copy; 2025 &middot; KSCL System v2.0</div>
+<div class="footer hidden" id="footerEl">Sakuko Việt Nam &copy; 2025 &middot; KSCL System v2.0</div>
 
 <script>
-const PORTAL_USER_KEY = 'kscl_portal_user';
+const FB_CONFIG = {
+  apiKey: "AIzaSyBeeAx7dJ6x5TS-MyoB-IH3NY-eiFsCOzk",
+  authDomain: "kscl---sakuko.firebaseapp.com",
+  databaseURL: "https://kscl---sakuko-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "kscl---sakuko",
+  storageBucket: "kscl---sakuko.firebasestorage.app",
+  messagingSenderId: "341527530481",
+  appId: "1:341527530481:web:084ac4e25294ba52f85250"
+};
 
-function init() {
-  const saved = localStorage.getItem(PORTAL_USER_KEY);
-  if (saved) {
-    showMain(JSON.parse(saved));
-  } else {
-    document.getElementById('loginOverlay').classList.remove('hidden');
-    document.getElementById('topbar').classList.add('hidden');
-    document.getElementById('mainContent').classList.add('hidden');
-  }
-}
+firebase.initializeApp(FB_CONFIG);
+const auth = firebase.auth();
+const db = firebase.database();
+
+const PORTAL_KEY = 'kscl_portal_session';
+const API = '/api';
 
 function showMain(user) {
-  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('loginWrap').classList.add('hidden');
   document.getElementById('topbar').classList.remove('hidden');
   document.getElementById('mainContent').classList.remove('hidden');
-  document.getElementById('userName').textContent = user.name;
-  document.getElementById('userAvatar').textContent = user.name.charAt(0).toUpperCase();
+  document.getElementById('footerEl').classList.remove('hidden');
+  document.getElementById('userName').textContent = user.name || user.email || '-';
+  document.getElementById('welcomeMsg').textContent = `Xin chào, ${user.name || user.email}!`;
+
+  const av = document.getElementById('userAvatar');
+  if (user.avatar) {
+    av.innerHTML = `<img src="${user.avatar}" alt="">`;
+  } else {
+    av.textContent = (user.name || user.email || '-').charAt(0).toUpperCase();
+  }
 }
 
-function login() {
-  const name = document.getElementById('inpUser').value.trim();
-  if (!name) return;
-  const user = { name, ts: Date.now() };
-  if (document.getElementById('chkRemember').checked) {
-    localStorage.setItem(PORTAL_USER_KEY, JSON.stringify(user));
+function showLogin() {
+  document.getElementById('loginWrap').classList.remove('hidden');
+  document.getElementById('topbar').classList.add('hidden');
+  document.getElementById('mainContent').classList.add('hidden');
+  document.getElementById('footerEl').classList.add('hidden');
+}
+
+function showErr(msg) {
+  document.getElementById('loginErr').innerHTML = msg ? `<div class="err-box">${msg}</div>` : '';
+}
+
+// Firebase auth state
+auth.onAuthStateChanged(async u => {
+  if (u) {
+    let name = u.displayName || '';
+    try {
+      const snap = await db.ref(`profiles/${u.uid}`).get();
+      if (snap.exists()) name = snap.val().name || name;
+    } catch (e) {}
+    const session = { type: 'firebase', name: name || u.email, email: u.email, uid: u.uid, ts: Date.now() };
+    localStorage.setItem(PORTAL_KEY, JSON.stringify(session));
+    showMain(session);
+  } else {
+    const saved = localStorage.getItem(PORTAL_KEY);
+    if (saved) {
+      const s = JSON.parse(saved);
+      if (s.type === 'lark') {
+        showMain(s);
+        return;
+      }
+    }
+    showLogin();
   }
-  showMain(user);
+});
+
+// Firebase email/password login
+async function doLogin() {
+  const email = document.getElementById('inpEmail').value.trim();
+  const pass = document.getElementById('inpPass').value;
+  if (!email || !pass) { showErr('Vui lòng nhập email và mật khẩu'); return; }
+  showErr('');
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch (e) {
+    const M = {
+      'auth/user-not-found': 'Email không tồn tại trong hệ thống',
+      'auth/wrong-password': 'Mật khẩu không đúng',
+      'auth/invalid-email': 'Email không hợp lệ',
+      'auth/too-many-requests': 'Quá nhiều lần thử. Vui lòng đợi vài phút.',
+      'auth/invalid-credential': 'Email hoặc mật khẩu không đúng'
+    };
+    showErr(M[e.code] || e.message);
+  }
+}
+
+// Lark OAuth login
+async function doLarkLogin() {
+  try {
+    const redirect = location.origin + '/portal.html';
+    const r = await fetch(`${API}/lark-oauth?action=login_url&redirect=${encodeURIComponent(redirect)}`);
+    const j = await r.json();
+    if (j.ok && j.url) {
+      location.href = j.url;
+    } else {
+      showErr('Không thể khởi tạo đăng nhập Lark: ' + (j.error || ''));
+    }
+  } catch (e) {
+    showErr('Lỗi kết nối: ' + e.message);
+  }
+}
+
+// Handle Lark OAuth callback
+async function handleLarkCallback() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if (!code) return false;
+
+  try {
+    const r = await fetch(`${API}/lark-oauth?action=callback&code=${encodeURIComponent(code)}`);
+    const j = await r.json();
+    if (j.ok && j.user) {
+      const session = {
+        type: 'lark',
+        name: j.user.name,
+        email: j.user.email,
+        avatar: j.user.avatar,
+        open_id: j.user.open_id,
+        ts: Date.now()
+      };
+      localStorage.setItem(PORTAL_KEY, JSON.stringify(session));
+      history.replaceState(null, '', location.pathname);
+      showMain(session);
+      return true;
+    } else {
+      showErr('Đăng nhập Lark thất bại: ' + (j.error || ''));
+    }
+  } catch (e) {
+    showErr('Lỗi xác thực Lark: ' + e.message);
+  }
+  return false;
 }
 
 function logout() {
-  localStorage.removeItem(PORTAL_USER_KEY);
-  location.reload();
+  localStorage.removeItem(PORTAL_KEY);
+  auth.signOut().catch(() => {});
+  showLogin();
 }
 
-document.getElementById('btnLogin').onclick = login;
-document.getElementById('inpUser').onkeydown = function(e) { if (e.key === 'Enter') login(); };
+// Event listeners
+document.getElementById('btnLogin').onclick = doLogin;
+document.getElementById('btnLark').onclick = doLarkLogin;
 document.getElementById('btnLogout').onclick = logout;
+document.getElementById('inpPass').onkeydown = function(e) { if (e.key === 'Enter') doLogin(); };
+document.getElementById('inpEmail').onkeydown = function(e) { if (e.key === 'Enter') document.getElementById('inpPass').focus(); };
 
-init();
+// Init
+(async function init() {
+  if (await handleLarkCallback()) return;
+  const saved = localStorage.getItem(PORTAL_KEY);
+  if (saved) {
+    const s = JSON.parse(saved);
+    if (s.type === 'lark') {
+      showMain(s);
+    }
+  }
+})();
 </script>
 </body>
 </html>
