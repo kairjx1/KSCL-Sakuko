@@ -668,7 +668,7 @@ const APP = {
     for (const code of Object.keys(countsByArea)) {
       if (!seenCodes.has(code)) {
         const friendlyName = code === 'KV01' ? 'Khu vực mặc định' : 'Khu vực ' + code.replace(/^KV/i, '');
-        const a = { id: code, ma_khu_vuc: code, ten_khu_vuc: friendlyName };
+        const a = { id: code, ma_khu_vuc: code, ten_khu_vuc: friendlyName, ma_dot: this.session?.ma_dot };
         allAreas.push(a); seenCodes.add(code);
         const la = this.getLocalAreas();
         if (!la.find(x => x.ma_khu_vuc === code)) { la.push(a); this.saveLocalAreas(la); }
@@ -684,7 +684,7 @@ const APP = {
     }));
 
     if (!areas.length) {
-      const def = { id: 'default', ma_khu_vuc: 'KV01', ten_khu_vuc: 'Khu vực mặc định' };
+      const def = { id: 'default', ma_khu_vuc: 'KV01', ten_khu_vuc: 'Khu vực mặc định', ma_dot: this.session?.ma_dot };
       const la = this.getLocalAreas();
       if (!la.find(x => x.ma_khu_vuc === 'KV01')) { la.push(def); this.saveLocalAreas(la); }
       areas = [{ id: 'default', name: 'Khu vực mặc định', code: 'KV01', count: 0, scanned: 0 }];
@@ -707,14 +707,23 @@ const APP = {
     }).join('');
   },
   getLocalAreas() {
+    try {
+      const all = JSON.parse(localStorage.getItem('kk_areas') || '[]');
+      return all.filter(a => !a.ma_dot || a.ma_dot === this.session?.ma_dot);
+    } catch { return []; }
+  },
+  getAllLocalAreas() {
     try { return JSON.parse(localStorage.getItem('kk_areas') || '[]'); } catch { return []; }
   },
-  saveLocalAreas(list) { localStorage.setItem('kk_areas', JSON.stringify(list)); },
+  saveLocalAreas(list) {
+    const others = this.getAllLocalAreas().filter(a => a.ma_dot && a.ma_dot !== this.session?.ma_dot);
+    localStorage.setItem('kk_areas', JSON.stringify([...others, ...list]));
+  },
   async addArea() {
     const name = prompt('Tên khu vực mới:');
     if (!name) return;
     const code = 'KV' + String(Date.now()).slice(-4);
-    const area = { id: code, ma_khu_vuc: code, ten_khu_vuc: name };
+    const area = { id: code, ma_khu_vuc: code, ten_khu_vuc: name, ma_dot: this.session?.ma_dot };
     if (API) {
       try {
         await fetch(`${API}/kk-session`, {
