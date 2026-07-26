@@ -482,6 +482,7 @@ function renderAdmin() {
       actionBtn = u.status === 'blocked'
         ? `<button class="btn-sm green" onclick="toggleBlock('${key}','approved')">Mở khóa</button>`
         : `<button class="btn-sm red" onclick="toggleBlock('${key}','blocked')">Khóa</button>`;
+      actionBtn += ` <button class="btn-sm red" onclick="deleteUser('${key}')" title="Xóa user">Xóa</button>`;
     }
 
     html += `<tr>
@@ -504,6 +505,12 @@ async function changeRole(key, role) {
 
 async function toggleBlock(key, status) {
   await db.ref(`portal_users/${key}/status`).set(status);
+  renderAdmin();
+}
+
+async function deleteUser(key) {
+  if (!confirm('Xóa người dùng này? Hành động không thể hoàn tác.')) return;
+  try { await db.ref(`portal_users/${key}`).remove(); } catch (e) { alert('Lỗi: ' + e.message); }
   renderAdmin();
 }
 

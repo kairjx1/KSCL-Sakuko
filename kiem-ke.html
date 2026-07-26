@@ -199,6 +199,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 /* Sync indicator */
 .sync-badge{position:fixed;top:60px;right:10px;background:var(--warn);color:#fff;font-size:12px;padding:4px 10px;border-radius:10px;z-index:11;display:none}
 .sync-badge.show{display:block}
+.adel{color:#dc2626;font-size:22px;font-weight:700;padding:4px 8px;border-radius:8px;cursor:pointer}
+.adel:hover{background:#fee2e2}
 </style>
 </head>
 <body>
@@ -696,13 +698,17 @@ const APP = {
       const totalSL = a.totalSL || 0;
       const ts = a.lastUpdate ? new Date(a.lastUpdate) : null;
       const timeStr = ts ? (String(ts.getHours()).padStart(2,'0') + ':' + String(ts.getMinutes()).padStart(2,'0') + ':' + String(ts.getSeconds()).padStart(2,'0') + ' ' + String(ts.getDate()).padStart(2,'0') + '/' + String(ts.getMonth()+1).padStart(2,'0') + '/' + ts.getFullYear()) : '';
+      const delBtn = this.canDelete() ? `<span class="adel" data-del="${esc(a.code)}" title="Xóa">&times;</span>` : '';
       return `<button class="areacard" data-area="${esc(a.code)}" data-name="${esc(a.name)}">
         <div>
           <div class="atime">${timeStr || esc(a.name)}</div>
           <div class="acount">${a.count} sản phẩm &middot; SL ${totalSL} &middot; Kk</div>
           <div class="anote">Ghi chú: <b>${esc(a.name)}</b></div>
         </div>
-        <div class="astatus ${status}">${status === 'doing' ? '' : status === 'done' ? 'Hoàn thành' : ''}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="astatus ${status}">${status === 'doing' ? '' : status === 'done' ? 'Hoàn thành' : ''}</div>
+          ${delBtn}
+        </div>
       </button>`;
     }).join('');
   },
@@ -1279,6 +1285,24 @@ const APP = {
   },
   beep() { try { $('#beepSound').currentTime = 0; $('#beepSound').play(); } catch {} },
 
+  canDelete() {
+    const r = this.user?.role;
+    return r === 'admin' || this.user?.portalRole === 'superadmin' || this.user?.portalRole === 'admin' || this.user?.portalRole === 'manager';
+  },
+  async deleteArea(code) {
+    if (!confirm('Xóa phiếu "' + code + '" và toàn bộ dữ liệu đã bắn?')) return;
+    const all = await dbGetAll('counts');
+    const toDelete = all.filter(c => c.ma_dot === this.session?.ma_dot && c.khu_vuc === code);
+    for (const c of toDelete) {
+      await dbDelete('counts', c.id);
+      if (c.record_id) await this.enqueue('delete', c);
+    }
+    const la = this.getLocalAreas().filter(a => a.ma_khu_vuc !== code);
+    this.saveLocalAreas(la);
+    this.toast('Đã xóa phiếu ' + code);
+    await this.loadAreas();
+  },
+
   /* ---- Events ---- */
   bindEvents() {
     $('#btnLogin').onclick = () => this.login();
@@ -1291,7 +1315,11 @@ const APP = {
     $('#btnMenu').onclick = () => this.openDrawer();
     $('#btnProgress').onclick = () => this.showProgress();
     $('#homeSearch').oninput = () => this.loadAreas();
-    $('#areaCards').onclick = e => { const b = e.target.closest('.areacard'); if (b) this.openSheet(b.dataset.area, b.dataset.name); };
+    $('#areaCards').onclick = e => {
+      const del = e.target.closest('.adel');
+      if (del) { e.stopPropagation(); this.deleteArea(del.dataset.del); return; }
+      const b = e.target.closest('.areacard'); if (b) this.openSheet(b.dataset.area, b.dataset.name);
+    };
     $('#btnAddArea').onclick = () => this.addArea();
 
     $('#btnSheetBack').onclick = () => this.showHome();
