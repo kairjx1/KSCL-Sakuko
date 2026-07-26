@@ -14,8 +14,17 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
 /* LOGIN */
 .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1b2a4a 0%,#0d5ea8 100%)}
 .login-card{background:#fff;border-radius:18px;padding:44px 40px;width:420px;max-width:94vw;box-shadow:0 32px 80px rgba(0,0,0,.25);text-align:center}
-.login-logo{margin:0 auto 12px}
-.login-logo svg{width:120px;height:48px}
+.login-logo{margin:0 auto 12px;display:flex;align-items:center;justify-content:center;gap:6px}
+.login-logo .sakura{display:inline-flex;align-items:center;justify-content:center;position:relative;width:40px;height:40px}
+.login-logo .sakura span{position:absolute;width:10px;height:10px;border-radius:50%;background:#e91e7b}
+.login-logo .sakura span:nth-child(1){top:0;left:15px;opacity:.8}
+.login-logo .sakura span:nth-child(2){top:6px;left:25px;opacity:.7}
+.login-logo .sakura span:nth-child(3){top:18px;left:26px;opacity:.7}
+.login-logo .sakura span:nth-child(4){top:22px;left:14px;opacity:.6}
+.login-logo .sakura span:nth-child(5){top:12px;left:6px;opacity:.6}
+.login-logo .sakura span:nth-child(6){top:12px;left:16px;width:6px;height:6px;background:#fff}
+.login-logo .logo-text{font-size:32px;font-weight:800;color:#1a2558;font-family:'Segoe UI',system-ui,sans-serif;letter-spacing:-0.5px}
+.login-logo .logo-text .o{color:#e91e7b}
 .login-title{font-size:19px;font-weight:700;color:#1a2558;margin-bottom:4px}
 .login-sub{font-size:13px;color:#6b7a99;margin-bottom:28px}
 .fg{margin-bottom:14px;text-align:left}
@@ -84,16 +93,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
 <div class="login-wrap" id="loginWrap">
   <div class="login-card">
     <div class="login-logo">
-      <svg viewBox="0 0 260 80" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="20" cy="32" r="5" fill="#e91e7b" opacity=".7"/>
-        <circle cx="30" cy="26" r="5" fill="#e91e7b" opacity=".8"/>
-        <circle cx="38" cy="34" r="5" fill="#e91e7b" opacity=".7"/>
-        <circle cx="30" cy="40" r="5" fill="#e91e7b" opacity=".6"/>
-        <circle cx="22" cy="38" r="5" fill="#e91e7b" opacity=".6"/>
-        <circle cx="30" cy="33" r="3" fill="#fff"/>
-        <text x="52" y="46" font-size="36" font-weight="800" fill="#1a2558" font-family="Segoe UI,system-ui,sans-serif">SAKUK</text>
-        <text x="207" y="46" font-size="36" font-weight="800" fill="#e91e7b" font-family="Segoe UI,system-ui,sans-serif">O</text>
-      </svg>
+      <div class="sakura"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <div class="logo-text">SAKUK<span class="o">O</span></div>
     </div>
     <div class="login-title">KSCL System</div>
     <div class="login-sub">Đăng nhập bằng tài khoản được cấp</div>
