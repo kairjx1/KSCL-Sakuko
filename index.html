@@ -312,47 +312,50 @@ async function checkPermission(session) {
   const isSuperAdmin = ADMIN_EMAILS.includes(session.email);
 
   if (isSuperAdmin) {
-    await ensureUserRecord(key, session, 'superadmin');
+    try { await ensureUserRecord(key, session, 'superadmin'); } catch (e) { console.warn('DB write failed:', e.message); }
     showMain(session, 'superadmin');
-    listenUsers();
+    try { listenUsers(); } catch (e) {}
     return;
   }
 
-  const snap = await db.ref(`portal_users/${key}`).get();
-  if (snap.exists()) {
-    const u = snap.val();
-    if (u.status === 'blocked') { showBlocked(session); return; }
-    showMain(session, u.role || 'staff');
-    if ((ROLES[u.role] || {}).canManageUsers) listenUsers();
-  } else {
-    // Lark users auto-approved as staff (role #4)
-    await db.ref(`portal_users/${key}`).set({
-      name: session.name || '',
-      email: session.email || '',
-      type: session.type,
-      avatar: session.avatar || '',
-      status: 'approved',
-      role: 'staff',
-      apps: ['academy', 'kiemke'],
-      created_at: Date.now()
-    });
-    showMain(session, 'staff');
+  try {
+    const snap = await db.ref(`portal_users/${key}`).get();
+    if (snap.exists()) {
+      const u = snap.val();
+      if (u.status === 'blocked') { showBlocked(session); return; }
+      showMain(session, u.role || 'staff');
+      if ((ROLES[u.role] || {}).canManageUsers) listenUsers();
+    } else {
+      try {
+        await db.ref(`portal_users/${key}`).set({
+          name: session.name || '', email: session.email || '', type: session.type,
+          avatar: session.avatar || '', status: 'approved', role: 'staff',
+          apps: ['academy', 'kiemke'], created_at: Date.now()
+        });
+      } catch (e) { console.warn('DB write failed:', e.message); }
+      showMain(session, 'staff');
+    }
+  } catch (e) {
+    console.warn('DB read failed, using default role:', e.message);
+    showMain(session, isSuperAdmin ? 'superadmin' : 'staff');
   }
 }
 
 async function ensureUserRecord(key, session, role) {
-  const snap = await db.ref(`portal_users/${key}`).get();
-  if (!snap.exists()) {
-    await db.ref(`portal_users/${key}`).set({
-      name: session.name || '', email: session.email || '', type: session.type,
-      avatar: session.avatar || '', status: 'approved', role,
-      apps: Object.keys(APPS), created_at: Date.now()
-    });
-  } else {
-    const u = snap.val();
-    if (u.role !== role) await db.ref(`portal_users/${key}/role`).set(role);
-    if (u.status !== 'approved') await db.ref(`portal_users/${key}/status`).set('approved');
-  }
+  try {
+    const snap = await db.ref(`portal_users/${key}`).get();
+    if (!snap.exists()) {
+      await db.ref(`portal_users/${key}`).set({
+        name: session.name || '', email: session.email || '', type: session.type,
+        avatar: session.avatar || '', status: 'approved', role,
+        apps: Object.keys(APPS), created_at: Date.now()
+      });
+    } else {
+      const u = snap.val();
+      if (u.role !== role) await db.ref(`portal_users/${key}/role`).set(role);
+      if (u.status !== 'approved') await db.ref(`portal_users/${key}/status`).set('approved');
+    }
+  } catch (e) { console.warn('ensureUserRecord failed:', e.message); }
 }
 
 // ═══════ AUTH ═══════
