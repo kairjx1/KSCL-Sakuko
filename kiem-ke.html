@@ -513,14 +513,26 @@ const APP = {
 
   async init() {
     this.bindEvents();
-    const saved = localStorage.getItem('kk_user');
-    if (saved) {
-      this.user = JSON.parse(saved);
+    const portal = localStorage.getItem('kscl_portal_session');
+    if (portal) {
+      const p = JSON.parse(portal);
+      const roleMap = { superadmin: 'admin', admin: 'admin', manager: 'admin', staff: 'staff', viewer: 'viewer' };
+      this.user = { name: p.name || p.email || '', role: roleMap[p.role] || 'staff', portalRole: p.role, email: p.email || '', avatar: p.avatar || '' };
+      localStorage.setItem('kk_user', JSON.stringify(this.user));
       const sess = localStorage.getItem('kk_session');
       if (sess) { this.session = JSON.parse(sess); this.showHome(); }
       else this.showSessions();
     } else {
-      this.show('pLogin');
+      const saved = localStorage.getItem('kk_user');
+      if (saved) {
+        this.user = JSON.parse(saved);
+        const sess = localStorage.getItem('kk_session');
+        if (sess) { this.session = JSON.parse(sess); this.showHome(); }
+        else this.showSessions();
+      } else {
+        location.href = 'index.html';
+        return;
+      }
     }
     try { this.catalogCount = (await dbGetAll('catalog')).length; } catch { this.catalogCount = 0; }
     this.startSyncLoop();
@@ -545,8 +557,9 @@ const APP = {
     this.user = null; this.session = null;
     localStorage.removeItem('kk_user');
     localStorage.removeItem('kk_session');
+    localStorage.removeItem('kscl_portal_session');
     this.closeDrawer();
-    this.show('pLogin');
+    location.href = 'index.html';
   },
 
   /* ---- Sessions (localStorage + API fallback) ---- */
@@ -1258,7 +1271,7 @@ const APP = {
     $('#btnLogin').onclick = () => this.login();
     $('#inpUser').onkeydown = e => { if (e.key === 'Enter') this.login(); };
 
-    $('#btnStoreBack').onclick = () => this.show('pLogin');
+    $('#btnStoreBack').onclick = () => location.href = 'index.html';
     $('#sessionList').onclick = e => { const b = e.target.closest('.storeitem'); if (b) this.selectSession(b.dataset.ma, b.dataset.name); };
     $('#btnCreateSession').onclick = () => this.createSession();
 

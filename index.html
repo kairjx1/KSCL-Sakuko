@@ -23,14 +23,14 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
 .login-logo .sakura span:nth-child(4){top:22px;left:14px;opacity:.6}
 .login-logo .sakura span:nth-child(5){top:12px;left:6px;opacity:.6}
 .login-logo .sakura span:nth-child(6){top:12px;left:16px;width:6px;height:6px;background:#fff}
-.login-logo .logo-text{font-size:32px;font-weight:800;color:#1a2558;font-family:'Segoe UI',system-ui,sans-serif;letter-spacing:-0.5px}
+.login-logo .logo-text{font-size:32px;font-weight:800;color:#1a2558;letter-spacing:-0.5px}
 .login-logo .logo-text .o{color:#e91e7b}
 .login-title{font-size:19px;font-weight:700;color:#1a2558;margin-bottom:4px}
 .login-sub{font-size:13px;color:#6b7a99;margin-bottom:28px}
 .fg{margin-bottom:14px;text-align:left}
 .fg label{display:block;font-size:12px;font-weight:600;color:#6b7a99;margin-bottom:5px}
-.fg input{width:100%;padding:11px 14px;font-size:14px;border:1px solid #dde3ef;border-radius:8px;outline:none;transition:.2s}
-.fg input:focus{border-color:#0066cc;box-shadow:0 0 0 3px rgba(0,102,204,.12)}
+.fg input,.fg select{width:100%;padding:11px 14px;font-size:14px;border:1px solid #dde3ef;border-radius:8px;outline:none;transition:.2s;font-family:inherit}
+.fg input:focus,.fg select:focus{border-color:#0066cc;box-shadow:0 0 0 3px rgba(0,102,204,.12)}
 .btn-login{background:#e91e7b;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;width:100%;cursor:pointer;transition:.2s;margin-top:4px}
 .btn-login:hover{background:#d01a6e}
 .btn-login:active{transform:scale(.98)}
@@ -50,21 +50,24 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
 .topbar-user{display:flex;align-items:center;gap:10px;font-size:14px}
 .topbar-user .avatar{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;overflow:hidden}
 .topbar-user .avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.topbar-user .logout{background:none;border:none;color:rgba(255,255,255,.8);font-size:13px;cursor:pointer;padding:4px 8px;border-radius:6px}
-.topbar-user .logout:hover{background:rgba(255,255,255,.15);color:#fff}
-.topbar-user .admin-btn{background:rgba(255,255,255,.15);border:none;color:#fff;font-size:13px;cursor:pointer;padding:4px 10px;border-radius:6px;font-weight:600}
-.topbar-user .admin-btn:hover{background:rgba(255,255,255,.25)}
+.role-tag{font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600}
+.role-tag.superadmin{background:rgba(124,58,237,.2);color:#c4b5fd}
+.role-tag.admin{background:rgba(5,150,105,.2);color:#6ee7b7}
+.role-tag.manager{background:rgba(59,130,246,.2);color:#93c5fd}
+.role-tag.staff{background:rgba(245,158,11,.2);color:#fcd34d}
+.role-tag.viewer{background:rgba(100,116,139,.2);color:#cbd5e1}
+.topbar-user .tbtn{background:none;border:none;color:rgba(255,255,255,.8);font-size:13px;cursor:pointer;padding:4px 8px;border-radius:6px}
+.topbar-user .tbtn:hover{background:rgba(255,255,255,.15);color:#fff}
+.topbar-user .tbtn.highlight{background:rgba(255,255,255,.15);font-weight:600}
 
 /* MAIN */
 .main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px}
 .welcome{text-align:center;margin-bottom:40px}
 .welcome h1{font-size:28px;font-weight:700;margin-bottom:8px;color:#1a2332}
 .welcome p{font-size:16px;color:#6b7a99;max-width:600px;margin:0 auto}
-
 .apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;max-width:700px;width:100%}
 .app-tile{background:#fff;border-radius:16px;padding:32px 24px;text-align:center;text-decoration:none;color:#1a2332;box-shadow:0 2px 12px rgba(0,0,0,.06);border:2px solid transparent;transition:all .2s ease;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:16px}
 .app-tile:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.12);border-color:#d0021b}
-.app-tile:active{transform:translateY(-1px)}
 .app-icon{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center}
 .app-icon.blue{background:linear-gradient(135deg,#1a56db,#3b82f6)}
 .app-icon.red{background:linear-gradient(135deg,#d0021b,#ef4444)}
@@ -75,48 +78,35 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
 .app-badge.live{background:#dcfce7;color:#16a34a}
 .app-badge.new{background:#fef3c7;color:#b45309}
 
-/* PENDING */
-.pending-wrap{min-height:80vh;display:flex;align-items:center;justify-content:center;padding:40px 20px}
-.pending-card{background:#fff;border-radius:18px;padding:48px 40px;width:480px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,.08);text-align:center}
-.pending-icon{width:80px;height:80px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:40px}
-.pending-card h2{font-size:22px;font-weight:700;margin-bottom:8px;color:#1a2332}
-.pending-card p{font-size:14px;color:#6b7a99;line-height:1.6;margin-bottom:16px}
-.pending-info{background:#f8fafc;border-radius:10px;padding:14px 18px;font-size:13px;color:#475569;text-align:left;margin-bottom:20px}
-.pending-info strong{color:#1a2332}
+/* BLOCKED */
+.block-wrap{min-height:80vh;display:flex;align-items:center;justify-content:center;padding:40px}
+.block-card{background:#fff;border-radius:18px;padding:48px 40px;width:480px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,.08);text-align:center}
+.block-card .icon{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:40px}
+.block-card h2{font-size:22px;font-weight:700;margin-bottom:8px}
+.block-card p{font-size:14px;color:#6b7a99;line-height:1.6;margin-bottom:20px}
 
 /* ADMIN PANEL */
 .admin-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200}
-.admin-panel{background:#fff;border-radius:16px;width:700px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2)}
+.admin-panel{background:#fff;border-radius:16px;width:820px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2)}
 .admin-header{padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
 .admin-header h2{font-size:18px;font-weight:700}
 .admin-close{background:none;border:none;font-size:24px;cursor:pointer;color:#6b7a99;padding:4px 8px;border-radius:6px}
 .admin-close:hover{background:#f0f2f7}
 .admin-body{padding:20px 24px}
-.admin-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid #e5e7eb;padding-bottom:0}
-.admin-tab{padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:#6b7a99;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.2s}
-.admin-tab.active{color:#d0021b;border-bottom-color:#d0021b}
-.admin-tab .count{background:#e5e7eb;color:#475569;font-size:11px;padding:1px 7px;border-radius:8px;margin-left:6px}
-.admin-tab.active .count{background:#fef2f2;color:#d0021b}
-
 .user-table{width:100%;border-collapse:collapse;font-size:13px}
-.user-table th{text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7a99;border-bottom:2px solid #e5e7eb}
+.user-table th{text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7a99;border-bottom:2px solid #e5e7eb;white-space:nowrap}
 .user-table td{padding:10px;border-bottom:1px solid #f0f2f7;vertical-align:middle}
 .user-table tr:hover td{background:#f8fafc}
-.user-name{display:flex;align-items:center;gap:8px}
-.user-name .av{width:28px;height:28px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#475569;overflow:hidden;flex-shrink:0}
-.user-name .av img{width:100%;height:100%;object-fit:cover}
-.status-pill{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600}
-.status-pill.pending{background:#fef3c7;color:#b45309}
-.status-pill.approved{background:#dcfce7;color:#16a34a}
-.status-pill.blocked{background:#fef2f2;color:#dc2626}
-.app-check{display:flex;gap:8px;flex-wrap:wrap}
-.app-check label{display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer}
-.app-check input{accent-color:#d0021b}
-.btn-sm{padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
-.btn-approve{background:#dcfce7;color:#16a34a}.btn-approve:hover{background:#bbf7d0}
-.btn-block{background:#fef2f2;color:#dc2626}.btn-block:hover{background:#fecaca}
-.btn-unblock{background:#e0f2fe;color:#0284c7}.btn-unblock:hover{background:#bae6fd}
-.actions{display:flex;gap:4px}
+.user-av{width:28px;height:28px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#475569;overflow:hidden;flex-shrink:0}
+.user-av img{width:100%;height:100%;object-fit:cover}
+.user-cell{display:flex;align-items:center;gap:8px}
+.role-sel{padding:4px 8px;border:1px solid #dde3ef;border-radius:6px;font-size:12px;outline:none;cursor:pointer}
+.role-sel:focus{border-color:#0066cc}
+.btn-sm{padding:4px 10px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-sm.red{background:#fef2f2;color:#dc2626}.btn-sm.red:hover{background:#fecaca}
+.btn-sm.green{background:#dcfce7;color:#16a34a}.btn-sm.green:hover{background:#bbf7d0}
+.btn-sm.blue{background:#e0f2fe;color:#0284c7}.btn-sm.blue:hover{background:#bae6fd}
+.empty-msg{text-align:center;color:#6b7a99;padding:40px;font-size:14px}
 
 .footer{text-align:center;padding:20px;font-size:13px;color:#a8b5cc}
 .hidden{display:none!important}
@@ -127,10 +117,9 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
   .app-icon{width:64px;height:64px;border-radius:16px}
   .app-icon svg{width:32px;height:32px}
   .welcome h1{font-size:22px}
-  .welcome p{font-size:14px}
   .login-card{padding:32px 24px}
   .admin-panel{border-radius:12px}
-  .user-table{font-size:12px}
+  .user-table{font-size:11px}
   .user-table th,.user-table td{padding:6px 4px}
 }
 </style>
@@ -173,30 +162,20 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
   </div>
   <div class="topbar-user">
     <span id="userName">-</span>
+    <span class="role-tag" id="roleTag"></span>
     <div class="avatar" id="userAvatar">-</div>
-    <button class="admin-btn hidden" id="btnAdmin">Quản lý</button>
-    <button class="logout" id="btnLogout">Đăng xuất</button>
-  </div>
-</div>
-
-<!-- PENDING APPROVAL -->
-<div class="pending-wrap hidden" id="pendingWrap">
-  <div class="pending-card">
-    <div class="pending-icon">&#9203;</div>
-    <h2>Đang chờ phê duyệt</h2>
-    <p>Tài khoản của bạn đã được ghi nhận. Vui lòng chờ quản trị viên phê duyệt quyền truy cập.</p>
-    <div class="pending-info" id="pendingInfo"></div>
-    <button class="btn-login" onclick="logout()" style="background:#64748b;margin-top:8px">Đăng xuất</button>
+    <button class="tbtn highlight hidden" id="btnAdmin">Quản lý user</button>
+    <button class="tbtn" id="btnLogout">Đăng xuất</button>
   </div>
 </div>
 
 <!-- BLOCKED -->
-<div class="pending-wrap hidden" id="blockedWrap">
-  <div class="pending-card">
-    <div class="pending-icon" style="background:#fef2f2">&#128683;</div>
+<div class="block-wrap hidden" id="blockedWrap">
+  <div class="block-card">
+    <div class="icon" style="background:#fef2f2">&#128683;</div>
     <h2>Tài khoản bị khóa</h2>
-    <p>Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.</p>
-    <button class="btn-login" onclick="logout()" style="background:#64748b;margin-top:8px">Đăng xuất</button>
+    <p>Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ quản trị viên.</p>
+    <button class="btn-login" onclick="logout()" style="background:#64748b">Đăng xuất</button>
   </div>
 </div>
 
@@ -218,14 +197,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
       <h2>Quản lý người dùng</h2>
       <button class="admin-close" onclick="closeAdmin()">&times;</button>
     </div>
-    <div class="admin-body">
-      <div class="admin-tabs">
-        <button class="admin-tab active" data-tab="pending" onclick="switchTab('pending')">Chờ duyệt <span class="count" id="countPending">0</span></button>
-        <button class="admin-tab" data-tab="approved" onclick="switchTab('approved')">Đã duyệt <span class="count" id="countApproved">0</span></button>
-        <button class="admin-tab" data-tab="blocked" onclick="switchTab('blocked')">Đã khóa <span class="count" id="countBlocked">0</span></button>
-      </div>
-      <div id="adminTable"></div>
-    </div>
+    <div class="admin-body" id="adminBody"></div>
   </div>
 </div>
 
@@ -248,6 +220,14 @@ const PORTAL_KEY = 'kscl_portal_session';
 const API = '/api';
 const ADMIN_EMAILS = ['kairjx1@gmail.com'];
 
+const ROLES = {
+  superadmin: { label: 'Quản trị viên', color: '#7c3aed', level: 5, apps: ['academy','kiemke'], canManageUsers: true, canEditSystem: true },
+  admin:      { label: 'Admin',         color: '#059669', level: 4, apps: ['academy','kiemke'], canManageUsers: true, canEditSystem: false },
+  manager:    { label: 'Quản lý',       color: '#3b82f6', level: 3, apps: ['academy','kiemke'], canManageUsers: false, canEditSystem: false },
+  staff:      { label: 'Nhân viên',     color: '#f59e0b', level: 2, apps: ['academy','kiemke'], canManageUsers: false, canEditSystem: false },
+  viewer:     { label: 'Viewer',        color: '#64748b', level: 1, apps: ['academy','kiemke'], canManageUsers: false, canEditSystem: false }
+};
+
 const APPS = {
   academy: { name: 'KSCL Academy', href: 'academy.html', desc: 'Đào tạo, kiểm tra năng lực, dashboard báo cáo', icon: 'blue', badge: 'live', badgeText: 'Đang hoạt động',
     svg: '<svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>' },
@@ -256,28 +236,33 @@ const APPS = {
 };
 
 let currentSession = null;
-let isAdmin = false;
+let currentRole = 'viewer';
 let allUsers = {};
-let adminTab = 'pending';
 
+// ═══════ HELPERS ═══════
 function hideAll() {
-  ['loginWrap','topbar','mainContent','footerEl','pendingWrap','blockedWrap'].forEach(id =>
+  ['loginWrap','topbar','mainContent','footerEl','blockedWrap'].forEach(id =>
     document.getElementById(id).classList.add('hidden'));
 }
-
 function showLogin() { hideAll(); document.getElementById('loginWrap').classList.remove('hidden'); }
-
-function showErr(msg) {
-  document.getElementById('loginErr').innerHTML = msg ? `<div class="err-box">${msg}</div>` : '';
-}
+function showErr(msg) { document.getElementById('loginErr').innerHTML = msg ? `<div class="err-box">${msg}</div>` : ''; }
 
 function setAvatar(el, user) {
   if (user.avatar) el.innerHTML = `<img src="${user.avatar}" alt="">`;
   else el.textContent = (user.name || user.email || '-').charAt(0).toUpperCase();
 }
 
-function showApproved(user, allowedApps) {
+function userKey(session) {
+  if (session.type === 'lark') return 'lark_' + session.open_id;
+  return 'fb_' + (session.uid || '').replace(/[.#$/\[\]]/g, '_');
+}
+
+// ═══════ SHOW MAIN ═══════
+function showMain(user, role) {
   hideAll();
+  currentRole = role;
+  const R = ROLES[role] || ROLES.viewer;
+
   document.getElementById('topbar').classList.remove('hidden');
   document.getElementById('mainContent').classList.remove('hidden');
   document.getElementById('footerEl').classList.remove('hidden');
@@ -285,13 +270,20 @@ function showApproved(user, allowedApps) {
   document.getElementById('welcomeMsg').textContent = `Xin chào, ${user.name || user.email}!`;
   setAvatar(document.getElementById('userAvatar'), user);
 
-  if (isAdmin) document.getElementById('btnAdmin').classList.remove('hidden');
-  else document.getElementById('btnAdmin').classList.add('hidden');
+  const tag = document.getElementById('roleTag');
+  tag.textContent = R.label;
+  tag.className = 'role-tag ' + role;
+
+  const canManage = R.canManageUsers;
+  document.getElementById('btnAdmin').classList.toggle('hidden', !canManage);
+
+  // Save role to session for kiem-ke.html to read
+  const s = { ...user, role, roleLabel: R.label };
+  localStorage.setItem(PORTAL_KEY, JSON.stringify(s));
 
   const grid = document.getElementById('appsGrid');
   grid.innerHTML = '';
-  const apps = isAdmin ? Object.keys(APPS) : (allowedApps || []);
-  apps.forEach(key => {
+  (R.apps || []).forEach(key => {
     const a = APPS[key];
     if (!a) return;
     grid.innerHTML += `<a class="app-tile" href="${a.href}">
@@ -301,42 +293,27 @@ function showApproved(user, allowedApps) {
       <span class="app-badge ${a.badge}">${a.badgeText}</span>
     </a>`;
   });
-
-  if (!apps.length && !isAdmin) {
-    grid.innerHTML = '<p style="color:#6b7a99;font-size:14px;text-align:center;grid-column:1/-1">Chưa được cấp quyền truy cập ứng dụng nào. Vui lòng liên hệ quản trị viên.</p>';
-  }
-}
-
-function showPending(user) {
-  hideAll();
-  document.getElementById('topbar').classList.remove('hidden');
-  document.getElementById('pendingWrap').classList.remove('hidden');
-  document.getElementById('userName').textContent = user.name || user.email || '-';
-  setAvatar(document.getElementById('userAvatar'), user);
-  document.getElementById('pendingInfo').innerHTML =
-    `<strong>Tên:</strong> ${user.name || '-'}<br><strong>Email:</strong> ${user.email || '-'}<br><strong>Loại tài khoản:</strong> ${user.type === 'lark' ? 'Lark' : 'Email'}`;
 }
 
 function showBlocked(user) {
   hideAll();
   document.getElementById('topbar').classList.remove('hidden');
   document.getElementById('blockedWrap').classList.remove('hidden');
-  document.getElementById('userName').textContent = user.name || user.email || '-';
+  document.getElementById('userName').textContent = user.name || '-';
   setAvatar(document.getElementById('userAvatar'), user);
+  document.getElementById('roleTag').textContent = '';
+  document.getElementById('btnAdmin').classList.add('hidden');
 }
 
-function userKey(session) {
-  if (session.type === 'lark') return 'lark_' + session.open_id;
-  return 'fb_' + (session.uid || '').replace(/[.#$/\[\]]/g, '_');
-}
-
+// ═══════ PERMISSION CHECK ═══════
 async function checkPermission(session) {
   currentSession = session;
   const key = userKey(session);
-  isAdmin = ADMIN_EMAILS.includes(session.email);
+  const isSuperAdmin = ADMIN_EMAILS.includes(session.email);
 
-  if (isAdmin) {
-    showApproved(session, Object.keys(APPS));
+  if (isSuperAdmin) {
+    await ensureUserRecord(key, session, 'superadmin');
+    showMain(session, 'superadmin');
     listenUsers();
     return;
   }
@@ -344,28 +321,41 @@ async function checkPermission(session) {
   const snap = await db.ref(`portal_users/${key}`).get();
   if (snap.exists()) {
     const u = snap.val();
-    if (u.status === 'approved') {
-      showApproved(session, u.apps || []);
-    } else if (u.status === 'blocked') {
-      showBlocked(session);
-    } else {
-      showPending(session);
-    }
+    if (u.status === 'blocked') { showBlocked(session); return; }
+    showMain(session, u.role || 'staff');
+    if ((ROLES[u.role] || {}).canManageUsers) listenUsers();
   } else {
+    // Lark users auto-approved as staff (role #4)
     await db.ref(`portal_users/${key}`).set({
       name: session.name || '',
       email: session.email || '',
       type: session.type,
       avatar: session.avatar || '',
-      status: 'pending',
-      apps: [],
+      status: 'approved',
+      role: 'staff',
+      apps: ['academy', 'kiemke'],
       created_at: Date.now()
     });
-    showPending(session);
+    showMain(session, 'staff');
   }
 }
 
-// Firebase auth
+async function ensureUserRecord(key, session, role) {
+  const snap = await db.ref(`portal_users/${key}`).get();
+  if (!snap.exists()) {
+    await db.ref(`portal_users/${key}`).set({
+      name: session.name || '', email: session.email || '', type: session.type,
+      avatar: session.avatar || '', status: 'approved', role,
+      apps: Object.keys(APPS), created_at: Date.now()
+    });
+  } else {
+    const u = snap.val();
+    if (u.role !== role) await db.ref(`portal_users/${key}/role`).set(role);
+    if (u.status !== 'approved') await db.ref(`portal_users/${key}/status`).set('approved');
+  }
+}
+
+// ═══════ AUTH ═══════
 auth.onAuthStateChanged(async u => {
   if (u) {
     let name = u.displayName || '';
@@ -374,7 +364,6 @@ auth.onAuthStateChanged(async u => {
       if (snap.exists()) name = snap.val().name || name;
     } catch (e) {}
     const session = { type: 'firebase', name: name || u.email, email: u.email, uid: u.uid, ts: Date.now() };
-    localStorage.setItem(PORTAL_KEY, JSON.stringify(session));
     checkPermission(session);
   } else {
     const saved = localStorage.getItem(PORTAL_KEY);
@@ -391,16 +380,9 @@ async function doLogin() {
   const pass = document.getElementById('inpPass').value;
   if (!email || !pass) { showErr('Vui lòng nhập email và mật khẩu'); return; }
   showErr('');
-  try {
-    await auth.signInWithEmailAndPassword(email, pass);
-  } catch (e) {
-    const M = {
-      'auth/user-not-found': 'Email không tồn tại trong hệ thống',
-      'auth/wrong-password': 'Mật khẩu không đúng',
-      'auth/invalid-email': 'Email không hợp lệ',
-      'auth/too-many-requests': 'Quá nhiều lần thử. Vui lòng đợi vài phút.',
-      'auth/invalid-credential': 'Email hoặc mật khẩu không đúng'
-    };
+  try { await auth.signInWithEmailAndPassword(email, pass); }
+  catch (e) {
+    const M = { 'auth/user-not-found':'Email không tồn tại','auth/wrong-password':'Mật khẩu không đúng','auth/invalid-email':'Email không hợp lệ','auth/too-many-requests':'Quá nhiều lần thử','auth/invalid-credential':'Email hoặc mật khẩu không đúng' };
     showErr(M[e.code] || e.message);
   }
 }
@@ -411,7 +393,7 @@ async function doLarkLogin() {
     const r = await fetch(`${API}/lark-oauth?action=login_url&redirect=${encodeURIComponent(redirect)}`);
     const j = await r.json();
     if (j.ok && j.url) location.href = j.url;
-    else showErr('Không thể khởi tạo đăng nhập Lark: ' + (j.error || ''));
+    else showErr('Không thể khởi tạo Lark login: ' + (j.error || ''));
   } catch (e) { showErr('Lỗi kết nối: ' + e.message); }
 }
 
@@ -424,7 +406,6 @@ async function handleLarkCallback() {
     const j = await r.json();
     if (j.ok && j.user) {
       const session = { type: 'lark', name: j.user.name, email: j.user.email, avatar: j.user.avatar, open_id: j.user.open_id, ts: Date.now() };
-      localStorage.setItem(PORTAL_KEY, JSON.stringify(session));
       history.replaceState(null, '', location.pathname);
       checkPermission(session);
       return true;
@@ -436,99 +417,88 @@ async function handleLarkCallback() {
 function logout() {
   localStorage.removeItem(PORTAL_KEY);
   currentSession = null;
-  isAdmin = false;
   auth.signOut().catch(() => {});
   showLogin();
 }
 
-// ═══════ ADMIN ═══════
+// ═══════ ADMIN PANEL ═══════
 function listenUsers() {
   db.ref('portal_users').on('value', snap => {
     allUsers = snap.val() || {};
-    updateAdminCounts();
   });
-}
-
-function updateAdminCounts() {
-  let p = 0, a = 0, b = 0;
-  Object.values(allUsers).forEach(u => {
-    if (u.status === 'pending') p++;
-    else if (u.status === 'approved') a++;
-    else if (u.status === 'blocked') b++;
-  });
-  document.getElementById('countPending').textContent = p;
-  document.getElementById('countApproved').textContent = a;
-  document.getElementById('countBlocked').textContent = b;
 }
 
 function openAdmin() {
   document.getElementById('adminOverlay').classList.remove('hidden');
-  renderAdminTable();
+  renderAdmin();
 }
 function closeAdmin() { document.getElementById('adminOverlay').classList.add('hidden'); }
 
-function switchTab(tab) {
-  adminTab = tab;
-  document.querySelectorAll('.admin-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-  renderAdminTable();
-}
+function renderAdmin() {
+  const entries = Object.entries(allUsers).sort((a, b) => {
+    const la = (ROLES[a[1].role] || ROLES.viewer).level;
+    const lb = (ROLES[b[1].role] || ROLES.viewer).level;
+    return lb - la;
+  });
 
-function renderAdminTable() {
-  const entries = Object.entries(allUsers).filter(([, u]) => u.status === adminTab);
   if (!entries.length) {
-    document.getElementById('adminTable').innerHTML = `<p style="text-align:center;color:#6b7a99;padding:32px;font-size:14px">Không có người dùng nào</p>`;
+    document.getElementById('adminBody').innerHTML = '<p class="empty-msg">Chưa có người dùng nào</p>';
     return;
   }
 
-  let html = `<table class="user-table"><thead><tr><th>Người dùng</th><th>Email</th><th>Loại</th><th>Quyền app</th><th>Thao tác</th></tr></thead><tbody>`;
-  entries.forEach(([key, u]) => {
-    const av = u.avatar ? `<img src="${u.avatar}" alt="">` : (u.name || '?').charAt(0).toUpperCase();
-    const checks = Object.entries(APPS).map(([k, a]) => {
-      const checked = (u.apps || []).includes(k) ? 'checked' : '';
-      return `<label><input type="checkbox" ${checked} onchange="toggleApp('${key}','${k}',this.checked)">${a.name}</label>`;
-    }).join('');
+  const myLevel = (ROLES[currentRole] || {}).level || 0;
 
-    let actions = '';
-    if (adminTab === 'pending') {
-      actions = `<button class="btn-sm btn-approve" onclick="setStatus('${key}','approved')">Duyệt</button>
-                 <button class="btn-sm btn-block" onclick="setStatus('${key}','blocked')">Từ chối</button>`;
-    } else if (adminTab === 'approved') {
-      actions = `<button class="btn-sm btn-block" onclick="setStatus('${key}','blocked')">Khóa</button>`;
-    } else {
-      actions = `<button class="btn-sm btn-unblock" onclick="setStatus('${key}','approved')">Mở khóa</button>`;
+  let html = `<table class="user-table"><thead><tr><th>Người dùng</th><th>Email</th><th>Loại</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr></thead><tbody>`;
+  entries.forEach(([key, u]) => {
+    const av = u.avatar ? `<img src="${u.avatar}">` : (u.name || '?').charAt(0).toUpperCase();
+    const uLevel = (ROLES[u.role] || ROLES.viewer).level;
+    const canEdit = myLevel > uLevel;
+    const isSelf = currentSession && key === userKey(currentSession);
+
+    const roleOpts = Object.entries(ROLES)
+      .filter(([, r]) => r.level < myLevel)
+      .map(([k, r]) => `<option value="${k}" ${k === u.role ? 'selected' : ''}>${r.label}</option>`)
+      .join('');
+
+    const roleCell = canEdit && !isSelf
+      ? `<select class="role-sel" onchange="changeRole('${key}',this.value)">${roleOpts}</select>`
+      : `<span class="role-tag ${u.role || 'viewer'}">${(ROLES[u.role] || ROLES.viewer).label}</span>`;
+
+    const statusText = u.status === 'blocked'
+      ? '<span style="color:#dc2626;font-weight:600">Bị khóa</span>'
+      : '<span style="color:#16a34a">Hoạt động</span>';
+
+    let actionBtn = '';
+    if (canEdit && !isSelf) {
+      actionBtn = u.status === 'blocked'
+        ? `<button class="btn-sm green" onclick="toggleBlock('${key}','approved')">Mở khóa</button>`
+        : `<button class="btn-sm red" onclick="toggleBlock('${key}','blocked')">Khóa</button>`;
     }
 
     html += `<tr>
-      <td><div class="user-name"><div class="av">${av}</div><span>${u.name || '-'}</span></div></td>
+      <td><div class="user-cell"><div class="user-av">${av}</div>${u.name || '-'}</div></td>
       <td>${u.email || '-'}</td>
       <td>${u.type === 'lark' ? 'Lark' : 'Email'}</td>
-      <td><div class="app-check">${checks}</div></td>
-      <td><div class="actions">${actions}</div></td>
+      <td>${roleCell}</td>
+      <td>${statusText}</td>
+      <td>${actionBtn}</td>
     </tr>`;
   });
   html += '</tbody></table>';
-  document.getElementById('adminTable').innerHTML = html;
+  document.getElementById('adminBody').innerHTML = html;
 }
 
-async function setStatus(key, status) {
-  const updates = { [`portal_users/${key}/status`]: status };
-  if (status === 'approved' && !(allUsers[key]?.apps || []).length) {
-    updates[`portal_users/${key}/apps`] = Object.keys(APPS);
-  }
-  if (status === 'approved') updates[`portal_users/${key}/approved_at`] = Date.now();
-  await db.ref().update(updates);
-  renderAdminTable();
+async function changeRole(key, role) {
+  await db.ref(`portal_users/${key}/role`).set(role);
+  renderAdmin();
 }
 
-async function toggleApp(key, app, checked) {
-  const apps = allUsers[key]?.apps || [];
-  let newApps;
-  if (checked) newApps = [...new Set([...apps, app])];
-  else newApps = apps.filter(a => a !== app);
-  await db.ref(`portal_users/${key}/apps`).set(newApps);
+async function toggleBlock(key, status) {
+  await db.ref(`portal_users/${key}/status`).set(status);
+  renderAdmin();
 }
 
-// Events
+// ═══════ EVENTS ═══════
 document.getElementById('btnLogin').onclick = doLogin;
 document.getElementById('btnLark').onclick = doLarkLogin;
 document.getElementById('btnLogout').onclick = logout;
@@ -537,6 +507,7 @@ document.getElementById('inpPass').onkeydown = e => { if (e.key === 'Enter') doL
 document.getElementById('inpEmail').onkeydown = e => { if (e.key === 'Enter') document.getElementById('inpPass').focus(); };
 document.getElementById('adminOverlay').onclick = e => { if (e.target === e.currentTarget) closeAdmin(); };
 
+// ═══════ INIT ═══════
 (async function init() {
   if (await handleLarkCallback()) return;
   const saved = localStorage.getItem(PORTAL_KEY);
