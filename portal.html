@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KSCL System – Sakuko Vietnam</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f7;color:#1a2332;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:linear-gradient(135deg,#d0021b 0%,#a00115 100%);color:#fff;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.topbar-logo{display:flex;align-items:center;gap:12px;font-weight:700;font-size:20px}
+.topbar-logo img{height:36px;border-radius:8px}
+.topbar-logo svg{width:36px;height:36px}
+.topbar-user{display:flex;align-items:center;gap:10px;font-size:14px}
+.topbar-user .avatar{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px}
+.topbar-user .logout{background:none;border:none;color:rgba(255,255,255,.8);font-size:13px;cursor:pointer;padding:4px 8px;border-radius:6px}
+.topbar-user .logout:hover{background:rgba(255,255,255,.15);color:#fff}
+
+.main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px}
+.welcome{text-align:center;margin-bottom:40px}
+.welcome h1{font-size:28px;font-weight:700;margin-bottom:8px;color:#1a2332}
+.welcome p{font-size:16px;color:#6b7a99;max-width:600px;margin:0 auto}
+
+.apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;max-width:700px;width:100%}
+.app-tile{background:#fff;border-radius:16px;padding:32px 24px;text-align:center;text-decoration:none;color:#1a2332;box-shadow:0 2px 12px rgba(0,0,0,.06);border:2px solid transparent;transition:all .2s ease;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:16px}
+.app-tile:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.12);border-color:#d0021b}
+.app-tile:active{transform:translateY(-1px)}
+.app-icon{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:36px}
+.app-icon.blue{background:linear-gradient(135deg,#1a56db,#3b82f6)}
+.app-icon.red{background:linear-gradient(135deg,#d0021b,#ef4444)}
+.app-icon.green{background:linear-gradient(135deg,#0f766e,#14b8a6)}
+.app-icon.purple{background:linear-gradient(135deg,#6d28d9,#8b5cf6)}
+.app-icon.orange{background:linear-gradient(135deg,#c2410c,#f97316)}
+.app-icon svg{width:40px;height:40px;fill:#fff}
+.app-name{font-size:17px;font-weight:600}
+.app-desc{font-size:13px;color:#6b7a99;line-height:1.4}
+.app-badge{font-size:11px;padding:3px 10px;border-radius:10px;font-weight:600}
+.app-badge.live{background:#dcfce7;color:#16a34a}
+.app-badge.new{background:#fef3c7;color:#b45309}
+
+.footer{text-align:center;padding:20px;font-size:13px;color:#a8b5cc}
+
+/* Login overlay */
+.login-overlay{position:fixed;inset:0;background:#131c2b;display:flex;align-items:center;justify-content:center;z-index:100}
+.login-box{width:100%;max-width:400px;padding:24px;text-align:center}
+.login-logo{width:100px;height:100px;border-radius:50%;background:#d0021b;color:#fff;font-size:52px;font-weight:800;font-style:italic;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 4px 18px rgba(208,2,27,.45)}
+.login-title{color:#fff;font-size:22px;font-weight:700;margin-bottom:36px}
+.login-field{display:flex;align-items:center;gap:10px;background:#e5e5e8;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.login-field svg{flex:0 0 22px;fill:#555}
+.login-field input{flex:1;border:none;outline:none;background:transparent;font-size:16px;color:#111}
+.login-remember{display:flex;align-items:center;gap:8px;color:#cbd5e1;font-size:15px;margin:8px 0 28px}
+.login-remember input{width:18px;height:18px;accent-color:#6d28d9}
+.login-btn{width:100%;background:#d0021b;color:#fff;border:none;border-radius:12px;padding:15px;font-size:17px;font-weight:700;cursor:pointer}
+.login-btn:active{background:#a00115}
+.login-footer{color:#475569;font-size:12px;margin-top:24px}
+.hidden{display:none!important}
+
+@media(max-width:600px){
+  .apps{grid-template-columns:1fr 1fr;gap:14px}
+  .app-tile{padding:24px 14px}
+  .app-icon{width:64px;height:64px;border-radius:16px}
+  .app-icon svg{width:32px;height:32px}
+  .welcome h1{font-size:22px}
+  .welcome p{font-size:14px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">KK</div>
+    <div class="login-title">KSCL System – Sakuko</div>
+    <div class="login-field">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v2h20v-2c0-3.3-6.7-5-10-5z"/></svg>
+      <input type="text" id="inpUser" placeholder="Nhập tên đăng nhập" autocomplete="off">
+    </div>
+    <label class="login-remember"><input type="checkbox" id="chkRemember" checked> Ghi nhớ đăng nhập</label>
+    <button class="login-btn" id="btnLogin">Đăng nhập</button>
+    <div class="login-footer">Sakuko Việt Nam &copy; 2025</div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar" id="topbar">
+  <div class="topbar-logo">
+    <svg viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#fff" fill-opacity=".15"/><text x="50" y="68" text-anchor="middle" font-size="48" font-weight="800" font-style="italic" fill="#fff">KK</text></svg>
+    KSCL System
+  </div>
+  <div class="topbar-user">
+    <span id="userName">-</span>
+    <div class="avatar" id="userAvatar">-</div>
+    <button class="logout" id="btnLogout">Đăng xuất</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="mainContent">
+  <div class="welcome">
+    <h1>Chào mừng đến với KSCL System</h1>
+    <p>Hệ thống quản lý kiểm soát chất lượng Sakuko Vietnam. Chọn ứng dụng bên dưới để bắt đầu.</p>
+  </div>
+  <div class="apps">
+    <a class="app-tile" href="index.html">
+      <div class="app-icon blue">
+        <svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
+      </div>
+      <div class="app-name">KSCL Academy</div>
+      <div class="app-desc">Đào tạo, kiểm tra năng lực, dashboard báo cáo</div>
+      <span class="app-badge live">Đang hoạt động</span>
+    </a>
+    <a class="app-tile" href="kiem-ke.html">
+      <div class="app-icon red">
+        <svg viewBox="0 0 24 24"><path d="M4 6h2V4H4c-1.1 0-2 .9-2 2v2h2V6zm0 12H2v2c0 1.1.9 2 2 2h2v-2H4v-2zm16-12V4h-2v2h2v2h2V6c0-1.1-.9-2-2-2zm0 14h-2v2h2c1.1 0 2-.9 2-2v-2h-2v2zM4 11h16v2H4zm3-4h10v2H7zm0 8h10v2H7z"/></svg>
+      </div>
+      <div class="app-name">App Kiểm Kê</div>
+      <div class="app-desc">Quét barcode, kiểm kê kho, đối chiếu tồn hệ thống</div>
+      <span class="app-badge new">Mới</span>
+    </a>
+  </div>
+</div>
+
+<div class="footer">Sakuko Việt Nam &copy; 2025 &middot; KSCL System v2.0</div>
+
+<script>
+const PORTAL_USER_KEY = 'kscl_portal_user';
+
+function init() {
+  const saved = localStorage.getItem(PORTAL_USER_KEY);
+  if (saved) {
+    showMain(JSON.parse(saved));
+  } else {
+    document.getElementById('loginOverlay').classList.remove('hidden');
+    document.getElementById('topbar').classList.add('hidden');
+    document.getElementById('mainContent').classList.add('hidden');
+  }
+}
+
+function showMain(user) {
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('topbar').classList.remove('hidden');
+  document.getElementById('mainContent').classList.remove('hidden');
+  document.getElementById('userName').textContent = user.name;
+  document.getElementById('userAvatar').textContent = user.name.charAt(0).toUpperCase();
+}
+
+function login() {
+  const name = document.getElementById('inpUser').value.trim();
+  if (!name) return;
+  const user = { name, ts: Date.now() };
+  if (document.getElementById('chkRemember').checked) {
+    localStorage.setItem(PORTAL_USER_KEY, JSON.stringify(user));
+  }
+  showMain(user);
+}
+
+function logout() {
+  localStorage.removeItem(PORTAL_USER_KEY);
+  location.reload();
+}
+
+document.getElementById('btnLogin').onclick = login;
+document.getElementById('inpUser').onkeydown = function(e) { if (e.key === 'Enter') login(); };
+document.getElementById('btnLogout').onclick = logout;
+
+init();
+</script>
+</body>
+</html>

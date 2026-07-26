@@ -1,0 +1,16 @@
+{
+  "name": "KSCL Kiểm Kê",
+  "short_name": "Kiểm Kê",
+  "description": "App kiểm kê kho Sakuko",
+  "start_url": "/kiem-ke.html",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#e8491d",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23e8491d'/><text x='50' y='68' text-anchor='middle' font-size='50' fill='white'>KK</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
