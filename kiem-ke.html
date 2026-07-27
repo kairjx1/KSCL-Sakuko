@@ -774,21 +774,16 @@ const APP = {
     await this.loadSheet();
   },
   async loadSheet() {
+    if (API && this.session && !this._pulledSession) {
+      this._pulledSession = true;
+      await this.flushQueue();
+      await this.pullFromServer(true);
+    }
     try {
       this.sheetData = await dbByIndex('counts', 'session_area', [this.session?.ma_dot, this.currentArea?.code]);
     } catch {
       const all = await dbGetAll('counts');
       this.sheetData = all.filter(c => c.ma_dot === this.session?.ma_dot && c.khu_vuc === this.currentArea?.code);
-    }
-    if (!this.sheetData.length && API && this.session && !this._pulledSession) {
-      this._pulledSession = true;
-      await this.pullFromServer();
-      try {
-        this.sheetData = await dbByIndex('counts', 'session_area', [this.session?.ma_dot, this.currentArea?.code]);
-      } catch {
-        const all = await dbGetAll('counts');
-        this.sheetData = all.filter(c => c.ma_dot === this.session?.ma_dot && c.khu_vuc === this.currentArea?.code);
-      }
     }
     this.renderSheet();
   },
@@ -979,13 +974,15 @@ const APP = {
   },
   async manualSync() {
     this.closeDrawer();
-    const queue = await dbGetAll('queue').catch(() => []);
-    if (!queue.length) { this.toast('Không có dữ liệu chờ đồng bộ'); return; }
-    this.toast('Đang đồng bộ ' + queue.length + ' bản ghi...');
+    this.toast('Đang đồng bộ...');
     await this.flushQueue();
     const remain = await dbGetAll('queue').catch(() => []);
-    if (!remain.length) this.toast('✓ Đồng bộ thành công!');
-    else this.toast('Còn ' + remain.length + ' bản ghi lỗi, thử lại sau');
+    if (remain.length) { this.toast('Còn ' + remain.length + ' bản ghi lỗi, thử lại sau'); return; }
+    await this.pullFromServer(true);
+    this._pulledSession = true;
+    this.toast('✓ Đồng bộ thành công!');
+    if (this.currentArea) this.loadSheet();
+    else this.loadAreas();
   },
   async flushQueue() {
     let queue;
@@ -1238,14 +1235,12 @@ const APP = {
   async showReport() {
     this.show('pReport');
     this.closeDrawer();
-    let counts = await dbGetAll('counts');
-    let sessData = counts.filter(c => c.ma_dot === this.session?.ma_dot);
-    if (!sessData.length && API && this.session) {
-      await this.pullFromServer();
-      counts = await dbGetAll('counts');
-      sessData = counts.filter(c => c.ma_dot === this.session?.ma_dot);
+    if (API && this.session) {
+      await this.flushQueue();
+      await this.pullFromServer(true);
     }
-    this.reportData = sessData;
+    const counts = await dbGetAll('counts');
+    this.reportData = counts.filter(c => c.ma_dot === this.session?.ma_dot);
     this.reportFilter = 'all';
     $$('#reportTabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === 'all'));
     this.renderReport();
@@ -1291,10 +1286,10 @@ const APP = {
   },
 
   /* ---- Pull from server ---- */
-  async pullFromServer() {
-    this.closeDrawer();
+  async pullFromServer(silent) {
+    if (!silent) this.closeDrawer();
     if (!this.session) return;
-    this.toast('Đang tải từ server...');
+    if (!silent) this.toast('Đang tải từ server...');
     try {
       const tenDot = this.session.ten_dot || this.session.ma_dot;
       const r1 = await fetch(`${API}/kk-count?ma_dot=${encodeURIComponent(tenDot)}`);
@@ -1305,9 +1300,21 @@ const APP = {
         const j2 = await r2.json();
         if (j2.ok && j2.items) items = j2.items;
       }
+
+      const localAll = await dbGetAll('counts');
+      const localForSession = localAll.filter(c => c.ma_dot === this.session.ma_dot);
+      const localByKey = {};
+      for (const c of localForSession) localByKey[(c.barcode || '') + '::' + (c.khu_vuc || '')] = c;
+
+      const serverKeys = new Set();
       for (const item of items) {
+        const key = (item.barcode || '') + '::' + (item.khu_vuc || '');
+        serverKeys.add(key);
+        const local = localByKey[key];
+        if (local && !local.synced) continue;
+        const id = local ? local.id : item.id;
         await dbPut('counts', {
-          id: item.id, record_id: item.id,
+          id, record_id: item.id,
           ma_dot: this.session.ma_dot, ten_dot: tenDot,
           khu_vuc: item.khu_vuc, khu_vuc_name: item.khu_vuc,
           barcode: item.barcode, ma_hang: item.ma_hang,
@@ -1318,10 +1325,20 @@ const APP = {
           ghi_chu: item.ghi_chu, updated: Date.now(), synced: true
         });
       }
-      this.toast('Đã tải ' + items.length + ' bản ghi');
-      if (this.currentArea) this.loadSheet();
-      else this.loadAreas();
-    } catch (e) { this.toast('Lỗi: ' + e.message); }
+
+      for (const c of localForSession) {
+        if (c.synced) {
+          const key = (c.barcode || '') + '::' + (c.khu_vuc || '');
+          if (!serverKeys.has(key)) await dbDelete('counts', c.id);
+        }
+      }
+
+      if (!silent) this.toast('Đồng bộ ' + items.length + ' bản ghi');
+      if (!silent) {
+        if (this.currentArea) this.loadSheet();
+        else this.loadAreas();
+      }
+    } catch (e) { if (!silent) this.toast('Lỗi: ' + e.message); }
   },
 
   /* ---- Drawer ---- */
