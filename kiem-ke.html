@@ -376,8 +376,11 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 <div id="catalogOverlay" class="overlay hidden">
   <div class="notecard" style="max-height:85vh;display:flex;flex-direction:column">
     <div style="font-weight:600;margin-bottom:8px;font-size:15px">Tìm sản phẩm</div>
-    <input id="catalogSearchInput" placeholder="Mã item, 6 số barcode, hoặc tên SP..." autocomplete="off"
-      style="width:100%;padding:9px 12px;border:1.5px solid var(--purple);border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:8px">
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input id="catalogSearchInput" placeholder="Mã item, barcode, hoặc tên SP..." autocomplete="off"
+        style="flex:1;padding:9px 12px;border:1.5px solid var(--purple);border-radius:8px;font-size:14px;box-sizing:border-box">
+      <button id="btnCatalogDo" style="padding:9px 16px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">Tìm</button>
+    </div>
     <div id="catalogResults" style="overflow-y:auto;flex:1;max-height:55vh"></div>
     <div class="notebtns" style="margin-top:8px">
       <button id="btnCatalogCancel">Đóng</button>
@@ -1341,22 +1344,44 @@ const APP = {
     q = (q || '').trim();
     const el = $('#catalogResults');
     if (!q || q.length < 2) {
-      el.innerHTML = '<div class="catempty">Nhập ít nhất 2 ký tự</div>';
+      el.innerHTML = '<div class="catempty">Nhập ít nhất 2 ký tự rồi bấm Tìm</div>';
       return;
     }
-    const all = await dbGetAll('catalog').catch(() => []);
+    el.innerHTML = '<div class="catempty">Đang tìm...</div>';
+
+    let all = await dbGetAll('catalog').catch(() => []);
+
+    // Nếu local trống, thử tải từ API
+    if (!all.length && API) {
+      try {
+        const r = await fetch(`${API}/kk-catalog`);
+        const j = await r.json();
+        if (j.ok && j.items?.length) {
+          all = j.items;
+          // Lưu vào local để dùng lần sau
+          for (const it of all) {
+            if (it.barcode) await dbPut('catalog', { ...it, keyPath: undefined }).catch(() => {});
+            if (it.ma_hang && it.ma_hang !== it.barcode) await dbPut('catalog', { ...it, barcode: it.ma_hang }).catch(() => {});
+          }
+        }
+      } catch {}
+    }
+
     const ql = q.toLowerCase();
-    const last6 = q.replace(/\D/g, '');
+    const digits = q.replace(/\D/g, '');
     const matches = all.filter(c => {
       if (!c.ten_sp && !c.ma_hang && !c.barcode) return false;
       const name = (c.ten_sp || '').toLowerCase();
       const ma = (c.ma_hang || '').toLowerCase();
       const bc = (c.barcode || '').toString();
       return name.includes(ql) || ma.includes(ql) ||
-             (last6.length >= 4 && bc.endsWith(last6));
-    }).slice(0, 30);
+             (digits.length >= 3 && bc.includes(digits));
+    }).slice(0, 40);
 
-    if (!matches.length) { el.innerHTML = '<div class="catempty">Không tìm thấy</div>'; return; }
+    if (!matches.length) {
+      el.innerHTML = '<div class="catempty">Không tìm thấy' + (!all.length ? ' — thử bấm "↺ Đồng bộ danh mục" trong menu' : '') + '</div>';
+      return;
+    }
 
     el.innerHTML = matches.map((c, i) =>
       `<div class="catrow" data-i="${i}">
@@ -1765,7 +1790,8 @@ const APP = {
     $('#btnNoteCancel').onclick = () => $('#noteOverlay').classList.add('hidden');
     $('#btnCatalogSearch').onclick = () => this.openCatalogSearch();
     $('#btnCatalogCancel').onclick = () => $('#catalogOverlay').classList.add('hidden');
-    $('#catalogSearchInput').oninput = e => this.searchCatalog(e.target.value);
+    $('#btnCatalogDo').onclick = () => this.searchCatalog($('#catalogSearchInput').value);
+    $('#catalogSearchInput').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); this.searchCatalog($('#catalogSearchInput').value); } };
     $('#btnNoteOk').onclick = () => { const bc = $('#noteInput').value.trim(); if (!bc) return; $('#noteOverlay').classList.add('hidden'); this.lookupAndCount(bc); };
     $('#noteInput').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('#btnNoteOk').click(); } };
     $('#btnNoteScan').onclick = () => { $('#noteOverlay').classList.add('hidden'); this.startScan('sheet'); };
