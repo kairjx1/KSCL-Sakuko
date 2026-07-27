@@ -1160,10 +1160,11 @@ const APP = {
       const rows = XLSX.utils.sheet_to_json(ws, { range: headerRow, defval: '' });
       if (!rows.length) return this.toast('File rỗng');
       const h = Object.keys(rows[0]);
-      const bcCol = h.find(x => /^barcode$/i.test(x));
-      const maCol = h.find(x => /mã.*sp2?$|ma.*sp|mã.*hàng|ma.*hang|item/i.test(x));
+      const sp2Col = h.find(x => /mã\s*sp2|ma\s*sp2/i.test(x));   // Mã SP2 → barcode
+      const maSCol = h.find(x => /^mã\s*s$/i.test(x) || /^mã\s*kl$/i.test(x) || /^item\s*no/i.test(x)); // Mã S/Mã kl → ma_hang
+      const bcCol = h.find(x => /^barcode$/i.test(x));              // Barcode fallback
       const tenCol = h.find(x => /tên.*sp|ten.*sp|description/i.test(x));
-      const giaCol = h.find(x => /giá.*bl|gia.*bl|giá.*bán|price/i.test(x));
+      const giaCol = h.find(x => /giá.*bl|gia.*bl|giá.*bán|retail.*price|price/i.test(x));
       const nganhCol = h.find(x => /ngành|nganh|category/i.test(x));
       const dvtCol = h.find(x => /uom|đvt|dvt|đơn.*vị/i.test(x));
       const khoCol = h.find(x => /^kho$/i.test(x));
@@ -1171,7 +1172,7 @@ const APP = {
       const accountCol = h.find(x => /accounting.*inventory/i.test(x));
       const posCol = h.find(x => /pos.*sold/i.test(x));
       const tonCol = retailCol || h.find(x => /tồn|ton|expected.*inventory/i.test(x)) || h.find(x => /số.*lượng|so.*luong|stock/i.test(x));
-      if (!bcCol && !maCol) return this.toast('Không tìm thấy cột Barcode');
+      if (!sp2Col && !bcCol) return this.toast('Không tìm thấy cột Mã SP2 hoặc Barcode');
 
       const curKho = this.session?.ten_dot || '';
       let filtered = rows;
@@ -1190,14 +1191,15 @@ const APP = {
 
       const tonItems = [];
       for (const row of filtered) {
-        const bc = String(row[bcCol] || row[maCol] || '').trim();
+        const bc = String(row[sp2Col] || row[bcCol] || '').trim();  // Mã SP2 ưu tiên
+        const maHang = String(row[maSCol] || bc).trim();            // Mã S làm item code
         if (!bc) continue;
         let ton = 0;
         if (tonCol) { ton = parseFloat(row[tonCol]) || 0; }
         else if (accountCol) { ton = (parseFloat(row[accountCol]) || 0) + (parseFloat(row[posCol]) || 0); }
         tonItems.push({
           barcode: bc,
-          ma_hang: maCol ? String(row[maCol] || bc).trim() : bc,
+          ma_hang: maHang,
           ten_sp: tenCol ? String(row[tenCol] || '').trim() : '',
           ton_he_thong: ton,
           don_gia: giaCol ? (parseFloat(row[giaCol]) || 0) : 0,
@@ -1305,13 +1307,16 @@ const APP = {
     const data = rows.map(d => {
       const chenh_lech = d.totalSL - d.ton_he_thong;
       return {
+        'Kho': d.kho || '',
+        'Ngành': d.nganh || '',
+        'Mã Item': d.ma_hang || '',
         'Barcode': d.barcode,
         'Tên SP': d.ten_sp,
         'Khu vực': (d.areas || []).join(', '),
+        'Giá bán lẻ': d.don_gia || 0,
         'Tồn HT': d.ton_he_thong,
-        'Thực đếm': d.totalSL,
+        'Kiểm lần 1': d.totalSL,
         'Chênh lệch': chenh_lech,
-        'Đơn giá': d.don_gia || 0,
         'GT chênh lệch': chenh_lech * (d.don_gia || 0)
       };
     });
@@ -1361,8 +1366,12 @@ const APP = {
       if (!byBarcode[bc].ten_sp) byBarcode[bc].ten_sp = ton.ten_sp || '';
     }
 
+    const curKho = this.session?.ten_dot || this.session?.ma_dot || '';
     this.reportData = Object.values(byBarcode).map(d => ({
       ...d,
+      kho: curKho,
+      ma_hang: tonMap[d.barcode]?.ma_hang || d.ma_hang || '',
+      nganh: tonMap[d.barcode]?.nganh || '',
       ton_he_thong: tonMap[d.barcode]?.ton_he_thong || 0,
       don_gia: tonMap[d.barcode]?.don_gia || 0
     })).filter(d => d.totalSL > 0 || d.ton_he_thong > 0);
@@ -1380,11 +1389,12 @@ const APP = {
       case 'noscan': data = data.filter(d => d.ton_he_thong > 0 && !d.totalSL); break;
     }
     if (!data.length) { $('#reportTable').innerHTML = '<div class="empty">Không có dữ liệu</div>'; return; }
-    let html = '<table><thead><tr><th>#</th><th>Barcode</th><th>Tên SP</th><th>Khu vực</th><th>Tồn HT</th><th>Thực đếm</th><th>Lệch</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>#</th><th>Kho</th><th>Ngành</th><th>Mã Item</th><th>Barcode</th><th>Tên SP</th><th>Khu vực</th><th>Giá bán lẻ</th><th>Tồn HT</th><th>Kiểm lần 1</th><th>Chênh lệch</th><th>GT chênh lệch</th></tr></thead><tbody>';
     data.forEach((d, i) => {
       const diff = d.totalSL - d.ton_he_thong;
+      const gtChenh = diff * (d.don_gia || 0);
       const cls = diff > 0 ? 'thua' : diff < 0 ? 'thieu' : '';
-      html += `<tr><td>${i + 1}</td><td>${esc(d.barcode)}</td><td style="white-space:normal;max-width:180px">${esc(d.ten_sp)}</td><td>${esc(d.areas.join(', '))}</td><td class="num">${d.ton_he_thong}</td><td class="num">${d.totalSL}</td><td class="num ${cls}">${diff > 0 ? '+' + diff : diff}</td></tr>`;
+      html += `<tr><td>${i + 1}</td><td>${esc(d.kho||'')}</td><td>${esc(d.nganh||'')}</td><td>${esc(d.ma_hang||'')}</td><td>${esc(d.barcode)}</td><td style="white-space:normal;max-width:160px">${esc(d.ten_sp)}</td><td>${esc((d.areas||[]).join(', '))}</td><td class="num">${(d.don_gia||0).toLocaleString('vi-VN')}</td><td class="num">${d.ton_he_thong}</td><td class="num">${d.totalSL}</td><td class="num ${cls}">${diff > 0 ? '+' + diff : diff}</td><td class="num ${cls}">${gtChenh > 0 ? '+' : ''}${gtChenh.toLocaleString('vi-VN')}</td></tr>`;
     });
     html += '</tbody></table>';
     $('#reportTable').innerHTML = html;
