@@ -662,44 +662,49 @@ const APP = {
 
     let counts;
     try { counts = await dbGetAll('counts'); } catch { counts = []; }
-    const countsByArea = {};
-    counts.filter(c => c.ma_dot === this.session?.ma_dot).forEach(c => {
-      const a = c.khu_vuc || 'KV01';
-      if (!countsByArea[a]) countsByArea[a] = { total: 0, scanned: 0, totalSL: 0, lastUpdate: 0 };
-      countsByArea[a].total++;
-      countsByArea[a].totalSL += (c.so_luong || 0);
-      if (c.updated && c.updated > countsByArea[a].lastUpdate) countsByArea[a].lastUpdate = c.updated;
-      if (c.so_luong > 0) countsByArea[a].scanned++;
-    });
+    const sessCounts = counts.filter(c => c.ma_dot === this.session?.ma_dot);
 
     const local = this.getLocalAreas();
     const deletedKeys = this.getDeletedAreas();
     const maDot = this.session?.ma_dot;
-    const allAreas = [...this.areas].filter(a => !deletedKeys.includes(maDot + '::' + a.ma_khu_vuc));
-    const seenCodes = new Set(allAreas.map(a => a.ma_khu_vuc));
-    for (const la of local) { if (!seenCodes.has(la.ma_khu_vuc) && !deletedKeys.includes(maDot + '::' + la.ma_khu_vuc)) { allAreas.push(la); seenCodes.add(la.ma_khu_vuc); } }
-
-    const search = ($('#homeSearch').value || '').toLowerCase();
-    const areaNameMap = {};
-    allAreas.forEach(a => { areaNameMap[a.ma_khu_vuc] = a.ten_khu_vuc || a.ma_khu_vuc; });
-
-    for (const code of Object.keys(countsByArea)) {
-      if (!seenCodes.has(code)) {
-        const friendlyName = code === 'KV01' ? 'Khu vực mặc định' : 'Khu vực ' + code.replace(/^KV/i, '');
-        const a = { id: code, ma_khu_vuc: code, ten_khu_vuc: friendlyName, ma_dot: this.session?.ma_dot };
-        allAreas.push(a); seenCodes.add(code);
-        const la = this.getLocalAreas();
-        if (!la.find(x => x.ma_khu_vuc === code)) { la.push(a); this.saveLocalAreas(la); }
-      }
+    const nameToCode = {};
+    const codeToName = {};
+    for (const a of [...this.areas, ...local]) {
+      const name = a.ten_khu_vuc || a.ma_khu_vuc;
+      const code = a.ma_khu_vuc;
+      if (!nameToCode[name]) nameToCode[name] = code;
+      codeToName[code] = name;
     }
 
-    let areas = allAreas.map(a => ({
-      id: a.id, name: a.ten_khu_vuc || a.ma_khu_vuc, code: a.ma_khu_vuc,
-      count: countsByArea[a.ma_khu_vuc]?.total || 0,
-      scanned: countsByArea[a.ma_khu_vuc]?.scanned || 0,
-      totalSL: countsByArea[a.ma_khu_vuc]?.totalSL || 0,
-      lastUpdate: countsByArea[a.ma_khu_vuc]?.lastUpdate || 0
-    }));
+    const countsByName = {};
+    sessCounts.forEach(c => {
+      const rawKV = c.khu_vuc || 'KV01';
+      const name = codeToName[rawKV] || rawKV;
+      if (!countsByName[name]) countsByName[name] = { total: 0, scanned: 0, totalSL: 0, lastUpdate: 0, code: rawKV };
+      countsByName[name].total++;
+      countsByName[name].totalSL += (c.so_luong || 0);
+      if (c.updated && c.updated > countsByName[name].lastUpdate) countsByName[name].lastUpdate = c.updated;
+      if (c.so_luong > 0) countsByName[name].scanned++;
+    });
+
+    const seenNames = new Set();
+    const areaList = [];
+    const addArea = (name, code) => {
+      if (seenNames.has(name) || deletedKeys.includes(maDot + '::' + code)) return;
+      seenNames.add(name);
+      const stats = countsByName[name] || {};
+      areaList.push({ id: code, name, code, count: stats.total || 0, scanned: stats.scanned || 0, totalSL: stats.totalSL || 0, lastUpdate: stats.lastUpdate || 0 });
+    };
+
+    for (const a of [...this.areas, ...local]) {
+      if (!deletedKeys.includes(maDot + '::' + a.ma_khu_vuc)) addArea(a.ten_khu_vuc || a.ma_khu_vuc, a.ma_khu_vuc);
+    }
+    for (const name of Object.keys(countsByName)) {
+      if (!seenNames.has(name)) addArea(name, countsByName[name].code || name);
+    }
+
+    const search = ($('#homeSearch').value || '').toLowerCase();
+    let areas = areaList;
 
     if (!areas.length) {
       const def = { id: 'default', ma_khu_vuc: 'KV01', ten_khu_vuc: 'Khu vực mặc định', ma_dot: this.session?.ma_dot };
@@ -779,12 +784,17 @@ const APP = {
       await this.flushQueue();
       await this.pullFromServer(true);
     }
-    try {
-      this.sheetData = await dbByIndex('counts', 'session_area', [this.session?.ma_dot, this.currentArea?.code]);
-    } catch {
-      const all = await dbGetAll('counts');
-      this.sheetData = all.filter(c => c.ma_dot === this.session?.ma_dot && c.khu_vuc === this.currentArea?.code);
-    }
+    const code = this.currentArea?.code;
+    const name = this.currentArea?.name;
+    const maDot = this.session?.ma_dot;
+    const all = await dbGetAll('counts');
+    this.sheetData = all.filter(c => c.ma_dot === maDot && (c.khu_vuc === code || c.khu_vuc === name || c.khu_vuc_name === name));
+    const seen = new Set();
+    this.sheetData = this.sheetData.filter(d => {
+      if (seen.has(d.barcode)) return false;
+      seen.add(d.barcode);
+      return true;
+    });
     this.renderSheet();
   },
   renderSheet() {
