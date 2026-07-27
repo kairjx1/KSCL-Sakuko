@@ -924,6 +924,7 @@ const APP = {
     const record = {
       id: existing?.id || ('c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
       ma_dot: this.session?.ma_dot,
+      ten_dot: this.session?.ten_dot || this.session?.ma_dot,
       khu_vuc: this.currentArea?.code,
       khu_vuc_name: this.currentArea?.name || this.currentArea?.code,
       barcode: product.barcode,
@@ -998,7 +999,7 @@ const APP = {
     try {
       if (creates.length) {
         const records = creates.map(q => ({
-          ma_dot: q.data.ma_dot, ma_hang: q.data.ma_hang, barcode: q.data.barcode,
+          ma_dot: q.data.ten_dot || q.data.ma_dot, ma_hang: q.data.ma_hang, barcode: q.data.barcode,
           ten_sp: q.data.ten_sp, dvt: q.data.dvt || 'PSC', nganh: q.data.nganh || '',
           khu_vuc: q.data.khu_vuc_name || q.data.khu_vuc, ton_he_thong: q.data.ton_he_thong || 0,
           so_luong: q.data.so_luong, don_gia: q.data.don_gia || 0,
@@ -1036,7 +1037,7 @@ const APP = {
             const r = await fetch(`${API}/kk-count`, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'sync', records: [{
-                ma_dot: q.data.ma_dot, ma_hang: q.data.ma_hang, barcode: q.data.barcode,
+                ma_dot: q.data.ten_dot || q.data.ma_dot, ma_hang: q.data.ma_hang, barcode: q.data.barcode,
                 ten_sp: q.data.ten_sp, dvt: q.data.dvt || 'PSC', nganh: q.data.nganh || '',
                 khu_vuc: q.data.khu_vuc_name || q.data.khu_vuc, ton_he_thong: q.data.ton_he_thong || 0,
                 so_luong: q.data.so_luong, don_gia: q.data.don_gia || 0,
@@ -1295,13 +1296,20 @@ const APP = {
     if (!this.session) return;
     this.toast('Đang tải từ server...');
     try {
-      const r = await fetch(`${API}/kk-count?ma_dot=${encodeURIComponent(this.session.ma_dot)}`);
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error);
-      for (const item of j.items) {
+      const tenDot = this.session.ten_dot || this.session.ma_dot;
+      const r1 = await fetch(`${API}/kk-count?ma_dot=${encodeURIComponent(tenDot)}`);
+      const j1 = await r1.json();
+      let items = (j1.ok && j1.items) ? j1.items : [];
+      if (!items.length && tenDot !== this.session.ma_dot) {
+        const r2 = await fetch(`${API}/kk-count?ma_dot=${encodeURIComponent(this.session.ma_dot)}`);
+        const j2 = await r2.json();
+        if (j2.ok && j2.items) items = j2.items;
+      }
+      for (const item of items) {
         await dbPut('counts', {
           id: item.id, record_id: item.id,
-          ma_dot: item.ma_dot, khu_vuc: item.khu_vuc,
+          ma_dot: this.session.ma_dot, ten_dot: tenDot,
+          khu_vuc: item.khu_vuc, khu_vuc_name: item.khu_vuc,
           barcode: item.barcode, ma_hang: item.ma_hang,
           ten_sp: item.ten_sp, dvt: item.dvt, nganh: item.nganh,
           ton_he_thong: item.ton_he_thong,
@@ -1310,7 +1318,7 @@ const APP = {
           ghi_chu: item.ghi_chu, updated: Date.now(), synced: true
         });
       }
-      this.toast('Đã tải ' + j.items.length + ' bản ghi');
+      this.toast('Đã tải ' + items.length + ' bản ghi');
       if (this.currentArea) this.loadSheet();
       else this.loadAreas();
     } catch (e) { this.toast('Lỗi: ' + e.message); }

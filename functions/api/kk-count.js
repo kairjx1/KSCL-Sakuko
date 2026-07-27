@@ -127,39 +127,53 @@ export async function onRequest({ request, env }) {
         const { records } = body;
         if (!records || !records.length) return new Response(JSON.stringify({ ok: false, error: 'No records' }), { headers: CORS });
 
-        const larkRecords = records.map(r => ({
-          fields: {
-            ma_dot: r.ma_dot,
-            ma_hang: r.ma_hang,
-            barcode: r.barcode || '',
-            ten_sp: r.ten_sp || '',
-            dvt: r.dvt || 'PSC',
-            nganh: r.nganh || '',
-            khu_vuc: r.khu_vuc || '',
-            ton_he_thong: r.ton_he_thong || 0,
-            so_luong_dem_l1: r.so_luong || 0,
-            don_gia: r.don_gia || 0,
-            nguoi_dem: r.nguoi_dem || '',
-            ghi_chu: r.ghi_chu || '',
-            lan_dem: r.lan_dem || 1
-          }
-        }));
+        const maDot = records[0].ma_dot;
+        let existingMap = {};
+        try {
+          const filter = { filter: { conjunction: 'and', conditions: [{ field_name: 'ma_dot', operator: 'is', value: [maDot] }] } };
+          let pageToken = null;
+          do {
+            const resp = await searchRecords(token, filter, pageToken);
+            for (const item of (resp.data?.items || [])) {
+              const f = item.fields || {};
+              const key = extractText(f.barcode) + '::' + extractText(f.khu_vuc);
+              existingMap[key] = { record_id: item.record_id, so_luong: f.so_luong_dem_l1 || 0 };
+            }
+            pageToken = resp.data?.has_more ? resp.data.page_token : null;
+          } while (pageToken);
+        } catch {}
 
-        let totalCreated = 0;
+        let totalCreated = 0, totalUpdated = 0;
         const createdRecords = [];
-        for (let i = 0; i < larkRecords.length; i += 500) {
-          const batch = larkRecords.slice(i, i + 500);
-          const resp = await batchCreate(token, batch);
-          if (resp.code !== 0) throw new Error(resp.msg || 'Batch create failed');
-          totalCreated += batch.length;
-          for (let k = 0; k < batch.length; k++) {
-            const larkResp = resp.data?.records?.[k];
-            const rid = larkResp?.data?.record?.record_id;
-            if (rid) createdRecords.push({ barcode: records[i + k].barcode, ma_hang: records[i + k].ma_hang, record_id: rid });
+        for (const r of records) {
+          const key = (r.barcode || '') + '::' + (r.khu_vuc || '');
+          const existing = existingMap[key];
+          if (existing) {
+            const resp = await updateRecord(token, existing.record_id, { so_luong_dem_l1: r.so_luong || 0, nguoi_dem: r.nguoi_dem || '', ghi_chu: r.ghi_chu || '' });
+            if (resp.code === 0) { totalUpdated++; createdRecords.push({ barcode: r.barcode, ma_hang: r.ma_hang, record_id: existing.record_id }); }
+          } else {
+            const url = `${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_KK}/records`;
+            const resp = await fetch(url, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fields: {
+                ma_dot: r.ma_dot, ma_hang: r.ma_hang, barcode: r.barcode || '', ten_sp: r.ten_sp || '',
+                dvt: r.dvt || 'PSC', nganh: r.nganh || '', khu_vuc: r.khu_vuc || '',
+                ton_he_thong: r.ton_he_thong || 0, so_luong_dem_l1: r.so_luong || 0,
+                don_gia: r.don_gia || 0, nguoi_dem: r.nguoi_dem || '', ghi_chu: r.ghi_chu || '', lan_dem: r.lan_dem || 1
+              }})
+            });
+            const j = await resp.json();
+            if (j.code === 0) {
+              totalCreated++;
+              const rid = j.data?.record?.record_id;
+              if (rid) createdRecords.push({ barcode: r.barcode, ma_hang: r.ma_hang, record_id: rid });
+              existingMap[key] = { record_id: rid, so_luong: r.so_luong || 0 };
+            }
           }
         }
 
-        return new Response(JSON.stringify({ ok: true, created: totalCreated, records: createdRecords }), { headers: CORS });
+        return new Response(JSON.stringify({ ok: true, created: totalCreated, updated: totalUpdated, records: createdRecords }), { headers: CORS });
       }
 
       if (action === 'update') {
