@@ -652,9 +652,6 @@ const APP = {
     if (API && this.session) {
       await this.flushQueue();
       await this.pullFromServer(true);
-      const dbg = await dbGetAll('counts');
-      console.log('[showHome] session:', JSON.stringify(this.session));
-      console.log('[showHome] counts in DB:', dbg.length, dbg.map(c => c.ma_dot + '|' + c.khu_vuc + '|' + c.so_luong));
     }
     await this.loadAreas();
   },
@@ -671,9 +668,6 @@ const APP = {
     let counts;
     try { counts = await dbGetAll('counts'); } catch { counts = []; }
     const sessCounts = counts.filter(c => c.ma_dot === this.session?.ma_dot);
-    console.log('[loadAreas] total counts:', counts.length, 'sessCounts:', sessCounts.length, 'session.ma_dot:', this.session?.ma_dot);
-    if (counts.length > 0 && sessCounts.length === 0) console.log('[loadAreas] ma_dot mismatch! DB ma_dots:', [...new Set(counts.map(c => c.ma_dot))]);
-    console.log('[loadAreas] sessCounts khu_vuc:', sessCounts.map(c => c.khu_vuc));
 
     const local = this.getLocalAreas();
     const deletedKeys = this.getDeletedAreas();
@@ -687,36 +681,33 @@ const APP = {
       codeToName[code] = name;
     }
 
-    const countsByName = {};
+    const countsByKey = {};
     sessCounts.forEach(c => {
       const rawKV = c.khu_vuc || 'KV01';
-      const name = codeToName[rawKV] || rawKV;
-      if (!countsByName[name]) countsByName[name] = { total: 0, scanned: 0, totalSL: 0, lastUpdate: 0, code: rawKV };
-      countsByName[name].total++;
-      countsByName[name].totalSL += (c.so_luong || 0);
-      if (c.updated && c.updated > countsByName[name].lastUpdate) countsByName[name].lastUpdate = c.updated;
-      if (c.so_luong > 0) countsByName[name].scanned++;
+      if (!countsByKey[rawKV]) countsByKey[rawKV] = { total: 0, scanned: 0, totalSL: 0, lastUpdate: 0, code: rawKV };
+      countsByKey[rawKV].total++;
+      countsByKey[rawKV].totalSL += (c.so_luong || 0);
+      if (c.updated && c.updated > countsByKey[rawKV].lastUpdate) countsByKey[rawKV].lastUpdate = c.updated;
+      if (c.so_luong > 0) countsByKey[rawKV].scanned++;
+      const mapped = codeToName[rawKV];
+      if (mapped && mapped !== rawKV) countsByKey[mapped] = countsByKey[rawKV];
     });
-    console.log('[loadAreas] countsByName:', JSON.stringify(countsByName));
-    console.log('[loadAreas] server areas:', this.areas?.map(a => a.ten_khu_vuc + '|' + a.kho));
-    console.log('[loadAreas] local areas:', this.getLocalAreas().map(a => a.ten_khu_vuc + '|' + a.ma_khu_vuc + '|' + a.ma_dot));
 
     const seenNames = new Set();
     const areaList = [];
     const addArea = (name, code) => {
       if (seenNames.has(name) || deletedKeys.includes(maDot + '::' + code)) return;
       seenNames.add(name);
-      const stats = countsByName[name] || {};
+      const stats = countsByKey[name] || countsByKey[code] || {};
       areaList.push({ id: code, name, code, count: stats.total || 0, scanned: stats.scanned || 0, totalSL: stats.totalSL || 0, lastUpdate: stats.lastUpdate || 0 });
     };
 
     for (const a of [...this.areas, ...local]) {
       if (!deletedKeys.includes(maDot + '::' + a.ma_khu_vuc)) addArea(a.ten_khu_vuc || a.ma_khu_vuc, a.ma_khu_vuc);
     }
-    for (const name of Object.keys(countsByName)) {
-      if (!seenNames.has(name)) addArea(name, countsByName[name].code || name);
+    for (const key of Object.keys(countsByKey)) {
+      if (!seenNames.has(key)) addArea(key, countsByKey[key].code || key);
     }
-    console.log('[loadAreas] final areaList:', areaList.map(a => a.name + '|count:' + a.count + '|SL:' + a.totalSL));
 
     const search = ($('#homeSearch').value || '').toLowerCase();
     let areas = areaList;
