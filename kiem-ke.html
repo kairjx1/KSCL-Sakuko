@@ -989,13 +989,18 @@ const APP = {
     try { queue = await dbGetAll('queue'); } catch { return; }
     if (!queue.length) return;
 
-    const creates = queue.filter(q => q.op === 'create');
-    const updates = queue.filter(q => q.op === 'update');
+    const syncItems = queue.filter(q => q.op === 'create' || (q.op === 'update' && !q.data.record_id));
+    const directUpdates = queue.filter(q => q.op === 'update' && q.data.record_id);
     const deletes = queue.filter(q => q.op === 'delete');
 
     try {
-      if (creates.length) {
-        const records = creates.map(q => ({
+      if (syncItems.length) {
+        const merged = {};
+        for (const q of syncItems) {
+          const key = (q.data.barcode || '') + '::' + (q.data.khu_vuc_name || q.data.khu_vuc || '');
+          if (!merged[key] || q.ts > merged[key].ts) merged[key] = q;
+        }
+        const records = Object.values(merged).map(q => ({
           ma_dot: q.data.ten_dot || q.data.ma_dot, ma_hang: q.data.ma_hang, barcode: q.data.barcode,
           ten_sp: q.data.ten_sp, dvt: q.data.dvt || 'PSC', nganh: q.data.nganh || '',
           khu_vuc: q.data.khu_vuc_name || q.data.khu_vuc, ton_he_thong: q.data.ton_he_thong || 0,
@@ -1008,43 +1013,26 @@ const APP = {
         });
         const j = await r.json();
         if (j.ok) {
-          for (const q of creates) await dbDelete('queue', q.op_id);
+          for (const q of syncItems) await dbDelete('queue', q.op_id);
           if (j.records) {
+            const allCounts = await dbGetAll('counts');
             for (const rec of j.records) {
-              const allCounts = await dbGetAll('counts');
-              const local = allCounts.find(c => c.barcode === rec.barcode && c.ma_dot === creates[0]?.data?.ma_dot);
+              const local = allCounts.find(c => c.barcode === rec.barcode && c.ma_dot === syncItems[0]?.data?.ma_dot);
               if (local && rec.record_id) { local.record_id = rec.record_id; local.synced = true; await dbPut('counts', local); }
             }
           }
         }
       }
 
-      for (const q of updates) {
-        if (q.data.record_id) {
-          try {
-            const r = await fetch(`${API}/kk-count`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'update', record_id: q.data.record_id, fields: { so_luong_dem_l1: q.data.so_luong, nguoi_dem: q.data.nguoi_dem } })
-            });
-            const j = await r.json();
-            if (j.ok) await dbDelete('queue', q.op_id);
-          } catch {}
-        } else {
-          try {
-            const r = await fetch(`${API}/kk-count`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'sync', records: [{
-                ma_dot: q.data.ten_dot || q.data.ma_dot, ma_hang: q.data.ma_hang, barcode: q.data.barcode,
-                ten_sp: q.data.ten_sp, dvt: q.data.dvt || 'PSC', nganh: q.data.nganh || '',
-                khu_vuc: q.data.khu_vuc_name || q.data.khu_vuc, ton_he_thong: q.data.ton_he_thong || 0,
-                so_luong: q.data.so_luong, don_gia: q.data.don_gia || 0,
-                nguoi_dem: q.data.nguoi_dem || '', ghi_chu: q.data.ghi_chu || ''
-              }] })
-            });
-            const j = await r.json();
-            if (j.ok) await dbDelete('queue', q.op_id);
-          } catch {}
-        }
+      for (const q of directUpdates) {
+        try {
+          const r = await fetch(`${API}/kk-count`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update', record_id: q.data.record_id, fields: { so_luong_dem_l1: q.data.so_luong, nguoi_dem: q.data.nguoi_dem } })
+          });
+          const j = await r.json();
+          if (j.ok) await dbDelete('queue', q.op_id);
+        } catch {}
       }
 
       for (const q of deletes) {
