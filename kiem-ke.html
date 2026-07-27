@@ -419,7 +419,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 'use strict';
 const API = location.hostname === 'localhost' ? '' : '/api';
 const DB_NAME = 'kk_db';
-const DB_VER = 3;
+const DB_VER = 4;
 const AVATAR_COLORS = ['#6d28d9','#1a56db','#0f766e','#c2410c','#b91c1c','#4338ca','#0e9f6e','#9333ea'];
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
@@ -441,6 +441,10 @@ function openDB() {
       }
       if (!db.objectStoreNames.contains('queue')) {
         db.createObjectStore('queue', { keyPath: 'op_id' });
+      }
+      if (!db.objectStoreNames.contains('ton_stock')) {
+        const s = db.createObjectStore('ton_stock', { keyPath: 'id' });
+        s.createIndex('kho', 'kho', { unique: false });
       }
     };
     req.onsuccess = () => ok(req.result);
@@ -1182,59 +1186,45 @@ const APP = {
         }
       }
 
-      let updated = 0, created = 0;
-      const allCounts = await dbGetAll('counts');
-      const larkItems = [];
+      const tonItems = [];
       for (const row of filtered) {
         const bc = String(row[bcCol] || row[maCol] || '').trim();
         if (!bc) continue;
         let ton = 0;
         if (tonCol) { ton = parseFloat(row[tonCol]) || 0; }
         else if (accountCol) { ton = (parseFloat(row[accountCol]) || 0) + (parseFloat(row[posCol]) || 0); }
-        const ten = tenCol ? String(row[tenCol] || '').trim() : '';
-        const gia = giaCol ? (parseFloat(row[giaCol]) || 0) : 0;
-        const nganh = nganhCol ? String(row[nganhCol] || '').trim() : '';
-        const dvt = dvtCol ? String(row[dvtCol] || 'PSC').trim() : 'PSC';
-        const maHang = maCol ? String(row[maCol] || bc).trim() : bc;
-
-        const sessMatches = allCounts.filter(c => c.barcode === bc && c.ma_dot === this.session?.ma_dot);
-        if (sessMatches.length) {
-          for (const existing of sessMatches) {
-            existing.ton_he_thong = ton;
-            if (ten) existing.ten_sp = ten;
-            if (gia) existing.don_gia = gia;
-            if (nganh) existing.nganh = nganh;
-            if (dvt) existing.dvt = dvt;
-            await dbPut('counts', existing);
-            larkItems.push({ barcode: bc, khu_vuc: existing.khu_vuc, record_id: existing.record_id || null, ton_he_thong: ton });
-          }
-          updated++;
-        } else {
-          await dbPut('counts', {
-            id: 'imp_' + Date.now() + '_' + created,
-            ma_dot: this.session?.ma_dot, khu_vuc: this.currentArea?.code || 'KV01',
-            barcode: bc, ma_hang: maHang, ten_sp: ten,
-            ton_he_thong: ton, so_luong: 0, don_gia: gia,
-            nguoi_dem: '', ghi_chu: '', dvt, nganh,
-            updated: Date.now(), synced: false
-          });
-          created++;
-        }
+        tonItems.push({
+          barcode: bc,
+          ma_hang: maCol ? String(row[maCol] || bc).trim() : bc,
+          ten_sp: tenCol ? String(row[tenCol] || '').trim() : '',
+          ton_he_thong: ton,
+          don_gia: giaCol ? (parseFloat(row[giaCol]) || 0) : 0,
+          nganh: nganhCol ? String(row[nganhCol] || '').trim() : '',
+          dvt: dvtCol ? String(row[dvtCol] || 'PSC').trim() : 'PSC'
+        });
       }
-      this.toast(`Đã lưu local: ${updated} cập nhật, ${created} mới. Đang đẩy lên server...`);
-      if (API && larkItems.length) {
+
+      // Lưu vào IndexedDB ton_stock (theo kho, ghi đè)
+      const kho = this.session?.ten_dot || this.session?.ma_dot;
+      const existing = await dbGetAll('ton_stock').catch(() => []);
+      for (const e of existing.filter(x => x.kho === kho)) await dbDelete('ton_stock', e.id);
+      for (const it of tonItems) {
+        await dbPut('ton_stock', { id: it.barcode + '::' + kho, kho, ...it });
+      }
+
+      this.toast(`Đang đẩy ${tonItems.length} mã tồn lên server...`);
+      if (API) {
         try {
-          const maDot = this.session?.ten_dot || this.session?.ma_dot;
-          const r = await fetch(`${API}/kk-count`, {
+          const r = await fetch(`${API}/kk-ton`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'batch_update_ton', ma_dot: maDot, items: larkItems })
+            body: JSON.stringify({ action: 'import', kho, items: tonItems })
           });
           const j = await r.json();
-          if (j.ok) this.toast(`✓ Import tồn: ${j.updated} bản ghi cập nhật trên server`);
-          else this.toast('Lưu local OK, lỗi server: ' + (j.error || ''));
-        } catch { this.toast('Lưu local OK, không kết nối được server'); }
+          if (j.ok) this.toast(`✓ Import tồn: xóa ${j.deleted} cũ, tạo ${j.created} mới cho kho "${kho}"`);
+          else this.toast('Lỗi server: ' + (j.error || ''));
+        } catch { this.toast('Đã lưu local, không kết nối được server'); }
       } else {
-        this.toast(`✓ Import tồn: ${updated} cập nhật, ${created} mới`);
+        this.toast(`✓ Đã lưu tồn local: ${tonItems.length} mã`);
       }
       if (this.currentArea) this.loadSheet();
       else this.loadAreas();
@@ -1302,7 +1292,41 @@ const APP = {
       await this.pullFromServer(true);
     }
     const counts = await dbGetAll('counts');
-    this.reportData = counts.filter(c => c.ma_dot === this.session?.ma_dot);
+    const sessCounts = counts.filter(c => c.ma_dot === this.session?.ma_dot);
+
+    // Lấy tồn hệ thống theo kho
+    const kho = this.session?.ten_dot || this.session?.ma_dot;
+    let tonMap = {};
+    if (API) {
+      try {
+        const r = await fetch(`${API}/kk-ton?kho=${encodeURIComponent(kho)}`);
+        const j = await r.json();
+        if (j.ok) j.items.forEach(it => { tonMap[it.barcode] = it; });
+      } catch {}
+    }
+    if (!Object.keys(tonMap).length) {
+      const local = await dbGetAll('ton_stock').catch(() => []);
+      local.filter(x => x.kho === kho).forEach(it => { tonMap[it.barcode] = it; });
+    }
+
+    // Gộp counts theo barcode
+    const byBarcode = {};
+    for (const c of sessCounts) {
+      if (!byBarcode[c.barcode]) byBarcode[c.barcode] = { barcode: c.barcode, ten_sp: c.ten_sp || '', areas: [], totalSL: 0 };
+      byBarcode[c.barcode].totalSL += (c.so_luong || 0);
+      if (c.khu_vuc && !byBarcode[c.barcode].areas.includes(c.khu_vuc)) byBarcode[c.barcode].areas.push(c.khu_vuc);
+    }
+    // Thêm mã có tồn nhưng chưa bắn
+    for (const [bc, ton] of Object.entries(tonMap)) {
+      if (!byBarcode[bc]) byBarcode[bc] = { barcode: bc, ten_sp: ton.ten_sp || '', areas: [], totalSL: 0 };
+      if (!byBarcode[bc].ten_sp) byBarcode[bc].ten_sp = ton.ten_sp || '';
+    }
+
+    this.reportData = Object.values(byBarcode).map(d => ({
+      ...d,
+      ton_he_thong: tonMap[d.barcode]?.ton_he_thong || 0,
+      don_gia: tonMap[d.barcode]?.don_gia || 0
+    }));
     this.reportFilter = 'all';
     $$('#reportTabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === 'all'));
     this.renderReport();
@@ -1310,18 +1334,18 @@ const APP = {
   renderReport() {
     let data = [...(this.reportData || [])];
     switch (this.reportFilter) {
-      case 'thua': data = data.filter(d => (d.so_luong || 0) > (d.ton_he_thong || 0)); break;
-      case 'thieu': data = data.filter(d => (d.so_luong || 0) < (d.ton_he_thong || 0)); break;
-      case 'khop': data = data.filter(d => (d.so_luong || 0) === (d.ton_he_thong || 0) && d.so_luong > 0); break;
-      case 'nostock': data = data.filter(d => d.so_luong > 0 && !d.ton_he_thong); break;
-      case 'noscan': data = data.filter(d => d.ton_he_thong > 0 && !d.so_luong); break;
+      case 'thua': data = data.filter(d => d.totalSL > d.ton_he_thong); break;
+      case 'thieu': data = data.filter(d => d.totalSL < d.ton_he_thong); break;
+      case 'khop': data = data.filter(d => d.totalSL === d.ton_he_thong && d.totalSL > 0); break;
+      case 'nostock': data = data.filter(d => d.totalSL > 0 && !d.ton_he_thong); break;
+      case 'noscan': data = data.filter(d => d.ton_he_thong > 0 && !d.totalSL); break;
     }
     if (!data.length) { $('#reportTable').innerHTML = '<div class="empty">Không có dữ liệu</div>'; return; }
-    let html = '<table><thead><tr><th>#</th><th>Barcode</th><th>Tên SP</th><th>Khu vực</th><th>Tồn</th><th>Thực</th><th>Lệch</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>#</th><th>Barcode</th><th>Tên SP</th><th>Khu vực</th><th>Tồn HT</th><th>Thực đếm</th><th>Lệch</th></tr></thead><tbody>';
     data.forEach((d, i) => {
-      const diff = (d.so_luong || 0) - (d.ton_he_thong || 0);
+      const diff = d.totalSL - d.ton_he_thong;
       const cls = diff > 0 ? 'thua' : diff < 0 ? 'thieu' : '';
-      html += `<tr><td>${i + 1}</td><td>${esc(d.barcode)}</td><td style="white-space:normal;max-width:200px">${esc(d.ten_sp || '')}</td><td>${esc(d.khu_vuc)}</td><td class="num">${d.ton_he_thong || 0}</td><td class="num">${d.so_luong || 0}</td><td class="num ${cls}">${diff > 0 ? '+' + diff : diff}</td></tr>`;
+      html += `<tr><td>${i + 1}</td><td>${esc(d.barcode)}</td><td style="white-space:normal;max-width:180px">${esc(d.ten_sp)}</td><td>${esc(d.areas.join(', '))}</td><td class="num">${d.ton_he_thong}</td><td class="num">${d.totalSL}</td><td class="num ${cls}">${diff > 0 ? '+' + diff : diff}</td></tr>`;
     });
     html += '</tbody></table>';
     $('#reportTable').innerHTML = html;
