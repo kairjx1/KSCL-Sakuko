@@ -1353,6 +1353,11 @@ const APP = {
       local.filter(x => x.kho === kho).forEach(it => { tonMap[it.barcode] = it; });
     }
 
+    // Load catalog để fallback
+    const catalogArr = await dbGetAll('catalog').catch(() => []);
+    const catalogMap = {};
+    catalogArr.forEach(c => { catalogMap[c.barcode] = c; });
+
     // Gộp counts theo barcode
     const byBarcode = {};
     for (const c of sessCounts) {
@@ -1367,14 +1372,18 @@ const APP = {
     }
 
     const curKho = this.session?.ten_dot || this.session?.ma_dot || '';
-    this.reportData = Object.values(byBarcode).map(d => ({
-      ...d,
-      kho: curKho,
-      ma_hang: tonMap[d.barcode]?.ma_hang || d.ma_hang || '',
-      nganh: tonMap[d.barcode]?.nganh || '',
-      ton_he_thong: tonMap[d.barcode]?.ton_he_thong || 0,
-      don_gia: tonMap[d.barcode]?.don_gia || 0
-    })).filter(d => d.totalSL > 0 || d.ton_he_thong > 0);
+    this.reportData = Object.values(byBarcode).map(d => {
+      const ton = tonMap[d.barcode];
+      const cat = catalogMap[d.barcode];
+      return {
+        ...d,
+        kho: curKho,
+        ma_hang: ton?.ma_hang || cat?.ma_hang || d.ma_hang || '',
+        nganh: ton?.nganh || cat?.nganh || '',
+        ton_he_thong: ton?.ton_he_thong || 0,
+        don_gia: ton?.don_gia || cat?.gia_ban_le || 0
+      };
+    }).filter(d => d.totalSL > 0 || d.ton_he_thong > 0);
     this.reportFilter = 'all';
     $$('#reportTabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === 'all'));
     this.renderReport();
