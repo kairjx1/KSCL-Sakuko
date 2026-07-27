@@ -1265,20 +1265,57 @@ const APP = {
   },
   async exportExcel() {
     this.closeDrawer();
-    const counts = await dbGetAll('counts');
-    const data = counts.filter(c => c.ma_dot === this.session?.ma_dot).map(c => ({
-      'Barcode': c.barcode, 'Mã hàng': c.ma_hang, 'Tên SP': c.ten_sp,
-      'Khu vực': c.khu_vuc, 'Tồn HT': c.ton_he_thong || 0,
-      'Thực đếm': c.so_luong || 0,
-      'Chênh lệch': (c.so_luong || 0) - (c.ton_he_thong || 0),
-      'Đơn giá': c.don_gia || 0,
-      'GT chênh lệch': ((c.so_luong || 0) - (c.ton_he_thong || 0)) * (c.don_gia || 0),
-      'Người đếm': c.nguoi_dem || '', 'Ghi chú': c.ghi_chu || ''
-    }));
-    if (!data.length) return this.toast('Không có dữ liệu');
+    // Dùng reportData nếu đã có (từ màn hình Đối chiếu), không thì tự tính
+    let rows = this.reportData;
+    if (!rows || !rows.length) {
+      const counts = await dbGetAll('counts');
+      const sessCounts = counts.filter(c => c.ma_dot === this.session?.ma_dot);
+      const kho = this.session?.ten_dot || this.session?.ma_dot;
+      let tonMap = {};
+      if (API) {
+        try {
+          const r = await fetch(`${API}/kk-ton?kho=${encodeURIComponent(kho)}`);
+          const j = await r.json();
+          if (j.ok) j.items.forEach(it => { tonMap[it.barcode] = it; });
+        } catch {}
+      }
+      if (!Object.keys(tonMap).length) {
+        const local = await dbGetAll('ton_stock').catch(() => []);
+        local.filter(x => x.kho === kho).forEach(it => { tonMap[it.barcode] = it; });
+      }
+      const byBarcode = {};
+      for (const c of sessCounts) {
+        if (!byBarcode[c.barcode]) byBarcode[c.barcode] = { barcode: c.barcode, ten_sp: c.ten_sp || '', areas: [], totalSL: 0 };
+        byBarcode[c.barcode].totalSL += (c.so_luong || 0);
+        if (c.khu_vuc && !byBarcode[c.barcode].areas.includes(c.khu_vuc)) byBarcode[c.barcode].areas.push(c.khu_vuc);
+      }
+      for (const [bc, ton] of Object.entries(tonMap)) {
+        if (!byBarcode[bc]) byBarcode[bc] = { barcode: bc, ten_sp: ton.ten_sp || '', areas: [], totalSL: 0 };
+        if (!byBarcode[bc].ten_sp) byBarcode[bc].ten_sp = ton.ten_sp || '';
+      }
+      rows = Object.values(byBarcode).map(d => ({
+        ...d,
+        ton_he_thong: tonMap[d.barcode]?.ton_he_thong || 0,
+        don_gia: tonMap[d.barcode]?.don_gia || 0
+      }));
+    }
+    if (!rows.length) return this.toast('Không có dữ liệu');
+    const data = rows.map(d => {
+      const chenh_lech = d.totalSL - d.ton_he_thong;
+      return {
+        'Barcode': d.barcode,
+        'Tên SP': d.ten_sp,
+        'Khu vực': (d.areas || []).join(', '),
+        'Tồn HT': d.ton_he_thong,
+        'Thực đếm': d.totalSL,
+        'Chênh lệch': chenh_lech,
+        'Đơn giá': d.don_gia || 0,
+        'GT chênh lệch': chenh_lech * (d.don_gia || 0)
+      };
+    });
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Kiểm kê');
+    XLSX.utils.book_append_sheet(wb, ws, 'Đối chiếu');
     XLSX.writeFile(wb, 'KiemKe_' + (this.session?.ma_dot || 'export') + '.xlsx');
     this.toast('Đã xuất Excel');
   },
