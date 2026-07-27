@@ -652,6 +652,9 @@ const APP = {
     if (API && this.session) {
       await this.flushQueue();
       await this.pullFromServer(true);
+      const dbg = await dbGetAll('counts');
+      console.log('[showHome] session:', JSON.stringify(this.session));
+      console.log('[showHome] counts in DB:', dbg.length, dbg.map(c => c.ma_dot + '|' + c.khu_vuc + '|' + c.so_luong));
     }
     await this.loadAreas();
   },
@@ -668,6 +671,8 @@ const APP = {
     let counts;
     try { counts = await dbGetAll('counts'); } catch { counts = []; }
     const sessCounts = counts.filter(c => c.ma_dot === this.session?.ma_dot);
+    console.log('[loadAreas] total counts:', counts.length, 'sessCounts:', sessCounts.length, 'session.ma_dot:', this.session?.ma_dot);
+    if (counts.length > 0 && sessCounts.length === 0) console.log('[loadAreas] ma_dot mismatch! DB ma_dots:', [...new Set(counts.map(c => c.ma_dot))]);
 
     const local = this.getLocalAreas();
     const deletedKeys = this.getDeletedAreas();
