@@ -400,6 +400,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     <button class="drawer-item" id="dReport">Tổng hợp / Đối chiếu</button>
     <hr>
     <button class="drawer-item" id="dImportCatalog">Nhập danh mục hàng hóa</button>
+    <button class="drawer-item" id="dSyncCatalog">&#8635; Đồng bộ danh mục từ Lark</button>
     <button class="drawer-item" id="dImportStock">Nhập tồn hệ thống</button>
     <button class="drawer-item" id="dExport">Xuất file kết quả</button>
     <hr>
@@ -1243,29 +1244,82 @@ const APP = {
       const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
       if (!rows.length) return this.toast('File rỗng');
       const h = Object.keys(rows[0]);
-      const bcCol = h.find(x => /barcode/i.test(x));
-      const maCol = h.find(x => /mã.*hàng|ma.*hang|item/i.test(x));
-      const tenCol = h.find(x => /tên|ten|description|name/i.test(x));
-      const giaCol = h.find(x => /giá|gia|price/i.test(x));
+      const bcCol = h.find(x => /^barcode$/i.test(x));
+      const maCol = h.find(x => /mã.*hàng|ma.*hang|^mã\s*s$|^item/i.test(x));
+      const tenCol = h.find(x => /tên.*sp|ten.*sp|description|name/i.test(x));
+      const giaCol = h.find(x => /giá.*bl|gia.*bl|giá.*bán|retail.*price|^giá$/i.test(x));
       const nganhCol = h.find(x => /ngành|nganh|category/i.test(x));
-      if (!bcCol) return this.toast('Không tìm thấy cột barcode');
+      const nhomCol = h.find(x => /nhóm|nhom|group/i.test(x));
+      const loaiCol = h.find(x => /^loại$|^loai$/i.test(x));
+      const blockCol = h.find(x => /^block$/i.test(x));
+      const kenhCol = h.find(x => /kênh.*mua|kenh.*mua/i.test(x));
+      const ttKdCol = h.find(x => /trạng.*thái|trang.*thai|trang_thai/i.test(x));
 
-      let count = 0;
+      const catalogItems = [];
       for (const row of rows) {
         const bc = String(row[bcCol] || '').trim();
-        if (!bc) continue;
-        await dbPut('catalog', {
-          barcode: bc,
-          ma_hang: String(row[maCol] || bc).trim(),
-          ten_sp: String(row[tenCol] || '').trim(),
-          gia_ban_le: parseFloat(row[giaCol]) || 0,
-          nganh: String(row[nganhCol] || '').trim()
-        });
+        const ma = String(row[maCol] || '').trim();
+        const key = bc || ma;
+        if (!key) continue;
+        const item = {
+          barcode: key,
+          ma_hang: ma || key,
+          ten_sp: tenCol ? String(row[tenCol] || '').trim() : '',
+          gia_ban_le: giaCol ? (parseFloat(row[giaCol]) || 0) : 0,
+          nganh: nganhCol ? String(row[nganhCol] || '').trim() : '',
+          nhom: nhomCol ? String(row[nhomCol] || '').trim() : '',
+          loai: loaiCol ? String(row[loaiCol] || '').trim() : '',
+          block: blockCol ? String(row[blockCol] || '').trim() : '',
+          kenh_mua: kenhCol ? String(row[kenhCol] || '').trim() : '',
+          trang_thai_kd: ttKdCol ? String(row[ttKdCol] || '').trim() : ''
+        };
+        catalogItems.push(item);
+        await dbPut('catalog', item);
+        // Nếu barcode khác ma_hang, lưu thêm bản theo ma_hang để lookup
+        if (bc && ma && bc !== ma) await dbPut('catalog', { ...item, barcode: ma });
+      }
+
+      this.catalogCount = catalogItems.length;
+      this.toast(`Đã lưu ${catalogItems.length} SP vào máy, đang đẩy lên Lark...`);
+
+      if (API) {
+        try {
+          const r = await fetch(`${API}/kk-catalog`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'import', items: catalogItems })
+          });
+          const j = await r.json();
+          if (j.ok) this.toast(`Đồng bộ Lark: ${j.created} SP`);
+          else this.toast('Lưu máy OK, Lark lỗi: ' + (j.error || ''));
+        } catch { this.toast('Lưu máy OK, không kết nối Lark'); }
+      }
+    });
+  },
+
+  async syncCatalog() {
+    this.closeDrawer();
+    if (!API) return this.toast('Không có kết nối server');
+    this.toast('Đang tải danh mục từ Lark...');
+    try {
+      const r = await fetch(`${API}/kk-catalog`);
+      const j = await r.json();
+      if (!j.ok) return this.toast('Lỗi: ' + j.error);
+      let count = 0;
+      for (const item of j.items) {
+        const key = item.barcode || item.ma_hang;
+        if (!key) continue;
+        const rec = { barcode: key, ma_hang: item.ma_hang || key, ten_sp: item.ten_sp || '',
+          gia_ban_le: item.gia_ban_le || 0, nganh: item.nganh || '', nhom: item.nhom || '',
+          loai: item.loai || '', block: item.block || '', kenh_mua: item.kenh_mua || '',
+          trang_thai_kd: item.trang_thai_kd || '' };
+        await dbPut('catalog', rec);
+        if (item.barcode && item.ma_hang && item.barcode !== item.ma_hang)
+          await dbPut('catalog', { ...rec, barcode: item.ma_hang });
         count++;
       }
       this.catalogCount = count;
-      this.toast('Import danh mục: ' + count + ' SP');
-    });
+      this.toast(`Đồng bộ xong: ${count} SP`);
+    } catch (e) { this.toast('Lỗi: ' + e.message); }
   },
   async exportExcel() {
     this.closeDrawer();
@@ -1633,6 +1687,7 @@ const APP = {
     $('#drawerDim').onclick = () => this.closeDrawer();
     $('#dSync').onclick = () => this.manualSync();
     $('#dImportCatalog').onclick = () => this.importCatalog();
+    $('#dSyncCatalog').onclick = () => this.syncCatalog();
     $('#dImportStock').onclick = () => this.importStock();
     $('#dExport').onclick = () => this.exportExcel();
     $('#dPicker').onclick = () => { this.closeDrawer(); this.showProgress(); };
