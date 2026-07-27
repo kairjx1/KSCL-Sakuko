@@ -773,6 +773,16 @@ const APP = {
       const all = await dbGetAll('counts');
       this.sheetData = all.filter(c => c.ma_dot === this.session?.ma_dot && c.khu_vuc === this.currentArea?.code);
     }
+    if (!this.sheetData.length && API && this.session && !this._pulledSession) {
+      this._pulledSession = true;
+      await this.pullFromServer();
+      try {
+        this.sheetData = await dbByIndex('counts', 'session_area', [this.session?.ma_dot, this.currentArea?.code]);
+      } catch {
+        const all = await dbGetAll('counts');
+        this.sheetData = all.filter(c => c.ma_dot === this.session?.ma_dot && c.khu_vuc === this.currentArea?.code);
+      }
+    }
     this.renderSheet();
   },
   renderSheet() {
@@ -908,6 +918,7 @@ const APP = {
       id: existing?.id || ('c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
       ma_dot: this.session?.ma_dot,
       khu_vuc: this.currentArea?.code,
+      khu_vuc_name: this.currentArea?.name || this.currentArea?.code,
       barcode: product.barcode,
       ma_hang: product.ma_hang || '',
       ten_sp: product.ten_sp || '',
@@ -982,7 +993,7 @@ const APP = {
         const records = creates.map(q => ({
           ma_dot: q.data.ma_dot, ma_hang: q.data.ma_hang, barcode: q.data.barcode,
           ten_sp: q.data.ten_sp, dvt: q.data.dvt || 'PSC', nganh: q.data.nganh || '',
-          khu_vuc: q.data.khu_vuc, ton_he_thong: q.data.ton_he_thong || 0,
+          khu_vuc: q.data.khu_vuc_name || q.data.khu_vuc, ton_he_thong: q.data.ton_he_thong || 0,
           so_luong: q.data.so_luong, don_gia: q.data.don_gia || 0,
           nguoi_dem: q.data.nguoi_dem || '', ghi_chu: q.data.ghi_chu || ''
         }));
@@ -991,7 +1002,16 @@ const APP = {
           body: JSON.stringify({ action: 'sync', records })
         });
         const j = await r.json();
-        if (j.ok) for (const q of creates) await dbDelete('queue', q.op_id);
+        if (j.ok) {
+          for (const q of creates) await dbDelete('queue', q.op_id);
+          if (j.records) {
+            for (const rec of j.records) {
+              const allCounts = await dbGetAll('counts');
+              const local = allCounts.find(c => c.barcode === rec.barcode && c.ma_dot === creates[0]?.data?.ma_dot);
+              if (local && rec.record_id) { local.record_id = rec.record_id; local.synced = true; await dbPut('counts', local); }
+            }
+          }
+        }
       }
 
       for (const q of updates) {
@@ -1011,7 +1031,7 @@ const APP = {
               body: JSON.stringify({ action: 'sync', records: [{
                 ma_dot: q.data.ma_dot, ma_hang: q.data.ma_hang, barcode: q.data.barcode,
                 ten_sp: q.data.ten_sp, dvt: q.data.dvt || 'PSC', nganh: q.data.nganh || '',
-                khu_vuc: q.data.khu_vuc, ton_he_thong: q.data.ton_he_thong || 0,
+                khu_vuc: q.data.khu_vuc_name || q.data.khu_vuc, ton_he_thong: q.data.ton_he_thong || 0,
                 so_luong: q.data.so_luong, don_gia: q.data.don_gia || 0,
                 nguoi_dem: q.data.nguoi_dem || '', ghi_chu: q.data.ghi_chu || ''
               }] })
@@ -1210,8 +1230,14 @@ const APP = {
   async showReport() {
     this.show('pReport');
     this.closeDrawer();
-    const counts = await dbGetAll('counts');
-    this.reportData = counts.filter(c => c.ma_dot === this.session?.ma_dot);
+    let counts = await dbGetAll('counts');
+    let sessData = counts.filter(c => c.ma_dot === this.session?.ma_dot);
+    if (!sessData.length && API && this.session) {
+      await this.pullFromServer();
+      counts = await dbGetAll('counts');
+      sessData = counts.filter(c => c.ma_dot === this.session?.ma_dot);
+    }
+    this.reportData = sessData;
     this.reportFilter = 'all';
     $$('#reportTabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === 'all'));
     this.renderReport();

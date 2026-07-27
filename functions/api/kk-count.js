@@ -146,14 +146,20 @@ export async function onRequest({ request, env }) {
         }));
 
         let totalCreated = 0;
+        const createdRecords = [];
         for (let i = 0; i < larkRecords.length; i += 500) {
           const batch = larkRecords.slice(i, i + 500);
           const resp = await batchCreate(token, batch);
           if (resp.code !== 0) throw new Error(resp.msg || 'Batch create failed');
           totalCreated += batch.length;
+          for (let k = 0; k < batch.length; k++) {
+            const larkResp = resp.data?.records?.[k];
+            const rid = larkResp?.data?.record?.record_id;
+            if (rid) createdRecords.push({ barcode: records[i + k].barcode, ma_hang: records[i + k].ma_hang, record_id: rid });
+          }
         }
 
-        return new Response(JSON.stringify({ ok: true, created: totalCreated }), { headers: CORS });
+        return new Response(JSON.stringify({ ok: true, created: totalCreated, records: createdRecords }), { headers: CORS });
       }
 
       if (action === 'update') {
