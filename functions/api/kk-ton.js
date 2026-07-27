@@ -115,11 +115,10 @@ export async function onRequest({ request, env }) {
         const { kho, items } = body;
         if (!kho || !items?.length) return new Response(JSON.stringify({ ok: false, error: 'Cần kho và items' }), { headers: CORS });
 
-        // Xóa tồn cũ của kho này (batch)
+        // Lấy danh sách record cũ (chưa xóa)
         const existing = await searchByKho(token, kho);
-        await batchDelete(token, existing.map(i => i.record_id));
 
-        // Tạo mới toàn bộ (batch 500/lần)
+        // Tạo mới trước
         const fieldsList = items.map(it => ({
           barcode: it.barcode || '',
           ma_hang: it.ma_hang || '',
@@ -131,6 +130,12 @@ export async function onRequest({ request, env }) {
           dvt: it.dvt || 'PSC'
         }));
         const created = await batchCreate(token, fieldsList);
+        if (created === 0 && items.length > 0) {
+          return new Response(JSON.stringify({ ok: false, error: 'Tạo mới thất bại, dữ liệu cũ giữ nguyên' }), { headers: CORS });
+        }
+
+        // Xóa cũ sau khi tạo thành công
+        await batchDelete(token, existing.map(i => i.record_id));
         return new Response(JSON.stringify({ ok: true, deleted: existing.length, created }), { headers: CORS });
       }
 
