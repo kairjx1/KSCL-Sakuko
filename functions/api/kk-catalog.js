@@ -115,6 +115,35 @@ export async function onRequest({ request, env }) {
     const token = await getToken(env);
 
     if (request.method === 'GET') {
+      const url = new URL(request.url);
+      const q = (url.searchParams.get('q') || '').trim();
+
+      if (q) {
+        // Tìm kiếm nhanh theo từ khoá — không paginate hết
+        const searchUrl = `${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_CATALOG}/records/search?page_size=50`;
+        const body = {
+          field_names: ['ma_hang', 'ten_sp', 'barcode', 'nganh', 'gia_ban_le'],
+          filter: {
+            conjunction: 'or',
+            conditions: [
+              { field_name: 'ten_sp', operator: 'contains', value: [q] },
+              { field_name: 'ma_hang', operator: 'contains', value: [q] },
+              { field_name: 'barcode', operator: 'contains', value: [q] }
+            ]
+          }
+        };
+        const r = await fetch(searchUrl, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const j = await r.json();
+        if (j.code !== 0) throw new Error('Lark: ' + (j.msg || j.code));
+        const result = (j.data?.items || []).map(formatItem);
+        return new Response(JSON.stringify({ ok: true, items: result, total: result.length }), { headers: CORS });
+      }
+
+      // Không có q → trả về toàn bộ (dùng cho đồng bộ offline, chấp nhận chậm)
       const items = await fetchAllCatalog(token);
       const result = items.map(formatItem);
       return new Response(JSON.stringify({ ok: true, items: result, total: result.length }), { headers: CORS });
