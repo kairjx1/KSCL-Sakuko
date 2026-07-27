@@ -986,9 +986,7 @@ const APP = {
     else this.sheetData.push(record);
 
     this.renderSheet();
-    $('#qReal').textContent = finalQty;
-    const diff = finalQty - (record.ton_he_thong || 0);
-    $('#qDiff').textContent = diff > 0 ? '+' + diff : diff;
+    this.closeQty();
     this.toast(mode === 'set' ? 'Đặt: ' + finalQty : 'Cộng: ' + finalQty, 1200);
   },
   async deleteCount() {
