@@ -48,30 +48,39 @@ async function searchByKho(token, kho) {
   return items;
 }
 
+async function parallelChunks(items, size, fn, concurrency = 4) {
+  const chunks = [];
+  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+  let results = [];
+  for (let i = 0; i < chunks.length; i += concurrency) {
+    const batch = chunks.slice(i, i + concurrency);
+    const res = await Promise.all(batch.map(fn));
+    results = results.concat(res);
+  }
+  return results;
+}
+
 async function batchDelete(token, recordIds) {
-  for (let i = 0; i < recordIds.length; i += 500) {
-    const chunk = recordIds.slice(i, i + 500);
+  await parallelChunks(recordIds, 500, async chunk => {
     await fetch(`${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_TON}/records/batch_delete`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ records: chunk })
     });
-  }
+  });
 }
 
 async function batchCreate(token, fieldsList) {
-  let created = 0;
-  for (let i = 0; i < fieldsList.length; i += 500) {
-    const chunk = fieldsList.slice(i, i + 500).map(f => ({ fields: f }));
+  const results = await parallelChunks(fieldsList, 500, async chunk => {
     const r = await fetch(`${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_TON}/records/batch_create`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ records: chunk })
+      body: JSON.stringify({ records: chunk.map(f => ({ fields: f })) })
     });
     const j = await r.json();
-    if (j.code === 0) created += j.data?.records?.length || 0;
-  }
-  return created;
+    return j.code === 0 ? j.data?.records?.length || 0 : 0;
+  });
+  return results.reduce((a, b) => a + b, 0);
 }
 
 export async function onRequest({ request, env }) {
