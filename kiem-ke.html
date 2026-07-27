@@ -1335,8 +1335,37 @@ const APP = {
 
   async openCatalogSearch() {
     $('#catalogSearchInput').value = '';
-    $('#catalogResults').innerHTML = '<div class="catempty">Nhập mã item, 6 số barcode, hoặc tên SP</div>';
     $('#catalogOverlay').classList.remove('hidden');
+    const el = $('#catalogResults');
+
+    // Kiểm tra local có dữ liệu chưa
+    const local = await dbGetAll('catalog').catch(() => []);
+    if (local.length) {
+      el.innerHTML = `<div class="catempty">Có ${local.length} SP — nhập từ khoá rồi bấm Tìm</div>`;
+      setTimeout(() => $('#catalogSearchInput').focus(), 100);
+      return;
+    }
+
+    // Chưa có → tự động tải từ API
+    if (!API) {
+      el.innerHTML = '<div class="catempty">Chưa có danh mục — vào Menu → Đồng bộ danh mục</div>';
+      return;
+    }
+    el.innerHTML = '<div class="catempty">Đang tải danh mục từ server...</div>';
+    try {
+      const r = await fetch(`${API}/kk-catalog`);
+      const j = await r.json();
+      if (!j.ok || !j.items?.length) throw new Error(j.error || 'Không có dữ liệu');
+      // Lưu vào IndexedDB
+      for (const it of j.items) {
+        if (it.barcode) await dbPut('catalog', { ma_hang: it.ma_hang || '', ten_sp: it.ten_sp || '', barcode: it.barcode, nganh: it.nganh || '', gia_ban_le: it.gia_ban_le || 0, dvt: it.dvt || 'PSC', nhom: it.nhom || '', loai: it.loai || '' }).catch(() => {});
+        if (it.ma_hang && it.ma_hang !== it.barcode) await dbPut('catalog', { ma_hang: it.ma_hang, ten_sp: it.ten_sp || '', barcode: it.ma_hang, nganh: it.nganh || '', gia_ban_le: it.gia_ban_le || 0, dvt: it.dvt || 'PSC', nhom: it.nhom || '', loai: it.loai || '' }).catch(() => {});
+      }
+      this.catalogCount = j.items.length;
+      el.innerHTML = `<div class="catempty">Đã tải ${j.items.length} SP — nhập từ khoá rồi bấm Tìm</div>`;
+    } catch (e) {
+      el.innerHTML = `<div class="catempty">Lỗi tải danh mục: ${e.message}</div>`;
+    }
     setTimeout(() => $('#catalogSearchInput').focus(), 100);
   },
 
@@ -1344,27 +1373,15 @@ const APP = {
     q = (q || '').trim();
     const el = $('#catalogResults');
     if (!q || q.length < 2) {
-      el.innerHTML = '<div class="catempty">Nhập ít nhất 2 ký tự rồi bấm Tìm</div>';
+      el.innerHTML = '<div class="catempty">Nhập ít nhất 2 ký tự</div>';
       return;
     }
     el.innerHTML = '<div class="catempty">Đang tìm...</div>';
 
-    let all = await dbGetAll('catalog').catch(() => []);
-
-    // Nếu local trống, thử tải từ API
-    if (!all.length && API) {
-      try {
-        const r = await fetch(`${API}/kk-catalog`);
-        const j = await r.json();
-        if (j.ok && j.items?.length) {
-          all = j.items;
-          // Lưu vào local để dùng lần sau
-          for (const it of all) {
-            if (it.barcode) await dbPut('catalog', { ...it, keyPath: undefined }).catch(() => {});
-            if (it.ma_hang && it.ma_hang !== it.barcode) await dbPut('catalog', { ...it, barcode: it.ma_hang }).catch(() => {});
-          }
-        }
-      } catch {}
+    const all = await dbGetAll('catalog').catch(() => []);
+    if (!all.length) {
+      el.innerHTML = '<div class="catempty">Chưa có danh mục — đóng rồi mở lại để tải</div>';
+      return;
     }
 
     const ql = q.toLowerCase();
@@ -1374,14 +1391,10 @@ const APP = {
       const name = (c.ten_sp || '').toLowerCase();
       const ma = (c.ma_hang || '').toLowerCase();
       const bc = (c.barcode || '').toString();
-      return name.includes(ql) || ma.includes(ql) ||
-             (digits.length >= 3 && bc.includes(digits));
+      return name.includes(ql) || ma.includes(ql) || (digits.length >= 3 && bc.includes(digits));
     }).slice(0, 40);
 
-    if (!matches.length) {
-      el.innerHTML = '<div class="catempty">Không tìm thấy' + (!all.length ? ' — thử bấm "↺ Đồng bộ danh mục" trong menu' : '') + '</div>';
-      return;
-    }
+    if (!matches.length) { el.innerHTML = '<div class="catempty">Không tìm thấy</div>'; return; }
 
     el.innerHTML = matches.map((c, i) =>
       `<div class="catrow" data-i="${i}">
