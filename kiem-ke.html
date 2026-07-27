@@ -1141,11 +1141,15 @@ const APP = {
       let range = XLSX.utils.decode_range(ws['!ref']);
       let headerRow = 0;
       for (let r = range.s.r; r <= Math.min(range.s.r + 10, range.e.r); r++) {
+        let barcodeFound = false, maDotFound = false;
         for (let c = range.s.c; c <= range.e.c; c++) {
           const cell = ws[XLSX.utils.encode_cell({ r, c })];
-          if (cell && typeof cell.v === 'string' && /barcode|mã.*hàng|ma.*hang|mã.*kho/i.test(cell.v)) { headerRow = r; break; }
+          if (!cell || typeof cell.v !== 'string') continue;
+          const v = cell.v.trim();
+          if (/^barcode$/i.test(v)) barcodeFound = true;
+          if (/^mã.*kho$|^kho$|^mã.*sp/i.test(v)) maDotFound = true;
         }
-        if (headerRow) break;
+        if (barcodeFound && maDotFound) { headerRow = r; break; }
       }
       const rows = XLSX.utils.sheet_to_json(ws, { range: headerRow, defval: '' });
       if (!rows.length) return this.toast('File rỗng');
