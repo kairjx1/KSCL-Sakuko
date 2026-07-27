@@ -673,6 +673,7 @@ const APP = {
     const sessCounts = counts.filter(c => c.ma_dot === this.session?.ma_dot);
     console.log('[loadAreas] total counts:', counts.length, 'sessCounts:', sessCounts.length, 'session.ma_dot:', this.session?.ma_dot);
     if (counts.length > 0 && sessCounts.length === 0) console.log('[loadAreas] ma_dot mismatch! DB ma_dots:', [...new Set(counts.map(c => c.ma_dot))]);
+    console.log('[loadAreas] sessCounts khu_vuc:', sessCounts.map(c => c.khu_vuc));
 
     const local = this.getLocalAreas();
     const deletedKeys = this.getDeletedAreas();
@@ -696,6 +697,9 @@ const APP = {
       if (c.updated && c.updated > countsByName[name].lastUpdate) countsByName[name].lastUpdate = c.updated;
       if (c.so_luong > 0) countsByName[name].scanned++;
     });
+    console.log('[loadAreas] countsByName:', JSON.stringify(countsByName));
+    console.log('[loadAreas] server areas:', this.areas?.map(a => a.ten_khu_vuc + '|' + a.kho));
+    console.log('[loadAreas] local areas:', this.getLocalAreas().map(a => a.ten_khu_vuc + '|' + a.ma_khu_vuc + '|' + a.ma_dot));
 
     const seenNames = new Set();
     const areaList = [];
@@ -712,6 +716,7 @@ const APP = {
     for (const name of Object.keys(countsByName)) {
       if (!seenNames.has(name)) addArea(name, countsByName[name].code || name);
     }
+    console.log('[loadAreas] final areaList:', areaList.map(a => a.name + '|count:' + a.count + '|SL:' + a.totalSL));
 
     const search = ($('#homeSearch').value || '').toLowerCase();
     let areas = areaList;
