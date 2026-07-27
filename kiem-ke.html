@@ -394,6 +394,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <div class="drawer-logo">KK</div>
       <div><div id="drawerUser" style="font-weight:600">-</div><small id="drawerRole">Nhân viên</small></div>
     </div>
+    <button class="drawer-item" id="dSync">&#128259; Đồng bộ dữ liệu lên server</button>
     <button class="drawer-item" id="dReport">Tổng hợp / Đối chiếu</button>
     <hr>
     <button class="drawer-item" id="dImportCatalog">Nhập danh mục hàng hóa</button>
@@ -957,6 +958,16 @@ const APP = {
     await dbPut('queue', { op_id: uuid(), op, data: { ...record }, ts: Date.now() });
     this.updateSyncBadge();
   },
+  async manualSync() {
+    this.closeDrawer();
+    const queue = await dbGetAll('queue').catch(() => []);
+    if (!queue.length) { this.toast('Không có dữ liệu chờ đồng bộ'); return; }
+    this.toast('Đang đồng bộ ' + queue.length + ' bản ghi...');
+    await this.flushQueue();
+    const remain = await dbGetAll('queue').catch(() => []);
+    if (!remain.length) this.toast('✓ Đồng bộ thành công!');
+    else this.toast('Còn ' + remain.length + ' bản ghi lỗi, thử lại sau');
+  },
   async flushQueue() {
     let queue;
     try { queue = await dbGetAll('queue'); } catch { return; }
@@ -1418,6 +1429,7 @@ const APP = {
     $('#btnProgressClose').onclick = () => $('#progressOverlay').classList.add('hidden');
 
     $('#drawerDim').onclick = () => this.closeDrawer();
+    $('#dSync').onclick = () => this.manualSync();
     $('#dImportCatalog').onclick = () => this.importCatalog();
     $('#dImportStock').onclick = () => this.importStock();
     $('#dExport').onclick = () => this.exportExcel();
