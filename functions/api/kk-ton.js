@@ -48,19 +48,30 @@ async function searchByKho(token, kho) {
   return items;
 }
 
-async function deleteRecord(token, recordId) {
-  const url = `${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_TON}/records/${recordId}`;
-  await fetch(url, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+async function batchDelete(token, recordIds) {
+  for (let i = 0; i < recordIds.length; i += 500) {
+    const chunk = recordIds.slice(i, i + 500);
+    await fetch(`${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_TON}/records/batch_delete`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ records: chunk })
+    });
+  }
 }
 
-async function createRecord(token, fields) {
-  const url = `${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_TON}/records`;
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields })
-  });
-  return r.json();
+async function batchCreate(token, fieldsList) {
+  let created = 0;
+  for (let i = 0; i < fieldsList.length; i += 500) {
+    const chunk = fieldsList.slice(i, i + 500).map(f => ({ fields: f }));
+    const r = await fetch(`${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_TON}/records/batch_create`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ records: chunk })
+    });
+    const j = await r.json();
+    if (j.code === 0) created += j.data?.records?.length || 0;
+  }
+  return created;
 }
 
 export async function onRequest({ request, env }) {
@@ -95,25 +106,22 @@ export async function onRequest({ request, env }) {
         const { kho, items } = body;
         if (!kho || !items?.length) return new Response(JSON.stringify({ ok: false, error: 'Cần kho và items' }), { headers: CORS });
 
-        // Xóa tồn cũ của kho này
+        // Xóa tồn cũ của kho này (batch)
         const existing = await searchByKho(token, kho);
-        for (const item of existing) await deleteRecord(token, item.record_id);
+        await batchDelete(token, existing.map(i => i.record_id));
 
-        // Tạo mới toàn bộ
-        let created = 0;
-        for (const it of items) {
-          const resp = await createRecord(token, {
-            barcode: it.barcode || '',
-            ma_hang: it.ma_hang || '',
-            ten_sp: it.ten_sp || '',
-            kho,
-            ton_he_thong: it.ton_he_thong || 0,
-            don_gia: it.don_gia || 0,
-            nganh: it.nganh || '',
-            dvt: it.dvt || 'PSC'
-          });
-          if (resp.code === 0) created++;
-        }
+        // Tạo mới toàn bộ (batch 500/lần)
+        const fieldsList = items.map(it => ({
+          barcode: it.barcode || '',
+          ma_hang: it.ma_hang || '',
+          ten_sp: it.ten_sp || '',
+          kho,
+          ton_he_thong: it.ton_he_thong || 0,
+          don_gia: it.don_gia || 0,
+          nganh: it.nganh || '',
+          dvt: it.dvt || 'PSC'
+        }));
+        const created = await batchCreate(token, fieldsList);
         return new Response(JSON.stringify({ ok: true, deleted: existing.length, created }), { headers: CORS });
       }
 
