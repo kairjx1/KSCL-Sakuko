@@ -1273,15 +1273,15 @@ const APP = {
       const counts = await dbGetAll('counts');
       const sessCounts = counts.filter(c => c.ma_dot === this.session?.ma_dot);
       const kho = this.session?.ten_dot || this.session?.ma_dot;
-      let tonMap = {};
+      let tonMap = {}, tonApiOk = false;
       if (API) {
         try {
           const r = await fetch(`${API}/kk-ton?kho=${encodeURIComponent(kho)}`);
           const j = await r.json();
-          if (j.ok) j.items.forEach(it => { tonMap[it.barcode] = it; });
+          if (j.ok) { tonApiOk = true; j.items.forEach(it => { tonMap[it.barcode] = it; }); }
         } catch {}
       }
-      if (!Object.keys(tonMap).length) {
+      if (!tonApiOk) {
         const local = await dbGetAll('ton_stock').catch(() => []);
         local.filter(x => x.kho === kho).forEach(it => { tonMap[it.barcode] = it; });
       }
@@ -1335,15 +1335,15 @@ const APP = {
 
     // Lấy tồn hệ thống theo kho
     const kho = this.session?.ten_dot || this.session?.ma_dot;
-    let tonMap = {};
+    let tonMap = {}, tonApiOk = false;
     if (API) {
       try {
         const r = await fetch(`${API}/kk-ton?kho=${encodeURIComponent(kho)}`);
         const j = await r.json();
-        if (j.ok) j.items.forEach(it => { tonMap[it.barcode] = it; });
+        if (j.ok) { tonApiOk = true; j.items.forEach(it => { tonMap[it.barcode] = it; }); }
       } catch {}
     }
-    if (!Object.keys(tonMap).length) {
+    if (!tonApiOk) {
       const local = await dbGetAll('ton_stock').catch(() => []);
       local.filter(x => x.kho === kho).forEach(it => { tonMap[it.barcode] = it; });
     }
