@@ -1143,46 +1143,77 @@ const APP = {
       for (let r = range.s.r; r <= Math.min(range.s.r + 10, range.e.r); r++) {
         for (let c = range.s.c; c <= range.e.c; c++) {
           const cell = ws[XLSX.utils.encode_cell({ r, c })];
-          if (cell && typeof cell.v === 'string' && /barcode|mã.*hàng|ma.*hang/i.test(cell.v)) { headerRow = r; break; }
+          if (cell && typeof cell.v === 'string' && /barcode|mã.*hàng|ma.*hang|mã.*kho/i.test(cell.v)) { headerRow = r; break; }
         }
         if (headerRow) break;
       }
       const rows = XLSX.utils.sheet_to_json(ws, { range: headerRow, defval: '' });
       if (!rows.length) return this.toast('File rỗng');
       const h = Object.keys(rows[0]);
-      const bcCol = h.find(x => /barcode/i.test(x));
-      const maCol = h.find(x => /mã.*hàng|ma.*hang|item.*no/i.test(x));
-      const tonCol = h.find(x => /tồn|ton|qty|số.*lượng|so.*luong|stock/i.test(x));
-      const tenCol = h.find(x => /tên.*sp|ten.*sp|description|tên.*hàng/i.test(x));
-      if (!bcCol && !maCol) return this.toast('Không tìm thấy cột barcode/mã hàng');
-      if (!tonCol) return this.toast('Không tìm thấy cột tồn/số lượng');
+      const bcCol = h.find(x => /^barcode$/i.test(x));
+      const maCol = h.find(x => /mã.*sp2?$|ma.*sp|mã.*hàng|ma.*hang|item/i.test(x));
+      const tenCol = h.find(x => /tên.*sp|ten.*sp|description/i.test(x));
+      const giaCol = h.find(x => /giá.*bl|gia.*bl|giá.*bán|price/i.test(x));
+      const nganhCol = h.find(x => /ngành|nganh|category/i.test(x));
+      const dvtCol = h.find(x => /uom|đvt|dvt|đơn.*vị/i.test(x));
+      const khoCol = h.find(x => /^kho$/i.test(x));
+      const retailCol = h.find(x => /retail.*inventory/i.test(x));
+      const accountCol = h.find(x => /accounting.*inventory/i.test(x));
+      const posCol = h.find(x => /pos.*sold/i.test(x));
+      const tonCol = retailCol || h.find(x => /tồn|ton|expected.*inventory/i.test(x)) || h.find(x => /số.*lượng|so.*luong|stock/i.test(x));
+      if (!bcCol && !maCol) return this.toast('Không tìm thấy cột Barcode');
 
-      let updated = 0;
+      const curKho = this.session?.ten_dot || '';
+      let filtered = rows;
+      if (khoCol) {
+        const matching = rows.filter(r => String(r[khoCol] || '').trim().toLowerCase() === curKho.toLowerCase());
+        if (matching.length) { filtered = matching; }
+        else {
+          const khoValues = [...new Set(rows.map(r => String(r[khoCol] || '').trim()).filter(Boolean))];
+          const pick = prompt('Chọn kho (nhập số):\n' + khoValues.map((k, i) => (i + 1) + '. ' + k).join('\n'));
+          if (!pick) return;
+          const idx = parseInt(pick) - 1;
+          if (idx >= 0 && idx < khoValues.length) filtered = rows.filter(r => String(r[khoCol] || '').trim() === khoValues[idx]);
+          else return this.toast('Kho không hợp lệ');
+        }
+      }
+
+      let updated = 0, created = 0;
       const allCounts = await dbGetAll('counts');
-      for (const row of rows) {
+      for (const row of filtered) {
         const bc = String(row[bcCol] || row[maCol] || '').trim();
         if (!bc) continue;
-        const ton = parseFloat(row[tonCol]) || 0;
+        let ton = 0;
+        if (tonCol) { ton = parseFloat(row[tonCol]) || 0; }
+        else if (accountCol) { ton = (parseFloat(row[accountCol]) || 0) + (parseFloat(row[posCol]) || 0); }
+        const ten = tenCol ? String(row[tenCol] || '').trim() : '';
+        const gia = giaCol ? (parseFloat(row[giaCol]) || 0) : 0;
+        const nganh = nganhCol ? String(row[nganhCol] || '').trim() : '';
+        const dvt = dvtCol ? String(row[dvtCol] || 'PSC').trim() : 'PSC';
+        const maHang = maCol ? String(row[maCol] || bc).trim() : bc;
+
         const existing = allCounts.find(c => c.barcode === bc && c.ma_dot === this.session?.ma_dot);
         if (existing) {
           existing.ton_he_thong = ton;
-          if (tenCol && row[tenCol]) existing.ten_sp = String(row[tenCol]).trim();
+          if (ten) existing.ten_sp = ten;
+          if (gia) existing.don_gia = gia;
+          if (nganh) existing.nganh = nganh;
+          if (dvt) existing.dvt = dvt;
           await dbPut('counts', existing);
+          updated++;
         } else {
-          const areaCode = this.currentArea?.code || 'KV01';
           await dbPut('counts', {
-            id: 'imp_' + Date.now() + '_' + updated,
-            ma_dot: this.session?.ma_dot, khu_vuc: areaCode,
-            barcode: bc, ma_hang: String(row[maCol] || bc).trim(),
-            ten_sp: String(row[tenCol] || '').trim(),
-            ton_he_thong: ton, so_luong: 0, don_gia: 0,
-            nguoi_dem: '', ghi_chu: '', dvt: 'PSC', nganh: '',
+            id: 'imp_' + Date.now() + '_' + created,
+            ma_dot: this.session?.ma_dot, khu_vuc: this.currentArea?.code || 'KV01',
+            barcode: bc, ma_hang: maHang, ten_sp: ten,
+            ton_he_thong: ton, so_luong: 0, don_gia: gia,
+            nguoi_dem: '', ghi_chu: '', dvt, nganh,
             updated: Date.now(), synced: false
           });
+          created++;
         }
-        updated++;
       }
-      this.toast('Import tồn: ' + updated + ' dòng');
+      this.toast(`Import tồn: ${updated} cập nhật, ${created} mới (${filtered.length} dòng)`);
       if (this.currentArea) this.loadSheet();
       else this.loadAreas();
     });
