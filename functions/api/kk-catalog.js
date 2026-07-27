@@ -40,16 +40,16 @@ function extractSelect(val) {
 
 async function fetchAllCatalog(token) {
   const url = `${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_CATALOG}/records/search?page_size=500`;
-  const fieldNames = ['ma_hang', 'ten_sp', 'barcode', 'nganh', 'nhom', 'loai', 'gia_ban_le', 'block', 'kenh_mua', 'trang_thai_kd'];
   let items = [], pageToken = null;
   do {
     const reqUrl = pageToken ? url + '&page_token=' + pageToken : url;
     const r = await fetch(reqUrl, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ field_names: fieldNames })
+      body: JSON.stringify({ field_names: ['ma_hang', 'ten_sp', 'barcode', 'nganh', 'nhom', 'loai', 'gia_ban_le', 'block', 'kenh_mua', 'trang_thai_kd'] })
     });
     const j = await r.json();
+    if (j.code !== 0) throw new Error('Lark: ' + (j.msg || j.code));
     items = items.concat(j.data?.items || []);
     pageToken = j.data?.has_more ? j.data.page_token : null;
   } while (pageToken);
