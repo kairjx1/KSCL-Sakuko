@@ -164,6 +164,11 @@ input,select{font-family:inherit;font-size:16px}
 .notebtns{display:flex;justify-content:flex-end;gap:28px;padding:6px 10px 8px}
 .notebtns button{font-size:16px;font-weight:700;color:#6b7280}
 .notebtns .ok{color:var(--purple)}
+.catrow{display:flex;flex-direction:column;padding:10px 12px;border-bottom:1px solid #e5e0f0;cursor:pointer;border-radius:8px;margin-bottom:2px}
+.catrow:active{background:#e9e3f8}
+.catrow .catname{font-weight:600;font-size:14px;color:#1a1a2e}
+.catrow .catmeta{font-size:12px;color:#6b7280;margin-top:2px}
+.catempty{text-align:center;color:#9ca3af;padding:24px;font-size:14px}
 
 /* Progress popup */
 .progresscard{width:100%;max-width:420px;background:#fff;border-radius:18px;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
@@ -270,6 +275,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
         <input type="text" placeholder="Tìm mã / barcode / tên SP..." id="sheetSearch">
         <button class="clearbtn hidden" id="btnClearSearch">&times;</button>
       </div>
+      <button class="scanbtn" id="btnCatalogSearch" title="Tìm danh mục" style="margin-right:4px;background:var(--teal)"><svg viewBox="0 0 24 24" width="26" height="26"><path fill="#fff" d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
       <button class="scanbtn" id="btnScan"><svg viewBox="0 0 24 24" width="28" height="28"><path fill="#fff" d="M4 6h2V4H4c-1.1 0-2 .9-2 2v2h2V6zm0 12H2v2c0 1.1.9 2 2 2h2v-2H4v-2zm16-12V4h-2v2h2v2h2V6c0-1.1-.9-2-2-2zm0 14h-2v2h2c1.1 0 2-.9 2-2v-2h-2v2zM4 11h16v2H4z"/></svg></button>
     </div>
     <div class="tabs4" id="sheetTabs">
@@ -361,7 +367,20 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     </div>
     <div class="qfoot">
       <button class="qdel" id="qDel">Xoá</button>
-      <button class="qexit" id="qClose">Xong</button>
+      <button class="qexit" id="qClose">Huỷ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== CATALOG SEARCH ========== -->
+<div id="catalogOverlay" class="overlay hidden">
+  <div class="notecard" style="max-height:85vh;display:flex;flex-direction:column">
+    <div style="font-weight:600;margin-bottom:8px;font-size:15px">Tìm sản phẩm</div>
+    <input id="catalogSearchInput" placeholder="Mã item, 6 số barcode, hoặc tên SP..." autocomplete="off"
+      style="width:100%;padding:9px 12px;border:1.5px solid var(--purple);border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:8px">
+    <div id="catalogResults" style="overflow-y:auto;flex:1;max-height:55vh"></div>
+    <div class="notebtns" style="margin-top:8px">
+      <button id="btnCatalogCancel">Đóng</button>
     </div>
   </div>
 </div>
@@ -1313,6 +1332,57 @@ const APP = {
     });
   },
 
+  async openCatalogSearch() {
+    $('#catalogSearchInput').value = '';
+    $('#catalogResults').innerHTML = '<div class="catempty">Nhập mã item, 6 số barcode, hoặc tên SP</div>';
+    $('#catalogOverlay').classList.remove('hidden');
+    setTimeout(() => $('#catalogSearchInput').focus(), 100);
+  },
+
+  async searchCatalog(q) {
+    q = (q || '').trim();
+    const el = $('#catalogResults');
+    if (!q || q.length < 2) {
+      el.innerHTML = '<div class="catempty">Nhập ít nhất 2 ký tự</div>';
+      return;
+    }
+    const all = await dbGetAll('catalog').catch(() => []);
+    const ql = q.toLowerCase();
+    const last6 = q.replace(/\D/g, '');
+    const matches = all.filter(c => {
+      if (!c.ten_sp && !c.ma_hang && !c.barcode) return false;
+      const name = (c.ten_sp || '').toLowerCase();
+      const ma = (c.ma_hang || '').toLowerCase();
+      const bc = (c.barcode || '').toString();
+      return name.includes(ql) || ma.includes(ql) ||
+             (last6.length >= 4 && bc.endsWith(last6));
+    }).slice(0, 30);
+
+    if (!matches.length) { el.innerHTML = '<div class="catempty">Không tìm thấy</div>'; return; }
+
+    el.innerHTML = matches.map((c, i) =>
+      `<div class="catrow" data-i="${i}">
+        <div class="catname">${esc(c.ten_sp || c.ma_hang)}</div>
+        <div class="catmeta">${esc(c.ma_hang)} · ${esc(c.barcode || '')} · ${esc(c.nganh || '')}</div>
+      </div>`
+    ).join('');
+
+    el.querySelectorAll('.catrow').forEach((row, i) => {
+      row.onclick = () => {
+        const p = matches[i];
+        $('#catalogOverlay').classList.add('hidden');
+        this.openQty({
+          barcode: p.barcode || p.ma_hang,
+          ma_hang: p.ma_hang,
+          ten_sp: p.ten_sp,
+          dvt: p.dvt || 'PSC',
+          nganh: p.nganh || '',
+          gia_ban_le: p.gia_ban_le || 0
+        });
+      };
+    });
+  },
+
   async syncCatalog() {
     this.closeDrawer();
     if (!API) return this.toast('Không có kết nối server');
@@ -1695,6 +1765,9 @@ const APP = {
     $('#qQty').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); this.saveQty('add'); } };
 
     $('#btnNoteCancel').onclick = () => $('#noteOverlay').classList.add('hidden');
+    $('#btnCatalogSearch').onclick = () => this.openCatalogSearch();
+    $('#btnCatalogCancel').onclick = () => $('#catalogOverlay').classList.add('hidden');
+    $('#catalogSearchInput').oninput = e => this.searchCatalog(e.target.value);
     $('#btnNoteOk').onclick = () => { const bc = $('#noteInput').value.trim(); if (!bc) return; $('#noteOverlay').classList.add('hidden'); this.lookupAndCount(bc); };
     $('#noteInput').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('#btnNoteOk').click(); } };
     $('#btnNoteScan').onclick = () => { $('#noteOverlay').classList.add('hidden'); this.startScan('sheet'); };
