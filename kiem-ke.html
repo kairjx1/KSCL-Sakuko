@@ -956,7 +956,7 @@ const APP = {
     if (!existing) return;
     if (!confirm('Xoá ' + (product.ten_sp || product.barcode) + '?')) return;
     await dbDelete('counts', existing.id);
-    if (existing.record_id) await this.enqueue('delete', existing);
+    await this.enqueue('delete', existing);
     this.sheetData = this.sheetData.filter(d => d.barcode !== product.barcode);
     this.renderSheet();
     this.closeQty();
@@ -1036,14 +1036,19 @@ const APP = {
       }
 
       for (const q of deletes) {
-        if (q.data.record_id) {
-          try {
+        try {
+          if (q.data.record_id) {
             await fetch(`${API}/kk-count`, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'delete', record_id: q.data.record_id })
             });
-          } catch {}
-        }
+          } else {
+            await fetch(`${API}/kk-count`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'delete_by_key', ma_dot: q.data.ten_dot || q.data.ma_dot, barcode: q.data.barcode, khu_vuc: q.data.khu_vuc_name || q.data.khu_vuc })
+            });
+          }
+        } catch {}
         await dbDelete('queue', q.op_id);
       }
     } catch (e) { console.warn('Sync error:', e); }

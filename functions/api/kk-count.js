@@ -197,6 +197,27 @@ export async function onRequest({ request, env }) {
         return new Response(JSON.stringify({ ok: true }), { headers: CORS });
       }
 
+      if (action === 'delete_by_key') {
+        const { ma_dot, barcode, khu_vuc } = body;
+        if (!ma_dot || !barcode) return new Response(JSON.stringify({ ok: false, error: 'Cần ma_dot và barcode' }), { headers: CORS });
+        const conditions = [
+          { field_name: 'ma_dot', operator: 'is', value: [ma_dot] },
+          { field_name: 'barcode', operator: 'is', value: [barcode] }
+        ];
+        if (khu_vuc) conditions.push({ field_name: 'khu_vuc', operator: 'is', value: [khu_vuc] });
+        const filter = { filter: { conjunction: 'and', conditions } };
+        const resp = await searchRecords(token, filter);
+        const items = resp.data?.items || [];
+        let deleted = 0;
+        for (const item of items) {
+          const url = `${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_KK}/records/${item.record_id}`;
+          const dr = await fetch(url, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+          const dj = await dr.json();
+          if (dj.code === 0) deleted++;
+        }
+        return new Response(JSON.stringify({ ok: true, deleted }), { headers: CORS });
+      }
+
       return new Response(JSON.stringify({ ok: false, error: 'Unknown action' }), { headers: CORS });
     }
 
