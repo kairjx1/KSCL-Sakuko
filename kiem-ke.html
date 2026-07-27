@@ -660,7 +660,8 @@ const APP = {
       try {
         const r = await fetch(`${API}/kk-session?action=khu_vuc`);
         const j = await r.json();
-        this.areas = j.items || [];
+        const curKho = this.session?.ten_dot || '';
+        this.areas = (j.items || []).filter(a => !a.kho || a.kho === curKho);
       } catch { this.areas = []; }
     } else { this.areas = this.getLocalAreas(); }
 
@@ -759,7 +760,7 @@ const APP = {
       try {
         await fetch(`${API}/kk-session`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'create_khu_vuc', ma_khu_vuc: code, ten_khu_vuc: name, kho: '' })
+          body: JSON.stringify({ action: 'create_khu_vuc', ma_khu_vuc: code, ten_khu_vuc: name, kho: this.session?.ten_dot || this.session?.kho || '' })
         });
       } catch {}
     }
