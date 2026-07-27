@@ -649,6 +649,10 @@ const APP = {
     const mm = String(now.getMonth()+1).padStart(2,'0');
     const yyyy = now.getFullYear();
     $('#sessionChip').innerHTML = '&#128197; Hôm nay &middot; ' + dd + '/' + mm + '/' + yyyy;
+    if (API && this.session) {
+      await this.flushQueue();
+      await this.pullFromServer(true);
+    }
     await this.loadAreas();
   },
   async loadAreas() {
