@@ -218,6 +218,33 @@ export async function onRequest({ request, env }) {
         return new Response(JSON.stringify({ ok: true, deleted }), { headers: CORS });
       }
 
+      if (action === 'batch_update_ton') {
+        const { ma_dot, items } = body;
+        if (!ma_dot || !items?.length) return new Response(JSON.stringify({ ok: false, error: 'Cần ma_dot và items' }), { headers: CORS });
+        const filter = { filter: { conjunction: 'and', conditions: [{ field_name: 'ma_dot', operator: 'is', value: [ma_dot] }] } };
+        let existingMap = {};
+        let pageToken = null;
+        do {
+          const resp = await searchRecords(token, filter, pageToken);
+          for (const item of (resp.data?.items || [])) {
+            const f = item.fields || {};
+            const key = extractText(f.barcode) + '::' + extractText(f.khu_vuc);
+            existingMap[key] = item.record_id;
+          }
+          pageToken = resp.data?.has_more ? resp.data.page_token : null;
+        } while (pageToken);
+
+        let updated = 0;
+        for (const it of items) {
+          const key = (it.barcode || '') + '::' + (it.khu_vuc || '');
+          const rid = it.record_id || existingMap[key];
+          if (!rid) continue;
+          const resp = await updateRecord(token, rid, { ton_he_thong: it.ton_he_thong || 0 });
+          if (resp.code === 0) updated++;
+        }
+        return new Response(JSON.stringify({ ok: true, updated }), { headers: CORS });
+      }
+
       return new Response(JSON.stringify({ ok: false, error: 'Unknown action' }), { headers: CORS });
     }
 

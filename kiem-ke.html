@@ -1184,6 +1184,7 @@ const APP = {
 
       let updated = 0, created = 0;
       const allCounts = await dbGetAll('counts');
+      const larkItems = [];
       for (const row of filtered) {
         const bc = String(row[bcCol] || row[maCol] || '').trim();
         if (!bc) continue;
@@ -1196,14 +1197,17 @@ const APP = {
         const dvt = dvtCol ? String(row[dvtCol] || 'PSC').trim() : 'PSC';
         const maHang = maCol ? String(row[maCol] || bc).trim() : bc;
 
-        const existing = allCounts.find(c => c.barcode === bc && c.ma_dot === this.session?.ma_dot);
-        if (existing) {
-          existing.ton_he_thong = ton;
-          if (ten) existing.ten_sp = ten;
-          if (gia) existing.don_gia = gia;
-          if (nganh) existing.nganh = nganh;
-          if (dvt) existing.dvt = dvt;
-          await dbPut('counts', existing);
+        const sessMatches = allCounts.filter(c => c.barcode === bc && c.ma_dot === this.session?.ma_dot);
+        if (sessMatches.length) {
+          for (const existing of sessMatches) {
+            existing.ton_he_thong = ton;
+            if (ten) existing.ten_sp = ten;
+            if (gia) existing.don_gia = gia;
+            if (nganh) existing.nganh = nganh;
+            if (dvt) existing.dvt = dvt;
+            await dbPut('counts', existing);
+            larkItems.push({ barcode: bc, khu_vuc: existing.khu_vuc, record_id: existing.record_id || null, ton_he_thong: ton });
+          }
           updated++;
         } else {
           await dbPut('counts', {
@@ -1217,7 +1221,21 @@ const APP = {
           created++;
         }
       }
-      this.toast(`Import tồn: ${updated} cập nhật, ${created} mới (${filtered.length} dòng)`);
+      this.toast(`Đã lưu local: ${updated} cập nhật, ${created} mới. Đang đẩy lên server...`);
+      if (API && larkItems.length) {
+        try {
+          const maDot = this.session?.ten_dot || this.session?.ma_dot;
+          const r = await fetch(`${API}/kk-count`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'batch_update_ton', ma_dot: maDot, items: larkItems })
+          });
+          const j = await r.json();
+          if (j.ok) this.toast(`✓ Import tồn: ${j.updated} bản ghi cập nhật trên server`);
+          else this.toast('Lưu local OK, lỗi server: ' + (j.error || ''));
+        } catch { this.toast('Lưu local OK, không kết nối được server'); }
+      } else {
+        this.toast(`✓ Import tồn: ${updated} cập nhật, ${created} mới`);
+      }
       if (this.currentArea) this.loadSheet();
       else this.loadAreas();
     });
