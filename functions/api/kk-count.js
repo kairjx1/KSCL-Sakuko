@@ -31,13 +31,19 @@ function extractText(val) {
 }
 
 async function batchCreate(token, records) {
-  const url = `${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_KK}/records/batch_create`;
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ records })
-  });
-  return r.json();
+  const results = [];
+  for (const rec of records) {
+    const url = `${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_KK}/records`;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(rec)
+    });
+    const j = await r.json();
+    if (j.code !== 0) return j;
+    results.push(j);
+  }
+  return { code: 0, data: { records: results } };
 }
 
 async function searchRecords(token, filter, pageToken) {
