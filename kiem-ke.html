@@ -1241,23 +1241,36 @@ const APP = {
       const data = await file.arrayBuffer();
       const wb = XLSX.read(data);
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      // Detect header row (tìm row có "Mã hàng" hoặc "Barcode")
+      let range = XLSX.utils.decode_range(ws['!ref']);
+      let headerRow = 0;
+      for (let r = range.s.r; r <= Math.min(range.s.r + 10, range.e.r); r++) {
+        let hasMaHang = false, hasBarcode = false;
+        for (let c = range.s.c; c <= range.e.c; c++) {
+          const cell = ws[XLSX.utils.encode_cell({ r, c })];
+          if (!cell || typeof cell.v !== 'string') continue;
+          const v = cell.v.trim();
+          if (/^mã\s*hàng$/i.test(v) || /^ma\s*hang$/i.test(v)) hasMaHang = true;
+          if (/^barcode$/i.test(v)) hasBarcode = true;
+        }
+        if (hasMaHang || hasBarcode) { headerRow = r; break; }
+      }
+      const rows = XLSX.utils.sheet_to_json(ws, { range: headerRow, defval: '' });
       if (!rows.length) return this.toast('File rỗng');
       const h = Object.keys(rows[0]);
       const bcCol = h.find(x => /^barcode$/i.test(x));
-      const maCol = h.find(x => /mã.*hàng|ma.*hang|^mã\s*s$|^item/i.test(x));
-      const tenCol = h.find(x => /tên.*sp|ten.*sp|description|name/i.test(x));
-      const giaCol = h.find(x => /giá.*bl|gia.*bl|giá.*bán|retail.*price|^giá$/i.test(x));
-      const nganhCol = h.find(x => /ngành|nganh|category/i.test(x));
-      const nhomCol = h.find(x => /nhóm|nhom|group/i.test(x));
+      const maCol = h.find(x => /^mã\s*hàng$|^ma\s*hang$/i.test(x));
+      const tenCol = h.find(x => /^tên\s*sp$|^ten\s*sp$|^tên\s*sản\s*phẩm$/i.test(x));
+      const giaCol = h.find(x => /giá.*sbl.*bán\s*lẻ|giá.*bán\s*lẻ|retail.*price/i.test(x));
+      const nganhCol = h.find(x => /^ngành$|^nganh$/i.test(x));
+      const nhomCol = h.find(x => /^nhóm$|^nhom$/i.test(x));
       const loaiCol = h.find(x => /^loại$|^loai$/i.test(x));
-      const blockCol = h.find(x => /^block$/i.test(x));
+      const blockCol = h.find(x => /^block/i.test(x));
       const kenhCol = h.find(x => /kênh.*mua|kenh.*mua/i.test(x));
-      const ttKdCol = h.find(x => /trạng.*thái|trang.*thai|trang_thai/i.test(x));
+      const ttKdCol = h.find(x => /trạng.*thái|trang.*thai/i.test(x));
 
-      // Debug: log cột tìm được
-      console.log('Catalog cols:', { bcCol, maCol, tenCol, giaCol, nganhCol, headers: h.slice(0,10) });
-      if (!bcCol && !maCol) return this.toast('Không tìm thấy cột barcode/mã hàng. Cột có: ' + h.slice(0,5).join(', '));
+      console.log('Catalog cols:', { bcCol, maCol, tenCol, giaCol, nganhCol, headerRow, h: h.slice(0,10) });
+      if (!bcCol && !maCol) return this.toast('Không tìm thấy cột. Header row=' + headerRow + '. Cột: ' + h.slice(0,5).join(', '));
 
       const catalogItems = [];
       for (const row of rows) {

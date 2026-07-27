@@ -1,6 +1,6 @@
 const LARK = 'https://open.larksuite.com';
 const APP_TOKEN = 'ESp9bqKtraHZqzsb1f0lTWKSgQg';
-const TABLE_CATALOG = 'tbl0aLt9gX3knGyW8';
+const TABLE_CATALOG = 'tbl0aLt9gX3knGyW';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
