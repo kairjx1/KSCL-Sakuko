@@ -584,6 +584,8 @@ const APP = {
     const local = this.getLocalSessions();
     const seen = new Set(items.map(s => s.ma_dot));
     for (const s of local) { if (!seen.has(s.ma_dot)) items.push(s); }
+    const delStores = this.getDeletedStores();
+    items = items.filter(s => !delStores.includes(s.ma_dot));
 
     if (!items.length) {
       $('#sessionList').innerHTML = '<div style="padding:20px;text-align:center;color:#999">Chưa có kho nào. Thêm mới bên dưới.</div>';
@@ -663,9 +665,11 @@ const APP = {
     });
 
     const local = this.getLocalAreas();
-    const allAreas = [...this.areas];
+    const deletedKeys = this.getDeletedAreas();
+    const maDot = this.session?.ma_dot;
+    const allAreas = [...this.areas].filter(a => !deletedKeys.includes(maDot + '::' + a.ma_khu_vuc));
     const seenCodes = new Set(allAreas.map(a => a.ma_khu_vuc));
-    for (const la of local) { if (!seenCodes.has(la.ma_khu_vuc)) { allAreas.push(la); seenCodes.add(la.ma_khu_vuc); } }
+    for (const la of local) { if (!seenCodes.has(la.ma_khu_vuc) && !deletedKeys.includes(maDot + '::' + la.ma_khu_vuc)) { allAreas.push(la); seenCodes.add(la.ma_khu_vuc); } }
 
     const search = ($('#homeSearch').value || '').toLowerCase();
     const areaNameMap = {};
@@ -1293,18 +1297,31 @@ const APP = {
     const r = this.user?.role;
     return r === 'admin' || this.user?.portalRole === 'superadmin' || this.user?.portalRole === 'admin' || this.user?.portalRole === 'manager';
   },
+  getDeletedAreas() {
+    try { return JSON.parse(localStorage.getItem('kk_deleted_areas') || '[]'); } catch { return []; }
+  },
+  markAreaDeleted(ma_dot, code) {
+    const list = this.getDeletedAreas();
+    list.push(ma_dot + '::' + code);
+    localStorage.setItem('kk_deleted_areas', JSON.stringify(list));
+  },
   async deleteArea(code) {
     if (!confirm('Xóa phiếu "' + code + '" và toàn bộ dữ liệu đã bắn?')) return;
+    const maDot = this.session?.ma_dot;
     const all = await dbGetAll('counts');
-    const toDelete = all.filter(c => c.ma_dot === this.session?.ma_dot && c.khu_vuc === code);
+    const toDelete = all.filter(c => (c.ma_dot === maDot || !c.ma_dot) && c.khu_vuc === code);
     for (const c of toDelete) {
       await dbDelete('counts', c.id);
       if (c.record_id) await this.enqueue('delete', c);
     }
     const allLocal = this.getAllLocalAreas().filter(a => a.ma_khu_vuc !== code);
     localStorage.setItem('kk_areas', JSON.stringify(allLocal));
+    this.markAreaDeleted(maDot, code);
     this.toast('Đã xóa phiếu ' + code);
     await this.loadAreas();
+  },
+  getDeletedStores() {
+    try { return JSON.parse(localStorage.getItem('kk_deleted_stores') || '[]'); } catch { return []; }
   },
   async deleteStore(ma_dot) {
     if (!confirm('Xóa kho "' + ma_dot + '" và toàn bộ dữ liệu?')) return;
@@ -1318,6 +1335,9 @@ const APP = {
     localStorage.setItem('kk_areas', JSON.stringify(allAreas));
     const sessions = this.getLocalSessions().filter(s => s.ma_dot !== ma_dot);
     this.saveLocalSessions(sessions);
+    const delStores = this.getDeletedStores();
+    delStores.push(ma_dot);
+    localStorage.setItem('kk_deleted_stores', JSON.stringify(delStores));
     if (this.session?.ma_dot === ma_dot) {
       this.session = null;
       localStorage.removeItem('kk_session');
