@@ -1369,7 +1369,7 @@ const APP = {
       row.onclick = () => {
         const p = matches[i];
         $('#catalogOverlay').classList.add('hidden');
-        this.openQty({
+        this.showQtyPopup({
           barcode: p.barcode || p.ma_hang,
           ma_hang: p.ma_hang,
           ten_sp: p.ten_sp,
