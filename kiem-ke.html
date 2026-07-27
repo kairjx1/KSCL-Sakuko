@@ -1365,7 +1365,7 @@ const APP = {
       ...d,
       ton_he_thong: tonMap[d.barcode]?.ton_he_thong || 0,
       don_gia: tonMap[d.barcode]?.don_gia || 0
-    }));
+    })).filter(d => d.totalSL > 0 || d.ton_he_thong > 0);
     this.reportFilter = 'all';
     $$('#reportTabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === 'all'));
     this.renderReport();
