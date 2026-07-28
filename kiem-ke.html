@@ -398,7 +398,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <button id="btnEmailClose" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:0 2px">×</button>
     </div>
     <div style="background:#e0f2fe;padding:8px 16px;font-size:12px;color:#0369a1;border-bottom:1px solid #bae6fd;flex-shrink:0">
-      ℹ️ Bấm <b>Gửi mail</b> sẽ tải file Excel và mở ứng dụng email để gửi. Đính kèm file Excel vào mail.
+      ℹ️ Bấm <b>Gửi mail</b>: tải file Excel + copy nội dung vào clipboard + mở ứng dụng email. Dán nội dung (Ctrl+V) và đính kèm file Excel.
     </div>
     <div style="flex:1;overflow-y:auto;padding:14px 16px 8px">
       <div class="em-field">
@@ -2271,7 +2271,7 @@ const APP = {
     const td = 'border:1px solid #d1d5db;padding:6px 10px';
     const tn = 'border:1px solid #d1d5db;padding:6px 10px;text-align:right';
     const red = 'color:#dc2626;font-weight:600';
-    return `<p style="margin:4px 0">Dear ST ${kho} / Chị Duyên,</p>
+    return `<p style="margin:4px 0">Dear ST ${kho} / ASM,</p>
 <p style="margin:8px 0">BPKK gửi chênh lệch kiểm kê Siêu thị ${kho} (đẩy tự động từ APP) với số liệu chênh lệch đã thống nhất với ASM và QLST.</p>
 <table style="${ts}">
 <tr><th style="${th}">Nội dung</th><th style="${th}">Số Items</th><th style="${th}">Số lượng SP</th><th style="${th}">Giá trị (VND)</th></tr>
@@ -2320,7 +2320,7 @@ const APP = {
       const dt = new Date(y,m-1,d); dt.setDate(dt.getDate()+2);
       n2 = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
     } catch {}
-    return `Dear ST ${kho} / Chị Duyên,
+    return `Dear ST ${kho} / ASM,
 
 BPKK gửi chênh lệch kiểm kê Siêu thị ${kho} (đẩy tự động từ APP) với số liệu chênh lệch đã thống nhất với ASM và QLST.
 
@@ -2349,16 +2349,27 @@ Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
     const btn = $('#btnEmailSend');
     btn.disabled = true; btn.textContent = 'Đang tạo...';
     try {
-      // 1. Tải Excel trước
+      // 1. Tải Excel
       this.toast('Đang tạo file Excel...');
       await this.exportBienBan(false);
-      // 2. Mở email client với nội dung điền sẵn
-      const body = this.buildEmailBodyPlain();
+      await new Promise(r => setTimeout(r, 600));
+
+      // 2. Copy nội dung vào clipboard (vì mailto: có giới hạn URL ~2000 ký tự)
+      const bodyText = this.buildEmailBodyPlain();
+      let copied = false;
+      try { await navigator.clipboard.writeText(bodyText); copied = true; } catch(e) {}
+
+      // 3. Mở email client chỉ với To/Subject/CC (không body → URL ngắn, luôn hoạt động)
       const ccParam = ccList.length ? `&cc=${encodeURIComponent(ccList.join(','))}` : '';
-      const mailto = `mailto:${encodeURIComponent(toList.join(','))}?subject=${encodeURIComponent(subject)}${ccParam}&body=${encodeURIComponent(body)}`;
-      setTimeout(() => { window.location.href = mailto; }, 800);
-      this.toast('✅ File Excel đã tải — đính kèm vào mail vừa mở');
-      setTimeout(() => $('#emailOverlay').classList.add('hidden'), 1500);
+      const mailto = `mailto:${encodeURIComponent(toList.join(','))}?subject=${encodeURIComponent(subject)}${ccParam}`;
+      const a = document.createElement('a');
+      a.href = mailto; a.style.display = 'none';
+      document.body.appendChild(a); a.click();
+      setTimeout(() => document.body.removeChild(a), 1000);
+
+      this.toast(copied
+        ? '✅ File tải xong · Nội dung đã copy → Dán vào mail (Ctrl+V) rồi đính kèm file Excel'
+        : '✅ File tải xong · Hãy copy nội dung trong form rồi dán vào mail và đính kèm file Excel');
     } catch(e) { this.toast('❌ ' + e.message); }
     finally { btn.disabled = false; btn.textContent = '📧 Gửi mail'; }
   },
