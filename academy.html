@@ -389,6 +389,7 @@ const auth=firebase.auth(), db=firebase.database();
 })();
 
 auth.onAuthStateChanged(async u=>{
+  if(u && u.isAnonymous){ await auth.signOut(); return; }
   if(u){
     S.user=u;
     try{

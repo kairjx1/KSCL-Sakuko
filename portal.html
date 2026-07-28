@@ -280,9 +280,9 @@ function showMain(user, role) {
   const s = { ...user, role, roleLabel: R.label };
   localStorage.setItem(PORTAL_KEY, JSON.stringify(s));
 
-  // Auto-redirect if coming from another app (e.g. ?next=kiem-ke)
-  const nextPage = new URLSearchParams(location.search).get('next');
-  if (nextPage) { location.href = nextPage + '.html'; return; }
+  // Auto-redirect if coming from another app
+  const nextPage = new URLSearchParams(location.search).get('next') || sessionStorage.getItem('portal_next');
+  if (nextPage) { sessionStorage.removeItem('portal_next'); location.href = nextPage + '.html'; return; }
 
   const grid = document.getElementById('appsGrid');
   grid.innerHTML = '';
@@ -528,6 +528,10 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
 // ═══════ INIT ═══════
 (async function init() {
   const params = new URLSearchParams(location.search);
+  // Save ?next= before it gets lost in OAuth redirect
+  const nextPage = params.get('next');
+  if (nextPage) sessionStorage.setItem('portal_next', nextPage);
+
   if (params.get('code')) {
     larkCallbackHandled = true;
     const ok = await handleLarkCallback();
