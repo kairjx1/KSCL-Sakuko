@@ -552,6 +552,13 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 'use strict';
+// Redirect ngay nếu chưa login — chạy đồng bộ trước khi render
+(function(){
+  try {
+    const p = localStorage.getItem('kscl_portal_session');
+    if (!p) { location.replace('portal.html?next=kiem-ke'); }
+  } catch(e) { location.replace('portal.html?next=kiem-ke'); }
+})();
 const API = location.hostname === 'localhost' ? '' : '/api';
 const DB_NAME = 'kk_db';
 const DB_VER = 4;

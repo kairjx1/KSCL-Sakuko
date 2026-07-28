@@ -420,7 +420,24 @@ auth.onAuthStateChanged(async u=>{
       toast('Không thể kết nối database. Vui lòng liên hệ Admin.','t-err');
       if(ADMIN_EMAILS.includes(u.email))go('dashboard');
     }
-  } else {go('login');window.chatShowFab?.(false);}
+  } else {
+    // Auto-login từ portal session (Lark)
+    try {
+      const ps = JSON.parse(localStorage.getItem('kscl_portal_session') || 'null');
+      if (ps && ps.type === 'lark' && ps.open_id && ps.email) {
+        S.pendingLarkUser = { name: ps.name, email: ps.email, open_id: ps.open_id, avatar: ps.avatar || '' };
+        const pwd = 'KSCL_' + ps.open_id;
+        try { await auth.signInWithEmailAndPassword(ps.email, pwd); }
+        catch(e) {
+          if (e.code==='auth/user-not-found'||e.code==='auth/invalid-credential'||e.code==='auth/wrong-password') {
+            await auth.createUserWithEmailAndPassword(ps.email, pwd);
+          } else throw e;
+        }
+        return; // onAuthStateChanged sẽ fire lại với user đã login
+      }
+    } catch(e) { console.warn('Auto-login from portal failed:', e.message); }
+    go('login'); window.chatShowFab?.(false);
+  }
 });
 
 /* ══════════════════════════════════════════
