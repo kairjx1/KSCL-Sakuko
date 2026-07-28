@@ -169,6 +169,25 @@ input,select{font-family:inherit;font-size:16px}
 .catrow .catname{font-weight:600;font-size:14px;color:#1a1a2e}
 .catrow .catmeta{font-size:12px;color:#6b7280;margin-top:2px}
 .catempty{text-align:center;color:#9ca3af;padding:24px;font-size:14px}
+/* ---- Biên bản kiểm kê table ---- */
+.bb-tbl{border-collapse:collapse;width:100%;min-width:900px;background:#fff;font-size:12px}
+.bb-tbl th,.bb-tbl td{border:1px solid #d1d5db;padding:5px 7px;white-space:nowrap}
+.bb-tbl th{background:#1e3a5f;color:#fff;text-align:center;font-size:11px;font-weight:600}
+.bb-tbl th.sub{background:#2d5a8e}
+.bb-tbl th.sub2{background:#3b74b8}
+.bb-tbl td{vertical-align:middle}
+.bb-tbl td.num{text-align:right}
+.bb-tbl td.ctr{text-align:center}
+.bb-tbl tr.thua td{background:#f0fdf4}
+.bb-tbl tr.thua .val{color:#15803d;font-weight:600}
+.bb-tbl tr.thieu td{background:#fef2f2}
+.bb-tbl tr.thieu .val{color:#dc2626;font-weight:600}
+.bb-tbl tr.tong td{background:#f0f9ff;font-weight:700;font-size:12px}
+.bb-tbl td.ten{white-space:normal;min-width:160px;max-width:220px}
+.bb-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:4px}
+.bb-sum-card{flex:1;min-width:120px;background:#fff;border-radius:8px;padding:8px 12px;border:1px solid #e5e7eb;text-align:center}
+.bb-sum-card .val{font-size:18px;font-weight:700}
+.bb-sum-card .lbl{font-size:11px;color:#6b7280;margin-top:2px}
 
 /* Progress popup */
 .progresscard{width:100%;max-width:420px;background:#fff;border-radius:18px;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
@@ -328,6 +347,37 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <button data-tab="noscan">Tồn&middot;chưa bắn</button>
     </div>
     <div class="tablewrap" id="reportTable"></div>
+  </div>
+</div>
+
+<!-- ========== BIÊN BẢN KIỂM KÊ ========== -->
+<div id="pBienBan" class="screen hidden">
+  <div class="appbar">
+    <button class="icon-btn" id="btnBienBanBack"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="#fff" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+    <h2>Biên bản kiểm kê</h2>
+    <button class="icon-btn hidden" id="btnExportBienBan" title="Xuất Excel"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="#fff" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></button>
+  </div>
+  <div class="page light" style="padding:16px">
+    <!-- Upload section -->
+    <div id="bbUpload">
+      <div style="text-align:center;padding:40px 20px">
+        <div style="font-size:48px;margin-bottom:12px">📂</div>
+        <div style="font-size:16px;font-weight:600;color:#374151;margin-bottom:6px">Tải lên file dữ liệu kiểm kê</div>
+        <div style="font-size:13px;color:#6b7280;margin-bottom:20px">File Excel xuất từ hệ thống (dạng Mẫu 1)<br>Có cột: Kho, Ngành, Mã Item, Barcode, Tên SP, Tồn HT, Kiểm thực tế...</div>
+        <button onclick="document.getElementById('bbFileInput').click()" style="padding:12px 28px;background:var(--purple);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">Chọn file Excel</button>
+        <input type="file" id="bbFileInput" accept=".xlsx,.xls" style="display:none">
+        <div style="margin-top:16px;font-size:13px;color:#9ca3af">hoặc dùng dữ liệu đang có trong app</div>
+        <button id="btnBBFromApp" style="margin-top:8px;padding:10px 20px;background:#e9e3f8;color:var(--purple);border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Lấy từ dữ liệu app hiện tại</button>
+      </div>
+    </div>
+    <!-- Preview section -->
+    <div id="bbPreview" class="hidden">
+      <div id="bbMeta" style="background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:13px;border:1px solid #e5e7eb"></div>
+      <div style="overflow-x:auto;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.08)">
+        <table id="bbTable" class="bb-tbl"></table>
+      </div>
+      <div id="bbSign" style="background:#fff;border-radius:10px;padding:16px;margin-top:12px;font-size:12px;color:#374151;border:1px solid #e5e7eb"></div>
+    </div>
   </div>
 </div>
 
@@ -1654,6 +1704,261 @@ const APP = {
     this.toast('Đã xuất biên bản kiểm kê');
   },
 
+  /* ---- Biên bản kiểm kê ---- */
+  showBienBan() {
+    this.closeDrawer();
+    this.show('pBienBan');
+    this.bienBanData = null;
+    $('#bbUpload').classList.remove('hidden');
+    $('#bbPreview').classList.add('hidden');
+    $('#btnExportBienBan').classList.add('hidden');
+  },
+
+  async loadBienBanFromApp() {
+    let rows = this.reportData;
+    if (!rows || !rows.length) {
+      this.toast('Đang tính dữ liệu...');
+      const counts = await dbGetAll('counts');
+      const sessCounts = counts.filter(c => c.ma_dot === this.session?.ma_dot);
+      const khoName = this.session?.ten_dot || this.session?.ma_dot || '';
+      let tonMap = {}, tonApiOk = false;
+      if (API) { try { const r = await fetch(`${API}/kk-ton?kho=${encodeURIComponent(khoName)}`); const j = await r.json(); if (j.ok) { tonApiOk = true; j.items.forEach(it => { tonMap[it.barcode] = it; }); } } catch {} }
+      if (!tonApiOk) { const local = await dbGetAll('ton_stock').catch(() => []); local.filter(x => x.kho === khoName).forEach(it => { tonMap[it.barcode] = it; }); }
+      const catalogArr = await dbGetAll('catalog').catch(() => []);
+      const catMap = {}; catalogArr.forEach(c => { catMap[c.barcode] = c; });
+      const byBarcode = {};
+      for (const c of sessCounts) {
+        if (!byBarcode[c.barcode]) byBarcode[c.barcode] = { barcode: c.barcode, ten_sp: c.ten_sp||'', ma_hang: c.ma_hang||'', nganh:'', totalSL:0 };
+        byBarcode[c.barcode].totalSL += (c.so_luong||0);
+      }
+      for (const [bc, ton] of Object.entries(tonMap)) {
+        if (!byBarcode[bc]) byBarcode[bc] = { barcode:bc, ten_sp:ton.ten_sp||'', ma_hang:ton.ma_hang||'', nganh:'', totalSL:0 };
+      }
+      rows = Object.values(byBarcode).map(d => {
+        const ton = tonMap[d.barcode]; const cat = catMap[d.barcode];
+        return { kho: khoName, nganh: ton?.nganh||cat?.nganh||'', ma_hang: ton?.ma_hang||cat?.ma_hang||d.ma_hang||'', barcode: d.barcode, ten_sp: d.ten_sp, gia_ban_le: ton?.don_gia||cat?.gia_ban_le||0, ton_ht: ton?.ton_he_thong||0, kiem_tt: d.totalSL };
+      }).filter(d => d.kiem_tt > 0 || d.ton_ht > 0);
+    } else {
+      rows = rows.map(d => ({ kho: d.kho||'', nganh: d.nganh||'', ma_hang: d.ma_hang||'', barcode: d.barcode, ten_sp: d.ten_sp, gia_ban_le: d.don_gia||0, ton_ht: d.ton_he_thong||0, kiem_tt: d.totalSL||0 }));
+    }
+    if (!rows.length) return this.toast('Không có dữ liệu');
+    this.bienBanData = { items: rows, kho: rows[0]?.kho || (this.session?.ten_dot||''), ngay: new Date().toLocaleDateString('vi-VN') };
+    this.renderBienBan();
+  },
+
+  parseMau1Excel(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'array' });
+          // Thử sheet đầu tiên hoặc sheet tên "Đối chiếu"
+          const sheetName = wb.SheetNames.find(s => /đối chiếu|doi chieu/i.test(s)) || wb.SheetNames[0];
+          const ws = wb.Sheets[sheetName];
+          const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+          if (!raw.length) throw new Error('File trống hoặc không đọc được');
+          // Map column names (flexible)
+          const items = raw.map(r => {
+            const keys = Object.keys(r);
+            const get = (...pats) => { const k = keys.find(k => pats.some(p => new RegExp(p,'i').test(k))); return k ? r[k] : ''; };
+            return {
+              kho:       String(get('kho','store') || '').trim(),
+              nganh:     String(get('ngành','nganh','loại','loai') || '').trim(),
+              ma_hang:   String(get('mã item','ma item','mã sp','ma sp','item') || '').trim(),
+              barcode:   String(get('barcode') || '').trim(),
+              ten_sp:    String(get('tên sp','ten sp','tên sản','ten san','tên','ten') || '').trim(),
+              gia_ban_le: Number(get('giá bán','gia ban','giá','gia') || 0),
+              ton_ht:    Number(get('tồn ht','ton ht','tồn hệ','ton he','tồn pm','ton pm','tồn','ton') || 0),
+              kiem_tt:   Number(get('kiểm thực tế','kiem thuc te','kiểm lần 1','kiem lan 1','thực tế','thuc te','kiểm','kiem') || 0),
+            };
+          }).filter(r => r.barcode || r.ma_hang);
+          if (!items.length) throw new Error('Không tìm thấy dữ liệu hợp lệ');
+          resolve(items);
+        } catch (err) { reject(err); }
+      };
+      reader.onerror = () => reject(new Error('Không đọc được file'));
+      reader.readAsArrayBuffer(file);
+    });
+  },
+
+  renderBienBan() {
+    const { items, kho, ngay } = this.bienBanData;
+    const chenh = items.filter(d => d.kiem_tt !== d.ton_ht);
+    const thieu = chenh.filter(d => d.kiem_tt - d.ton_ht < 0).sort((a,b) => (a.kiem_tt-a.ton_ht)-(b.kiem_tt-b.ton_ht));
+    const thua  = chenh.filter(d => d.kiem_tt - d.ton_ht > 0).sort((a,b) => (b.kiem_tt-b.ton_ht)-(a.kiem_tt-a.ton_ht));
+    const sorted = [...thieu, ...thua];
+
+    const slThua  = thua.reduce((s,d)  => s + (d.kiem_tt-d.ton_ht), 0);
+    const gtThua  = thua.reduce((s,d)  => s + (d.kiem_tt-d.ton_ht)*(d.gia_ban_le||0), 0);
+    const slThieu = thieu.reduce((s,d) => s + (d.kiem_tt-d.ton_ht), 0);
+    const gtThieu = thieu.reduce((s,d) => s + (d.kiem_tt-d.ton_ht)*(d.gia_ban_le||0), 0);
+    const netGt   = gtThua + gtThieu;
+    const fmt = n => n === null || n === undefined ? '' : Number(n).toLocaleString('vi-VN');
+    const fmtDiff = n => n > 0 ? '+'+fmt(n) : fmt(n);
+
+    // Meta bar
+    $('#bbMeta').innerHTML = `
+      <div style="font-size:15px;font-weight:700;text-align:center;margin-bottom:8px;color:#1e3a5f">BẢNG CHÊNH LỆCH HÀNG HÓA KIỂM KÊ</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 20px;margin-bottom:8px;font-size:13px">
+        <span><b>ST:</b> ${esc(kho)}</span>
+        <span><b>Ngày kiểm kê:</b> ${esc(ngay)}</span>
+        <span><b>Lần kiểm thứ:</b> ................................</span>
+      </div>
+      <div class="bb-summary">
+        <div class="bb-sum-card"><div class="val" style="color:#15803d">+${fmt(slThua)}</div><div class="lbl">SL thừa</div></div>
+        <div class="bb-sum-card"><div class="val" style="color:#15803d">+${fmt(gtThua)}</div><div class="lbl">GT thừa (đ)</div></div>
+        <div class="bb-sum-card"><div class="val" style="color:#dc2626">${fmt(slThieu)}</div><div class="lbl">SL thiếu</div></div>
+        <div class="bb-sum-card"><div class="val" style="color:#dc2626">${fmt(gtThieu)}</div><div class="lbl">GT thiếu (đ)</div></div>
+        <div class="bb-sum-card"><div class="val" style="color:${netGt>=0?'#15803d':'#dc2626'}">${fmtDiff(netGt)}</div><div class="lbl">GT chênh lệch (đ)</div></div>
+      </div>`;
+
+    // Table
+    let html = `<thead>
+      <tr>
+        <th rowspan="3" style="min-width:36px">STT</th>
+        <th rowspan="3">Loại Hàng</th>
+        <th rowspan="3">Mã SP</th>
+        <th rowspan="3">Mã Barcode</th>
+        <th rowspan="3" style="min-width:160px">Tên sản phẩm</th>
+        <th rowspan="3">Giá bán lẻ</th>
+        <th rowspan="3">SL tồn<br>phần mềm</th>
+        <th rowspan="3">SL tồn<br>thực tế</th>
+        <th rowspan="3">Chênh lệch</th>
+        <th colspan="2" class="sub">Chênh lệch thừa</th>
+        <th colspan="2" class="sub">Chênh lệch thiếu</th>
+        <th rowspan="3">Lý do ST<br>giải trình</th>
+        <th rowspan="3">Ngày<br>điều chỉnh</th>
+      </tr>
+      <tr>
+        <th class="sub2">Số lượng</th><th class="sub2">Trị giá thừa</th>
+        <th class="sub2">Số lượng</th><th class="sub2">Trị giá thiếu</th>
+      </tr>
+      <tr><th class="sub2"></th><th class="sub2"></th><th class="sub2"></th><th class="sub2"></th></tr>
+    </thead><tbody>`;
+
+    sorted.forEach((d, i) => {
+      const diff = d.kiem_tt - d.ton_ht;
+      const gt   = diff * (d.gia_ban_le||0);
+      const cls  = diff > 0 ? 'thua' : 'thieu';
+      html += `<tr class="${cls}">
+        <td class="ctr">${i+1}</td>
+        <td>${esc(d.nganh)}</td>
+        <td class="ctr">${esc(d.ma_hang)}</td>
+        <td class="ctr">${esc(d.barcode)}</td>
+        <td class="ten">${esc(d.ten_sp)}</td>
+        <td class="num">${fmt(d.gia_ban_le)}</td>
+        <td class="num">${fmt(d.ton_ht)}</td>
+        <td class="num">${fmt(d.kiem_tt)}</td>
+        <td class="num val">${fmtDiff(diff)}</td>
+        <td class="num val">${diff>0?fmt(diff):''}</td>
+        <td class="num val">${diff>0?'+'+fmt(gt):''}</td>
+        <td class="num val">${diff<0?fmt(diff):''}</td>
+        <td class="num val">${diff<0?fmt(gt):''}</td>
+        <td></td><td></td>
+      </tr>`;
+    });
+
+    // Tổng
+    html += `<tr class="tong">
+      <td colspan="9" style="text-align:right;padding-right:12px">Tổng</td>
+      <td class="num" style="color:#15803d">${fmt(slThua)}</td>
+      <td class="num" style="color:#15803d">+${fmt(gtThua)}</td>
+      <td class="num" style="color:#dc2626">${fmt(slThieu)}</td>
+      <td class="num" style="color:#dc2626">${fmt(gtThieu)}</td>
+      <td class="num" style="color:${netGt>=0?'#15803d':'#dc2626'}">${fmtDiff(netGt)}</td>
+      <td></td>
+    </tr></tbody>`;
+
+    $('#bbTable').innerHTML = html;
+
+    // Ký tên
+    const year = new Date().getFullYear();
+    $('#bbSign').innerHTML = `
+      <div style="margin-bottom:12px;color:#374151">Vào lúc ……. giờ …….. phút, thứ ….. ngày …… tháng …… năm ${year}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;text-align:center">
+        ${['Quản lý ST','GSKV','Trưởng nhóm kiểm kê','Giám đốc ĐHBL','Trưởng Phòng Kế Toán'].map(r=>`
+          <div style="flex:1;min-width:100px;border-top:1px dashed #9ca3af;padding-top:6px">
+            <div style="font-weight:600;font-size:12px">${r}</div>
+            <div style="color:#9ca3af;font-size:11px;margin-top:4px">(Ký và ghi rõ họ tên)</div>
+          </div>`).join('')}
+      </div>`;
+
+    $('#bbUpload').classList.add('hidden');
+    $('#bbPreview').classList.remove('hidden');
+    $('#btnExportBienBan').classList.remove('hidden');
+    this.toast(`Đã tải ${sorted.length} mã chênh lệch`);
+  },
+
+  exportBienBan() {
+    if (!this.bienBanData) return this.toast('Chưa có dữ liệu');
+    const { items, kho, ngay } = this.bienBanData;
+    const chenh  = items.filter(d => d.kiem_tt !== d.ton_ht);
+    const thieu  = chenh.filter(d => d.kiem_tt-d.ton_ht < 0).sort((a,b)=>(a.kiem_tt-a.ton_ht)-(b.kiem_tt-b.ton_ht));
+    const thua   = chenh.filter(d => d.kiem_tt-d.ton_ht > 0).sort((a,b)=>(b.kiem_tt-b.ton_ht)-(a.kiem_tt-a.ton_ht));
+    const sorted = [...thieu, ...thua];
+    const slThua  = thua.reduce((s,d) =>s+(d.kiem_tt-d.ton_ht),0);
+    const gtThua  = thua.reduce((s,d) =>s+(d.kiem_tt-d.ton_ht)*(d.gia_ban_le||0),0);
+    const slThieu = thieu.reduce((s,d)=>s+(d.kiem_tt-d.ton_ht),0);
+    const gtThieu = thieu.reduce((s,d)=>s+(d.kiem_tt-d.ton_ht)*(d.gia_ban_le||0),0);
+    const netGt   = gtThua + gtThieu;
+    const N = 15;
+    const r = arr => { while(arr.length<N) arr.push(null); return arr; };
+    const year = new Date().getFullYear();
+
+    const aoa = [];
+    aoa.push(r([null,null,null,null,null,null,null,null,null,'Mã hiệu: SBL.KDBL.QT.BM.01.02   Lần ban hành: 01   Ngày ban hành: 22/03/2018']));
+    aoa.push(r(['BẢNG CHÊNH LỆCH HÀNG HÓA KIỂM KÊ']));
+    aoa.push(r([null,'ST: '+kho,null,null,'Ngày kiểm kê: '+ngay,null,null,null,null,slThua,gtThua,slThieu,gtThieu,netGt]));
+    aoa.push(r([null,'Lần kiểm thứ: ..............................']));
+    aoa.push(r([]));
+    aoa.push(r(['STT','Loại Hàng','Mã sản phẩm','Mã Barcode','Tên sản phẩm','Giá bán lẻ','SL tồn\nphần mềm','SL tồn\nthực tế',null,'Chênh lệch',null,null,null,'Lý do ST giải trình','Ngày điều chỉnh']));
+    aoa.push(r([null,null,null,null,null,null,null,null,null,'Chênh lệch thừa',null,'Chênh lệch thiếu',null]));
+    aoa.push(r([null,null,null,null,null,null,null,null,null,'Số lượng','Trị giá thừa','Số lượng','Trị giá thiếu']));
+    sorted.forEach((d,i) => {
+      const diff=d.kiem_tt-d.ton_ht, gt=diff*(d.gia_ban_le||0);
+      aoa.push(r([i+1,d.nganh||'',d.ma_hang||'',d.barcode,d.ten_sp,d.gia_ban_le||0,d.ton_ht,d.kiem_tt,diff,diff>0?diff:null,diff>0?gt:null,diff<0?diff:null,diff<0?gt:null,'','']));
+    });
+    const tongRow = aoa.length;
+    aoa.push(r(['Tổng',null,null,null,null,null,null,null,null,slThua,gtThua,slThieu,gtThieu,netGt]));
+    aoa.push(r([]));
+    aoa.push(r([null,null,null,'Vào lúc ……. giờ …….. phút, thứ ….. ngày …… tháng …… năm '+year]));
+    aoa.push(r([null,'Quản lý ST',null,'GSKV',null,'Trưởng nhóm kiểm kê',null,null,null,'Giám đốc ĐHBL',null,null,null,'Trưởng Phòng Kế Toán']));
+    aoa.push(r([null,'(Ký và ghi rõ họ tên)',null,'(Ký và ghi rõ họ tên)',null,'(Ký và ghi rõ họ tên)',null,null,null,'(Ký và ghi rõ họ tên)',null,null,null,'(Ký và ghi rõ họ tên)']));
+
+    const ws1 = XLSX.utils.aoa_to_sheet(aoa);
+    ws1['!merges'] = [
+      {s:{r:1,c:0},e:{r:1,c:14}},{s:{r:2,c:1},e:{r:2,c:3}},{s:{r:2,c:4},e:{r:2,c:7}},
+      {s:{r:5,c:0},e:{r:7,c:0}},{s:{r:5,c:1},e:{r:7,c:1}},{s:{r:5,c:2},e:{r:7,c:2}},{s:{r:5,c:3},e:{r:7,c:3}},{s:{r:5,c:4},e:{r:7,c:4}},
+      {s:{r:5,c:5},e:{r:7,c:5}},{s:{r:5,c:6},e:{r:7,c:6}},{s:{r:5,c:7},e:{r:7,c:7}},{s:{r:5,c:8},e:{r:7,c:8}},
+      {s:{r:5,c:9},e:{r:5,c:12}},{s:{r:6,c:9},e:{r:6,c:10}},{s:{r:6,c:11},e:{r:6,c:12}},
+      {s:{r:5,c:13},e:{r:7,c:13}},{s:{r:5,c:14},e:{r:7,c:14}},
+      {s:{r:tongRow,c:0},e:{r:tongRow,c:8}},
+    ];
+    ws1['!cols']=[{wch:5},{wch:20},{wch:10},{wch:16},{wch:45},{wch:12},{wch:10},{wch:10},{wch:8},{wch:8},{wch:14},{wch:8},{wch:14},{wch:20},{wch:14}];
+
+    // Sheet2 tổng hợp
+    const totalItems=items.length, totalQty=items.reduce((s,d)=>s+(d.kiem_tt||0),0);
+    const matchItems=items.filter(d=>d.kiem_tt===d.ton_ht).length;
+    const matchQty=items.filter(d=>d.kiem_tt===d.ton_ht).reduce((s,d)=>s+d.kiem_tt,0);
+    const aoa2=[
+      [null,null,null,null,'Nội dung','Số items','Số lượng SP','Giá trị'],
+      [null,null,null,null,'TỔNG SỐ ITEMS KIỂM',totalItems,totalQty,null],
+      [null,null,null,null,'TỔNG SỐ ITEMS KIỂM KHỚP PM',matchItems,matchQty,null],
+      [null,null,null,null,'SỐ ITEMS THỪA ĐỢT KK',thua.length,slThua,null],
+      [null,null,null,null,'SỐ ITEMS THIẾU ĐỢT KK',-thieu.length,slThieu,null],
+      [null,null,null,null,'TỔNG SỐ TIỀN THỪA',gtThua,null,null],
+      [null,null,null,null,'TỔNG SỐ TIỀN THIẾU',gtThieu,null,null],
+    ];
+    const ws2=XLSX.utils.aoa_to_sheet(aoa2);
+    ws2['!cols']=[{wch:4},{wch:4},{wch:4},{wch:4},{wch:32},{wch:12},{wch:14},{wch:14}];
+
+    const wbOut=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wbOut,ws1,'BBKK');
+    XLSX.utils.book_append_sheet(wbOut,ws2,'Tổng hợp');
+    XLSX.writeFile(wbOut,'BBKK_'+kho.replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    this.toast('Đã xuất biên bản kiểm kê');
+  },
+
   /* ---- Report ---- */
   async showReport() {
     this.show('pReport');
@@ -1969,7 +2274,22 @@ const APP = {
     $('#dExport').onclick = () => this.exportExcel();
     $('#dPicker').onclick = () => { this.closeDrawer(); this.showProgress(); };
     $('#dReport').onclick = () => this.showReport();
-    $('#dBienBan').onclick = () => this.generateBienBan();
+    $('#dBienBan').onclick = () => this.showBienBan();
+    $('#btnBienBanBack').onclick = () => this.showHome();
+    $('#btnExportBienBan').onclick = () => this.exportBienBan();
+    $('#btnBBFromApp').onclick = () => this.loadBienBanFromApp();
+    $('#bbFileInput').onchange = async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      e.target.value = '';
+      try {
+        this.toast('Đang đọc file...');
+        const items = await this.parseMau1Excel(file);
+        const kho = items[0]?.kho || '';
+        this.bienBanData = { items, kho, ngay: new Date().toLocaleDateString('vi-VN') };
+        this.renderBienBan();
+      } catch(err) { this.toast('Lỗi: ' + err.message); }
+    };
     $('#dChangeSession').onclick = () => { this.closeDrawer(); this.showSessions(); };
     $('#dLogout').onclick = () => this.logout();
 
