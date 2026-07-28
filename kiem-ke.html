@@ -2118,10 +2118,12 @@ const APP = {
       const stC2=ws.getCell(signR,4);
       stC2.value=`Vào lúc ……. giờ …….. phút, thứ ….. ngày …… tháng …… năm ${year}`; stC2.alignment={horizontal:'center'}; stC2.font=mkFont({size:10,italic:true}); stC2.border={};
       const signR2=signR+1, signR3=signR+5;
-      ws.getRow(signR2).height=28; ws.getRow(signR3).height=14;
-      [[2,'Quản lý ST'],[4,'GSKV'],[6,'Trưởng nhóm\nkiểm kê'],[10,'Giám đốc ĐHBL'],[14,'Trưởng Phòng\nKế Toán']].forEach(([col,name]) => {
-        const nc=ws.getCell(signR2,col); nc.value=name; nc.font=mkFont({size:10,bold:true}); nc.alignment={horizontal:'center',wrapText:true}; nc.border={};
-        const sc=ws.getCell(signR3,col); sc.value='(Ký và ghi rõ họ tên)'; sc.font=mkFont({size:8,italic:true,color:{argb:'FF6B7280'}}); sc.alignment={horizontal:'center'}; sc.border={};
+      ws.getRow(signR2).height=32; ws.getRow(signR3).height=16;
+      // Mỗi người ký được merge 3 cột → đủ rộng hiện toàn bộ chữ
+      [[1,3,'Quản lý ST'],[4,6,'GSKV'],[7,9,'Trưởng nhóm\nkiểm kê'],[10,12,'Giám đốc ĐHBL'],[13,15,'Trưởng Phòng\nKế Toán']].forEach(([c1,c2,name]) => {
+        ws.mergeCells(signR2,c1,signR2,c2); ws.mergeCells(signR3,c1,signR3,c2);
+        const nc=ws.getCell(signR2,c1); nc.value=name; nc.font=mkFont({size:10,bold:true}); nc.alignment={horizontal:'center',vertical:'middle',wrapText:true}; nc.border={};
+        const sc=ws.getCell(signR3,c1); sc.value='(Ký và ghi rõ họ tên)'; sc.font=mkFont({size:8,italic:true,color:{argb:'FF6B7280'}}); sc.alignment={horizontal:'center'}; sc.border={};
       });
 
       // ---- Sheet 2: Tổng hợp ----
