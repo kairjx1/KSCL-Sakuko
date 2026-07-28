@@ -2721,8 +2721,9 @@ Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
     $('#btnEmailSend').onclick = () => this.sendBienBanEmail();
     const doMailAuth = async () => {
       sessionStorage.removeItem('kk_mail_token');
-      const base = window.location.href.split('?')[0];
-      const r = await fetch(`/api/lark-oauth?action=mail_auth_url&redirect=${encodeURIComponent(base)}`);
+      // Redirect to portal.html login (registered redirect URI), then back to kiem-ke
+      const portalUrl = window.location.origin + '/portal.html';
+      const r = await fetch(`/api/lark-oauth?action=login_url&redirect=${encodeURIComponent(portalUrl)}&state=portal_then_kiemke`);
       const j = await r.json();
       if (j.ok) window.location.href = j.url;
       else this.toast('Lỗi: ' + (j.error || 'Không lấy được URL'));
