@@ -2266,10 +2266,10 @@ const APP = {
       const dt = new Date(y, m-1, d); dt.setDate(dt.getDate() + 2);
       n2 = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
     } catch {}
-    const ts = 'border-collapse:collapse;font-size:12px;margin:12px 0';
-    const th = 'border:1px solid #9ca3af;padding:6px 10px;background:#e8edf4;font-weight:600;text-align:center;white-space:nowrap';
-    const td = 'border:1px solid #d1d5db;padding:6px 10px';
-    const tn = 'border:1px solid #d1d5db;padding:6px 10px;text-align:right';
+    const ts = 'border-collapse:collapse;font-size:12px;margin:12px 0;width:auto';
+    const th = 'border:1px solid #9ca3af;padding:5px 12px;background:#e8edf4;font-weight:600;text-align:center;white-space:nowrap';
+    const td = 'border:1px solid #d1d5db;padding:5px 12px;white-space:nowrap';
+    const tn = 'border:1px solid #d1d5db;padding:5px 12px;text-align:right;white-space:nowrap';
     const red = 'color:#dc2626;font-weight:600';
     return `<p style="margin:4px 0">Dear ST ${kho} / ASM,</p>
 <p style="margin:8px 0">BPKK gửi chênh lệch kiểm kê Siêu thị ${kho} (đẩy tự động từ APP) với số liệu chênh lệch đã thống nhất với ASM và QLST.</p>
@@ -2339,22 +2339,21 @@ Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
   },
 
   async sendBienBanEmail() {
-    const toRaw   = $('#emailTo').value.trim();
-    const ccRaw   = $('#emailCc').value.trim();
-    const subject = $('#emailSubject').value.trim();
-    if (!toRaw)   return this.toast('Vui lòng nhập email người nhận');
-    if (!subject) return this.toast('Vui lòng nhập tiêu đề');
+    const fromEmail = $('#emailFrom').value.trim();
+    const toRaw     = $('#emailTo').value.trim();
+    const ccRaw     = $('#emailCc').value.trim();
+    const subject   = $('#emailSubject').value.trim();
+    const userToken = sessionStorage.getItem('kk_mail_token');
+    if (!fromEmail) return this.toast('Vui lòng nhập email người gửi');
+    if (!toRaw)     return this.toast('Vui lòng nhập email người nhận');
+    if (!subject)   return this.toast('Vui lòng nhập tiêu đề');
+    if (!userToken) return this.toast('Chưa xác thực — bấm "Đăng nhập Lark" trước');
     const toList = toRaw.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
     const ccList = ccRaw ? ccRaw.split(/[,\n]/).map(s => s.trim()).filter(Boolean) : [];
     const btn = $('#btnEmailSend');
-    btn.disabled = true; btn.textContent = 'Đang tạo...';
-    const userToken = sessionStorage.getItem('kk_mail_token');
-    if (!userToken) return this.toast('Chưa xác thực Lark Mail — bấm "Đăng nhập Lark" trước');
+    btn.disabled = true; btn.textContent = 'Đang tạo Excel...';
     try {
-      // 1. Tạo Excel → base64
-      this.toast('Đang tạo file Excel...');
       const attachB64 = await this.exportBienBan(true);
-      // 2. Gửi qua Lark Mail API
       btn.textContent = 'Đang gửi...';
       this.toast('Đang gửi mail...');
       const bodyHtml = $('#emailBody').innerHTML;
