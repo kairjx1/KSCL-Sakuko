@@ -2716,7 +2716,7 @@ Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
       if (j.ok) window.location.href = j.url;
       else this.toast('Lỗi: ' + (j.error || 'Không lấy được URL'));
     };
-    $('#btnReauth').onclick = doMailAuth;
+    if ($('#btnReauth')) $('#btnReauth').onclick = doMailAuth;
     const btnMailAuth = $('#btnMailAuth');
     if (btnMailAuth) btnMailAuth.onclick = e => { e.preventDefault(); doMailAuth(); };
     $('#btnBBFromApp').onclick = () => this.loadBienBanFromApp();
