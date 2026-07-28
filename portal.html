@@ -413,7 +413,7 @@ async function handleLarkCallback() {
     const r = await fetch(`${API}/lark-oauth?action=callback&code=${encodeURIComponent(code)}`);
     const j = await r.json();
     if (j.ok && j.user) {
-      const session = { type: 'lark', name: j.user.name, email: j.user.email, avatar: j.user.avatar, open_id: j.user.open_id, ts: Date.now() };
+      const session = { type: 'lark', name: j.user.name, email: j.user.email, avatar: j.user.avatar, open_id: j.user.open_id, ts: Date.now(), access_token: j.access_token || '' };
       history.replaceState(null, '', location.pathname);
       try { await auth.signInAnonymously(); } catch (e) { console.warn('Anonymous auth failed:', e.message); }
       checkPermission(session);

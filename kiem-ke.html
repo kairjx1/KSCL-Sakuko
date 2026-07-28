@@ -402,8 +402,11 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     </div>
     <div style="flex:1;overflow-y:auto;padding:14px 16px 8px">
       <div class="em-field">
-        <label>Từ (email Lark của bạn)</label>
-        <input id="emailFrom" type="email" placeholder="ten.ho@sakukovietnam.com.vn">
+        <label>Từ (email Lark của bạn) — <span id="emailAuthStatus" style="font-weight:400"></span></label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="emailFrom" type="email" placeholder="ten.ho@sakukovietnam.com.vn" style="flex:1">
+          <button id="btnReauth" style="flex-shrink:0;padding:6px 12px;background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;border-radius:6px;font-size:12px;white-space:nowrap;cursor:pointer">🔑 Đăng nhập Lark</button>
+        </div>
       </div>
       <div class="em-field">
         <label>Đến <span style="color:#6b7280;font-weight:400">(dấu phẩy hoặc xuống dòng)</span></label>
@@ -669,6 +672,8 @@ const APP = {
       const roleMap = { superadmin: 'admin', admin: 'admin', manager: 'admin', staff: 'staff', viewer: 'viewer' };
       this.user = { name: p.name || p.email || '', role: roleMap[p.role] || 'staff', portalRole: p.role, email: p.email || '', avatar: p.avatar || '' };
       localStorage.setItem('kk_user', JSON.stringify(this.user));
+      // Dùng luôn access_token từ Lark login để gửi mail (không cần auth riêng)
+      if (p.access_token) sessionStorage.setItem('kk_mail_token', p.access_token);
       const sess = localStorage.getItem('kk_session');
       if (sess) this.session = JSON.parse(sess);
       this.showSessions();
@@ -2299,7 +2304,14 @@ const APP = {
     this._emailAttachName = `BBKK_${kho.replace(/[^\wÀ-ɏḀ-ỿ]/g,'_')}_${ds}.xlsx`;
     $('#emailAttachName').textContent = this._emailAttachName;
     $('#emailBody').innerHTML = this.buildEmailBody();
-    // Không cần token — dùng mailto:
+    const hasToken = !!sessionStorage.getItem('kk_mail_token');
+    const authWarn = $('#emailAuthWarn');
+    if (authWarn) authWarn.classList.toggle('hidden', hasToken);
+    const statusEl = $('#emailAuthStatus');
+    if (statusEl) {
+      statusEl.textContent = hasToken ? '✅ Đã xác thực' : '⚠️ Chưa xác thực — bấm 🔑';
+      statusEl.style.color = hasToken ? '#16a34a' : '#dc2626';
+    }
     $('#emailOverlay').classList.remove('hidden');
   },
 
@@ -2707,6 +2719,17 @@ Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
     $('#btnEmailClose').onclick = () => $('#emailOverlay').classList.add('hidden');
     $('#btnEmailCancel').onclick = () => $('#emailOverlay').classList.add('hidden');
     $('#btnEmailSend').onclick = () => this.sendBienBanEmail();
+    const doMailAuth = async () => {
+      sessionStorage.removeItem('kk_mail_token');
+      const base = window.location.href.split('?')[0];
+      const r = await fetch(`/api/lark-oauth?action=mail_auth_url&redirect=${encodeURIComponent(base)}`);
+      const j = await r.json();
+      if (j.ok) window.location.href = j.url;
+      else this.toast('Lỗi: ' + (j.error || 'Không lấy được URL'));
+    };
+    $('#btnReauth').onclick = doMailAuth;
+    const btnMailAuth = $('#btnMailAuth');
+    if (btnMailAuth) btnMailAuth.onclick = e => { e.preventDefault(); doMailAuth(); };
     $('#btnBBFromApp').onclick = () => this.loadBienBanFromApp();
     $('#bbFileInput').onchange = async e => {
       const file = e.target.files[0];
