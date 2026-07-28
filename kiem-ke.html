@@ -1889,74 +1889,244 @@ const APP = {
     this.toast(`Đã tải ${sorted.length} mã chênh lệch`);
   },
 
-  exportBienBan() {
-    if (!this.bienBanData) return this.toast('Chưa có dữ liệu');
-    const { items, kho, ngay } = this.bienBanData;
-    const chenh  = items.filter(d => d.kiem_tt !== d.ton_ht);
-    const thieu  = chenh.filter(d => d.kiem_tt-d.ton_ht < 0).sort((a,b)=>(a.kiem_tt-a.ton_ht)-(b.kiem_tt-b.ton_ht));
-    const thua   = chenh.filter(d => d.kiem_tt-d.ton_ht > 0).sort((a,b)=>(b.kiem_tt-b.ton_ht)-(a.kiem_tt-a.ton_ht));
-    const sorted = [...thieu, ...thua];
-    const slThua  = thua.reduce((s,d) =>s+(d.kiem_tt-d.ton_ht),0);
-    const gtThua  = thua.reduce((s,d) =>s+(d.kiem_tt-d.ton_ht)*(d.gia_ban_le||0),0);
-    const slThieu = thieu.reduce((s,d)=>s+(d.kiem_tt-d.ton_ht),0);
-    const gtThieu = thieu.reduce((s,d)=>s+(d.kiem_tt-d.ton_ht)*(d.gia_ban_le||0),0);
-    const netGt   = gtThua + gtThieu;
-    const N = 15;
-    const r = arr => { while(arr.length<N) arr.push(null); return arr; };
-    const year = new Date().getFullYear();
-
-    const aoa = [];
-    aoa.push(r([null,null,null,null,null,null,null,null,null,'Mã hiệu: SBL.KDBL.QT.BM.01.02   Lần ban hành: 01   Ngày ban hành: 22/03/2018']));
-    aoa.push(r(['BẢNG CHÊNH LỆCH HÀNG HÓA KIỂM KÊ']));
-    aoa.push(r([null,'ST: '+kho,null,null,'Ngày kiểm kê: '+ngay,null,null,null,null,slThua,gtThua,slThieu,gtThieu,netGt]));
-    aoa.push(r([null,'Lần kiểm thứ: ..............................']));
-    aoa.push(r([]));
-    aoa.push(r(['STT','Loại Hàng','Mã sản phẩm','Mã Barcode','Tên sản phẩm','Giá bán lẻ','SL tồn\nphần mềm','SL tồn\nthực tế',null,'Chênh lệch',null,null,null,'Lý do ST giải trình','Ngày điều chỉnh']));
-    aoa.push(r([null,null,null,null,null,null,null,null,null,'Chênh lệch thừa',null,'Chênh lệch thiếu',null]));
-    aoa.push(r([null,null,null,null,null,null,null,null,null,'Số lượng','Trị giá thừa','Số lượng','Trị giá thiếu']));
-    sorted.forEach((d,i) => {
-      const diff=d.kiem_tt-d.ton_ht, gt=diff*(d.gia_ban_le||0);
-      aoa.push(r([i+1,d.nganh||'',d.ma_hang||'',d.barcode,d.ten_sp,d.gia_ban_le||0,d.ton_ht,d.kiem_tt,diff,diff>0?diff:null,diff>0?gt:null,diff<0?diff:null,diff<0?gt:null,'','']));
+  async _svgToPng(svgStr, w, h) {
+    const blob = new Blob([svgStr], {type:'image/svg+xml'});
+    const url  = URL.createObjectURL(blob);
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const cv = document.createElement('canvas');
+        cv.width = w*2; cv.height = h*2;
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, cv.width, cv.height);
+        ctx.drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url);
+        resolve(cv.toDataURL('image/png').split(',')[1]);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
     });
-    const tongRow = aoa.length;
-    aoa.push(r(['Tổng',null,null,null,null,null,null,null,null,slThua,gtThua,slThieu,gtThieu,netGt]));
-    aoa.push(r([]));
-    aoa.push(r([null,null,null,'Vào lúc ……. giờ …….. phút, thứ ….. ngày …… tháng …… năm '+year]));
-    aoa.push(r([null,'Quản lý ST',null,'GSKV',null,'Trưởng nhóm kiểm kê',null,null,null,'Giám đốc ĐHBL',null,null,null,'Trưởng Phòng Kế Toán']));
-    aoa.push(r([null,'(Ký và ghi rõ họ tên)',null,'(Ký và ghi rõ họ tên)',null,'(Ký và ghi rõ họ tên)',null,null,null,'(Ký và ghi rõ họ tên)',null,null,null,'(Ký và ghi rõ họ tên)']));
+  },
 
-    const ws1 = XLSX.utils.aoa_to_sheet(aoa);
-    ws1['!merges'] = [
-      {s:{r:1,c:0},e:{r:1,c:14}},{s:{r:2,c:1},e:{r:2,c:3}},{s:{r:2,c:4},e:{r:2,c:7}},
-      {s:{r:5,c:0},e:{r:7,c:0}},{s:{r:5,c:1},e:{r:7,c:1}},{s:{r:5,c:2},e:{r:7,c:2}},{s:{r:5,c:3},e:{r:7,c:3}},{s:{r:5,c:4},e:{r:7,c:4}},
-      {s:{r:5,c:5},e:{r:7,c:5}},{s:{r:5,c:6},e:{r:7,c:6}},{s:{r:5,c:7},e:{r:7,c:7}},{s:{r:5,c:8},e:{r:7,c:8}},
-      {s:{r:5,c:9},e:{r:5,c:12}},{s:{r:6,c:9},e:{r:6,c:10}},{s:{r:6,c:11},e:{r:6,c:12}},
-      {s:{r:5,c:13},e:{r:7,c:13}},{s:{r:5,c:14},e:{r:7,c:14}},
-      {s:{r:tongRow,c:0},e:{r:tongRow,c:8}},
-    ];
-    ws1['!cols']=[{wch:5},{wch:20},{wch:10},{wch:16},{wch:45},{wch:12},{wch:10},{wch:10},{wch:8},{wch:8},{wch:14},{wch:8},{wch:14},{wch:20},{wch:14}];
+  async exportBienBan() {
+    if (!this.bienBanData) return this.toast('Chưa có dữ liệu');
+    this.toast('Đang tạo Excel có logo...');
+    try {
+      if (!window.ExcelJS) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+          s.onload = res; s.onerror = () => rej(new Error('Không tải được ExcelJS'));
+          document.head.appendChild(s);
+        });
+      }
 
-    // Sheet2 tổng hợp
-    const totalItems=items.length, totalQty=items.reduce((s,d)=>s+(d.kiem_tt||0),0);
-    const matchItems=items.filter(d=>d.kiem_tt===d.ton_ht).length;
-    const matchQty=items.filter(d=>d.kiem_tt===d.ton_ht).reduce((s,d)=>s+d.kiem_tt,0);
-    const aoa2=[
-      [null,null,null,null,'Nội dung','Số items','Số lượng SP','Giá trị'],
-      [null,null,null,null,'TỔNG SỐ ITEMS KIỂM',totalItems,totalQty,null],
-      [null,null,null,null,'TỔNG SỐ ITEMS KIỂM KHỚP PM',matchItems,matchQty,null],
-      [null,null,null,null,'SỐ ITEMS THỪA ĐỢT KK',thua.length,slThua,null],
-      [null,null,null,null,'SỐ ITEMS THIẾU ĐỢT KK',-thieu.length,slThieu,null],
-      [null,null,null,null,'TỔNG SỐ TIỀN THỪA',gtThua,null,null],
-      [null,null,null,null,'TỔNG SỐ TIỀN THIẾU',gtThieu,null,null],
-    ];
-    const ws2=XLSX.utils.aoa_to_sheet(aoa2);
-    ws2['!cols']=[{wch:4},{wch:4},{wch:4},{wch:4},{wch:32},{wch:12},{wch:14},{wch:14}];
+      const { items, kho, ngay } = this.bienBanData;
+      const chenh  = items.filter(d => d.kiem_tt !== d.ton_ht);
+      const thieu  = chenh.filter(d => d.kiem_tt-d.ton_ht < 0).sort((a,b)=>(a.kiem_tt-a.ton_ht)-(b.kiem_tt-b.ton_ht));
+      const thua   = chenh.filter(d => d.kiem_tt-d.ton_ht > 0).sort((a,b)=>(b.kiem_tt-b.ton_ht)-(a.kiem_tt-a.ton_ht));
+      const sorted = [...thieu, ...thua];
+      const slThua  = thua.reduce((s,d) =>s+(d.kiem_tt-d.ton_ht),0);
+      const gtThua  = thua.reduce((s,d) =>s+(d.kiem_tt-d.ton_ht)*(d.gia_ban_le||0),0);
+      const slThieu = thieu.reduce((s,d)=>s+(d.kiem_tt-d.ton_ht),0);
+      const gtThieu = thieu.reduce((s,d)=>s+(d.kiem_tt-d.ton_ht)*(d.gia_ban_le||0),0);
+      const netGt   = gtThua + gtThieu;
+      const year    = new Date().getFullYear();
 
-    const wbOut=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wbOut,ws1,'BBKK');
-    XLSX.utils.book_append_sheet(wbOut,ws2,'Tổng hợp');
-    XLSX.writeFile(wbOut,'BBKK_'+kho.replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
-    this.toast('Đã xuất biên bản kiểm kê');
+      // Chuyển SVG logo → PNG base64
+      let logoBase64 = null;
+      try {
+        const resp = await fetch('/KSCL-Sakuko/assets/brand/logo-sakuko.svg');
+        if (resp.ok) logoBase64 = await this._svgToPng(await resp.text(), 240, 68);
+      } catch(e) { console.warn('Logo:', e); }
+
+      const wb = new ExcelJS.Workbook();
+      wb.creator = 'KSCL Sakuko';
+
+      // ---- Sheet 1: BBKK ----
+      const ws = wb.addWorksheet('BBKK');
+      ws.columns = [
+        {width:5},{width:20},{width:10},{width:16},{width:45},
+        {width:12},{width:10},{width:10},{width:8},{width:9},
+        {width:14},{width:9},{width:14},{width:22},{width:14}
+      ];
+
+      const mkBorder = (clr='FFD1D5DB') => { const s={style:'thin',color:{argb:clr}}; return {top:s,left:s,bottom:s,right:s}; };
+      const mkFill   = a => ({type:'pattern',pattern:'solid',fgColor:{argb:a}});
+      const mkFont   = (o={}) => Object.assign({name:'Arial',size:10},o);
+      const hdrAlign = {horizontal:'center',vertical:'middle',wrapText:true};
+
+      const addHdr = (cell, val, bgArgb, sz=9) => {
+        cell.value = val;
+        cell.fill  = mkFill(bgArgb);
+        cell.font  = mkFont({size:sz,bold:true,color:{argb:'FFFFFFFF'}});
+        cell.alignment = hdrAlign;
+        cell.border = mkBorder('FFFFFFFF');
+      };
+
+      // Rows 1-3: logo area (height 20 each = ~57pt total)
+      [1,2,3].forEach(r => { ws.getRow(r).height = 20; });
+      if (logoBase64) {
+        const imgId = wb.addImage({base64:logoBase64, extension:'png'});
+        ws.addImage(imgId, {tl:{col:0,row:0}, ext:{width:200,height:57}});
+      }
+      // Mã hiệu at top-right
+      ['Mã hiệu: SBL.KDBL.QT.BM.01.02','Lần ban hành: 01','Ngày ban hành: 22/03/2018'].forEach((txt,i) => {
+        ws.mergeCells(i+1,10,i+1,15);
+        const c = ws.getCell(i+1,10);
+        c.value = txt; c.font = mkFont({size:8,color:{argb:'FF6B7280'}}); c.alignment={horizontal:'right'}; c.border={};
+      });
+
+      // Row 4: Tiêu đề
+      ws.getRow(4).height = 28;
+      ws.mergeCells('A4:O4');
+      const titleC = ws.getCell('A4');
+      titleC.value = 'BẢNG CHÊNH LỆCH HÀNG HÓA KIỂM KÊ';
+      titleC.font  = mkFont({size:16,bold:true,color:{argb:'FF1E3460'}});
+      titleC.alignment = {horizontal:'center',vertical:'middle'};
+      titleC.border = {};
+
+      // Row 5: ST + ngày kiểm
+      ws.getRow(5).height = 18;
+      ws.mergeCells('B5:D5');
+      const stC = ws.getCell('B5'); stC.value='ST: '+kho; stC.font=mkFont({size:11,bold:true}); stC.border={};
+      ws.mergeCells('E5:I5');
+      const ngayC = ws.getCell('E5'); ngayC.value='Ngày kiểm kê: '+ngay; ngayC.font=mkFont({size:11}); ngayC.border={};
+
+      // Row 6: Lần kiểm
+      ws.getRow(6).height = 18;
+      ws.mergeCells('B6:F6');
+      const lanC = ws.getCell('B6'); lanC.value='Lần kiểm thứ: ..............................'; lanC.font=mkFont({size:10}); lanC.border={};
+
+      // Row 7: Tóm tắt
+      ws.getRow(7).height = 18;
+      [['J7',slThua,'FF15803D'],['K7',gtThua,'FF15803D'],['L7',slThieu,'FFDC2626'],['M7',Math.abs(gtThieu),'FFDC2626'],['N7',netGt,netGt>=0?'FF15803D':'FFDC2626']].forEach(([addr,val,clr],i) => {
+        const labels=['SL thừa: ','GT thừa: ','SL thiếu: ','GT thiếu: ','Net: '];
+        const c=ws.getCell(addr); c.value=labels[i]+(typeof val==='number'&&i>0?val.toLocaleString('vi-VN'):val); c.font=mkFont({size:9,bold:true,color:{argb:clr}}); c.border={};
+      });
+
+      // Rows 8-10: Headers (3 cấp)
+      [8,9,10].forEach(r=>ws.getRow(r).height=r===8?22:18);
+      const H1='FF1E3460', H2='FF2D5A8E', H3='FF3B74B8';
+
+      // Các cột span rows 8-10
+      [[1,'STT'],[2,'Loại\nHàng'],[3,'Mã sản phẩm'],[4,'Mã Barcode'],[5,'Tên sản phẩm'],
+       [6,'Giá bán lẻ'],[7,'SL tồn\nphần mềm'],[8,'SL tồn\nthực tế'],[9,'Chênh\nlệch'],
+       [14,'Lý do ST\ngiải trình'],[15,'Ngày\nđiều chỉnh']].forEach(([col,lbl]) => {
+        ws.mergeCells(8,col,10,col); addHdr(ws.getCell(8,col), lbl, H1);
+      });
+      ws.mergeCells(8,10,8,13); addHdr(ws.getCell(8,10),'Chênh lệch',H1,10);
+      ws.mergeCells(9,10,9,11); addHdr(ws.getCell(9,10),'Chênh lệch thừa',H2);
+      ws.mergeCells(9,12,9,13); addHdr(ws.getCell(9,12),'Chênh lệch thiếu',H2);
+      addHdr(ws.getCell(10,10),'Số\nlượng',H3,8);
+      addHdr(ws.getCell(10,11),'Trị giá\nthừa',H3,8);
+      addHdr(ws.getCell(10,12),'Số\nlượng',H3,8);
+      addHdr(ws.getCell(10,13),'Trị giá\nthiếu',H3,8);
+
+      // Data rows
+      const dataStart = 11;
+      sorted.forEach((d,idx) => {
+        const rn   = dataStart+idx;
+        const diff = d.kiem_tt-d.ton_ht;
+        const gt   = diff*(d.gia_ban_le||0);
+        const row  = ws.getRow(rn); row.height=16;
+        const isThua = diff>0;
+        const bg   = isThua?'FFF0FDF4':'FFFEF2F2';
+        const dClr = isThua?'FF15803D':'FFDC2626';
+        const vals = [idx+1,d.nganh||'',d.ma_hang||'',d.barcode||'',d.ten_sp||'',
+          d.gia_ban_le||0,d.ton_ht||0,d.kiem_tt||0,diff,
+          isThua?diff:null,isThua?gt:null,!isThua?diff:null,!isThua?gt:null,'',''];
+        vals.forEach((val,ci) => {
+          const cell=row.getCell(ci+1);
+          cell.value=val; cell.fill=mkFill(bg); cell.border=mkBorder('FFE5E7EB'); cell.font=mkFont({size:9});
+          if (ci===4) { cell.alignment={wrapText:true,vertical:'middle'}; }
+          else if (ci>=5) { cell.alignment={horizontal:'right',vertical:'middle'}; }
+          if (ci===5||ci===10||ci===12) cell.numFmt='#,##0';
+          if ([8,9,10,11,12].includes(ci)&&val!==null&&val!==0) cell.font=mkFont({size:9,bold:true,color:{argb:dClr}});
+        });
+      });
+
+      // Tổng row
+      const tongRN = dataStart+sorted.length;
+      ws.getRow(tongRN).height=18;
+      ws.mergeCells(tongRN,1,tongRN,9);
+      const tongC=ws.getCell(tongRN,1);
+      tongC.value='TỔNG'; tongC.font=mkFont({size:11,bold:true}); tongC.alignment={horizontal:'right',vertical:'middle'}; tongC.fill=mkFill('FFE0F2FE'); tongC.border=mkBorder('FFA0C4D8');
+      [[10,slThua,'FF15803D'],[11,gtThua,'FF15803D'],[12,slThieu,'FFDC2626'],[13,gtThieu,'FFDC2626'],[14,netGt,netGt>=0?'FF15803D':'FFDC2626']].forEach(([ci,val,clr]) => {
+        const c=ws.getCell(tongRN,ci);
+        c.value=val; c.font=mkFont({size:11,bold:true,color:{argb:clr}}); c.fill=mkFill('FFE0F2FE'); c.border=mkBorder('FFA0C4D8'); c.alignment={horizontal:'right',vertical:'middle'};
+        if ([11,13,14].includes(ci)) c.numFmt='#,##0';
+      });
+
+      // Chữ ký
+      const signR=tongRN+2;
+      ws.getRow(signR).height=16;
+      ws.mergeCells(signR,4,signR,13);
+      const stC2=ws.getCell(signR,4);
+      stC2.value=`Vào lúc ……. giờ …….. phút, thứ ….. ngày …… tháng …… năm ${year}`; stC2.alignment={horizontal:'center'}; stC2.font=mkFont({size:10,italic:true}); stC2.border={};
+      const signR2=signR+1, signR3=signR+5;
+      ws.getRow(signR2).height=28; ws.getRow(signR3).height=14;
+      [[2,'Quản lý ST'],[4,'GSKV'],[6,'Trưởng nhóm\nkiểm kê'],[10,'Giám đốc ĐHBL'],[14,'Trưởng Phòng\nKế Toán']].forEach(([col,name]) => {
+        const nc=ws.getCell(signR2,col); nc.value=name; nc.font=mkFont({size:10,bold:true}); nc.alignment={horizontal:'center',wrapText:true}; nc.border={};
+        const sc=ws.getCell(signR3,col); sc.value='(Ký và ghi rõ họ tên)'; sc.font=mkFont({size:8,italic:true,color:{argb:'FF6B7280'}}); sc.alignment={horizontal:'center'}; sc.border={};
+      });
+
+      // ---- Sheet 2: Tổng hợp ----
+      const ws2 = wb.addWorksheet('Tổng hợp');
+      ws2.columns=[{width:4},{width:4},{width:4},{width:4},{width:35},{width:14},{width:14},{width:14}];
+      [1,2,3].forEach(r=>ws2.getRow(r).height=18);
+      if (logoBase64) {
+        const imgId2=wb.addImage({base64:logoBase64,extension:'png'});
+        ws2.addImage(imgId2,{tl:{col:0,row:0},ext:{width:160,height:46}});
+      }
+      ws2.getRow(4).height=26;
+      ws2.mergeCells('A4:H4');
+      const th2=ws2.getCell('A4');
+      th2.value='TỔNG HỢP KIỂM KÊ - '+kho; th2.font=mkFont({size:14,bold:true,color:{argb:'FF1E3460'}}); th2.alignment={horizontal:'center',vertical:'middle'}; th2.border={};
+
+      const totalItems=items.length, totalQty=items.reduce((s,d)=>s+(d.kiem_tt||0),0);
+      const matchItems=items.filter(d=>d.kiem_tt===d.ton_ht).length;
+      const matchQty  =items.filter(d=>d.kiem_tt===d.ton_ht).reduce((s,d)=>s+d.kiem_tt,0);
+      const rows2=[
+        ['Nội dung','Số items','Số lượng SP','Giá trị (VND)'],
+        ['TỔNG SỐ ITEMS KIỂM',totalItems,totalQty,null],
+        ['TỔNG SỐ ITEMS KIỂM KHỚP PM',matchItems,matchQty,null],
+        ['SỐ ITEMS THỪA ĐỢT KK',thua.length,slThua,gtThua],
+        ['SỐ ITEMS THIẾU ĐỢT KK',thieu.length,Math.abs(slThieu),Math.abs(gtThieu)],
+        ['TỔNG TIỀN THỪA',null,null,gtThua],
+        ['TỔNG TIỀN THIẾU',null,null,Math.abs(gtThieu)],
+        ['CHÊNH LỆCH NET (THỪA - THIẾU)',null,null,netGt],
+      ];
+      const rowClr=['FFDC2626','FF15803D','FFDC2626','FF1E3460'];
+      rows2.forEach((rowData,ri) => {
+        const rn=5+ri; ws2.getRow(rn).height=ri===0?18:16;
+        ws2.mergeCells(rn,1,rn,4);
+        rowData.forEach((val,ci) => {
+          const cell=ws2.getCell(rn,ci+5);
+          cell.value=val; cell.border=mkBorder();
+          if (ri===0) { cell.fill=mkFill('FF1E3460'); cell.font=mkFont({size:10,bold:true,color:{argb:'FFFFFFFF'}}); cell.alignment={horizontal:'center'}; }
+          else {
+            const isLast=ri===rows2.length-1;
+            cell.font=mkFont({size:10,bold:isLast?true:false}); cell.alignment=ci===0?{vertical:'middle'}:{horizontal:'right',vertical:'middle'};
+            if (ci>0&&val!==null) cell.numFmt='#,##0';
+            if (isLast) { cell.fill=mkFill('FFE0F2FE'); cell.font=mkFont({size:10,bold:true,color:{argb:netGt>=0?'FF15803D':'FFDC2626'}}); }
+            if (ri===3&&ci===3) cell.font=mkFont({size:10,bold:true,color:{argb:'FF15803D'}});
+            if (ri===4&&ci===3) cell.font=mkFont({size:10,bold:true,color:{argb:'FFDC2626'}});
+          }
+        });
+      });
+
+      // Xuất file
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob   = new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const url    = URL.createObjectURL(blob);
+      const a      = document.createElement('a');
+      a.href = url; a.download = 'BBKK_'+kho.replace(/[^a-zA-Z0-9]/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.xlsx';
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+      this.toast('Đã xuất biên bản kiểm kê');
+    } catch(e) { this.toast('Lỗi xuất Excel: '+e.message); console.error(e); }
   },
 
   /* ---- Report ---- */
