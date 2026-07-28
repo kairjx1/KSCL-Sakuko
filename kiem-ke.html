@@ -77,6 +77,10 @@ input,select{font-family:inherit;font-size:16px}
 .drawer-item{display:block;width:100%;text-align:left;padding:15px 20px;font-size:16px}
 .drawer-item:active{background:#f3f4f6}
 .drawer-item.danger{color:#dc2626}
+.drawer-row{display:flex;align-items:center;border-bottom:1px solid #f3f4f6}
+.drawer-row .drawer-item{border-bottom:none;flex:1}
+.drawer-tmpl{flex-shrink:0;padding:6px 14px;font-size:11px;color:#6366f1;background:#eef2ff;border-radius:6px;margin-right:12px;white-space:nowrap;cursor:pointer;border:1px solid #c7d2fe}
+.drawer-tmpl:active{background:#e0e7ff}
 .drawer hr{border:none;border-top:1px solid #eee;margin:6px 0}
 
 /* Sheet */
@@ -470,11 +474,20 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     </div>
     <button class="drawer-item" id="dSync">&#128259; Đồng bộ dữ liệu lên server</button>
     <button class="drawer-item" id="dReport">Tổng hợp / Đối chiếu</button>
-    <button class="drawer-item" id="dBienBan">📋 Biên bản kiểm kê</button>
+    <div class="drawer-row">
+      <button class="drawer-item" id="dBienBan">📋 Biên bản kiểm kê</button>
+      <button class="drawer-tmpl" id="dTmplBienBan" title="Tải file mẫu Mẫu 1">⬇ Mẫu</button>
+    </div>
     <hr>
-    <button class="drawer-item" id="dImportCatalog">Nhập danh mục hàng hóa</button>
+    <div class="drawer-row">
+      <button class="drawer-item" id="dImportCatalog">Nhập danh mục hàng hóa</button>
+      <button class="drawer-tmpl" id="dTmplCatalog" title="Tải file mẫu danh mục">⬇ Mẫu</button>
+    </div>
     <button class="drawer-item" id="dSyncCatalog">&#8635; Đồng bộ danh mục từ Lark</button>
-    <button class="drawer-item" id="dImportStock">Nhập tồn hệ thống</button>
+    <div class="drawer-row">
+      <button class="drawer-item" id="dImportStock">Nhập tồn hệ thống</button>
+      <button class="drawer-tmpl" id="dTmplStock" title="Tải file mẫu tồn kho">⬇ Mẫu</button>
+    </div>
     <button class="drawer-item" id="dExport">Xuất file kết quả</button>
     <hr>
     <button class="drawer-item" id="dPicker">Tiến độ kiểm kê</button>
@@ -1704,6 +1717,43 @@ const APP = {
     this.toast('Đã xuất biên bản kiểm kê');
   },
 
+  /* ---- Download templates ---- */
+  downloadTemplate(type) {
+    const wb = XLSX.utils.book_new();
+    let ws, name, filename;
+    if (type === 'bienbankk') {
+      const header = ['Kho','Ngành','Mã Item','Barcode','Tên SP','Giá bán','Tồn HT','Kiểm thực tế'];
+      const sample = [
+        ['Trần Đăng Ninh','CHĂM SÓC SỨC KHỎE','110402','4987415993508','SHISEIDO- The Collagen EXR (50ml x 10 lo)',899000,12,10],
+        ['Trần Đăng Ninh','CHĂM SÓC SỨC KHỎE','110456','1110022020005','FUJI PHARMA- Viên đặt âm đạo Clotrimazole 10 viên',125000,6,6],
+      ];
+      ws = XLSX.utils.aoa_to_sheet([header, ...sample]);
+      ws['!cols'] = [{wch:20},{wch:22},{wch:10},{wch:16},{wch:45},{wch:12},{wch:10},{wch:14}];
+      name = 'Mau1_BBKK'; filename = 'Mau1_BienBan_KiemKe.xlsx';
+    } else if (type === 'catalog') {
+      const header = ['Barcode','Mã hàng','Tên SP','Giá bán lẻ','Ngành','Nhóm','Loại','Block','Kênh mua','Trạng thái KD'];
+      const sample = [
+        ['4987415993508','110402','SHISEIDO- The Collagen EXR (50ml x 10 lo)',899000,'CHĂM SÓC SỨC KHỎE','','','','','Đang KD'],
+        ['1110022020005','110456','FUJI PHARMA- Viên đặt âm đạo Clotrimazole 10 viên',125000,'CHĂM SÓC SỨC KHỎE','','','','','Đang KD'],
+      ];
+      ws = XLSX.utils.aoa_to_sheet([header, ...sample]);
+      ws['!cols'] = [{wch:16},{wch:10},{wch:45},{wch:12},{wch:22},{wch:12},{wch:12},{wch:10},{wch:12},{wch:14}];
+      name = 'DanhMuc'; filename = 'Mau_NhapDanhMucHangHoa.xlsx';
+    } else if (type === 'stock') {
+      const header = ['Kho','Mã SP2','Mã S','Tên SP','Tồn','Giá BL','Ngành','ĐVT'];
+      const sample = [
+        ['Trần Đăng Ninh','4987415993508','110402','SHISEIDO- The Collagen EXR (50ml x 10 lo)',12,899000,'CHĂM SÓC SỨC KHỎE','PSC'],
+        ['Trần Đăng Ninh','1110022020005','110456','FUJI PHARMA- Viên đặt âm đạo Clotrimazole 10 viên',6,125000,'CHĂM SÓC SỨC KHỎE','PSC'],
+      ];
+      ws = XLSX.utils.aoa_to_sheet([header, ...sample]);
+      ws['!cols'] = [{wch:20},{wch:16},{wch:10},{wch:45},{wch:8},{wch:12},{wch:22},{wch:8}];
+      name = 'TonKho'; filename = 'Mau_NhapTonHeThong.xlsx';
+    } else return;
+    XLSX.utils.book_append_sheet(wb, ws, name);
+    XLSX.writeFile(wb, filename);
+    this.toast('Đã tải file mẫu: ' + filename);
+  },
+
   /* ---- Biên bản kiểm kê ---- */
   showBienBan() {
     this.closeDrawer();
@@ -2447,6 +2497,9 @@ const APP = {
     $('#dPicker').onclick = () => { this.closeDrawer(); this.showProgress(); };
     $('#dReport').onclick = () => this.showReport();
     $('#dBienBan').onclick = () => this.showBienBan();
+    $('#dTmplBienBan').onclick = () => this.downloadTemplate('bienbankk');
+    $('#dTmplCatalog').onclick = () => this.downloadTemplate('catalog');
+    $('#dTmplStock').onclick = () => this.downloadTemplate('stock');
     $('#btnBienBanBack').onclick = () => this.showHome();
     $('#btnExportBienBan').onclick = () => this.exportBienBan();
     $('#btnBBFromApp').onclick = () => this.loadBienBanFromApp();
