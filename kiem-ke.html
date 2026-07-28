@@ -398,15 +398,12 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <button id="btnEmailClose" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:0 2px">×</button>
     </div>
     <div style="background:#dcfce7;padding:8px 16px;font-size:12px;color:#166534;border-bottom:1px solid #bbf7d0;flex-shrink:0">
-      ✅ Bấm <b>Gửi mail</b>: tự động gửi qua Lark Mail kèm file Excel đính kèm — không cần thao tác thủ công.
+      📧 Bấm <b>Gửi mail</b>: tự động tải file Excel + mở ứng dụng mail với nội dung điền sẵn — chỉ cần đính kèm file và bấm Gửi.
     </div>
     <div style="flex:1;overflow-y:auto;padding:14px 16px 8px">
       <div class="em-field">
-        <label>Từ (email Lark của bạn) — <span id="emailAuthStatus" style="font-weight:400"></span></label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="emailFrom" type="email" placeholder="ten.ho@sakukovietnam.com.vn" style="flex:1">
-          <button id="btnReauth" style="flex-shrink:0;padding:6px 12px;background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;border-radius:6px;font-size:12px;white-space:nowrap;cursor:pointer">🔑 Đăng nhập Lark</button>
-        </div>
+        <label>Từ (email của bạn)</label>
+        <input id="emailFrom" type="email" placeholder="ten.ho@sakukovietnam.com.vn" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box">
       </div>
       <div class="em-field">
         <label>Đến <span style="color:#6b7280;font-weight:400">(dấu phẩy hoặc xuống dòng)</span></label>
@@ -2304,14 +2301,6 @@ const APP = {
     this._emailAttachName = `BBKK_${kho.replace(/[^\wÀ-ɏḀ-ỿ]/g,'_')}_${ds}.xlsx`;
     $('#emailAttachName').textContent = this._emailAttachName;
     $('#emailBody').innerHTML = this.buildEmailBody();
-    const hasToken = !!sessionStorage.getItem('kk_mail_token');
-    const authWarn = $('#emailAuthWarn');
-    if (authWarn) authWarn.classList.toggle('hidden', hasToken);
-    const statusEl = $('#emailAuthStatus');
-    if (statusEl) {
-      statusEl.textContent = hasToken ? '✅ Đã xác thực' : '⚠️ Chưa xác thực — bấm 🔑';
-      statusEl.style.color = hasToken ? '#16a34a' : '#dc2626';
-    }
     $('#emailOverlay').classList.remove('hidden');
   },
 
@@ -2351,33 +2340,35 @@ Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
   },
 
   async sendBienBanEmail() {
-    const fromEmail = $('#emailFrom').value.trim();
-    const toRaw     = $('#emailTo').value.trim();
-    const ccRaw     = $('#emailCc').value.trim();
-    const subject   = $('#emailSubject').value.trim();
-    const userToken = sessionStorage.getItem('kk_mail_token');
-    if (!fromEmail) return this.toast('Vui lòng nhập email người gửi');
-    if (!toRaw)     return this.toast('Vui lòng nhập email người nhận');
-    if (!subject)   return this.toast('Vui lòng nhập tiêu đề');
-    if (!userToken) return this.toast('Chưa xác thực — bấm "Đăng nhập Lark" trước');
+    const toRaw   = $('#emailTo').value.trim();
+    const ccRaw   = $('#emailCc').value.trim();
+    const subject = $('#emailSubject').value.trim();
+    if (!toRaw)   return this.toast('Vui lòng nhập email người nhận');
+    if (!subject) return this.toast('Vui lòng nhập tiêu đề');
     const toList = toRaw.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
     const ccList = ccRaw ? ccRaw.split(/[,\n]/).map(s => s.trim()).filter(Boolean) : [];
     const btn = $('#btnEmailSend');
     btn.disabled = true; btn.textContent = 'Đang tạo Excel...';
     try {
-      const attachB64 = await this.exportBienBan(true);
-      btn.textContent = 'Đang gửi...';
-      this.toast('Đang gửi mail...');
-      const bodyHtml = $('#emailBody').innerHTML;
-      const r = await fetch('/api/kk-sendmail', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ fromEmail, toList, ccList, subject, bodyHtml, attachB64, attachName: this._emailAttachName, userToken })
-      });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || 'Gửi thất bại');
-      this.toast('✅ Đã gửi mail thành công kèm file Excel!');
-      $('#emailOverlay').classList.add('hidden');
+      // 1. Auto-download Excel file
+      await this.exportBienBan(false);
+      btn.textContent = 'Mở mail...';
+
+      // 2. Build plain-text body for mailto
+      const bodyPlain = this.buildEmailBodyPlain();
+
+      // 3. Build mailto link
+      const params = new URLSearchParams();
+      params.set('subject', subject);
+      params.set('body', bodyPlain);
+      if (ccList.length) params.set('cc', ccList.join(','));
+      const mailtoUrl = `mailto:${toList.join(',')}?${params.toString()}`;
+
+      // 4. Open mail client
+      window.location.href = mailtoUrl;
+
+      this.toast('✅ File Excel đã tải xuống — vui lòng đính kèm vào mail vừa mở!');
+      setTimeout(() => $('#emailOverlay').classList.add('hidden'), 1500);
     } catch(e) { this.toast('❌ ' + e.message); }
     finally { btn.disabled = false; btn.textContent = '📧 Gửi mail'; }
   },
