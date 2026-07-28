@@ -2354,10 +2354,19 @@ Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
       await this.exportBienBan(false);
       await new Promise(r => setTimeout(r, 600));
 
-      // 2. Copy nội dung vào clipboard (vì mailto: có giới hạn URL ~2000 ký tự)
+      // 2. Copy nội dung HTML vào clipboard (giữ định dạng bảng khi paste vào mail)
+      const bodyHtml = $('#emailBody').innerHTML;
       const bodyText = this.buildEmailBodyPlain();
       let copied = false;
-      try { await navigator.clipboard.writeText(bodyText); copied = true; } catch(e) {}
+      try {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html':  new Blob([bodyHtml], {type:'text/html'}),
+          'text/plain': new Blob([bodyText], {type:'text/plain'})
+        })]);
+        copied = true;
+      } catch(e) {
+        try { await navigator.clipboard.writeText(bodyText); copied = true; } catch(e2) {}
+      }
 
       // 3. Mở email client chỉ với To/Subject/CC (không body → URL ngắn, luôn hoạt động)
       const ccParam = ccList.length ? `&cc=${encodeURIComponent(ccList.join(','))}` : '';
