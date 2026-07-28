@@ -82,6 +82,10 @@ input,select{font-family:inherit;font-size:16px}
 .drawer-tmpl{flex-shrink:0;padding:6px 14px;font-size:11px;color:#6366f1;background:#eef2ff;border-radius:6px;margin-right:12px;white-space:nowrap;cursor:pointer;border:1px solid #c7d2fe}
 .drawer-tmpl:active{background:#e0e7ff}
 .drawer hr{border:none;border-top:1px solid #eee;margin:6px 0}
+.em-field{margin-bottom:12px}
+.em-field label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px}
+.em-field input,.em-field textarea{width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;font-family:inherit}
+.em-field textarea{min-height:60px;resize:vertical}
 
 /* Sheet */
 .sheetbody{flex:1;display:flex;flex-direction:column;padding:12px 12px 90px}
@@ -360,6 +364,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     <button class="icon-btn" id="btnBienBanBack"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="#fff" d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
     <h2>Biên bản kiểm kê</h2>
     <button class="icon-btn hidden" id="btnExportBienBan" title="Xuất Excel"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="#fff" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></button>
+    <button class="icon-btn hidden" id="btnEmailBienBan" title="Gửi mail"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="#fff" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></button>
   </div>
   <div class="page light" style="padding:16px">
     <!-- Upload section -->
@@ -381,6 +386,49 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
         <table id="bbTable" class="bb-tbl"></table>
       </div>
       <div id="bbSign" style="background:#fff;border-radius:10px;padding:16px;margin-top:12px;font-size:12px;color:#374151;border:1px solid #e5e7eb"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== EMAIL COMPOSE OVERLAY ========== -->
+<div id="emailOverlay" class="hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:200;display:flex;flex-direction:column">
+  <div style="background:#fff;flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:#1e3a5f;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <span style="font-size:15px;font-weight:700">📧 Gửi Biên bản kiểm kê</span>
+      <button id="btnEmailClose" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:0 2px">×</button>
+    </div>
+    <div style="background:#e0f2fe;padding:8px 16px;font-size:12px;color:#0369a1;border-bottom:1px solid #bae6fd;flex-shrink:0">
+      ℹ️ Bấm <b>Gửi mail</b> sẽ tải file Excel và mở ứng dụng email để gửi. Đính kèm file Excel vào mail.
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:14px 16px 8px">
+      <div class="em-field">
+        <label>Từ (email Lark của bạn)</label>
+        <input id="emailFrom" type="email" placeholder="ten.ho@sakukovietnam.com.vn">
+      </div>
+      <div class="em-field">
+        <label>Đến <span style="color:#6b7280;font-weight:400">(dấu phẩy hoặc xuống dòng)</span></label>
+        <textarea id="emailTo" rows="2" placeholder="email1@sakukovietnam.com.vn, email2@..."></textarea>
+      </div>
+      <div class="em-field">
+        <label>CC <span style="color:#6b7280;font-weight:400">(tùy chọn)</span></label>
+        <input id="emailCc" type="text" placeholder="email@sakukovietnam.com.vn">
+      </div>
+      <div class="em-field">
+        <label>Tiêu đề</label>
+        <input id="emailSubject" type="text">
+      </div>
+      <div class="em-field">
+        <label>Nội dung <span style="color:#6b7280;font-weight:400">(có thể chỉnh sửa)</span></label>
+        <div id="emailBody" contenteditable="true" style="min-height:200px;border:1px solid #d1d5db;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.7;overflow-y:auto;background:#fff"></div>
+      </div>
+      <div style="background:#f0f4f8;border-radius:6px;padding:8px 12px;font-size:12px;color:#374151;display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        📎 <span id="emailAttachName" style="font-weight:600">BBKK_KiemKe.xlsx</span>
+        <span style="color:#9ca3af">(tự động đính kèm)</span>
+      </div>
+    </div>
+    <div style="padding:12px 16px;background:#f9fafb;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end;flex-shrink:0">
+      <button id="btnEmailCancel" style="padding:10px 20px;background:#fff;border:1px solid #d1d5db;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600">Hủy</button>
+      <button id="btnEmailSend" style="padding:10px 24px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">📧 Gửi mail</button>
     </div>
   </div>
 </div>
@@ -608,6 +656,13 @@ const APP = {
 
   async init() {
     this.bindEvents();
+    // Check Lark Mail OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const oauthCode = urlParams.get('code');
+    if (oauthCode && urlParams.get('state') === 'mailauth') {
+      window.history.replaceState({}, '', window.location.pathname);
+      this.handleMailOAuth(oauthCode);
+    }
     const portal = localStorage.getItem('kscl_portal_session');
     if (portal) {
       const p = JSON.parse(portal);
@@ -1762,6 +1817,7 @@ const APP = {
     $('#bbUpload').classList.remove('hidden');
     $('#bbPreview').classList.add('hidden');
     $('#btnExportBienBan').classList.add('hidden');
+    $('#btnEmailBienBan').classList.add('hidden');
   },
 
   async loadBienBanFromApp() {
@@ -1942,6 +1998,7 @@ const APP = {
     $('#bbUpload').classList.add('hidden');
     $('#bbPreview').classList.remove('hidden');
     $('#btnExportBienBan').classList.remove('hidden');
+    $('#btnEmailBienBan').classList.remove('hidden');
     this.toast(`Đã tải ${sorted.length} mã chênh lệch`);
   },
 
@@ -1965,7 +2022,7 @@ const APP = {
     });
   },
 
-  async exportBienBan() {
+  async exportBienBan(returnBase64 = false) {
     if (!this.bienBanData) return this.toast('Chưa có dữ liệu');
     this.toast('Đang tạo Excel có logo...');
     try {
@@ -2173,6 +2230,11 @@ const APP = {
 
       // Xuất file
       const buffer = await wb.xlsx.writeBuffer();
+      if (returnBase64) {
+        let bin = ''; const bytes = new Uint8Array(buffer);
+        for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+        return btoa(bin);
+      }
       const blob   = new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
       const url    = URL.createObjectURL(blob);
       const a      = document.createElement('a');
@@ -2181,6 +2243,136 @@ const APP = {
       setTimeout(()=>URL.revokeObjectURL(url),1000);
       this.toast('Đã xuất biên bản kiểm kê');
     } catch(e) { this.toast('Lỗi xuất Excel: '+e.message); console.error(e); }
+  },
+
+  /* ---- Email BBKK ---- */
+  buildEmailBody() {
+    const { items, kho, ngay } = this.bienBanData;
+    const chenh  = items.filter(d => d.kiem_tt !== d.ton_ht);
+    const thieu  = chenh.filter(d => d.kiem_tt - d.ton_ht < 0);
+    const thua   = chenh.filter(d => d.kiem_tt - d.ton_ht > 0);
+    const slThua  = thua.reduce((s,d)  => s + (d.kiem_tt - d.ton_ht), 0);
+    const gtThua  = thua.reduce((s,d)  => s + (d.kiem_tt - d.ton_ht) * (d.gia_ban_le||0), 0);
+    const slThieu = thieu.reduce((s,d) => s + Math.abs(d.kiem_tt - d.ton_ht), 0);
+    const gtThieu = thieu.reduce((s,d) => s + Math.abs(d.kiem_tt - d.ton_ht) * (d.gia_ban_le||0), 0);
+    const totalItems = items.length;
+    const matchItems = items.filter(d => d.kiem_tt === d.ton_ht).length;
+    const fmt = n => Number(n||0).toLocaleString('vi-VN');
+    let n2 = '';
+    try {
+      const parts = ngay.replace(/ /g,'').split('/');
+      let [d,m,y] = parts.map(Number);
+      if (y < 100) y += 2000;
+      const dt = new Date(y, m-1, d); dt.setDate(dt.getDate() + 2);
+      n2 = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+    } catch {}
+    const ts = 'border-collapse:collapse;width:100%;font-size:12px;margin:12px 0';
+    const th = 'border:1px solid #9ca3af;padding:6px 10px;background:#e8edf4;font-weight:600;text-align:center;white-space:nowrap';
+    const td = 'border:1px solid #d1d5db;padding:6px 10px';
+    const tn = 'border:1px solid #d1d5db;padding:6px 10px;text-align:right';
+    const red = 'color:#dc2626;font-weight:600';
+    return `<p style="margin:4px 0">Dear ST ${kho} / Chị Duyên,</p>
+<p style="margin:8px 0">BPKK gửi chênh lệch kiểm kê Siêu thị ${kho} (đẩy tự động từ APP) với số liệu chênh lệch đã thống nhất với ASM và QLST.</p>
+<table style="${ts}">
+<tr><th style="${th}">Nội dung</th><th style="${th}">Số Items</th><th style="${th}">Số lượng SP</th><th style="${th}">Giá trị (VND)</th></tr>
+<tr><td style="${td}">TỔNG SỐ ITEMS KIỂM</td><td style="${tn}">${totalItems}</td><td style="${tn}"></td><td style="${tn}"></td></tr>
+<tr><td style="${td}">TỔNG SỐ ITEMS KIỂM KHỚP PM</td><td style="${tn}">${matchItems}</td><td style="${tn}"></td><td style="${tn}"></td></tr>
+<tr><td style="${td}"><span style="${red}">SỐ ITEMS THỪA ĐỢT KK</span></td><td style="${tn};${red}">${thua.length}</td><td style="${tn};${red}">+${fmt(slThua)}</td><td style="${tn}"></td></tr>
+<tr><td style="${td}"><span style="${red}">SỐ ITEMS THIẾU ĐỢT KK</span></td><td style="${tn};${red}">-${thieu.length}</td><td style="${tn};${red}">-${fmt(slThieu)}</td><td style="${tn}"></td></tr>
+<tr><td style="${td}">TỔNG SỐ TIỀN THỪA</td><td style="${tn}" colspan="2"></td><td style="${tn}">${fmt(gtThua)}</td></tr>
+<tr><td style="${td}"><span style="${red}">TỔNG SỐ TIỀN THIẾU</span></td><td colspan="2" style="${tn};${red}"></td><td style="${tn};${red}">-${fmt(gtThieu)}</td></tr>
+</table>
+<p style="margin:8px 0">ASM cùng siêu thị kiểm tra lại hàng hóa còn sót gửi cho sale Admin xử lý trước <strong>12h ngày ${n2||'[N+2]'}</strong> và điền vào file BBKK (ô giải trình) số lượng hàng chuyển trong đơn TO.</p>
+<p style="margin:8px 0">Sau ngày <strong>${n2||'[N+2]'}</strong> thì tất cả các giải trình TO sẽ không được chấp nhận.</p>
+<p style="margin:12px 0 4px">Trân trọng./.</p>`;
+  },
+
+  showEmailCompose() {
+    if (!this.bienBanData) return this.toast('Chưa có dữ liệu BBKK');
+    const { kho, ngay, items } = this.bienBanData;
+    const nganh = [...new Set(items.map(d => d.nganh).filter(Boolean))].join(', ') || 'CHUNG';
+    const dateTag = (ngay || '').replace(/\//g, '.').trim();
+    $('#emailSubject').value = `BBKK ngành ${nganh} ${kho} ${dateTag}`;
+    $('#emailFrom').value = this.user?.email || '';
+    const d = new Date();
+    const ds = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+    this._emailAttachName = `BBKK_${kho.replace(/[^\wÀ-ɏḀ-ỿ]/g,'_')}_${ds}.xlsx`;
+    $('#emailAttachName').textContent = this._emailAttachName;
+    $('#emailBody').innerHTML = this.buildEmailBody();
+    // Không cần token — dùng mailto:
+    $('#emailOverlay').classList.remove('hidden');
+  },
+
+  buildEmailBodyPlain() {
+    const { items, kho, ngay } = this.bienBanData;
+    const chenh  = items.filter(d => d.kiem_tt !== d.ton_ht);
+    const thieu  = chenh.filter(d => d.kiem_tt - d.ton_ht < 0);
+    const thua   = chenh.filter(d => d.kiem_tt - d.ton_ht > 0);
+    const slThua  = thua.reduce((s,d)  => s + (d.kiem_tt - d.ton_ht), 0);
+    const gtThua  = thua.reduce((s,d)  => s + (d.kiem_tt - d.ton_ht) * (d.gia_ban_le||0), 0);
+    const slThieu = thieu.reduce((s,d) => s + Math.abs(d.kiem_tt - d.ton_ht), 0);
+    const gtThieu = thieu.reduce((s,d) => s + Math.abs(d.kiem_tt - d.ton_ht) * (d.gia_ban_le||0), 0);
+    const fmt = n => Number(n||0).toLocaleString('vi-VN');
+    let n2 = '';
+    try {
+      const parts = ngay.replace(/ /g,'').split('/');
+      let [d,m,y] = parts.map(Number); if (y < 100) y += 2000;
+      const dt = new Date(y,m-1,d); dt.setDate(dt.getDate()+2);
+      n2 = `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+    } catch {}
+    return `Dear ST ${kho} / Chị Duyên,
+
+BPKK gửi chênh lệch kiểm kê Siêu thị ${kho} (đẩy tự động từ APP) với số liệu chênh lệch đã thống nhất với ASM và QLST.
+
+TỔNG SỐ ITEMS KIỂM:          ${items.length}
+TỔNG SỐ ITEMS KIỂM KHỚP PM:  ${items.filter(d=>d.kiem_tt===d.ton_ht).length}
+SỐ ITEMS THỪA ĐỢT KK:        ${thua.length} items (+${fmt(slThua)} SP)
+SỐ ITEMS THIẾU ĐỢT KK:        ${thieu.length} items (-${fmt(slThieu)} SP)
+TỔNG SỐ TIỀN THỪA:            ${fmt(gtThua)} đ
+TỔNG SỐ TIỀN THIẾU:           ${fmt(gtThieu)} đ
+
+ASM cùng siêu thị kiểm tra lại hàng hóa còn sót gửi cho sale Admin xử lý trước 12h ngày ${n2||'[N+2]'} và điền vào file BBKK (ô giải trình) số lượng hàng chuyển trong đơn TO.
+
+Sau ngày ${n2||'[N+2]'} thì tất cả các giải trình TO sẽ không được chấp nhận.
+
+Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
+  },
+
+  async sendBienBanEmail() {
+    const toRaw   = $('#emailTo').value.trim();
+    const ccRaw   = $('#emailCc').value.trim();
+    const subject = $('#emailSubject').value.trim();
+    if (!toRaw)   return this.toast('Vui lòng nhập email người nhận');
+    if (!subject) return this.toast('Vui lòng nhập tiêu đề');
+    const toList = toRaw.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+    const ccList = ccRaw ? ccRaw.split(/[,\n]/).map(s => s.trim()).filter(Boolean) : [];
+    const btn = $('#btnEmailSend');
+    btn.disabled = true; btn.textContent = 'Đang tạo...';
+    try {
+      // 1. Tải Excel trước
+      this.toast('Đang tạo file Excel...');
+      await this.exportBienBan(false);
+      // 2. Mở email client với nội dung điền sẵn
+      const body = this.buildEmailBodyPlain();
+      const ccParam = ccList.length ? `&cc=${encodeURIComponent(ccList.join(','))}` : '';
+      const mailto = `mailto:${encodeURIComponent(toList.join(','))}?subject=${encodeURIComponent(subject)}${ccParam}&body=${encodeURIComponent(body)}`;
+      setTimeout(() => { window.location.href = mailto; }, 800);
+      this.toast('✅ File Excel đã tải — đính kèm vào mail vừa mở');
+      setTimeout(() => $('#emailOverlay').classList.add('hidden'), 1500);
+    } catch(e) { this.toast('❌ ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = '📧 Gửi mail'; }
+  },
+
+  async handleMailOAuth(code) {
+    try {
+      const r = await fetch(`/api/lark-oauth?action=callback&code=${code}`);
+      const j = await r.json();
+      if (j.ok && j.access_token) {
+        sessionStorage.setItem('kk_mail_token', j.access_token);
+        this.toast('✅ Đã xác thực Lark Mail');
+        if (this.bienBanData) this.showEmailCompose();
+      } else { this.toast('Xác thực thất bại: ' + (j.error || 'Lỗi không xác định')); }
+    } catch(e) { this.toast('Lỗi xác thực: ' + e.message); }
   },
 
   /* ---- Report ---- */
@@ -2504,6 +2696,10 @@ const APP = {
     $('#dTmplStock').onclick = () => this.downloadTemplate('stock');
     $('#btnBienBanBack').onclick = () => this.showHome();
     $('#btnExportBienBan').onclick = () => this.exportBienBan();
+    $('#btnEmailBienBan').onclick = () => this.showEmailCompose();
+    $('#btnEmailClose').onclick = () => $('#emailOverlay').classList.add('hidden');
+    $('#btnEmailCancel').onclick = () => $('#emailOverlay').classList.add('hidden');
+    $('#btnEmailSend').onclick = () => this.sendBienBanEmail();
     $('#btnBBFromApp').onclick = () => this.loadBienBanFromApp();
     $('#bbFileInput').onchange = async e => {
       const file = e.target.files[0];

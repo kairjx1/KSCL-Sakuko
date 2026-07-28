@@ -365,13 +365,28 @@ const _initDate=(()=>{const n=new Date(),m=n.getMonth()+1,y=n.getFullYear();retu
 let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:_initDate.m,qcExecYear:_initDate.y,kkExecData:null,kkExecMonth:_initDate.m,kkExecYear:_initDate.y,dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:_initDate.m,qcDiemYear:_initDate.y,qcDiemLoiHM:[],qcDTMonth:_initDate.m,qcDTYear:_initDate.y,qcDTST:{},qcDTCVS:{},qcGLMonth:_initDate.m,qcGLYear:_initDate.y,qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:_initDate.m,qcBBYear:_initDate.y,qcBBList:[],qcBBYearData:{},qcDocsData:{},qcDocLists:{},
   qcOvMonth:_initDate.m,qcOvYear:_initDate.y,qcOvData:null,qcOv2Month:_initDate.m,qcOv2Year:_initDate.py,qcOv2Data:null,
   tonAmCache:null,tonAmMonth:'',tonAmFilter:{q:'',status:'all',nganh:'',sort:'value'},
-  xhCache:null,xhYear:'',xhMonth:'ALL',xhQ:'',xhMode:'st'};
+  xhCache:null,xhYear:'',xhMonth:'ALL',xhQ:'',xhMode:'st',pendingLarkUser:null};
 
 /* ══════════════════════════════════════════
    FIREBASE
 ══════════════════════════════════════════ */
 firebase.initializeApp(FB);
 const auth=firebase.auth(), db=firebase.database();
+
+// Handle Lark OAuth callback for academy
+(async()=>{
+  const p=new URLSearchParams(window.location.search);
+  const code=p.get('code'),state=p.get('state');
+  if(code&&state==='academy'){
+    window.history.replaceState({},'',window.location.pathname);
+    const app=document.getElementById('app');
+    if(app)app.innerHTML='<div class="loading"><div class="spinner"></div><p style="color:rgba(255,255,255,.75)">Đang xác thực tài khoản Lark...</p></div>';
+    try{await handleAcademyLarkCallback(code);}
+    catch(e){
+      if(app)app.innerHTML=`<div class="loading"><p style="color:#fca5a5;font-size:15px;max-width:320px;text-align:center">❌ ${e.message}</p><br><button onclick="location.reload()" style="padding:10px 24px;background:#fff;color:#1b2a4a;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-top:8px">Thử lại</button></div>`;
+    }
+  }
+})();
 
 auth.onAuthStateChanged(async u=>{
   if(u){
@@ -386,8 +401,17 @@ auth.onAuthStateChanged(async u=>{
         }
         go('dashboard');window.chatShowFab?.(true);
       } else {
-        S.profile={name:'',email:u.email,role:ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer',dept:'',phone:'',createdAt:Date.now()};
-        render(); showFirstLogin();window.chatShowFab?.(true);
+        // New user — auto-create from Lark if available, else show form
+        const lark=S.pendingLarkUser;
+        S.pendingLarkUser=null;
+        if(lark&&lark.email===u.email){
+          S.profile={name:lark.name,email:lark.email,role:ADMIN_EMAILS.includes(lark.email)?'superadmin':'viewer',dept:'',phone:'',createdAt:Date.now(),larkId:lark.open_id};
+          await db.ref(`profiles/${u.uid}`).set(S.profile);
+          go('dashboard');window.chatShowFab?.(true);
+        } else {
+          S.profile={name:'',email:u.email,role:ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer',dept:'',phone:'',createdAt:Date.now()};
+          render(); showFirstLogin();window.chatShowFab?.(true);
+        }
       }
     }catch(e){
       // DB rules chưa cấu hình hoặc mạng lỗi — vẫn cho vào với quyền tối thiểu
@@ -452,6 +476,11 @@ function rLogin(){
     <h3>Đăng nhập</h3>
     <p class="login-sub">Vui lòng đăng nhập để tiếp tục làm việc</p>
     <div id="lerr"></div>
+    <button class="btn-login" style="background:#1b5eb8;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:10px" onclick="doLarkAcademyLogin()">
+      <svg width="22" height="22" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="20" fill="#fff"/><path d="M20 8l8 12H12L20 8z" fill="#1b5eb8"/><path d="M12 20l8 12 8-12H12z" fill="#00b0ff" opacity=".7"/></svg>
+      Đăng nhập bằng Lark
+    </button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><hr style="flex:1;border:none;border-top:1px solid #e5e7eb"><span style="font-size:12px;color:#9ca3af">hoặc email/mật khẩu</span><hr style="flex:1;border:none;border-top:1px solid #e5e7eb"></div>
     <div class="fg"><label>Email</label><input id="le" type="email" placeholder="email@sakuko.vn"></div>
     <div class="fg"><label>Mật khẩu</label><input id="lp" type="password" placeholder="••••••••"></div>
     <button class="btn-login" onclick="doLogin()">Đăng nhập</button>
@@ -5125,6 +5154,42 @@ async function doLogin(){
   }
 }
 async function doLogout(){await auth.signOut();S.user=null;S.profile=null;S.data={};go('login');}
+
+/* ── Lark OAuth login ── */
+async function doLarkAcademyLogin(){
+  try{
+    const base=window.location.href.split('?')[0];
+    const r=await fetch(`/api/lark-oauth?action=login_url&redirect=${encodeURIComponent(base)}&state=academy`);
+    const j=await r.json();
+    if(j.ok)window.location.href=j.url;
+    else{const el=document.getElementById('lerr');if(el)el.innerHTML=`<div class="err-box">Lỗi: ${j.error||'Không lấy được URL đăng nhập'}</div>`;}
+  }catch(e){const el=document.getElementById('lerr');if(el)el.innerHTML=`<div class="err-box">${e.message}</div>`;}
+}
+
+async function handleAcademyLarkCallback(code){
+  // Exchange code for Lark user info
+  const r=await fetch(`/api/lark-oauth?action=callback&code=${code}`);
+  const j=await r.json();
+  if(!j.ok)throw new Error(j.error||'Lỗi xác thực Lark');
+  const lu=j.user;
+  if(!lu.email)throw new Error('Tài khoản Lark chưa có email — liên hệ Admin');
+  // Store Lark profile for onAuthStateChanged to use
+  S.pendingLarkUser={name:lu.name||lu.email,email:lu.email,open_id:lu.open_id,avatar:lu.avatar||''};
+  // Firebase sign-in with deterministic password
+  const pwd=`KSCL_${lu.open_id}`;
+  try{
+    await auth.signInWithEmailAndPassword(lu.email,pwd);
+  }catch(e){
+    if(e.code==='auth/user-not-found'||e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'){
+      try{await auth.createUserWithEmailAndPassword(lu.email,pwd);}
+      catch(e2){
+        if(e2.code==='auth/email-already-in-use')throw new Error('Email này đã có tài khoản riêng. Vui lòng đăng nhập bằng email/mật khẩu hoặc liên hệ Admin để liên kết.');
+        throw e2;
+      }
+    }else throw e;
+  }
+  // onAuthStateChanged will fire and handle profile creation
+}
 
 async function saveFirstLogin(){
   const name=document.getElementById('fl-n')?.value?.trim();

@@ -48,7 +48,15 @@ export async function onRequest({ request, env }) {
       if (action === 'login_url') {
         const appId = env.LARK_APP_ID || 'cli_aaa0cdd424b81eed';
         const redirect = url.searchParams.get('redirect') || `${url.origin}/portal.html`;
-        const loginUrl = `${LARK}/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${encodeURIComponent(redirect)}&response_type=code&state=portal`;
+        const state = url.searchParams.get('state') || 'portal';
+        const loginUrl = `${LARK}/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${encodeURIComponent(redirect)}&response_type=code&state=${encodeURIComponent(state)}`;
+        return new Response(JSON.stringify({ ok: true, url: loginUrl }), { headers: CORS });
+      }
+
+      if (action === 'mail_auth_url') {
+        const appId = env.LARK_APP_ID || 'cli_aaa0cdd424b81eed';
+        const redirect = url.searchParams.get('redirect') || `${url.origin}/kiem-ke.html`;
+        const loginUrl = `${LARK}/open-apis/authen/v1/authorize?app_id=${appId}&redirect_uri=${encodeURIComponent(redirect)}&response_type=code&state=mailauth`;
         return new Response(JSON.stringify({ ok: true, url: loginUrl }), { headers: CORS });
       }
 
@@ -67,6 +75,7 @@ export async function onRequest({ request, env }) {
         const u = infoResp.data;
         return new Response(JSON.stringify({
           ok: true,
+          access_token: userToken,
           user: {
             open_id: u.open_id,
             name: u.name,
