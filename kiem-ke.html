@@ -30,7 +30,7 @@ input,select{font-family:inherit;font-size:16px}
 /* Login */
 .login{background:var(--navy);color:#fff;align-items:center;justify-content:space-between}
 .login-inner{width:100%;max-width:420px;padding:12px 28px 0;display:flex;flex-direction:column}
-.login-logo{width:108px;height:108px;border-radius:50%;background:var(--red);color:#fff;font-size:62px;font-weight:800;font-style:italic;display:flex;align-items:center;justify-content:center;margin:48px auto 18px;box-shadow:0 4px 18px rgba(208,2,27,.45)}
+.login-logo{margin:0 auto 18px;display:flex;align-items:center;justify-content:center}
 .login-title{text-align:center;font-size:24px;margin:0 0 44px;font-weight:700}
 .lfield{display:flex;align-items:center;gap:10px;background:#e5e5e8;color:#111;border-radius:14px;padding:15px 16px;margin-bottom:16px}
 .lfield input{flex:1;border:none;outline:none;background:transparent;font-size:17px;color:#111}
@@ -238,17 +238,15 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 </head>
 <body>
 
-<!-- ========== LOGIN ========== -->
+<!-- ========== LOGIN (redirect screen) ========== -->
 <div id="pLogin" class="screen login">
-  <div class="login-inner">
-    <div class="login-logo">KK</div>
-    <h1 class="login-title">KSCL Kiểm Kê</h1>
-    <div class="lfield">
-      <svg viewBox="0 0 24 24" width="24" height="24"><path fill="#333" d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v2h20v-2c0-3.3-6.7-5-10-5z"/></svg>
-      <input type="text" id="inpUser" placeholder="Nhập tên nhân viên" autocomplete="off">
+  <div class="login-inner" style="align-items:center;text-align:center">
+    <div class="login-logo">
+      <img src="/assets/brand/logo-sakuko.png" alt="Sakuko" style="width:180px;height:auto">
     </div>
-    <label class="lremember"><input type="checkbox" id="chkRemember" checked> Ghi nhớ đăng nhập</label>
-    <button class="btn-login" id="btnLogin">Đăng nhập</button>
+    <h1 class="login-title" style="margin-bottom:12px">KSCL Kiểm Kê</h1>
+    <p style="color:rgba(255,255,255,.6);font-size:15px;margin-bottom:32px">Đang chuyển đến trang đăng nhập...</p>
+    <button class="btn-login" onclick="location.href='portal.html'" style="max-width:260px">Đăng nhập bằng Lark</button>
   </div>
   <div class="login-footer">Sakuko Việt Nam &copy; 2025</div>
 </div>
@@ -517,7 +515,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   <div class="drawer-dim" id="drawerDim"></div>
   <div class="drawer">
     <div class="drawer-head">
-      <div class="drawer-logo">KK</div>
+      <div class="drawer-logo" style="background:#fff;border-radius:10px;padding:4px"><img src="/assets/brand/logo-sakuko.png" alt="Sakuko" style="width:38px;height:38px;object-fit:contain"></div>
       <div><div id="drawerUser" style="font-weight:600">-</div><small id="drawerRole">Nhân viên</small></div>
     </div>
     <button class="drawer-item" id="dSync">&#128259; Đồng bộ dữ liệu lên server</button>
@@ -675,16 +673,8 @@ const APP = {
       if (sess) this.session = JSON.parse(sess);
       this.showSessions();
     } else {
-      const saved = localStorage.getItem('kk_user');
-      if (saved) {
-        this.user = JSON.parse(saved);
-        const sess = localStorage.getItem('kk_session');
-        if (sess) this.session = JSON.parse(sess);
-        this.showSessions();
-      } else {
-        location.href = 'index.html';
-        return;
-      }
+      location.href = 'portal.html';
+      return;
     }
     try { this.catalogCount = (await dbGetAll('catalog')).length; } catch { this.catalogCount = 0; }
     this.startSyncLoop();

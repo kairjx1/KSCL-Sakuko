@@ -321,7 +321,7 @@ const SKICONS={
   'kpi-search':'<circle cx="21" cy="21" r="12" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-width="2.5"/><line x1="30" y1="30" x2="43" y2="43" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>',
   'kpi-kk':'<rect x="5" y="22" width="20" height="20" rx="2" fill="currentColor" fill-opacity=".08" stroke="currentColor" stroke-width="2.5"/><path d="M10 32L14 36L21 27" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="33" cy="14" r="9" fill="currentColor" fill-opacity=".06" stroke="currentColor" stroke-width="2.5"/><line x1="39.4" y1="20.4" x2="44" y2="26" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
 };
-function skLogo(sz=36){const p=SKICONS.logo;return`<svg width="${sz}" height="${sz}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">${p}</svg>`;}
+function skLogo(sz=36){return`<img src="/assets/brand/logo-sakuko.png" alt="Sakuko" style="width:${sz}px;height:${sz}px;object-fit:contain">`;}
 function skIcn(n,w=48,h=48,col=''){
   const p=SKICONS[n];if(!p)return'';
   const kpi=n.startsWith('kpi-');
