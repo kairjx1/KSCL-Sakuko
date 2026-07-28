@@ -422,21 +422,21 @@ auth.onAuthStateChanged(async u=>{
       if(ADMIN_EMAILS.includes(u.email))go('dashboard');
     }
   } else {
-    // Auto-login từ portal session (Lark)
+    // Auto-login từ portal session (Lark) — không cần Firebase
     try {
       const ps = JSON.parse(localStorage.getItem('kscl_portal_session') || 'null');
-      if (ps && ps.type === 'lark' && ps.open_id && ps.email) {
-        S.pendingLarkUser = { name: ps.name, email: ps.email, open_id: ps.open_id, avatar: ps.avatar || '' };
-        const pwd = 'KSCL_' + ps.open_id;
-        try { await auth.signInWithEmailAndPassword(ps.email, pwd); }
-        catch(e) {
-          if (e.code==='auth/user-not-found'||e.code==='auth/invalid-credential'||e.code==='auth/wrong-password') {
-            await auth.createUserWithEmailAndPassword(ps.email, pwd);
-          } else throw e;
-        }
-        return; // onAuthStateChanged sẽ fire lại với user đã login
+      if (ps && ps.type === 'lark' && ps.open_id) {
+        S.user = { email: ps.email, uid: 'lark_' + ps.open_id };
+        S.profile = {
+          name: ps.name || ps.email,
+          email: ps.email,
+          role: ADMIN_EMAILS.includes(ps.email) ? 'superadmin' : 'viewer',
+          dept: '', phone: '', larkId: ps.open_id, avatar: ps.avatar || ''
+        };
+        go('dashboard'); window.chatShowFab?.(true);
+        return;
       }
-    } catch(e) { console.warn('Auto-login from portal failed:', e.message); }
+    } catch(e) { console.warn('Portal session read failed:', e.message); }
     go('login'); window.chatShowFab?.(false);
   }
 });

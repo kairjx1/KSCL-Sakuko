@@ -2616,8 +2616,8 @@ Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
 
   /* ---- Events ---- */
   bindEvents() {
-    $('#btnLogin').onclick = () => this.login();
-    $('#inpUser').onkeydown = e => { if (e.key === 'Enter') this.login(); };
+    if ($('#btnLogin')) $('#btnLogin').onclick = () => this.login();
+    if ($('#inpUser')) $('#inpUser').onkeydown = e => { if (e.key === 'Enter') this.login(); };
 
     $('#btnStoreBack').onclick = () => location.href = 'index.html';
     $('#sessionList').onclick = e => {
