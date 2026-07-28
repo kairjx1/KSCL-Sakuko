@@ -1798,6 +1798,12 @@ const APP = {
 
     // Meta bar
     $('#bbMeta').innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <img src="/assets/brand/logo-sakuko.svg" style="height:48px" onerror="this.style.display='none'" alt="Sakuko">
+        <div style="text-align:right;font-size:9px;color:#6b7280;line-height:1.7">
+          Mã hiệu: SBL.KDBL.QT.BM.01.02<br>Lần ban hành: 01<br>Ngày ban hành: 22/03/2018
+        </div>
+      </div>
       <div style="font-size:15px;font-weight:700;text-align:center;margin-bottom:8px;color:#1e3a5f">BẢNG CHÊNH LỆCH HÀNG HÓA KIỂM KÊ</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px 20px;margin-bottom:8px;font-size:13px">
         <span><b>ST:</b> ${esc(kho)}</span>
@@ -1937,7 +1943,7 @@ const APP = {
       // Chuyển SVG logo → PNG base64
       let logoBase64 = null;
       try {
-        const resp = await fetch('/KSCL-Sakuko/assets/brand/logo-sakuko.svg');
+        const resp = await fetch('/assets/brand/logo-sakuko.svg');
         if (resp.ok) logoBase64 = await this._svgToPng(await resp.text(), 240, 68);
       } catch(e) { console.warn('Logo:', e); }
 
@@ -2039,7 +2045,7 @@ const APP = {
           isThua?diff:null,isThua?gt:null,!isThua?diff:null,!isThua?gt:null,'',''];
         vals.forEach((val,ci) => {
           const cell=row.getCell(ci+1);
-          cell.value=val; cell.fill=mkFill(bg); cell.border=mkBorder('FFE5E7EB'); cell.font=mkFont({size:9});
+          cell.value=val; cell.fill=mkFill(bg); cell.border=mkBorder('FF9CA3AF'); cell.font=mkFont({size:9});
           if (ci===4) { cell.alignment={wrapText:true,vertical:'middle'}; }
           else if (ci>=5) { cell.alignment={horizontal:'right',vertical:'middle'}; }
           if (ci===5||ci===10||ci===12) cell.numFmt='#,##0';
