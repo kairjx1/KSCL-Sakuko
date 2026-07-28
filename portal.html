@@ -364,7 +364,7 @@ let larkCallbackHandled = false;
 function startFirebaseListener() {
   auth.onAuthStateChanged(async u => {
     if (larkCallbackHandled) return;
-    if (u) {
+    if (u && !u.isAnonymous) {
       let name = u.displayName || '';
       try {
         const snap = await db.ref(`profiles/${u.uid}`).get();
@@ -415,7 +415,6 @@ async function handleLarkCallback() {
     if (j.ok && j.user) {
       const session = { type: 'lark', name: j.user.name, email: j.user.email, avatar: j.user.avatar, open_id: j.user.open_id, ts: Date.now(), access_token: j.access_token || '' };
       history.replaceState(null, '', location.pathname);
-      try { await auth.signInAnonymously(); } catch (e) { console.warn('Anonymous auth failed:', e.message); }
       checkPermission(session);
       return true;
     } else { showErr('Đăng nhập Lark thất bại: ' + (j.error || '')); }
