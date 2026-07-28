@@ -673,7 +673,7 @@ const APP = {
       if (sess) this.session = JSON.parse(sess);
       this.showSessions();
     } else {
-      location.href = 'portal.html';
+      location.href = 'portal.html?next=kiem-ke';
       return;
     }
     try { this.catalogCount = (await dbGetAll('catalog')).length; } catch { this.catalogCount = 0; }

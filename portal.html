@@ -280,6 +280,10 @@ function showMain(user, role) {
   const s = { ...user, role, roleLabel: R.label };
   localStorage.setItem(PORTAL_KEY, JSON.stringify(s));
 
+  // Auto-redirect if coming from another app (e.g. ?next=kiem-ke)
+  const nextPage = new URLSearchParams(location.search).get('next');
+  if (nextPage) { location.href = nextPage + '.html'; return; }
+
   const grid = document.getElementById('appsGrid');
   grid.innerHTML = '';
   (R.apps || []).forEach(key => {
