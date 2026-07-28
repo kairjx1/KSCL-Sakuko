@@ -1799,7 +1799,14 @@ const APP = {
     // Meta bar
     $('#bbMeta').innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <img src="/assets/brand/logo-sakuko.svg" style="height:48px" onerror="this.style.display='none'" alt="Sakuko">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 68" fill="none" style="height:48px;flex-shrink:0">
+          <defs><g id="sk_bb"><circle cx="0" cy="0" r="2.2" fill="#e84393"/><ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(0)"/><ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(72)"/><ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(144)"/><ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(216)"/><ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(288)"/></g></defs>
+          <text x="0" y="36" font-family="Arial,sans-serif" font-size="34" font-weight="800" fill="#1e3460" letter-spacing="1.5">SAKUK</text>
+          <circle cx="188" cy="26" r="15" fill="none" stroke="#1e3460" stroke-width="3.2"/>
+          <use href="#sk_bb" transform="translate(188,26) scale(1.05)"/>
+          <rect x="0" y="46" width="132" height="16" rx="2" fill="#1e3460"/>
+          <text x="66" y="58" text-anchor="middle" font-family="Arial,sans-serif" font-size="8.5" font-weight="700" fill="#ffffff" letter-spacing="0.8">HÀNG NHẬT NỘI ĐỊA</text>
+        </svg>
         <div style="text-align:right;font-size:9px;color:#6b7280;line-height:1.7">
           Mã hiệu: SBL.KDBL.QT.BM.01.02<br>Lần ban hành: 01<br>Ngày ban hành: 22/03/2018
         </div>
@@ -1940,12 +1947,10 @@ const APP = {
       const netGt   = gtThua + gtThieu;
       const year    = new Date().getFullYear();
 
-      // Chuyển SVG logo → PNG base64
+      // Chuyển inline SVG logo → PNG base64 (không fetch, không bao giờ fail)
+      const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 68" fill="none"><defs><g id="sk_ex"><circle cx="0" cy="0" r="2.2" fill="#e84393"/><ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(0)"/><ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(72)"/><ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(144)"/><ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(216)"/><ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(288)"/></g></defs><text x="0" y="36" font-family="Arial,sans-serif" font-size="34" font-weight="800" fill="#1e3460" letter-spacing="1.5">SAKUK</text><circle cx="188" cy="26" r="15" fill="none" stroke="#1e3460" stroke-width="3.2"/><use href="#sk_ex" transform="translate(188,26) scale(1.05)"/><rect x="0" y="46" width="132" height="16" rx="2" fill="#1e3460"/><text x="66" y="58" text-anchor="middle" font-family="Arial,sans-serif" font-size="8.5" font-weight="700" fill="#ffffff" letter-spacing="0.8">HANG NHAT NOI DIA</text></svg>`;
       let logoBase64 = null;
-      try {
-        const resp = await fetch('/assets/brand/logo-sakuko.svg');
-        if (resp.ok) logoBase64 = await this._svgToPng(await resp.text(), 240, 68);
-      } catch(e) { console.warn('Logo:', e); }
+      try { logoBase64 = await this._svgToPng(LOGO_SVG, 480, 136); } catch(e) { console.warn('Logo PNG:', e); }
 
       const wb = new ExcelJS.Workbook();
       wb.creator = 'KSCL Sakuko';
