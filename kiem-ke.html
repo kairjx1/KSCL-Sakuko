@@ -420,6 +420,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     </div>
     <button class="drawer-item" id="dSync">&#128259; Đồng bộ dữ liệu lên server</button>
     <button class="drawer-item" id="dReport">Tổng hợp / Đối chiếu</button>
+    <button class="drawer-item" id="dBienBan">📋 Biên bản kiểm kê</button>
     <hr>
     <button class="drawer-item" id="dImportCatalog">Nhập danh mục hàng hóa</button>
     <button class="drawer-item" id="dSyncCatalog">&#8635; Đồng bộ danh mục từ Lark</button>
@@ -1486,6 +1487,173 @@ const APP = {
     this.toast('Đã xuất Excel');
   },
 
+  async generateBienBan() {
+    this.closeDrawer();
+    // Lấy dữ liệu (reuse reportData nếu có, không thì tự tính)
+    let rows = this.reportData;
+    if (!rows || !rows.length) {
+      this.toast('Đang tính dữ liệu...');
+      const counts = await dbGetAll('counts');
+      const sessCounts = counts.filter(c => c.ma_dot === this.session?.ma_dot);
+      const khoName = this.session?.ten_dot || this.session?.ma_dot;
+      let tonMap = {}, tonApiOk = false;
+      if (API) {
+        try {
+          const r = await fetch(`${API}/kk-ton?kho=${encodeURIComponent(khoName)}`);
+          const j = await r.json();
+          if (j.ok) { tonApiOk = true; j.items.forEach(it => { tonMap[it.barcode] = it; }); }
+        } catch {}
+      }
+      if (!tonApiOk) {
+        const local = await dbGetAll('ton_stock').catch(() => []);
+        local.filter(x => x.kho === khoName).forEach(it => { tonMap[it.barcode] = it; });
+      }
+      const catalogArr = await dbGetAll('catalog').catch(() => []);
+      const catalogMap = {};
+      catalogArr.forEach(c => { catalogMap[c.barcode] = c; });
+      const byBarcode = {};
+      for (const c of sessCounts) {
+        if (!byBarcode[c.barcode]) byBarcode[c.barcode] = { barcode: c.barcode, ten_sp: c.ten_sp || '', ma_hang: c.ma_hang || '', nganh: c.nganh || '', areas: [], totalSL: 0 };
+        byBarcode[c.barcode].totalSL += (c.so_luong || 0);
+        if (c.khu_vuc && !byBarcode[c.barcode].areas.includes(c.khu_vuc)) byBarcode[c.barcode].areas.push(c.khu_vuc);
+      }
+      for (const [bc, ton] of Object.entries(tonMap)) {
+        if (!byBarcode[bc]) byBarcode[bc] = { barcode: bc, ten_sp: ton.ten_sp || '', ma_hang: ton.ma_hang || '', nganh: ton.nganh || '', areas: [], totalSL: 0 };
+      }
+      rows = Object.values(byBarcode).map(d => {
+        const ton = tonMap[d.barcode]; const cat = catalogMap[d.barcode];
+        return { ...d, kho: khoName, nganh: ton?.nganh || cat?.nganh || d.nganh || '', ma_hang: ton?.ma_hang || cat?.ma_hang || d.ma_hang || '', ton_he_thong: ton?.ton_he_thong || 0, don_gia: ton?.don_gia || cat?.gia_ban_le || 0 };
+      }).filter(d => d.totalSL > 0 || d.ton_he_thong > 0);
+    }
+    if (!rows.length) return this.toast('Không có dữ liệu');
+
+    // Chỉ lấy hàng có chênh lệch, sắp xếp: thiếu trước (âm nhất trước), thừa sau (dương nhất trước)
+    const chenhItems = rows.filter(d => d.totalSL !== d.ton_he_thong);
+    const thieu = chenhItems.filter(d => d.totalSL - d.ton_he_thong < 0).sort((a, b) => (a.totalSL - a.ton_he_thong) - (b.totalSL - b.ton_he_thong));
+    const thua  = chenhItems.filter(d => d.totalSL - d.ton_he_thong > 0).sort((a, b) => (b.totalSL - b.ton_he_thong) - (a.totalSL - a.ton_he_thong));
+    const sorted = [...thieu, ...thua];
+
+    // Tổng kết
+    const slThua  = thua.reduce((s, d)  => s + (d.totalSL - d.ton_he_thong), 0);
+    const gtThua  = thua.reduce((s, d)  => s + (d.totalSL - d.ton_he_thong) * (d.don_gia || 0), 0);
+    const slThieu = thieu.reduce((s, d) => s + (d.totalSL - d.ton_he_thong), 0);
+    const gtThieu = thieu.reduce((s, d) => s + (d.totalSL - d.ton_he_thong) * (d.don_gia || 0), 0);
+    const netGt   = gtThua + gtThieu;
+
+    const kho  = this.session?.ten_dot || this.session?.ma_dot || '';
+    const ngay = new Date().toLocaleDateString('vi-VN');
+    const year = new Date().getFullYear();
+
+    // ===== Sheet BBKK =====
+    // Cột: 0=STT 1=Loại Hàng 2=Mã SP 3=Barcode 4=Tên SP 5=Giá 6=Tồn PM 7=Tồn TT 8=Δ(net) 9=SL thừa 10=GT thừa 11=SL thiếu 12=GT thiếu 13=Lý do 14=Ngày
+    const N = 15; // số cột
+    const r = (arr) => { while (arr.length < N) arr.push(null); return arr; };
+
+    const aoa = [];
+    // Row 0: mã hiệu
+    aoa.push(r([null,null,null,null,null,null,null,null,null,'Mã hiệu: SBL.KDBL.QT.BM.01.02   Lần ban hành: 01   Ngày ban hành: 22/03/2018']));
+    // Row 1: tiêu đề
+    aoa.push(r(['BẢNG CHÊNH LỆCH HÀNG HÓA KIỂM KÊ']));
+    // Row 2: ST + Ngày + Tổng summary
+    aoa.push(r([null,'ST: '+kho,null,null,'Ngày kiểm kê: '+ngay,null,null,null,null,slThua,gtThua,slThieu,gtThieu,netGt]));
+    // Row 3: Lần kiểm thứ
+    aoa.push(r([null,'Lần kiểm thứ: ..............................']));
+    // Row 4: blank
+    aoa.push(r([]));
+    // Row 5-7: 3-level column headers
+    aoa.push(r(['STT','Loại Hàng','Mã sản phẩm','Mã Barcode','Tên sản phẩm','Giá bán lẻ','SL tồn\nphần mềm','SL tồn\nthực tế',null,'Chênh lệch',null,null,null,'Lý do ST giải trình','Ngày điều chỉnh']));
+    aoa.push(r([null,null,null,null,null,null,null,null,null,'Chênh lệch thừa',null,'Chênh lệch thiếu',null]));
+    aoa.push(r([null,null,null,null,null,null,null,null,null,'Số lượng','Trị giá thừa','Số lượng','Trị giá thiếu']));
+
+    // Data rows
+    sorted.forEach((d, i) => {
+      const diff = d.totalSL - d.ton_he_thong;
+      const gt   = diff * (d.don_gia || 0);
+      aoa.push(r([
+        i + 1,
+        d.nganh || '',
+        d.ma_hang || '',
+        d.barcode,
+        d.ten_sp,
+        d.don_gia || 0,
+        d.ton_he_thong,
+        d.totalSL,
+        diff,
+        diff > 0 ? diff : null,
+        diff > 0 ? gt   : null,
+        diff < 0 ? diff : null,
+        diff < 0 ? gt   : null,
+        '',
+        ''
+      ]));
+    });
+
+    // Tổng
+    const tongRow = aoa.length;
+    aoa.push(r(['Tổng',null,null,null,null,null,null,null,null,slThua,gtThua,slThieu,gtThieu,netGt]));
+    // Blank
+    aoa.push(r([]));
+    // Ký tên
+    aoa.push(r([null,null,null,'Vào lúc ……. giờ …….. phút, thứ ….. ngày …… tháng …… năm '+year]));
+    aoa.push(r([null,'Quản lý ST',null,'GSKV',null,'Trưởng nhóm kiểm kê',null,null,null,'Giám đốc ĐHBL',null,null,null,'Trưởng Phòng Kế Toán']));
+    aoa.push(r([null,'(Ký và ghi rõ họ tên)',null,'(Ký và ghi rõ họ tên)',null,'(Ký và ghi rõ họ tên)',null,null,null,'(Ký và ghi rõ họ tên)',null,null,null,'(Ký và ghi rõ họ tên)']));
+
+    const ws1 = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Merge cells (0-indexed row, col)
+    ws1['!merges'] = [
+      {s:{r:1,c:0},e:{r:1,c:14}},   // tiêu đề span toàn bộ
+      {s:{r:2,c:1},e:{r:2,c:3}},    // ST name
+      {s:{r:2,c:4},e:{r:2,c:7}},    // Ngày kiểm kê
+      {s:{r:5,c:0},e:{r:7,c:0}},    // STT
+      {s:{r:5,c:1},e:{r:7,c:1}},    // Loại Hàng
+      {s:{r:5,c:2},e:{r:7,c:2}},    // Mã SP
+      {s:{r:5,c:3},e:{r:7,c:3}},    // Barcode
+      {s:{r:5,c:4},e:{r:7,c:4}},    // Tên SP
+      {s:{r:5,c:5},e:{r:7,c:5}},    // Giá bán lẻ
+      {s:{r:5,c:6},e:{r:7,c:6}},    // SL tồn PM
+      {s:{r:5,c:7},e:{r:7,c:7}},    // SL tồn TT
+      {s:{r:5,c:8},e:{r:7,c:8}},    // Chênh lệch net (col I)
+      {s:{r:5,c:9},e:{r:5,c:12}},   // "Chênh lệch" header span
+      {s:{r:6,c:9},e:{r:6,c:10}},   // Chênh lệch thừa
+      {s:{r:6,c:11},e:{r:6,c:12}},  // Chênh lệch thiếu
+      {s:{r:5,c:13},e:{r:7,c:13}},  // Lý do
+      {s:{r:5,c:14},e:{r:7,c:14}},  // Ngày điều chỉnh
+      {s:{r:tongRow,c:0},e:{r:tongRow,c:8}},   // Tổng (merge phần đầu)
+    ];
+
+    // Độ rộng cột
+    ws1['!cols'] = [
+      {wch:5},{wch:20},{wch:10},{wch:16},{wch:45},{wch:12},{wch:10},{wch:10},{wch:8},{wch:8},{wch:14},{wch:8},{wch:14},{wch:20},{wch:14}
+    ];
+
+    // ===== Sheet Tổng hợp (Sheet2) =====
+    const totalItems = rows.length;
+    const totalQty   = rows.reduce((s, d) => s + (d.totalSL || 0), 0);
+    const matchItems = rows.filter(d => d.totalSL === d.ton_he_thong).length;
+    const matchQty   = rows.filter(d => d.totalSL === d.ton_he_thong).reduce((s, d) => s + d.totalSL, 0);
+
+    const aoa2 = [
+      [null,null,null,null,'Nội dung','Số items','Số lượng SP','Giá trị'],
+      [null,null,null,null,'TỔNG SỐ ITEMS KIỂM', totalItems, totalQty, null],
+      [null,null,null,null,'TỔNG SỐ ITEMS KIỂM KHỚP PM', matchItems, matchQty, null],
+      [null,null,null,null,'SỐ ITEMS THỪA ĐỢT KK', thua.length, slThua, null],
+      [null,null,null,null,'SỐ ITEMS THIẾU ĐỢT KK', -thieu.length, slThieu, null],
+      [null,null,null,null,'TỔNG SỐ TIỀN THỪA', gtThua, null, null],
+      [null,null,null,null,'TỔNG SỐ TIỀN THIẾU', gtThieu, null, null],
+    ];
+    const ws2 = XLSX.utils.aoa_to_sheet(aoa2);
+    ws2['!cols'] = [{wch:4},{wch:4},{wch:4},{wch:4},{wch:30},{wch:12},{wch:14},{wch:14}];
+
+    const wbOut = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wbOut, ws1, 'BBKK');
+    XLSX.utils.book_append_sheet(wbOut, ws2, 'Tổng hợp');
+
+    const fname = 'BBKK_' + kho.replace(/[^a-zA-Z0-9]/g, '_') + '_' + new Date().toISOString().slice(0,10) + '.xlsx';
+    XLSX.writeFile(wbOut, fname);
+    this.toast('Đã xuất biên bản kiểm kê');
+  },
+
   /* ---- Report ---- */
   async showReport() {
     this.show('pReport');
@@ -1801,6 +1969,7 @@ const APP = {
     $('#dExport').onclick = () => this.exportExcel();
     $('#dPicker').onclick = () => { this.closeDrawer(); this.showProgress(); };
     $('#dReport').onclick = () => this.showReport();
+    $('#dBienBan').onclick = () => this.generateBienBan();
     $('#dChangeSession').onclick = () => { this.closeDrawer(); this.showSessions(); };
     $('#dLogout').onclick = () => this.logout();
 
