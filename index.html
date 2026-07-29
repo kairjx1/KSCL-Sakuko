@@ -185,6 +185,39 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
     <p>Hệ thống quản lý kiểm soát chất lượng Sakuko Vietnam. Chọn ứng dụng bên dưới để bắt đầu.</p>
   </div>
   <div class="apps" id="appsGrid"></div>
+
+  <!-- CHAT BOT WIDGET (inside mainContent so hidden/shown with it) -->
+  <div id="chatFabWrap" style="position:fixed;bottom:90px;right:16px;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+    <div id="chatFabLabel" style="background:#1a2558;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer">Nếu cần hỗ trợ hãy hỏi Bé Kiểm Soát Sakuko 🐱</div>
+    <button id="chatFab" style="width:62px;height:62px;border-radius:50%;background:#fff;border:3px solid #d0021b;cursor:pointer;box-shadow:0 4px 16px rgba(208,2,27,.4);display:flex;align-items:center;justify-content:center;padding:0;overflow:hidden" title="Bé Kiểm Soát Sakuko">
+      <img src="/assets/bot-cat.jpg" alt="Bé Kiểm Soát Sakuko" style="width:100%;height:100%;object-fit:cover;border-radius:50%">
+    </button>
+  </div>
+
+  <div id="chatPanel">
+    <div class="chat-head">
+      <div class="chat-head-av" style="padding:0;overflow:hidden"><img src="/assets/bot-cat.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>
+      <div class="chat-head-info">
+        <strong>Bé Kiểm Soát Sakuko</strong>
+        <span>Hỏi về app Kiểm Kê, Academy &amp; quy trình</span>
+      </div>
+      <button class="chat-head-close" id="chatClose">&times;</button>
+    </div>
+    <div class="chat-msgs" id="chatMsgs">
+      <div class="chat-msg bot">Xin chào! Mình là Bé Kiểm Soát Sakuko 🐱
+
+Tôi có thể giúp bạn về:
+• Cách dùng <strong>App Kiểm Kê</strong>
+• Cách dùng <strong>KSCL Academy</strong>
+• Quy trình &amp; hướng dẫn nội bộ
+
+Bạn cần hỗ trợ gì?</div>
+    </div>
+    <div class="chat-foot">
+      <input type="text" id="chatInput" placeholder="Hỏi về app, quy trình..." autocomplete="off">
+      <button id="chatSend">Gửi</button>
+    </div>
+  </div>
 </div>
 
 <div class="footer hidden" id="footerEl">Sakuko Việt Nam &copy; 2025 &middot; KSCL System v2.0</div>
@@ -538,9 +571,7 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
 
 <!-- ========== CHAT BOT WIDGET ========== -->
 <style>
-#chatFabWrap{position:fixed;bottom:90px;right:16px;z-index:9999;flex-direction:column;align-items:flex-end;gap:8px;display:none}
-#mainContent:not(.hidden) ~ #chatFabWrap{display:flex!important}
-@media(max-width:600px){#chatFabWrap{bottom:90px;right:16px}#chatPanel{bottom:170px;right:8px;width:calc(100vw - 16px)}}
+@media(max-width:600px){#chatPanel{bottom:170px;right:8px;width:calc(100vw - 16px)}}
 #chatFabLabel{background:#1a2558;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer}
 #chatFab{width:62px;height:62px;border-radius:50%;background:#fff;border:3px solid #d0021b;cursor:pointer;box-shadow:0 4px 16px rgba(208,2,27,.4);display:flex;align-items:center;justify-content:center;transition:transform .2s;padding:0;overflow:hidden;align-self:flex-end}
 #chatFab:hover{transform:scale(1.08)}
@@ -571,39 +602,6 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
 .chat-foot button:hover{background:#a00115}
 .chat-foot button:disabled{background:#e5e7eb;color:#9ca3af;cursor:not-allowed}
 </style>
-
-<div id="chatFabWrap">
-  <div id="chatFabLabel">Nếu cần hỗ trợ hãy hỏi Bé Kiểm Soát Sakuko 🐱</div>
-  <button id="chatFab" title="Bé Kiểm Soát Sakuko">
-    <img src="/assets/bot-cat.jpg" alt="Bé Kiểm Soát Sakuko">
-    <span class="badge" id="chatBadge"></span>
-  </button>
-</div>
-
-<div id="chatPanel">
-  <div class="chat-head">
-    <div class="chat-head-av" style="padding:0;overflow:hidden"><img src="/assets/bot-cat.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>
-    <div class="chat-head-info">
-      <strong>Bé Kiểm Soát Sakuko</strong>
-      <span>Hỏi về app Kiểm Kê, Academy &amp; quy trình</span>
-    </div>
-    <button class="chat-head-close" id="chatClose">&times;</button>
-  </div>
-  <div class="chat-msgs" id="chatMsgs">
-    <div class="chat-msg bot">Xin chào! Mình là Bé Kiểm Soát Sakuko 🐱
-
-Tôi có thể giúp bạn về:
-• Cách dùng <strong>App Kiểm Kê</strong>
-• Cách dùng <strong>KSCL Academy</strong>
-• Quy trình &amp; hướng dẫn nội bộ
-
-Bạn cần hỗ trợ gì?</div>
-  </div>
-  <div class="chat-foot">
-    <input type="text" id="chatInput" placeholder="Hỏi về app, quy trình..." autocomplete="off">
-    <button id="chatSend">Gửi</button>
-  </div>
-</div>
 
 <script>
 (function(){
