@@ -61,7 +61,7 @@ export async function onRequest({ request, env }) {
     const { messages } = await request.json();
     if (!messages?.length) return new Response(JSON.stringify({ ok: false, error: 'Cần messages' }), { headers: CORS });
 
-    const apiKey = env.GROQ_API_KEY;
+    const apiKey = (env.GROQ_API_KEY || '').trim();
     if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'Chưa cấu hình GROQ_API_KEY' }), { headers: CORS });
 
     const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
