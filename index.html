@@ -612,6 +612,7 @@ Bạn cần hỗ trợ gì?</div>
   function toggleChat(){
     open = !open;
     document.getElementById('chatPanel').classList.toggle('open', open);
+    document.getElementById('chatFabLabel').style.display = open ? 'none' : '';
     if(open){ document.getElementById('chatInput').focus(); scrollBottom(); }
   }
 
