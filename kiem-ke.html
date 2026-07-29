@@ -1300,7 +1300,7 @@ const APP = {
       if (!rows.length) return this.toast('File rỗng');
       const h = Object.keys(rows[0]);
       const sp2Col = h.find(x => /mã\s*sp2|ma\s*sp2/i.test(x));   // Mã SP2 → barcode
-      const maSCol = h.find(x => /^mã\s*s$/i.test(x) || /^mã\s*kl$/i.test(x) || /^item\s*no/i.test(x)); // Mã S/Mã kl → ma_hang
+      const maSCol = h.find(x => /^mã\s*sp$/i.test(x) || /^mã\s*s$/i.test(x) || /^mã\s*kl$/i.test(x) || /^item\s*no/i.test(x) || /^mã\s*hàng$|^ma\s*hang$|^mã\s*item$|^ma\s*item$/i.test(x)); // Mã SP/Mã S/Mã KL/Mã hàng → ma_hang
       const bcCol = h.find(x => /^barcode$/i.test(x));              // Barcode fallback
       const tenCol = h.find(x => /tên.*sp|ten.*sp|description/i.test(x));
       const giaCol = h.find(x => /giá.*bl|gia.*bl|giá.*bán|retail.*price|price/i.test(x));
@@ -1310,7 +1310,7 @@ const APP = {
       const retailCol = h.find(x => /retail.*inventory/i.test(x));
       const accountCol = h.find(x => /accounting.*inventory/i.test(x));
       const posCol = h.find(x => /pos.*sold/i.test(x));
-      const tonCol = retailCol || h.find(x => /tồn|ton|expected.*inventory/i.test(x)) || h.find(x => /số.*lượng|so.*luong|stock/i.test(x));
+      const tonCol = h.find(x => /tồn|ton|expected.*inventory/i.test(x)) || h.find(x => /số.*lượng|so.*luong|stock/i.test(x));
       if (!sp2Col && !bcCol) return this.toast('Không tìm thấy cột Mã SP2 hoặc Barcode');
 
       const curKho = this.session?.ten_dot || '';
@@ -1331,11 +1331,14 @@ const APP = {
       const tonItems = [];
       for (const row of filtered) {
         const bc = String(row[sp2Col] || row[bcCol] || '').trim();  // Mã SP2 ưu tiên
-        const maHang = String(row[maSCol] || bc).trim();            // Mã S làm item code
+        const maHang = String(row[maSCol] || bc).trim();            // Mã SP làm item code
         if (!bc) continue;
         let ton = 0;
-        if (tonCol) { ton = parseFloat(row[tonCol]) || 0; }
-        else if (accountCol) { ton = (parseFloat(row[accountCol]) || 0) + (parseFloat(row[posCol]) || 0); }
+        // Ưu tiên: Accounting Inventory + POS Sold (cột L + M của NAV)
+        if (accountCol && posCol) { ton = (parseFloat(row[accountCol]) || 0) + (parseFloat(row[posCol]) || 0); }
+        else if (tonCol) { ton = parseFloat(row[tonCol]) || 0; }
+        else if (retailCol) { ton = parseFloat(row[retailCol]) || 0; }
+        else if (accountCol) { ton = parseFloat(row[accountCol]) || 0; }
         tonItems.push({
           barcode: bc,
           ma_hang: maHang,
@@ -1794,7 +1797,7 @@ const APP = {
       ws['!cols'] = [{wch:16},{wch:10},{wch:45},{wch:12},{wch:22},{wch:12},{wch:12},{wch:10},{wch:12},{wch:14}];
       name = 'DanhMuc'; filename = 'Mau_NhapDanhMucHangHoa.xlsx';
     } else if (type === 'stock') {
-      const header = ['Kho','Mã SP2','Mã S','Tên SP','Tồn','Giá BL','Ngành','ĐVT'];
+      const header = ['Kho','Mã SP2','Mã SP','Tên SP','Tồn','Giá BL','Ngành','ĐVT'];
       const sample = [
         ['Trần Đăng Ninh','4987415993508','110402','SHISEIDO- The Collagen EXR (50ml x 10 lo)',12,899000,'CHĂM SÓC SỨC KHỎE','PSC'],
         ['Trần Đăng Ninh','1110022020005','110456','FUJI PHARMA- Viên đặt âm đạo Clotrimazole 10 viên',6,125000,'CHĂM SÓC SỨC KHỎE','PSC'],
