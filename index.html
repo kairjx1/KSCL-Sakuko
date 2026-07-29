@@ -538,8 +538,8 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
 
 <!-- ========== CHAT BOT WIDGET ========== -->
 <style>
-#chatFabWrap{position:fixed;bottom:max(24px,env(safe-area-inset-bottom,0px) + 16px);right:24px;z-index:999;display:none;flex-direction:column;align-items:flex-end;gap:8px}
-@media(max-width:600px){#chatFabWrap{bottom:max(80px,env(safe-area-inset-bottom,0px) + 70px);right:16px}#chatPanel{bottom:max(155px,env(safe-area-inset-bottom,0px) + 145px);right:8px;width:calc(100vw - 16px)}}
+#chatFabWrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:none;flex-direction:column;align-items:flex-end;gap:8px}
+@media(max-width:600px){#chatFabWrap{bottom:90px;right:16px}#chatPanel{bottom:170px;right:8px;width:calc(100vw - 16px)}}
 #chatFabLabel{background:#1a2558;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer}
 #chatFab{width:62px;height:62px;border-radius:50%;background:#fff;border:3px solid #d0021b;cursor:pointer;box-shadow:0 4px 16px rgba(208,2,27,.4);display:flex;align-items:center;justify-content:center;transition:transform .2s;padding:0;overflow:hidden;align-self:flex-end}
 #chatFab:hover{transform:scale(1.08)}
