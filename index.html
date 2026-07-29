@@ -666,8 +666,9 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
     inp.focus();
   }
 
-  document.getElementById('chatFab').onclick = toggleChat;
-  document.getElementById('chatFabLabel').onclick = toggleChat;
+  window.toggleChatBot = toggleChat;
+  if(document.getElementById('chatFab')) document.getElementById('chatFab').onclick = toggleChat;
+  if(document.getElementById('chatFabLabel')) document.getElementById('chatFabLabel').onclick = toggleChat;
   document.getElementById('chatClose').onclick = toggleChat;
   document.getElementById('chatSend').onclick = sendMsg;
   document.getElementById('chatInput').onkeydown = e => { if(e.key==='Enter'){ e.preventDefault(); sendMsg(); } };
@@ -717,11 +718,24 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
   })();
 })();
 </script>
-<div id="chatFabWrap" style="position:fixed;bottom:100px;right:16px;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-  <div id="chatFabLabel" style="background:#1a2558;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer">Nếu cần hỗ trợ hãy hỏi Bé Kiểm Soát Sakuko 🐱</div>
-  <button id="chatFab" style="width:62px;height:62px;border-radius:50%;background:#fff;border:3px solid #d0021b;cursor:pointer;box-shadow:0 4px 16px rgba(208,2,27,.4);display:flex;align-items:center;justify-content:center;padding:0;overflow:hidden" title="Bé Kiểm Soát Sakuko">
-    <img src="/assets/bot-cat.jpg" alt="Bé Kiểm Soát Sakuko" style="width:100%;height:100%;object-fit:cover;border-radius:50%">
-  </button>
-</div>
+<script>
+(function(){
+  function injectFab(){
+    if(document.getElementById('chatFabWrap')) return;
+    var wrap = document.createElement('div');
+    wrap.id = 'chatFabWrap';
+    wrap.setAttribute('style','position:fixed!important;bottom:100px!important;right:16px!important;z-index:2147483647!important;display:flex!important;flex-direction:column;align-items:flex-end;gap:8px');
+    wrap.innerHTML = '<div id="chatFabLabel" style="background:#1a2558;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer">Nếu cần hỗ trợ hãy hỏi Bé Kiểm Soát Sakuko 🐱</div>'
+      +'<button id="chatFab" style="width:62px;height:62px;border-radius:50%;background:#fff;border:3px solid #d0021b;cursor:pointer;box-shadow:0 4px 16px rgba(208,2,27,.4);display:flex!important;align-items:center;justify-content:center;padding:0;overflow:hidden" title="Bé Kiểm Soát Sakuko"><img src="/assets/bot-cat.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>';
+    document.body.appendChild(wrap);
+    document.getElementById('chatFabLabel').onclick = function(){ if(window.toggleChatBot) window.toggleChatBot(); };
+    document.getElementById('chatFab').onclick = function(){ if(window.toggleChatBot) window.toggleChatBot(); };
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectFab);
+  else injectFab();
+  setTimeout(injectFab, 1000);
+  setTimeout(injectFab, 3000);
+})();
+</script>
 </body>
 </html>
