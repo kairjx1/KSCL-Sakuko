@@ -265,7 +265,7 @@ function showMain(user, role) {
   document.getElementById('topbar').classList.remove('hidden');
   document.getElementById('mainContent').classList.remove('hidden');
   document.getElementById('footerEl').classList.remove('hidden');
-  const fab = document.getElementById('chatFabWrap'); if(fab) fab.style.display = 'flex';
+  const fab = document.getElementById('chatFabWrap'); if(fab) fab.classList.add('visible');
   document.getElementById('userName').textContent = user.name || user.email || '-';
   document.getElementById('welcomeMsg').textContent = `Xin chào, ${user.name || user.email}!`;
   setAvatar(document.getElementById('userAvatar'), user);
@@ -538,7 +538,8 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
 
 <!-- ========== CHAT BOT WIDGET ========== -->
 <style>
-#chatFabWrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:none;flex-direction:column;align-items:flex-end;gap:8px}
+#chatFabWrap{position:fixed;bottom:24px;right:24px;z-index:9999;flex-direction:column;align-items:flex-end;gap:8px;display:none}
+#chatFabWrap.visible{display:flex!important}
 @media(max-width:600px){#chatFabWrap{bottom:90px;right:16px}#chatPanel{bottom:170px;right:8px;width:calc(100vw - 16px)}}
 #chatFabLabel{background:#1a2558;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer}
 #chatFab{width:62px;height:62px;border-radius:50%;background:#fff;border:3px solid #d0021b;cursor:pointer;box-shadow:0 4px 16px rgba(208,2,27,.4);display:flex;align-items:center;justify-content:center;transition:transform .2s;padding:0;overflow:hidden;align-self:flex-end}
@@ -682,7 +683,7 @@ Bạn cần hỗ trợ gì?</div>
   document.getElementById('chatInput').onkeydown = e => { if(e.key==='Enter'){ e.preventDefault(); sendMsg(); } };
 
   // Expose for other pages
-  window.chatShowFab = function(show){ document.getElementById('chatFabWrap').style.display = show ? 'flex' : 'none'; };
+  window.chatShowFab = function(show){ document.getElementById('chatFabWrap').classList.toggle('visible', show); };
 })();
 </script>
 </body>
