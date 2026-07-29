@@ -300,6 +300,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
         <input type="text" placeholder="Tìm mã / barcode / tên SP..." id="sheetSearch">
         <button class="clearbtn hidden" id="btnClearSearch">&times;</button>
       </div>
+      <button class="scanbtn" id="btnManualBarcode" title="Nhập tay" style="margin-right:4px;background:#6d28d9"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="#fff" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
       <button class="scanbtn" id="btnCatalogSearch" title="Tìm danh mục" style="margin-right:4px;background:var(--teal)"><svg viewBox="0 0 24 24" width="26" height="26"><path fill="#fff" d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
       <button class="scanbtn" id="btnScan"><svg viewBox="0 0 24 24" width="28" height="28"><path fill="#fff" d="M4 6h2V4H4c-1.1 0-2 .9-2 2v2h2V6zm0 12H2v2c0 1.1.9 2 2 2h2v-2H4v-2zm16-12V4h-2v2h2v2h2V6c0-1.1-.9-2-2-2zm0 14h-2v2h2c1.1 0 2-.9 2-2v-2h-2v2zM4 11h16v2H4z"/></svg></button>
     </div>
@@ -468,6 +469,34 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
     <div class="qfoot">
       <button class="qdel" id="qDel">Xoá</button>
       <button class="qexit" id="qClose">Huỷ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== NOT IN CATALOG WARNING ========== -->
+<div id="notCatalogOverlay" class="overlay hidden">
+  <div class="notecard" style="max-width:340px;text-align:center">
+    <div style="font-size:40px;margin-bottom:8px">⚠️</div>
+    <div style="font-weight:700;font-size:16px;margin-bottom:6px">Mã không có trong danh mục</div>
+    <div id="notCatalogBarcode" style="font-size:13px;color:var(--muted);margin-bottom:16px;word-break:break-all"></div>
+    <div style="font-size:14px;color:#374151;margin-bottom:20px">Mã barcode này chưa có trong danh mục hàng hóa. Bạn muốn làm gì?</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button id="btnNotCatalogRescan" style="padding:12px;background:var(--teal);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">🔄 Kiểm lại — Quét lại</button>
+      <button id="btnNotCatalogContinue" style="padding:12px;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">✅ Vẫn nhập mã này</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MANUAL BARCODE ENTRY ========== -->
+<div id="manualBarcodeOverlay" class="overlay hidden">
+  <div class="notecard" style="max-width:340px">
+    <div style="font-weight:700;font-size:16px;margin-bottom:12px">✏️ Nhập mã thủ công</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Nhập barcode hoặc mã SP (kể cả mã chưa có trong danh mục)</div>
+    <input id="manualBarcodeInput" type="text" inputmode="numeric" placeholder="Nhập barcode..." autocomplete="off"
+      style="width:100%;padding:10px 12px;border:1.5px solid var(--purple);border-radius:8px;font-size:16px;box-sizing:border-box;margin-bottom:14px">
+    <div style="display:flex;gap:10px">
+      <button id="btnManualBarcodeCancel" style="flex:1;padding:11px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">Huỷ</button>
+      <button id="btnManualBarcodeOk" style="flex:1;padding:11px;background:var(--purple);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Tìm & nhập</button>
     </div>
   </div>
 </div>
@@ -1040,9 +1069,22 @@ const APP = {
       } catch {}
     }
     if (!product) {
-      product = { barcode, ma_hang: barcode, ten_sp: 'SP không có trong danh mục', gia_ban_le: 0 };
+      this.showNotCatalogWarning(barcode);
+      return;
     }
     this.showQtyPopup(product);
+  },
+
+  showNotCatalogWarning(barcode) {
+    this._pendingUnknownBarcode = barcode;
+    $('#notCatalogBarcode').textContent = barcode;
+    $('#notCatalogOverlay').classList.remove('hidden');
+  },
+
+  showManualBarcodeEntry() {
+    $('#manualBarcodeInput').value = '';
+    $('#manualBarcodeOverlay').classList.remove('hidden');
+    setTimeout(() => $('#manualBarcodeInput').focus(), 100);
   },
 
   /* ---- Qty Popup ---- */
@@ -2692,6 +2734,30 @@ Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
     $('#btnCatalogCancel').onclick = () => $('#catalogOverlay').classList.add('hidden');
     $('#btnCatalogDo').onclick = () => this.searchCatalog($('#catalogSearchInput').value);
     $('#catalogSearchInput').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); this.searchCatalog($('#catalogSearchInput').value); } };
+
+    // Not-in-catalog warning
+    $('#btnNotCatalogRescan').onclick = () => {
+      $('#notCatalogOverlay').classList.add('hidden');
+      this._pendingUnknownBarcode = null;
+      this.startScan('sheet');
+    };
+    $('#btnNotCatalogContinue').onclick = () => {
+      $('#notCatalogOverlay').classList.add('hidden');
+      const bc = this._pendingUnknownBarcode;
+      this._pendingUnknownBarcode = null;
+      if (bc) this.showQtyPopup({ barcode: bc, ma_hang: bc, ten_sp: 'SP không có trong danh mục', gia_ban_le: 0 });
+    };
+
+    // Manual barcode entry
+    $('#btnManualBarcode').onclick = () => this.showManualBarcodeEntry();
+    $('#btnManualBarcodeCancel').onclick = () => $('#manualBarcodeOverlay').classList.add('hidden');
+    $('#btnManualBarcodeOk').onclick = () => {
+      const bc = $('#manualBarcodeInput').value.trim();
+      if (!bc) return;
+      $('#manualBarcodeOverlay').classList.add('hidden');
+      this.lookupAndCount(bc);
+    };
+    $('#manualBarcodeInput').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('#btnManualBarcodeOk').click(); } };
     $('#btnNoteOk').onclick = () => { const bc = $('#noteInput').value.trim(); if (!bc) return; $('#noteOverlay').classList.add('hidden'); this.lookupAndCount(bc); };
     $('#noteInput').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('#btnNoteOk').click(); } };
     $('#btnNoteScan').onclick = () => { $('#noteOverlay').classList.add('hidden'); this.startScan('sheet'); };
