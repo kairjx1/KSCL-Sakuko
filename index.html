@@ -265,6 +265,7 @@ function showMain(user, role) {
   document.getElementById('topbar').classList.remove('hidden');
   document.getElementById('mainContent').classList.remove('hidden');
   document.getElementById('footerEl').classList.remove('hidden');
+  const fab = document.getElementById('chatFab'); if(fab) fab.style.display = 'flex';
   document.getElementById('userName').textContent = user.name || user.email || '-';
   document.getElementById('welcomeMsg').textContent = `Xin chào, ${user.name || user.email}!`;
   setAvatar(document.getElementById('userAvatar'), user);
@@ -537,7 +538,7 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
 
 <!-- ========== CHAT BOT WIDGET ========== -->
 <style>
-#chatFab{position:fixed;bottom:24px;right:24px;z-index:999;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#d0021b,#a00115);border:none;cursor:pointer;box-shadow:0 4px 16px rgba(208,2,27,.4);display:flex;align-items:center;justify-content:center;transition:transform .2s;color:#fff;font-size:24px}
+#chatFab{position:fixed;bottom:24px;right:24px;z-index:999;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#d0021b,#a00115);border:none;cursor:pointer;box-shadow:0 4px 16px rgba(208,2,27,.4);display:none;align-items:center;justify-content:center;transition:transform .2s;color:#fff;font-size:24px}
 #chatFab:hover{transform:scale(1.08)}
 #chatFab .badge{position:absolute;top:-4px;right:-4px;background:#f59e0b;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;display:none}
 #chatPanel{position:fixed;bottom:90px;right:24px;z-index:998;width:360px;max-width:calc(100vw - 32px);background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);display:none;flex-direction:column;max-height:520px}
