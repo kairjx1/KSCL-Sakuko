@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bot KSCL – Quản lý</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f7;color:#1a2332;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:linear-gradient(135deg,#d0021b 0%,#a00115 100%);color:#fff;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15);flex-shrink:0}
+.topbar-logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+.topbar-logo img{height:34px}
+.topbar-right{display:flex;align-items:center;gap:12px;font-size:13px}
+.tbtn{background:none;border:none;color:rgba(255,255,255,.8);font-size:13px;cursor:pointer;padding:4px 10px;border-radius:6px}
+.tbtn:hover{background:rgba(255,255,255,.15);color:#fff}
+.badge-live{display:inline-block;width:8px;height:8px;border-radius:50%;background:#4ade80;margin-right:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* AUTH OVERLAY */
+.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999}
+.auth-card{background:#fff;border-radius:16px;padding:40px;width:380px;max-width:94vw;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.25)}
+.auth-card h2{font-size:20px;font-weight:700;margin-bottom:8px}
+.auth-card p{color:#6b7a99;font-size:13px;margin-bottom:24px}
+.auth-card input{width:100%;padding:11px 14px;font-size:14px;border:1px solid #dde3ef;border-radius:8px;outline:none;margin-bottom:12px;font-family:inherit}
+.auth-card input:focus{border-color:#d0021b;box-shadow:0 0 0 3px rgba(208,2,27,.1)}
+.btn-primary{background:#d0021b;color:#fff;border:none;border-radius:10px;padding:13px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+.btn-primary:hover{background:#b00118}
+.auth-err{color:#dc2626;font-size:13px;margin-bottom:10px}
+
+/* LAYOUT */
+.layout{display:flex;flex:1;overflow:hidden;height:calc(100vh - 60px)}
+.sidebar{width:220px;background:#fff;border-right:1px solid #e5e7eb;padding:20px 0;flex-shrink:0;overflow-y:auto}
+.sidebar-title{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;padding:0 20px 10px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:#475569;font-size:14px;font-weight:500;border-left:3px solid transparent;transition:.15s}
+.nav-item:hover{background:#f8fafc;color:#1a2332}
+.nav-item.active{background:#fef2f2;color:#d0021b;border-left-color:#d0021b;font-weight:600}
+.nav-item .icon{font-size:18px;width:22px;text-align:center}
+.content{flex:1;overflow-y:auto;padding:28px}
+.page{display:none}
+.page.active{display:block}
+
+/* CARDS */
+.page-title{font-size:20px;font-weight:700;margin-bottom:20px;color:#1a2332}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.stat-card .label{font-size:12px;color:#6b7a99;font-weight:500;margin-bottom:6px}
+.stat-card .value{font-size:26px;font-weight:700;color:#1a2332}
+.stat-card .sub{font-size:11px;color:#94a3b8;margin-top:4px}
+.card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:16px}
+.card-title{font-size:14px;font-weight:600;margin-bottom:14px;color:#374151;display:flex;align-items:center;gap:8px}
+
+/* FORM */
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:12px;font-weight:600;color:#6b7a99;margin-bottom:5px}
+.fg input,.fg textarea{width:100%;padding:9px 12px;font-size:14px;border:1px solid #dde3ef;border-radius:8px;outline:none;font-family:inherit;resize:vertical}
+.fg input:focus,.fg textarea:focus{border-color:#d0021b;box-shadow:0 0 0 3px rgba(208,2,27,.08)}
+.fg .hint{font-size:11px;color:#94a3b8;margin-top:4px}
+.btn{padding:9px 18px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+.btn-red{background:#d0021b;color:#fff}.btn-red:hover{background:#b00118}
+.btn-gray{background:#f1f5f9;color:#475569}.btn-gray:hover{background:#e2e8f0}
+.btn-green{background:#059669;color:#fff}.btn-green:hover{background:#047857}
+.btn-sm{padding:6px 12px;font-size:12px}
+.row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+
+/* LOG */
+.log-box{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:16px;font-family:'Courier New',monospace;font-size:12px;line-height:1.6;max-height:420px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+.log-box .ts{color:#64748b}
+.log-box .level-info{color:#4ade80}
+.log-box .level-warn{color:#fbbf24}
+.log-box .level-error{color:#f87171}
+
+/* TAG / BADGE */
+.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.tag-green{background:#dcfce7;color:#16a34a}
+.tag-red{background:#fef2f2;color:#dc2626}
+.tag-blue{background:#e0f2fe;color:#0284c7}
+.tag-gray{background:#f1f5f9;color:#64748b}
+
+.info-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f2f7;font-size:13px}
+.info-row:last-child{border-bottom:none}
+.info-row .key{color:#6b7a99;font-weight:500;min-width:140px;flex-shrink:0}
+.info-row .val{color:#1a2332;font-weight:600}
+
+.notify{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}
+.notify.ok{background:#dcfce7;color:#16a34a}
+.notify.err{background:#fef2f2;color:#dc2626}
+.notify.show{display:block}
+
+@media(max-width:640px){
+  .sidebar{width:60px}.sidebar .nav-item span:not(.icon){display:none}
+  .sidebar-title{display:none}.nav-item{padding:12px;justify-content:center}
+  .stat-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">
+    <img src="/assets/brand/logo-sakuko.png" alt="Sakuko">
+    Bot KSCL – Quản lý
+  </div>
+  <div class="topbar-right">
+    <span id="statusDot"><span class="badge-live"></span><span id="statusText">Đang kết nối...</span></span>
+    <button class="tbtn" onclick="location.href='index.html'">← Trang chủ</button>
+  </div>
+</div>
+
+<!-- AUTH -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div style="font-size:40px;margin-bottom:12px">🤖</div>
+    <h2>Bot KSCL Admin</h2>
+    <p>Nhập mật khẩu panel để tiếp tục</p>
+    <div class="auth-err" id="authErr"></div>
+    <input type="password" id="secretInput" placeholder="Panel secret..." onkeydown="if(event.key==='Enter')doAuth()">
+    <button class="btn-primary" onclick="doAuth()">Đăng nhập</button>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-title">Menu</div>
+    <div class="nav-item active" onclick="goPage('overview')"><span class="icon">📊</span><span>Tổng quan</span></div>
+    <div class="nav-item" onclick="goPage('logs')"><span class="icon">📋</span><span>Nhật ký</span></div>
+    <div class="nav-item" onclick="goPage('kb')"><span class="icon">🧠</span><span>Tri thức</span></div>
+    <div class="nav-item" onclick="goPage('test')"><span class="icon">🧪</span><span>Kiểm tra</span></div>
+    <div class="nav-item" onclick="goPage('send')"><span class="icon">💬</span><span>Gửi tin</span></div>
+  </div>
+
+  <div class="content">
+    <!-- OVERVIEW -->
+    <div class="page active" id="page-overview">
+      <div class="page-title">Tổng quan Bot</div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="label">Uptime</div><div class="value" id="st-uptime">—</div><div class="sub">kể từ lần khởi động</div></div>
+        <div class="stat-card"><div class="label">Tri thức (chunks)</div><div class="value" id="st-chunks">—</div><div class="sub" id="st-kb-updated">chưa có dữ liệu</div></div>
+        <div class="stat-card"><div class="label">Log entries</div><div class="value" id="st-logs">—</div><div class="sub">debug log gần nhất</div></div>
+        <div class="stat-card"><div class="label">Giờ báo cáo</div><div class="value">9:15</div><div class="sub">sáng mỗi ngày (VN)</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚙️ Cấu hình hiện tại</div>
+        <div id="configRows"><div style="color:#94a3b8;font-size:13px">Đang tải...</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔕 Chat bị tắt bot (silent)</div>
+        <div id="silentRows"><div style="color:#94a3b8;font-size:13px">Đang tải...</div></div>
+      </div>
+    </div>
+
+    <!-- LOGS -->
+    <div class="page" id="page-logs">
+      <div class="page-title">Nhật ký hoạt động</div>
+      <div class="row" style="margin-bottom:14px">
+        <button class="btn btn-gray btn-sm" onclick="loadLogs(20)">20 dòng</button>
+        <button class="btn btn-gray btn-sm" onclick="loadLogs(50)">50 dòng</button>
+        <button class="btn btn-gray btn-sm" onclick="loadLogs(100)">100 dòng</button>
+        <button class="btn btn-red btn-sm" onclick="loadLogs(50)" style="margin-left:auto">🔄 Làm mới</button>
+      </div>
+      <div class="log-box" id="logBox">Chưa tải log...</div>
+    </div>
+
+    <!-- KB -->
+    <div class="page" id="page-kb">
+      <div class="page-title">Quản lý Tri thức (KB)</div>
+      <div class="card">
+        <div class="card-title">📦 Trạng thái KB trên Render</div>
+        <div id="kbInfo"><div style="color:#94a3b8;font-size:13px">Đang tải...</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">ℹ️ Hướng dẫn cập nhật KB</div>
+        <div style="font-size:13px;color:#475569;line-height:1.7">
+          <p>1. Mở phần mềm <b>KB Pusher</b> trên máy tính Windows</p>
+          <p>2. Nhấn <b>Force Full Crawl</b> để thu thập dữ liệu wiki mới nhất</p>
+          <p>3. Sau khi crawl xong, nhấn <b>Push to Redis + Render</b></p>
+          <p>4. Bot sẽ tự động load KB mới trong vòng 5 phút</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEST -->
+    <div class="page" id="page-test">
+      <div class="page-title">Kiểm tra Bot</div>
+      <div class="notify" id="testNotify"></div>
+      <div class="card">
+        <div class="card-title">📨 Gửi báo cáo xuất hủy test</div>
+        <div class="fg">
+          <label>Open ID nhận (cá nhân hoặc nhóm)</label>
+          <input type="text" id="testTarget" value="ou_42034a8fa13e49f8884d88e203206a09" placeholder="ou_... hoặc oc_...">
+          <div class="hint">Mặc định: tài khoản cá nhân admin. Nhóm CVS: oc_37f9845e46621d055eb858a749b41f60</div>
+        </div>
+        <div class="row">
+          <button class="btn btn-red" onclick="sendTestReport()">Gửi báo cáo ngay</button>
+          <span id="testReportStatus" style="font-size:13px;color:#6b7a99"></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏥 Health check</div>
+        <button class="btn btn-gray btn-sm" onclick="doHealthCheck()">Kiểm tra ngay</button>
+        <div id="healthResult" style="margin-top:12px;font-size:13px;color:#475569"></div>
+      </div>
+    </div>
+
+    <!-- SEND -->
+    <div class="page" id="page-send">
+      <div class="page-title">Gửi tin nhắn</div>
+      <div class="notify" id="sendNotify"></div>
+      <div class="card">
+        <div class="card-title">💬 Gửi tin text qua Bot</div>
+        <div class="fg">
+          <label>Open ID người nhận / nhóm</label>
+          <input type="text" id="sendTarget" placeholder="ou_... hoặc oc_...">
+        </div>
+        <div class="fg">
+          <label>Nội dung tin nhắn</label>
+          <textarea id="sendText" rows="4" placeholder="Nhập nội dung..."></textarea>
+        </div>
+        <button class="btn btn-red" onclick="doSendMsg()">Gửi tin</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const FB_CONFIG = {
+  apiKey: "AIzaSyBeeAx7dJ6x5TS-MyoB-IH3NY-eiFsCOzk",
+  authDomain: "kscl---sakuko.firebaseapp.com",
+  databaseURL: "https://kscl---sakuko-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "kscl---sakuko",
+};
+firebase.initializeApp(FB_CONFIG);
+const auth = firebase.auth();
+const db = firebase.database();
+
+const PORTAL_KEY = 'kscl_portal_session';
+const ADMIN_EMAILS = ['kairjx1@gmail.com'];
+const RENDER_URL = 'https://lark-bot-vhi3.onrender.com';
+const SECRET_KEY = 'bot_panel_secret';
+
+let panelSecret = '';
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function doAuth() {
+  const val = document.getElementById('secretInput').value.trim();
+  if (!val) return;
+  panelSecret = val;
+  sessionStorage.setItem(SECRET_KEY, val);
+  document.getElementById('authErr').textContent = '';
+  verifySecret();
+}
+
+async function verifySecret() {
+  try {
+    const r = await api('GET', '/api/panel/status');
+    if (r.ok) {
+      document.getElementById('authOverlay').style.display = 'none';
+      loadOverview();
+    } else {
+      document.getElementById('authErr').textContent = 'Sai mật khẩu, thử lại.';
+      panelSecret = '';
+      sessionStorage.removeItem(SECRET_KEY);
+    }
+  } catch (e) {
+    document.getElementById('authErr').textContent = 'Không kết nối được server: ' + e.message;
+  }
+}
+
+// ── Portal session check ───────────────────────────────────────────────────────
+(function init() {
+  // Kiểm tra session portal (phải là admin/superadmin)
+  const sess = JSON.parse(localStorage.getItem(PORTAL_KEY) || 'null');
+  if (!sess || !['admin','superadmin'].includes(sess.role)) {
+    if (!sess) { location.href = 'index.html'; return; }
+    // Nếu có session nhưng không phải admin → block
+    if (!ADMIN_EMAILS.includes(sess.email) && !['admin','superadmin'].includes(sess.role)) {
+      location.href = 'index.html'; return;
+    }
+  }
+  // Check cached secret
+  const cached = sessionStorage.getItem(SECRET_KEY);
+  if (cached) { panelSecret = cached; verifySecret(); }
+})();
+
+// ── API helper ────────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-Panel-Secret': panelSecret }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(RENDER_URL + path, opts);
+  return r.json();
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (id === 'overview') loadOverview();
+  if (id === 'logs') loadLogs(50);
+  if (id === 'kb') loadKB();
+}
+
+// ── Overview ─────────────────────────────────────────────────────────────────
+async function loadOverview() {
+  try {
+    const d = await api('GET', '/api/panel/status');
+    if (!d.ok) return;
+    document.getElementById('st-uptime').textContent = d.uptime_human || '—';
+    document.getElementById('st-chunks').textContent = d.kb_chunks ?? '—';
+    document.getElementById('st-logs').textContent = d.debug_log_count ?? '—';
+    document.getElementById('statusText').textContent = 'Bot đang hoạt động';
+    if (d.kb_updated) {
+      document.getElementById('st-kb-updated').textContent = 'cập nhật: ' + d.kb_updated.slice(0,16);
+    }
+    document.getElementById('configRows').innerHTML = `
+      <div class="info-row"><span class="key">Lịch báo cáo</span><span class="val">${d.report_schedule}</span></div>
+      <div class="info-row"><span class="key">Nhóm nhận báo cáo</span><span class="val tag tag-blue" style="font-size:12px">${d.report_open_id}</span></div>
+      <div class="info-row"><span class="key">KB chunks</span><span class="val">${d.kb_chunks} mục</span></div>
+      <div class="info-row"><span class="key">KB cập nhật</span><span class="val">${d.kb_updated ? d.kb_updated.slice(0,16) : 'Chưa có'}</span></div>
+    `;
+    const silentHtml = (d.silent_chats || []).map(id =>
+      `<div class="info-row"><span class="key">Chat ID</span><span class="val tag tag-red" style="font-size:12px">${id}</span></div>`
+    ).join('') || '<div style="color:#94a3b8;font-size:13px">Không có</div>';
+    document.getElementById('silentRows').innerHTML = silentHtml;
+  } catch (e) {
+    document.getElementById('statusText').textContent = 'Lỗi kết nối';
+  }
+}
+
+// ── Logs ─────────────────────────────────────────────────────────────────────
+async function loadLogs(n) {
+  const box = document.getElementById('logBox');
+  box.textContent = 'Đang tải...';
+  try {
+    const d = await api('GET', `/api/panel/logs?n=${n}`);
+    if (!d.logs || !d.logs.length) { box.textContent = 'Chưa có log.'; return; }
+    box.innerHTML = d.logs.map(line => {
+      const safe = line.replace(/</g,'&lt;');
+      if (safe.includes('[ERROR]') || safe.includes('ERROR')) return `<span class="level-error">${safe}</span>`;
+      if (safe.includes('[WARN]') || safe.includes('WARN')) return `<span class="level-warn">${safe}</span>`;
+      return `<span class="level-info">${safe}</span>`;
+    }).join('\n');
+    box.scrollTop = box.scrollHeight;
+  } catch (e) {
+    box.textContent = 'Lỗi tải log: ' + e.message;
+  }
+}
+
+// ── KB ────────────────────────────────────────────────────────────────────────
+async function loadKB() {
+  const el = document.getElementById('kbInfo');
+  try {
+    const d = await api('GET', '/api/panel/status');
+    el.innerHTML = `
+      <div class="info-row"><span class="key">Tổng chunks</span><span class="val">${d.kb_chunks}</span></div>
+      <div class="info-row"><span class="key">Cập nhật lần cuối</span><span class="val">${d.kb_updated ? d.kb_updated.slice(0,16) : 'Chưa rõ'}</span></div>
+      <div class="info-row"><span class="key">Trạng thái</span><span class="val tag ${d.kb_chunks > 0 ? 'tag-green' : 'tag-red'}">${d.kb_chunks > 0 ? 'Đang hoạt động' : 'Chưa có dữ liệu'}</span></div>
+    `;
+  } catch (e) {
+    el.textContent = 'Lỗi: ' + e.message;
+  }
+}
+
+// ── Test report ───────────────────────────────────────────────────────────────
+async function sendTestReport() {
+  const target = document.getElementById('testTarget').value.trim();
+  const st = document.getElementById('testReportStatus');
+  st.textContent = 'Đang gửi...';
+  showNotify('testNotify', '');
+  try {
+    const d = await api('POST', '/api/panel/send-test-report', { target });
+    if (d.ok) {
+      st.textContent = '✅ Đã gửi thành công!';
+      showNotify('testNotify', '✅ Báo cáo đã gửi tới ' + target, true);
+    } else {
+      st.textContent = '❌ Lỗi: ' + d.error;
+      showNotify('testNotify', '❌ ' + d.error, false);
+    }
+  } catch (e) {
+    st.textContent = '❌ ' + e.message;
+    showNotify('testNotify', '❌ ' + e.message, false);
+  }
+}
+
+async function doHealthCheck() {
+  const el = document.getElementById('healthResult');
+  el.textContent = 'Đang kiểm tra...';
+  try {
+    const r = await fetch(RENDER_URL + '/health');
+    const d = await r.json();
+    el.innerHTML = `<span class="tag tag-green">✅ OK</span> Bot đang hoạt động — uptime ${d.uptime_s || '?'}s`;
+  } catch (e) {
+    el.innerHTML = `<span class="tag tag-red">❌ Lỗi</span> Không kết nối được: ${e.message}`;
+  }
+}
+
+// ── Send msg ──────────────────────────────────────────────────────────────────
+async function doSendMsg() {
+  const target = document.getElementById('sendTarget').value.trim();
+  const text = document.getElementById('sendText').value.trim();
+  if (!target || !text) { showNotify('sendNotify', '❌ Vui lòng điền đầy đủ thông tin', false); return; }
+  showNotify('sendNotify', '');
+  try {
+    const d = await api('POST', '/api/panel/send-msg', { target, text });
+    if (d.ok) {
+      showNotify('sendNotify', '✅ Đã gửi tin nhắn!', true);
+      document.getElementById('sendText').value = '';
+    } else {
+      showNotify('sendNotify', '❌ ' + d.error, false);
+    }
+  } catch (e) {
+    showNotify('sendNotify', '❌ ' + e.message, false);
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function showNotify(id, msg, ok) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'notify' + (msg ? (' show ' + (ok ? 'ok' : 'err')) : '');
+}
+</script>
+</body>
+</html>
