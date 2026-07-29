@@ -2351,21 +2351,27 @@ Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
       await this.exportBienBan(false);
       btn.textContent = 'Mở mail...';
 
-      // 2. Build plain-text body for mailto
+      // 2. Copy HTML body to clipboard (giữ định dạng bảng khi paste vào mail)
+      const bodyHtml = this.buildEmailBody();
       const bodyPlain = this.buildEmailBodyPlain();
+      try {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([bodyHtml], { type: 'text/html' }),
+          'text/plain': new Blob([bodyPlain], { type: 'text/plain' })
+        })]);
+      } catch(e) {
+        try { await navigator.clipboard.writeText(bodyPlain); } catch {}
+      }
 
-      // 3. Build mailto link
-      const params = new URLSearchParams();
-      params.set('subject', subject);
-      params.set('body', bodyPlain);
-      if (ccList.length) params.set('cc', ccList.join(','));
-      const mailtoUrl = `mailto:${toList.join(',')}?${params.toString()}`;
+      // 3. Build mailto link — dùng encodeURIComponent (không dùng URLSearchParams để tránh + thay space)
+      const cc = ccList.length ? `&cc=${encodeURIComponent(ccList.join(','))}` : '';
+      const mailtoUrl = `mailto:${encodeURIComponent(toList.join(','))}?subject=${encodeURIComponent(subject)}${cc}`;
 
       // 4. Open mail client
       window.location.href = mailtoUrl;
 
-      this.toast('✅ File Excel đã tải xuống — vui lòng đính kèm vào mail vừa mở!');
-      setTimeout(() => $('#emailOverlay').classList.add('hidden'), 1500);
+      this.toast('✅ Excel tải xuống + nội dung đã copy — paste (Ctrl+V) vào phần thân mail, rồi đính kèm file!');
+      setTimeout(() => $('#emailOverlay').classList.add('hidden'), 2500);
     } catch(e) { this.toast('❌ ' + e.message); }
     finally { btn.disabled = false; btn.textContent = '📧 Gửi mail'; }
   },
