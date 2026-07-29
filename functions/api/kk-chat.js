@@ -63,7 +63,7 @@ export async function onRequest({ request, env }) {
 
     if (!env.AI) return new Response(JSON.stringify({ ok: false, error: 'Chưa cấu hình AI binding' }), { headers: CORS });
 
-    const result = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+    const result = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         ...messages.slice(-10)
