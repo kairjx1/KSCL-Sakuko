@@ -186,14 +186,6 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
   </div>
   <div class="apps" id="appsGrid"></div>
 
-  <!-- CHAT BOT WIDGET (inside mainContent so hidden/shown with it) -->
-  <div id="chatFabWrap" style="position:fixed;bottom:100px;right:16px;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;gap:8px;transform:translateZ(0);will-change:transform">
-    <div id="chatFabLabel" style="background:#1a2558;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer">Nếu cần hỗ trợ hãy hỏi Bé Kiểm Soát Sakuko 🐱</div>
-    <button id="chatFab" style="width:62px;height:62px;border-radius:50%;background:#fff;border:3px solid #d0021b;cursor:pointer;box-shadow:0 4px 16px rgba(208,2,27,.4);display:flex;align-items:center;justify-content:center;padding:0;overflow:hidden" title="Bé Kiểm Soát Sakuko">
-      <img src="/assets/bot-cat.jpg" alt="Bé Kiểm Soát Sakuko" style="width:100%;height:100%;object-fit:cover;border-radius:50%">
-    </button>
-  </div>
-
   <div id="chatPanel">
     <div class="chat-head">
       <div class="chat-head-av" style="padding:0;overflow:hidden"><img src="/assets/bot-cat.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>
@@ -725,5 +717,11 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
   })();
 })();
 </script>
+<div id="chatFabWrap" style="position:fixed;bottom:100px;right:16px;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+  <div id="chatFabLabel" style="background:#1a2558;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer">Nếu cần hỗ trợ hãy hỏi Bé Kiểm Soát Sakuko 🐱</div>
+  <button id="chatFab" style="width:62px;height:62px;border-radius:50%;background:#fff;border:3px solid #d0021b;cursor:pointer;box-shadow:0 4px 16px rgba(208,2,27,.4);display:flex;align-items:center;justify-content:center;padding:0;overflow:hidden" title="Bé Kiểm Soát Sakuko">
+    <img src="/assets/bot-cat.jpg" alt="Bé Kiểm Soát Sakuko" style="width:100%;height:100%;object-fit:cover;border-radius:50%">
+  </button>
+</div>
 </body>
 </html>
