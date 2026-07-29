@@ -72,6 +72,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f7;color:#1a233
 .log-box .level-warn{color:#fbbf24}
 .log-box .level-error{color:#f87171}
 
+/* PERMS */
+.perm-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px}
+.perm-item .perm-label{flex:1;font-size:13px;font-weight:600;color:#1a2332}
+.perm-item .perm-id{font-size:11px;color:#94a3b8;font-family:'Courier New',monospace}
+.perm-toggle{padding:4px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.perm-toggle.allow{background:#dcfce7;color:#16a34a}
+.perm-toggle.block{background:#fef2f2;color:#dc2626}
+
 /* AUTO-REPLY */
 .ar-list{display:flex;flex-direction:column;gap:10px}
 .ar-item{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;position:relative}
@@ -150,6 +158,7 @@ select.fg-sel:focus{border-color:#d0021b}
     <div class="nav-item" onclick="goPage('send')"><span class="icon">💬</span><span>Gửi tin</span></div>
     <div class="nav-item" onclick="goPage('autoreply')"><span class="icon">⚡</span><span>Trả lời tự động</span></div>
     <div class="nav-item" onclick="goPage('aichat')"><span class="icon">🤖</span><span>AI Chat</span></div>
+    <div class="nav-item" onclick="goPage('perms')"><span class="icon">🔐</span><span>Phân quyền</span></div>
   </div>
 
   <div class="content">
@@ -222,6 +231,41 @@ select.fg-sel:focus{border-color:#d0021b}
         <div class="card-title">🏥 Health check</div>
         <button class="btn btn-gray btn-sm" onclick="doHealthCheck()">Kiểm tra ngay</button>
         <div id="healthResult" style="margin-top:12px;font-size:13px;color:#475569"></div>
+      </div>
+    </div>
+
+    <!-- PHÂN QUYỀN -->
+    <div class="page" id="page-perms">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div class="page-title" style="margin-bottom:0">Phân quyền Bot</div>
+        <button class="btn btn-red" onclick="savePerms()">💾 Lưu phân quyền</button>
+      </div>
+      <div class="notify" id="permsNotify"></div>
+
+      <div class="card">
+        <div class="card-title">💬 Nhóm chat được phép trả lời</div>
+        <div style="font-size:12px;color:#6b7a99;margin-bottom:12px">Để trống = bot trả lời <b>tất cả nhóm</b>. Thêm nhóm vào đây = chỉ trả lời trong những nhóm đó.</div>
+        <div class="ar-list" id="groupList"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <input type="text" id="newGroupId" placeholder="oc_... (chat_id nhóm)" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid #dde3ef;border-radius:8px;font-size:13px;outline:none">
+          <input type="text" id="newGroupLabel" placeholder="Tên nhóm (VD: Phòng QC)" style="flex:1;min-width:160px;padding:8px 12px;border:1px solid #dde3ef;border-radius:8px;font-size:13px;outline:none">
+          <button class="btn btn-green btn-sm" onclick="addGroup()">+ Thêm</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">👤 Danh sách người dùng</div>
+        <div style="font-size:12px;color:#6b7a99;margin-bottom:12px">Thêm open_id người dùng và chọn <span class="tag tag-green">Được phép</span> hoặc <span class="tag tag-red">Bị chặn</span>. Người không có trong danh sách = mặc định được phép.</div>
+        <div class="ar-list" id="userList"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <input type="text" id="newUserId" placeholder="ou_... (open_id người dùng)" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid #dde3ef;border-radius:8px;font-size:13px;outline:none">
+          <input type="text" id="newUserLabel" placeholder="Tên (VD: Hà QC)" style="flex:1;min-width:140px;padding:8px 12px;border:1px solid #dde3ef;border-radius:8px;font-size:13px;outline:none">
+          <select id="newUserPerm" style="padding:8px 10px;border:1px solid #dde3ef;border-radius:8px;font-size:13px;outline:none;background:#fff">
+            <option value="allow">✅ Được phép</option>
+            <option value="block">🚫 Bị chặn</option>
+          </select>
+          <button class="btn btn-green btn-sm" onclick="addUser()">+ Thêm</button>
+        </div>
       </div>
     </div>
 
@@ -567,6 +611,103 @@ function showNotify(id, msg, ok) {
   el.className = 'notify' + (msg ? (' show ' + (ok ? 'ok' : 'err')) : '');
 }
 
+// ── Phân quyền ───────────────────────────────────────────────────────────────
+const PERMS_PATH = 'bot_permissions';
+let _permsGroups = {};   // {id: {label, active}}
+let _permsUsers  = {};   // {id: {label, perm: 'allow'|'block'}}
+
+function loadPerms() {
+  db.ref(PERMS_PATH).once('value').then(snap => {
+    const d = snap.val() || {};
+    _permsGroups = d.groups || {};
+    _permsUsers  = d.users  || {};
+    renderGroups();
+    renderUsers();
+  });
+}
+
+function renderGroups() {
+  const el = document.getElementById('groupList');
+  const keys = Object.keys(_permsGroups);
+  if (!keys.length) { el.innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:8px 0">Chưa có nhóm nào — bot đang trả lời tất cả nhóm.</div>'; return; }
+  el.innerHTML = keys.map(id => {
+    const g = _permsGroups[id];
+    return `<div class="perm-item">
+      <div style="flex:1">
+        <div class="perm-label">${esc(g.label||id)}</div>
+        <div class="perm-id">${esc(id)}</div>
+      </div>
+      <button class="perm-toggle allow">✅ Được phép</button>
+      <button class="btn btn-sm" style="background:#fef2f2;color:#dc2626" onclick="removeGroup('${id}')">Xoá</button>
+    </div>`;
+  }).join('');
+}
+
+function renderUsers() {
+  const el = document.getElementById('userList');
+  const keys = Object.keys(_permsUsers);
+  if (!keys.length) { el.innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:8px 0">Chưa có ai trong danh sách — mọi người đều được phép.</div>'; return; }
+  el.innerHTML = keys.map(id => {
+    const u = _permsUsers[id];
+    const isBlock = u.perm === 'block';
+    return `<div class="perm-item">
+      <div style="flex:1">
+        <div class="perm-label">${esc(u.label||id)}</div>
+        <div class="perm-id">${esc(id)}</div>
+      </div>
+      <button class="perm-toggle ${isBlock?'block':'allow'}" onclick="toggleUser('${id}')">
+        ${isBlock ? '🚫 Bị chặn' : '✅ Được phép'}
+      </button>
+      <button class="btn btn-sm" style="background:#f1f5f9;color:#475569" onclick="removeUser('${id}')">Xoá</button>
+    </div>`;
+  }).join('');
+}
+
+function addGroup() {
+  const id    = document.getElementById('newGroupId').value.trim();
+  const label = document.getElementById('newGroupLabel').value.trim();
+  if (!id) { alert('Nhập chat_id nhóm (oc_...)'); return; }
+  _permsGroups[id] = { label: label || id, active: true };
+  document.getElementById('newGroupId').value = '';
+  document.getElementById('newGroupLabel').value = '';
+  renderGroups();
+}
+
+function removeGroup(id) {
+  delete _permsGroups[id];
+  renderGroups();
+}
+
+function addUser() {
+  const id    = document.getElementById('newUserId').value.trim();
+  const label = document.getElementById('newUserLabel').value.trim();
+  const perm  = document.getElementById('newUserPerm').value;
+  if (!id) { alert('Nhập open_id người dùng (ou_...)'); return; }
+  _permsUsers[id] = { label: label || id, perm };
+  document.getElementById('newUserId').value = '';
+  document.getElementById('newUserLabel').value = '';
+  renderUsers();
+}
+
+function removeUser(id) {
+  delete _permsUsers[id];
+  renderUsers();
+}
+
+function toggleUser(id) {
+  if (!_permsUsers[id]) return;
+  _permsUsers[id].perm = _permsUsers[id].perm === 'block' ? 'allow' : 'block';
+  renderUsers();
+}
+
+function savePerms() {
+  const data = { groups: _permsGroups, users: _permsUsers, updated: Date.now() };
+  db.ref(PERMS_PATH).set(data).then(() => {
+    showNotify('permsNotify', '✅ Đã lưu phân quyền! Bot áp dụng trong vòng 5 phút.', true);
+    setTimeout(() => showNotify('permsNotify', ''), 4000);
+  }).catch(e => showNotify('permsNotify', '❌ Lỗi: ' + e.message, false));
+}
+
 // ── AI Chat Config ────────────────────────────────────────────────────────────
 const AI_CFG_PATH = 'bot_ai_config';
 
@@ -661,6 +802,7 @@ function goPage(id) {
   if (id === 'kb') loadKB();
   if (id === 'autoreply') loadRules();
   if (id === 'aichat') loadAIConfig();
+  if (id === 'perms') loadPerms();
 }
 
 function loadRules() {
