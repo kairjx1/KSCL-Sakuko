@@ -72,6 +72,25 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f7;color:#1a233
 .log-box .level-warn{color:#fbbf24}
 .log-box .level-error{color:#f87171}
 
+/* AUTO-REPLY */
+.ar-list{display:flex;flex-direction:column;gap:10px}
+.ar-item{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;position:relative}
+.ar-item:hover{border-color:#d0021b20;background:#fff}
+.ar-kw{font-size:14px;font-weight:700;color:#d0021b;font-family:'Courier New',monospace;margin-bottom:6px}
+.ar-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.ar-reply{font-size:13px;color:#374151;line-height:1.5;white-space:pre-wrap;border-left:3px solid #e5e7eb;padding-left:10px;margin-top:6px}
+.ar-actions{position:absolute;top:12px;right:12px;display:flex;gap:6px}
+.ar-empty{text-align:center;padding:40px;color:#94a3b8;font-size:14px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:500}
+.modal{background:#fff;border-radius:14px;width:520px;max-width:96vw;box-shadow:0 24px 64px rgba(0,0,0,.2);overflow:hidden}
+.modal-head{padding:18px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:16px;font-weight:700}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:#6b7a99;line-height:1}
+.modal-body{padding:20px}
+.modal-foot{padding:14px 20px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:10px}
+select.fg-sel{width:100%;padding:9px 12px;font-size:14px;border:1px solid #dde3ef;border-radius:8px;outline:none;background:#fff;font-family:inherit}
+select.fg-sel:focus{border-color:#d0021b}
+
 /* TAG / BADGE */
 .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
 .tag-green{background:#dcfce7;color:#16a34a}
@@ -129,6 +148,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f7;color:#1a233
     <div class="nav-item" onclick="goPage('kb')"><span class="icon">🧠</span><span>Tri thức</span></div>
     <div class="nav-item" onclick="goPage('test')"><span class="icon">🧪</span><span>Kiểm tra</span></div>
     <div class="nav-item" onclick="goPage('send')"><span class="icon">💬</span><span>Gửi tin</span></div>
+    <div class="nav-item" onclick="goPage('autoreply')"><span class="icon">⚡</span><span>Trả lời tự động</span></div>
   </div>
 
   <div class="content">
@@ -204,6 +224,19 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f7;color:#1a233
       </div>
     </div>
 
+    <!-- AUTO REPLY -->
+    <div class="page" id="page-autoreply">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div class="page-title" style="margin-bottom:0">Trả lời tự động</div>
+        <button class="btn btn-red" onclick="openAddRule()">+ Thêm quy tắc</button>
+      </div>
+      <div class="notify" id="arNotify"></div>
+      <div class="card">
+        <div class="card-title">⚡ Danh sách quy tắc <span id="arCount" style="color:#94a3b8;font-weight:400;font-size:12px"></span></div>
+        <div class="ar-list" id="arList"><div class="ar-empty">Đang tải...</div></div>
+      </div>
+    </div>
+
     <!-- SEND -->
     <div class="page" id="page-send">
       <div class="page-title">Gửi tin nhắn</div>
@@ -220,6 +253,47 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f7;color:#1a233
         </div>
         <button class="btn btn-red" onclick="doSendMsg()">Gửi tin</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL THÊM/SỬA QUY TẮC -->
+<div class="modal-overlay" id="arModal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="arModalTitle">Thêm quy tắc trả lời</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label>Từ khóa / lệnh kích hoạt</label>
+        <input type="text" id="arKw" placeholder="VD: /menu, xin chào, giờ mở cửa...">
+        <div class="hint">Bot sẽ tự động trả lời khi tin nhắn chứa từ khóa này</div>
+      </div>
+      <div class="fg">
+        <label>Kiểu khớp</label>
+        <select class="fg-sel" id="arMatch">
+          <option value="contains">Chứa từ khóa (không phân biệt hoa/thường)</option>
+          <option value="exact">Chính xác 100%</option>
+          <option value="startswith">Bắt đầu bằng</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Nội dung trả lời</label>
+        <textarea id="arReply" rows="5" placeholder="Nhập nội dung bot sẽ trả lời..."></textarea>
+        <div class="hint">Hỗ trợ xuống dòng. Bot sẽ gửi tin nhắn này khi khớp từ khóa.</div>
+      </div>
+      <div class="fg">
+        <label>Trạng thái</label>
+        <select class="fg-sel" id="arActive">
+          <option value="true">✅ Đang bật</option>
+          <option value="false">⏸ Tạm tắt</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-red" onclick="saveRule()">Lưu quy tắc</button>
     </div>
   </div>
 </div>
@@ -293,17 +367,6 @@ async function api(method, path, body) {
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch(RENDER_URL + path, opts);
   return r.json();
-}
-
-// ── Navigation ────────────────────────────────────────────────────────────────
-function goPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-  event.currentTarget.classList.add('active');
-  if (id === 'overview') loadOverview();
-  if (id === 'logs') loadLogs(50);
-  if (id === 'kb') loadKB();
 }
 
 // ── Overview ─────────────────────────────────────────────────────────────────
@@ -424,6 +487,117 @@ function showNotify(id, msg, ok) {
   const el = document.getElementById(id);
   el.textContent = msg;
   el.className = 'notify' + (msg ? (' show ' + (ok ? 'ok' : 'err')) : '');
+}
+
+// ── Auto Reply ────────────────────────────────────────────────────────────────
+const AR_PATH = 'bot_autoreplies';
+let _editingKey = null;
+
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (id === 'overview') loadOverview();
+  if (id === 'logs') loadLogs(50);
+  if (id === 'kb') loadKB();
+  if (id === 'autoreply') loadRules();
+}
+
+function loadRules() {
+  const list = document.getElementById('arList');
+  list.innerHTML = '<div class="ar-empty">Đang tải...</div>';
+  db.ref(AR_PATH).once('value').then(snap => {
+    const data = snap.val() || {};
+    const keys = Object.keys(data);
+    document.getElementById('arCount').textContent = `(${keys.length} quy tắc)`;
+    if (!keys.length) {
+      list.innerHTML = '<div class="ar-empty">Chưa có quy tắc nào. Nhấn "+ Thêm quy tắc" để bắt đầu.</div>';
+      return;
+    }
+    const MATCH_LABEL = { contains: 'Không phân biệt hoa/thường', exact: 'Chính xác 100%', startswith: 'Bắt đầu bằng' };
+    list.innerHTML = keys.map(k => {
+      const r = data[k];
+      const active = r.active !== false;
+      return `<div class="ar-item" id="ar-${k}">
+        <div class="ar-kw">${esc(r.keyword)}</div>
+        <div class="ar-tags">
+          <span class="tag ${active ? 'tag-green' : 'tag-gray'}">${active ? '✅ Đang bật' : '⏸ Tắt'}</span>
+          <span class="tag tag-blue">${esc(MATCH_LABEL[r.match] || r.match)}</span>
+        </div>
+        <div class="ar-reply">${esc(r.reply)}</div>
+        <div class="ar-actions">
+          <button class="btn btn-gray btn-sm" onclick="editRule('${k}')">Sửa</button>
+          <button class="btn btn-sm" style="background:#fef2f2;color:#dc2626" onclick="deleteRule('${k}','${esc(r.keyword)}')">Xoá</button>
+        </div>
+      </div>`;
+    }).join('');
+  }).catch(e => {
+    list.innerHTML = `<div class="ar-empty">Lỗi: ${e.message}</div>`;
+  });
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+function openAddRule() {
+  _editingKey = null;
+  document.getElementById('arModalTitle').textContent = 'Thêm quy tắc trả lời';
+  document.getElementById('arKw').value = '';
+  document.getElementById('arReply').value = '';
+  document.getElementById('arMatch').value = 'contains';
+  document.getElementById('arActive').value = 'true';
+  document.getElementById('arModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('arKw').focus(), 50);
+}
+
+function editRule(key) {
+  db.ref(`${AR_PATH}/${key}`).once('value').then(snap => {
+    const r = snap.val();
+    if (!r) return;
+    _editingKey = key;
+    document.getElementById('arModalTitle').textContent = 'Sửa quy tắc';
+    document.getElementById('arKw').value = r.keyword || '';
+    document.getElementById('arReply').value = r.reply || '';
+    document.getElementById('arMatch').value = r.match || 'contains';
+    document.getElementById('arActive').value = r.active !== false ? 'true' : 'false';
+    document.getElementById('arModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('arKw').focus(), 50);
+  });
+}
+
+function closeModal() {
+  document.getElementById('arModal').style.display = 'none';
+}
+
+function saveRule() {
+  const kw = document.getElementById('arKw').value.trim();
+  const reply = document.getElementById('arReply').value.trim();
+  const match = document.getElementById('arMatch').value;
+  const active = document.getElementById('arActive').value === 'true';
+  if (!kw || !reply) {
+    alert('Vui lòng điền từ khóa và nội dung trả lời.');
+    return;
+  }
+  const rule = { keyword: kw, reply, match, active, updated: Date.now() };
+  const key = _editingKey || AR_PATH + '_' + Date.now();
+  const ref = _editingKey ? db.ref(`${AR_PATH}/${_editingKey}`) : db.ref(AR_PATH).push();
+  ref.set(rule).then(() => {
+    closeModal();
+    loadRules();
+    showNotify('arNotify', `✅ Đã ${_editingKey ? 'cập nhật' : 'thêm'} quy tắc "${kw}"`, true);
+    setTimeout(() => showNotify('arNotify', ''), 3000);
+  }).catch(e => {
+    showNotify('arNotify', '❌ Lỗi lưu: ' + e.message, false);
+  });
+}
+
+function deleteRule(key, kw) {
+  if (!confirm(`Xoá quy tắc "${kw}"?`)) return;
+  db.ref(`${AR_PATH}/${key}`).remove().then(() => {
+    loadRules();
+    showNotify('arNotify', `✅ Đã xoá quy tắc "${kw}"`, true);
+    setTimeout(() => showNotify('arNotify', ''), 3000);
+  }).catch(e => showNotify('arNotify', '❌ ' + e.message, false));
 }
 </script>
 </body>
