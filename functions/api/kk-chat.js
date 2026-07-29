@@ -61,28 +61,29 @@ export async function onRequest({ request, env }) {
     const { messages } = await request.json();
     if (!messages?.length) return new Response(JSON.stringify({ ok: false, error: 'Cần messages' }), { headers: CORS });
 
-    const apiKey = env.ANTHROPIC_API_KEY;
-    if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'Chưa cấu hình API key' }), { headers: CORS });
+    const apiKey = env.GROQ_API_KEY;
+    if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'Chưa cấu hình GROQ_API_KEY' }), { headers: CORS });
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json'
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 1024,
-        system: SYSTEM_PROMPT,
-        messages: messages.slice(-10)
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...messages.slice(-10)
+        ]
       })
     });
 
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error?.message || 'Lỗi API');
+    if (!resp.ok) throw new Error(data.error?.message || 'Lỗi Groq API');
 
-    const reply = data.content?.[0]?.text || '';
+    const reply = data.choices?.[0]?.message?.content || '';
     return new Response(JSON.stringify({ ok: true, reply }), { headers: CORS });
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: CORS });
