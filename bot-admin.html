@@ -73,12 +73,23 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f7;color:#1a233
 .log-box .level-error{color:#f87171}
 
 /* PERMS */
-.perm-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px}
-.perm-item .perm-label{flex:1;font-size:13px;font-weight:600;color:#1a2332}
-.perm-item .perm-id{font-size:11px;color:#94a3b8;font-family:'Courier New',monospace}
+.perm-item{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden}
+.perm-item-head{display:flex;align-items:center;gap:10px;padding:10px 14px}
+.perm-item-head .perm-label{flex:1;font-size:13px;font-weight:600;color:#1a2332}
+.perm-item-head .perm-id{font-size:11px;color:#94a3b8;font-family:'Courier New',monospace}
 .perm-toggle{padding:4px 12px;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
 .perm-toggle.allow{background:#dcfce7;color:#16a34a}
 .perm-toggle.block{background:#fef2f2;color:#dc2626}
+.group-blocked{background:#fff8f8;border-top:1px solid #fee2e2;padding:10px 14px}
+.group-blocked-title{font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.blocked-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.blocked-chip{display:flex;align-items:center;gap:4px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:3px 8px;font-size:12px;color:#dc2626}
+.blocked-chip button{background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;line-height:1;padding:0 2px}
+.add-blocked-row{display:flex;gap:6px;flex-wrap:wrap}
+.add-blocked-row input{flex:1;min-width:140px;padding:6px 10px;border:1px solid #fecaca;border-radius:6px;font-size:12px;outline:none}
+.add-blocked-row input:focus{border-color:#dc2626}
+.btn-expand{background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;font-size:11px;color:#6b7a99;cursor:pointer}
+.btn-expand:hover{background:#f1f5f9}
 
 /* AUTO-REPLY */
 .ar-list{display:flex;flex-direction:column;gap:10px}
@@ -632,15 +643,60 @@ function renderGroups() {
   if (!keys.length) { el.innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:8px 0">Chưa có nhóm nào — bot đang trả lời tất cả nhóm.</div>'; return; }
   el.innerHTML = keys.map(id => {
     const g = _permsGroups[id];
-    return `<div class="perm-item">
-      <div style="flex:1">
-        <div class="perm-label">${esc(g.label||id)}</div>
-        <div class="perm-id">${esc(id)}</div>
+    const blocked = g.blocked_users || {};
+    const bKeys = Object.keys(blocked);
+    const chips = bKeys.map(uid =>
+      `<span class="blocked-chip">${esc(blocked[uid]||uid)}<button onclick="removeGroupBlocked('${id}','${uid}')" title="Bỏ chặn">×</button></span>`
+    ).join('');
+    return `<div class="perm-item" id="grp-${id.replace(/[^a-z0-9]/gi,'_')}">
+      <div class="perm-item-head">
+        <div style="flex:1">
+          <div class="perm-label">${esc(g.label||id)}</div>
+          <div class="perm-id">${esc(id)}</div>
+        </div>
+        <span class="tag tag-green" style="font-size:11px">✅ Được phép</span>
+        ${bKeys.length ? `<span class="tag tag-red" style="font-size:11px">🚫 ${bKeys.length} bị chặn</span>` : ''}
+        <button class="btn-expand" onclick="toggleGroupExpand('${id}')">👤 Chặn người</button>
+        <button class="btn btn-sm" style="background:#fef2f2;color:#dc2626" onclick="removeGroup('${id}')">Xoá</button>
       </div>
-      <button class="perm-toggle allow">✅ Được phép</button>
-      <button class="btn btn-sm" style="background:#fef2f2;color:#dc2626" onclick="removeGroup('${id}')">Xoá</button>
+      <div class="group-blocked" id="gblk-${id.replace(/[^a-z0-9]/gi,'_')}" style="display:${bKeys.length?'block':'none'}">
+        <div class="group-blocked-title">🚫 Người bị chặn trong nhóm này</div>
+        <div class="blocked-chips" id="chips-${id.replace(/[^a-z0-9]/gi,'_')}">${chips||'<span style="color:#94a3b8;font-size:12px">Chưa có ai bị chặn</span>'}</div>
+        <div class="add-blocked-row">
+          <input type="text" id="buid-${id.replace(/[^a-z0-9]/gi,'_')}" placeholder="ou_... (open_id)">
+          <input type="text" id="bname-${id.replace(/[^a-z0-9]/gi,'_')}" placeholder="Tên người dùng">
+          <button class="btn btn-sm" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca" onclick="addGroupBlocked('${id}')">+ Chặn</button>
+        </div>
+      </div>
     </div>`;
   }).join('');
+}
+
+function toggleGroupExpand(id) {
+  const key = id.replace(/[^a-z0-9]/gi,'_');
+  const el = document.getElementById('gblk-' + key);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function addGroupBlocked(groupId) {
+  const key  = groupId.replace(/[^a-z0-9]/gi,'_');
+  const uid  = document.getElementById('buid-'  + key).value.trim();
+  const name = document.getElementById('bname-' + key).value.trim();
+  if (!uid) { alert('Nhập open_id người dùng (ou_...)'); return; }
+  if (!_permsGroups[groupId].blocked_users) _permsGroups[groupId].blocked_users = {};
+  _permsGroups[groupId].blocked_users[uid] = name || uid;
+  document.getElementById('buid-'  + key).value = '';
+  document.getElementById('bname-' + key).value = '';
+  renderGroups();
+  // re-open panel
+  const el = document.getElementById('gblk-' + key);
+  if (el) el.style.display = 'block';
+}
+
+function removeGroupBlocked(groupId, uid) {
+  if (_permsGroups[groupId] && _permsGroups[groupId].blocked_users)
+    delete _permsGroups[groupId].blocked_users[uid];
+  renderGroups();
 }
 
 function renderUsers() {
