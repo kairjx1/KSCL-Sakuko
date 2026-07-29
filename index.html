@@ -265,7 +265,7 @@ function showMain(user, role) {
   document.getElementById('topbar').classList.remove('hidden');
   document.getElementById('mainContent').classList.remove('hidden');
   document.getElementById('footerEl').classList.remove('hidden');
-  const fab = document.getElementById('chatFab'); if(fab) fab.style.display = 'flex';
+  const fab = document.getElementById('chatFabWrap'); if(fab) fab.style.display = 'flex';
   document.getElementById('userName').textContent = user.name || user.email || '-';
   document.getElementById('welcomeMsg').textContent = `Xin chào, ${user.name || user.email}!`;
   setAvatar(document.getElementById('userAvatar'), user);
@@ -538,9 +538,12 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
 
 <!-- ========== CHAT BOT WIDGET ========== -->
 <style>
-#chatFab{position:fixed;bottom:24px;right:24px;z-index:999;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#d0021b,#a00115);border:none;cursor:pointer;box-shadow:0 4px 16px rgba(208,2,27,.4);display:none;align-items:center;justify-content:center;transition:transform .2s;color:#fff;font-size:24px}
+#chatFabWrap{position:fixed;bottom:24px;right:24px;z-index:999;display:none;flex-direction:column;align-items:flex-end;gap:8px}
+#chatFabLabel{background:#1a2558;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer}
+#chatFab{width:62px;height:62px;border-radius:50%;background:#fff;border:3px solid #d0021b;cursor:pointer;box-shadow:0 4px 16px rgba(208,2,27,.4);display:flex;align-items:center;justify-content:center;transition:transform .2s;padding:0;overflow:hidden;align-self:flex-end}
 #chatFab:hover{transform:scale(1.08)}
-#chatFab .badge{position:absolute;top:-4px;right:-4px;background:#f59e0b;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;display:none}
+#chatFab img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+#chatFab .badge{position:absolute;top:-4px;right:-4px;background:#f59e0b;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:none;align-items:center;justify-content:center}
 #chatPanel{position:fixed;bottom:90px;right:24px;z-index:998;width:360px;max-width:calc(100vw - 32px);background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);display:none;flex-direction:column;max-height:520px}
 #chatPanel.open{display:flex}
 .chat-head{background:linear-gradient(135deg,#d0021b,#a00115);color:#fff;padding:14px 16px;border-radius:16px 16px 0 0;display:flex;align-items:center;gap:10px}
@@ -567,22 +570,25 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
 .chat-foot button:disabled{background:#e5e7eb;color:#9ca3af;cursor:not-allowed}
 </style>
 
-<button id="chatFab" title="Trợ lý KSCL">
-  💬
-  <span class="badge" id="chatBadge"></span>
-</button>
+<div id="chatFabWrap">
+  <div id="chatFabLabel">Nếu cần hỗ trợ hãy hỏi Bé Kiểm Soát Sakuko 🐱</div>
+  <button id="chatFab" title="Bé Kiểm Soát Sakuko">
+    <img src="/assets/bot-cat.jpg" alt="Bé Kiểm Soát Sakuko">
+    <span class="badge" id="chatBadge"></span>
+  </button>
+</div>
 
 <div id="chatPanel">
   <div class="chat-head">
-    <div class="chat-head-av">🤖</div>
+    <div class="chat-head-av" style="padding:0;overflow:hidden"><img src="/assets/bot-cat.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>
     <div class="chat-head-info">
-      <strong>Trợ lý KSCL</strong>
+      <strong>Bé Kiểm Soát Sakuko</strong>
       <span>Hỏi về app Kiểm Kê, Academy &amp; quy trình</span>
     </div>
     <button class="chat-head-close" id="chatClose">&times;</button>
   </div>
   <div class="chat-msgs" id="chatMsgs">
-    <div class="chat-msg bot">Xin chào! Tôi là trợ lý KSCL Sakuko 👋
+    <div class="chat-msg bot">Xin chào! Mình là Bé Kiểm Soát Sakuko 🐱
 
 Tôi có thể giúp bạn về:
 • Cách dùng <strong>App Kiểm Kê</strong>
@@ -668,12 +674,13 @@ Bạn cần hỗ trợ gì?</div>
   }
 
   document.getElementById('chatFab').onclick = toggleChat;
+  document.getElementById('chatFabLabel').onclick = toggleChat;
   document.getElementById('chatClose').onclick = toggleChat;
   document.getElementById('chatSend').onclick = sendMsg;
   document.getElementById('chatInput').onkeydown = e => { if(e.key==='Enter'){ e.preventDefault(); sendMsg(); } };
 
   // Expose for other pages
-  window.chatShowFab = function(show){ document.getElementById('chatFab').style.display = show ? '' : 'none'; };
+  window.chatShowFab = function(show){ document.getElementById('chatFabWrap').style.display = show ? 'flex' : 'none'; };
 })();
 </script>
 </body>
