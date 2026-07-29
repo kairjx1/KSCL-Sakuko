@@ -61,29 +61,17 @@ export async function onRequest({ request, env }) {
     const { messages } = await request.json();
     if (!messages?.length) return new Response(JSON.stringify({ ok: false, error: 'Cần messages' }), { headers: CORS });
 
-    const apiKey = (env.GROQ_API_KEY || '').trim();
-    if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'Chưa cấu hình GROQ_API_KEY' }), { headers: CORS });
+    if (!env.AI) return new Response(JSON.stringify({ ok: false, error: 'Chưa cấu hình AI binding' }), { headers: CORS });
 
-    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama3-70b-8192',
-        max_tokens: 1024,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          ...messages.slice(-10)
-        ]
-      })
+    const result = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        ...messages.slice(-10)
+      ],
+      max_tokens: 1024
     });
 
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(`Groq ${resp.status}: ${data.error?.message || data.error?.code || JSON.stringify(data)}`);
-
-    const reply = data.choices?.[0]?.message?.content || '';
+    const reply = result.response || '';
     return new Response(JSON.stringify({ ok: true, reply }), { headers: CORS });
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: CORS });
