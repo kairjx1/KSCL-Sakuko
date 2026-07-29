@@ -667,15 +667,19 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
   }
 
   window.toggleChatBot = toggleChat;
-  if(document.getElementById('chatFab')) document.getElementById('chatFab').onclick = toggleChat;
-  if(document.getElementById('chatFabLabel')) document.getElementById('chatFabLabel').onclick = toggleChat;
-  document.getElementById('chatClose').onclick = toggleChat;
-  document.getElementById('chatSend').onclick = sendMsg;
-  document.getElementById('chatInput').onkeydown = e => { if(e.key==='Enter'){ e.preventDefault(); sendMsg(); } };
 
-  // Draggable FAB
-  (function(){
+  function initChatUI(){
+    document.getElementById('chatClose').onclick = toggleChat;
+    document.getElementById('chatSend').onclick = sendMsg;
+    document.getElementById('chatInput').onkeydown = e => { if(e.key==='Enter'){ e.preventDefault(); sendMsg(); } };
+    const fab = document.getElementById('chatFab');
+    const label = document.getElementById('chatFabLabel');
+    if(fab) fab.onclick = toggleChat;
+    if(label) label.onclick = toggleChat;
+
+    // Draggable FAB
     const wrap = document.getElementById('chatFabWrap');
+    if(!wrap) return;
     let dragging = false, startX, startY, origRight, origBottom, moved = false;
     function onStart(e){
       const t = e.touches ? e.touches[0] : e;
@@ -715,7 +719,10 @@ document.getElementById('adminOverlay').onclick = e => { if (e.target === e.curr
     document.addEventListener('touchend', onEnd);
     // prevent click after drag
     wrap.addEventListener('click', e=>{ if(moved){ moved=false; e.stopPropagation(); } }, true);
-  })();
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initChatUI);
+  else initChatUI();
 })();
 </script>
 <div id="chatFabWrap" style="position:fixed;bottom:100px;right:16px;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;gap:8px;touch-action:none">
