@@ -81,7 +81,7 @@ export async function onRequest({ request, env }) {
     });
 
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error?.message || 'Lỗi Groq API');
+    if (!resp.ok) throw new Error(`Groq ${resp.status}: ${data.error?.message || data.error?.code || JSON.stringify(data)}`);
 
     const reply = data.choices?.[0]?.message?.content || '';
     return new Response(JSON.stringify({ ok: true, reply }), { headers: CORS });
