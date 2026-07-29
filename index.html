@@ -681,8 +681,49 @@ Bạn cần hỗ trợ gì?</div>
   document.getElementById('chatSend').onclick = sendMsg;
   document.getElementById('chatInput').onkeydown = e => { if(e.key==='Enter'){ e.preventDefault(); sendMsg(); } };
 
-  // Expose for other pages
-  window.chatShowFab = function(show){ document.getElementById('chatFabWrap').classList.toggle('visible', show); };
+  // Draggable FAB
+  (function(){
+    const wrap = document.getElementById('chatFabWrap');
+    let dragging = false, startX, startY, origRight, origBottom, moved = false;
+    function onStart(e){
+      const t = e.touches ? e.touches[0] : e;
+      dragging = true; moved = false;
+      startX = t.clientX; startY = t.clientY;
+      const rect = wrap.getBoundingClientRect();
+      origRight = window.innerWidth - rect.right;
+      origBottom = window.innerHeight - rect.bottom;
+      wrap.style.transition = 'none';
+      e.preventDefault();
+    }
+    function onMove(e){
+      if(!dragging) return;
+      const t = e.touches ? e.touches[0] : e;
+      const dx = t.clientX - startX, dy = t.clientY - startY;
+      if(Math.abs(dx)>5||Math.abs(dy)>5) moved = true;
+      if(!moved) return;
+      let newRight = origRight - dx;
+      let newBottom = origBottom - dy;
+      newRight = Math.max(8, Math.min(window.innerWidth - 70, newRight));
+      newBottom = Math.max(8, Math.min(window.innerHeight - 70, newBottom));
+      wrap.style.right = newRight + 'px';
+      wrap.style.bottom = newBottom + 'px';
+      e.preventDefault();
+    }
+    function onEnd(e){
+      if(!dragging) return;
+      dragging = false;
+      wrap.style.transition = '';
+      if(moved) e.stopPropagation();
+    }
+    wrap.addEventListener('mousedown', onStart);
+    wrap.addEventListener('touchstart', onStart, {passive:false});
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, {passive:false});
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
+    // prevent click after drag
+    wrap.addEventListener('click', e=>{ if(moved){ moved=false; e.stopPropagation(); } }, true);
+  })();
 })();
 </script>
 </body>
