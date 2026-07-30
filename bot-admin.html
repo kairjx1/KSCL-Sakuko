@@ -188,21 +188,53 @@ select.fg-sel:focus{border-color:#d0021b}
 <!-- AUTH -->
 <div class="auth-overlay" id="authOverlay">
   <div class="auth-card">
-    <div class="auth-logo">🛡️</div>
-    <h2>Bot KSCL Admin</h2>
-    <div class="auth-sub">Đăng nhập bằng email để quản lý bot</div>
-    <div class="auth-err" id="authErr"></div>
-    <div class="auth-field">
-      <span class="field-icon">✉️</span>
-      <input type="email" id="authEmail" placeholder="Email của bạn" autocomplete="email">
+
+    <!-- Bước 1: Đăng nhập -->
+    <div id="loginStep">
+      <div class="auth-logo">🛡️</div>
+      <h2>Bot KSCL Admin</h2>
+      <div class="auth-sub">Đăng nhập bằng email để quản lý bot</div>
+      <div class="auth-err" id="authErr"></div>
+      <div class="auth-field">
+        <span class="field-icon">✉️</span>
+        <input type="email" id="authEmail" placeholder="Email của bạn" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <span class="field-icon">🔑</span>
+        <input type="password" id="authPass" placeholder="Mật khẩu" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')doAuth()">
+      </div>
+      <button class="btn-primary" id="authBtn" onclick="doAuth()">Đăng nhập hệ thống</button>
+      <div class="auth-secure">🔒 Xác thực bảo mật qua Firebase Auth + OTP</div>
     </div>
-    <div class="auth-field">
-      <span class="field-icon">🔑</span>
-      <input type="password" id="authPass" placeholder="Mật khẩu" autocomplete="current-password"
-             onkeydown="if(event.key==='Enter')doAuth()">
+
+    <!-- Bước 2: OTP -->
+    <div id="otpStep" style="display:none">
+      <div class="auth-logo">🔐</div>
+      <h2>Xác minh hai lớp</h2>
+      <div class="auth-sub" id="otpDesc">Đang gửi mã OTP...</div>
+      <div class="auth-err" id="otpErr"></div>
+      <div class="auth-field">
+        <span class="field-icon">🔢</span>
+        <input type="text" id="otpCode" placeholder="Nhập mã 6 chữ số" maxlength="6"
+               inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code"
+               onkeydown="if(event.key==='Enter')doOtpVerify()"
+               oninput="this.value=this.value.replace(/\D/g,'')">
+      </div>
+      <button class="btn-primary" id="otpVerifyBtn" onclick="doOtpVerify()">Xác nhận OTP</button>
+      <button id="otpResendBtn" onclick="doOtpResend()"
+              style="width:100%;margin-top:10px;padding:11px;background:none;border:1.5px solid #d0021b;color:#d0021b;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">
+        Gửi lại mã
+      </button>
+      <div class="auth-secure" style="margin-top:14px">🔒 Mã hết hạn sau 5 phút · Chỉ dùng 1 lần</div>
+      <div style="margin-top:10px;text-align:center">
+        <button onclick="resetToLogin()"
+                style="background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer">
+          ← Quay lại đăng nhập
+        </button>
+      </div>
     </div>
-    <button class="btn-primary" id="authBtn" onclick="doAuth()">Đăng nhập hệ thống</button>
-    <div class="auth-secure">🔒 Xác thực bảo mật qua Firebase Auth</div>
+
   </div>
 </div>
 
@@ -630,7 +662,6 @@ firebase.initializeApp(FB_CONFIG);
 const auth = firebase.auth();
 const db = firebase.database();
 
-const ADMIN_EMAILS = ['kairjx1@gmail.com'];
 const DEFAULT_PANEL = {
   id: 'kscl-bot',
   name: 'Bot KSCL',
@@ -645,51 +676,144 @@ let activePanel = { ...DEFAULT_PANEL };  // panel đang dùng
 
 let panelSecret = '';
 
-// ── Firebase Auth ─────────────────────────────────────────────────────────────
+// ── Firebase Auth + OTP ───────────────────────────────────────────────────────
+let _otpEmail = '';
+let _otpCooldownTimer = null;
+
 auth.onAuthStateChanged(user => {
-  if (user && ADMIN_EMAILS.includes(user.email)) {
-    document.getElementById('authOverlay').style.display = 'none';
-    document.getElementById('userEmailDisplay').textContent = user.email;
-    loadPanels().then(() => loadOverview());
-  } else if (user) {
-    // Đăng nhập thành công nhưng không phải admin
-    auth.signOut();
-    showAuthErr('Tài khoản này không có quyền truy cập.');
+  if (!user) return; // không làm gì, giữ overlay
+  // Đã verify OTP trong session này → vào panel luôn
+  if (sessionStorage.getItem('otp_verified_' + user.email) === '1') {
+    _enterPanel(user.email); return;
   }
-  // user === null → giữ overlay hiện
+  // Cần OTP
+  _otpEmail = user.email;
+  _showOtpStep();
+  _otpSend();
 });
 
 async function doAuth() {
   const email = document.getElementById('authEmail').value.trim();
   const pass  = document.getElementById('authPass').value;
   if (!email || !pass) { showAuthErr('Vui lòng nhập đầy đủ email và mật khẩu.'); return; }
-  if (!ADMIN_EMAILS.includes(email)) { showAuthErr('Email không được phép truy cập.'); return; }
 
   const btn = document.getElementById('authBtn');
   btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
   showAuthErr('');
-
   try {
     await auth.signInWithEmailAndPassword(email, pass);
-    // onAuthStateChanged sẽ xử lý tiếp
+    // onAuthStateChanged xử lý tiếp
   } catch (e) {
     let msg = 'Đăng nhập thất bại.';
     if (e.code === 'auth/user-not-found') {
-      // Tự tạo tài khoản lần đầu
-      try {
-        await auth.createUserWithEmailAndPassword(email, pass);
-      } catch (e2) { msg = 'Không thể tạo tài khoản: ' + e2.message; showAuthErr(msg); }
+      try { await auth.createUserWithEmailAndPassword(email, pass); }
+      catch (e2) { showAuthErr('Không thể tạo tài khoản: ' + e2.message); }
     } else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
       msg = 'Sai mật khẩu, vui lòng thử lại.';
+      showAuthErr(msg);
     } else if (e.code === 'auth/invalid-email') {
-      msg = 'Địa chỉ email không hợp lệ.';
-    } else {
-      msg = e.message;
-    }
-    showAuthErr(msg);
+      showAuthErr('Địa chỉ email không hợp lệ.');
+    } else { showAuthErr(e.message); }
   } finally {
     btn.disabled = false; btn.textContent = 'Đăng nhập hệ thống';
   }
+}
+
+async function _otpSend() {
+  try {
+    const r = await fetch(activePanel.url + '/api/otp/send', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: _otpEmail})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      document.getElementById('otpDesc').textContent =
+        `Mã OTP đã gửi đến ${_otpEmail} và Lark của bạn`;
+      _startResendCooldown();
+    } else {
+      document.getElementById('otpDesc').textContent = 'Lỗi gửi OTP';
+      document.getElementById('otpErr').textContent = d.msg || 'Không thể gửi OTP';
+      if (d.msg && d.msg.includes('quyền')) {
+        setTimeout(() => resetToLogin(), 2000);
+      }
+    }
+  } catch(e) {
+    document.getElementById('otpErr').textContent = 'Lỗi kết nối server';
+  }
+}
+
+async function doOtpVerify() {
+  const code = document.getElementById('otpCode').value.trim();
+  if (code.length !== 6) {
+    document.getElementById('otpErr').textContent = 'Vui lòng nhập đủ 6 chữ số'; return;
+  }
+  const btn = document.getElementById('otpVerifyBtn');
+  btn.disabled = true; btn.textContent = 'Đang xác nhận...';
+  document.getElementById('otpErr').textContent = '';
+  try {
+    const r = await fetch(activePanel.url + '/api/otp/verify', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: _otpEmail, code})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      sessionStorage.setItem('otp_verified_' + _otpEmail, '1');
+      _enterPanel(_otpEmail);
+    } else {
+      document.getElementById('otpErr').textContent = d.msg || 'OTP không đúng';
+    }
+  } catch(e) {
+    document.getElementById('otpErr').textContent = 'Lỗi kết nối server';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Xác nhận OTP';
+  }
+}
+
+async function doOtpResend() {
+  document.getElementById('otpCode').value = '';
+  document.getElementById('otpErr').textContent = '';
+  document.getElementById('otpDesc').textContent = 'Đang gửi lại...';
+  await _otpSend();
+}
+
+function _showOtpStep() {
+  document.getElementById('loginStep').style.display = 'none';
+  document.getElementById('otpStep').style.display = 'block';
+  document.getElementById('otpErr').textContent = '';
+  document.getElementById('otpCode').value = '';
+  setTimeout(() => document.getElementById('otpCode').focus(), 150);
+}
+
+function _enterPanel(email) {
+  document.getElementById('authOverlay').style.display = 'none';
+  document.getElementById('userEmailDisplay').textContent = email;
+  loadPanels().then(() => loadOverview());
+}
+
+function resetToLogin() {
+  if (_otpCooldownTimer) clearInterval(_otpCooldownTimer);
+  _otpEmail = '';
+  auth.signOut();
+  document.getElementById('otpStep').style.display = 'none';
+  document.getElementById('loginStep').style.display = 'block';
+  document.getElementById('otpResendBtn').disabled = false;
+  document.getElementById('otpResendBtn').textContent = 'Gửi lại mã';
+  document.getElementById('authOverlay').style.display = 'flex';
+}
+
+function _startResendCooldown() {
+  const btn = document.getElementById('otpResendBtn');
+  let sec = 60;
+  btn.disabled = true;
+  if (_otpCooldownTimer) clearInterval(_otpCooldownTimer);
+  btn.textContent = `Gửi lại mã (${sec}s)`;
+  _otpCooldownTimer = setInterval(() => {
+    sec--;
+    btn.textContent = sec > 0 ? `Gửi lại mã (${sec}s)` : 'Gửi lại mã';
+    if (sec <= 0) { clearInterval(_otpCooldownTimer); btn.disabled = false; }
+  }, 1000);
 }
 
 function showAuthErr(msg) {
