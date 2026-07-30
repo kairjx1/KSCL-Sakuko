@@ -20,15 +20,25 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f7;color:#1a233
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* AUTH OVERLAY */
-.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999}
-.auth-card{background:#fff;border-radius:16px;padding:40px;width:380px;max-width:94vw;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.25)}
-.auth-card h2{font-size:20px;font-weight:700;margin-bottom:8px}
-.auth-card p{color:#6b7a99;font-size:13px;margin-bottom:24px}
-.auth-card input{width:100%;padding:11px 14px;font-size:14px;border:1px solid #dde3ef;border-radius:8px;outline:none;margin-bottom:12px;font-family:inherit}
-.auth-card input:focus{border-color:#d0021b;box-shadow:0 0 0 3px rgba(208,2,27,.1)}
-.btn-primary{background:#d0021b;color:#fff;border:none;border-radius:10px;padding:13px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
-.btn-primary:hover{background:#b00118}
-.auth-err{color:#dc2626;font-size:13px;margin-bottom:10px}
+.auth-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%);display:flex;align-items:center;justify-content:center;z-index:999}
+.auth-card{background:#fff;border-radius:20px;padding:44px 40px;width:400px;max-width:94vw;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.4)}
+.auth-logo{font-size:48px;margin-bottom:14px}
+.auth-card h2{font-size:22px;font-weight:800;margin-bottom:4px;color:#1a2332}
+.auth-card .auth-sub{color:#6b7a99;font-size:13px;margin-bottom:28px}
+.auth-field{position:relative;margin-bottom:14px}
+.auth-field input{width:100%;padding:13px 14px 13px 42px;font-size:14px;border:1.5px solid #dde3ef;border-radius:10px;outline:none;font-family:inherit;background:#fafbfc;transition:.2s}
+.auth-field input:focus{border-color:#d0021b;background:#fff;box-shadow:0 0 0 3px rgba(208,2,27,.1)}
+.auth-field .field-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none}
+.btn-primary{background:linear-gradient(135deg,#d0021b,#9b0117);color:#fff;border:none;border-radius:10px;padding:14px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin-top:4px;letter-spacing:.3px;transition:.2s}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(208,2,27,.35)}
+.btn-primary:active{transform:none}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
+.auth-err{color:#dc2626;font-size:13px;margin-bottom:12px;min-height:20px;font-weight:500}
+.auth-secure{font-size:11px;color:#94a3b8;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:5px}
+/* CHANGE PASSWORD MODAL */
+.cpw-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:600}
+.cpw-modal.show{display:flex}
+.cpw-card{background:#fff;border-radius:16px;padding:32px;width:360px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,.25)}
 
 /* LAYOUT */
 .layout{display:flex;flex:1;overflow:hidden;height:calc(100vh - 60px)}
@@ -143,6 +153,9 @@ select.fg-sel:focus{border-color:#d0021b}
   </div>
   <div class="topbar-right">
     <span id="statusDot"><span class="badge-live"></span><span id="statusText">Đang kết nối...</span></span>
+    <span id="userEmailDisplay" style="font-size:12px;opacity:.75"></span>
+    <button class="tbtn" onclick="openCpw()">🔐 Đổi MK</button>
+    <button class="tbtn" onclick="doLogout()">Đăng xuất</button>
     <button class="tbtn" onclick="location.href='index.html'">← Trang chủ</button>
   </div>
 </div>
@@ -150,12 +163,46 @@ select.fg-sel:focus{border-color:#d0021b}
 <!-- AUTH -->
 <div class="auth-overlay" id="authOverlay">
   <div class="auth-card">
-    <div style="font-size:40px;margin-bottom:12px">🤖</div>
+    <div class="auth-logo">🛡️</div>
     <h2>Bot KSCL Admin</h2>
-    <p>Nhập mật khẩu panel để tiếp tục</p>
+    <div class="auth-sub">Đăng nhập bằng email để quản lý bot</div>
     <div class="auth-err" id="authErr"></div>
-    <input type="password" id="secretInput" placeholder="Panel secret..." onkeydown="if(event.key==='Enter')doAuth()">
-    <button class="btn-primary" onclick="doAuth()">Đăng nhập</button>
+    <div class="auth-field">
+      <span class="field-icon">✉️</span>
+      <input type="email" id="authEmail" placeholder="Email của bạn" autocomplete="email">
+    </div>
+    <div class="auth-field">
+      <span class="field-icon">🔑</span>
+      <input type="password" id="authPass" placeholder="Mật khẩu" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')doAuth()">
+    </div>
+    <button class="btn-primary" id="authBtn" onclick="doAuth()">Đăng nhập hệ thống</button>
+    <div class="auth-secure">🔒 Xác thực bảo mật qua Firebase Auth</div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="cpw-modal" id="cpwModal">
+  <div class="cpw-card">
+    <h3 style="font-size:17px;font-weight:700;margin-bottom:6px">🔐 Đổi mật khẩu</h3>
+    <p style="color:#6b7a99;font-size:13px;margin-bottom:20px">Mật khẩu mới phải từ 6 ký tự trở lên</p>
+    <div class="auth-err" id="cpwErr" style="margin-bottom:12px"></div>
+    <div class="fg">
+      <label>Mật khẩu hiện tại</label>
+      <input type="password" id="cpwCurrent" class="cpw-input" placeholder="Nhập mật khẩu hiện tại">
+    </div>
+    <div class="fg">
+      <label>Mật khẩu mới</label>
+      <input type="password" id="cpwNew" class="cpw-input" placeholder="Ít nhất 6 ký tự">
+    </div>
+    <div class="fg">
+      <label>Xác nhận mật khẩu mới</label>
+      <input type="password" id="cpwConfirm" class="cpw-input" placeholder="Nhập lại mật khẩu mới">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-gray" onclick="closeCpw()">Hủy</button>
+      <button class="btn btn-red" onclick="doChangePw()">Cập nhật mật khẩu</button>
+    </div>
   </div>
 </div>
 
@@ -442,54 +489,108 @@ firebase.initializeApp(FB_CONFIG);
 const auth = firebase.auth();
 const db = firebase.database();
 
-const PORTAL_KEY = 'kscl_portal_session';
 const ADMIN_EMAILS = ['kairjx1@gmail.com'];
 const RENDER_URL = 'https://lark-bot-vhi3.onrender.com';
-const SECRET_KEY = 'bot_panel_secret';
+const PANEL_SECRET = 'yw26XCRn6hU8uD2Xoa5xiVG2alU1ppBC';
 
 let panelSecret = '';
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
-function doAuth() {
-  const val = document.getElementById('secretInput').value.trim();
-  if (!val) return;
-  panelSecret = val;
-  sessionStorage.setItem(SECRET_KEY, val);
-  document.getElementById('authErr').textContent = '';
-  verifySecret();
-}
+// ── Firebase Auth ─────────────────────────────────────────────────────────────
+auth.onAuthStateChanged(user => {
+  if (user && ADMIN_EMAILS.includes(user.email)) {
+    panelSecret = PANEL_SECRET;
+    document.getElementById('authOverlay').style.display = 'none';
+    document.getElementById('userEmailDisplay').textContent = user.email;
+    loadOverview();
+  } else if (user) {
+    // Đăng nhập thành công nhưng không phải admin
+    auth.signOut();
+    showAuthErr('Tài khoản này không có quyền truy cập.');
+  }
+  // user === null → giữ overlay hiện
+});
 
-async function verifySecret() {
+async function doAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const pass  = document.getElementById('authPass').value;
+  if (!email || !pass) { showAuthErr('Vui lòng nhập đầy đủ email và mật khẩu.'); return; }
+  if (!ADMIN_EMAILS.includes(email)) { showAuthErr('Email không được phép truy cập.'); return; }
+
+  const btn = document.getElementById('authBtn');
+  btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
+  showAuthErr('');
+
   try {
-    const r = await api('GET', '/api/panel/status');
-    if (r.ok) {
-      document.getElementById('authOverlay').style.display = 'none';
-      loadOverview();
-    } else {
-      document.getElementById('authErr').textContent = 'Sai mật khẩu, thử lại.';
-      panelSecret = '';
-      sessionStorage.removeItem(SECRET_KEY);
-    }
+    await auth.signInWithEmailAndPassword(email, pass);
+    // onAuthStateChanged sẽ xử lý tiếp
   } catch (e) {
-    document.getElementById('authErr').textContent = 'Không kết nối được server: ' + e.message;
+    let msg = 'Đăng nhập thất bại.';
+    if (e.code === 'auth/user-not-found') {
+      // Tự tạo tài khoản lần đầu
+      try {
+        await auth.createUserWithEmailAndPassword(email, pass);
+      } catch (e2) { msg = 'Không thể tạo tài khoản: ' + e2.message; showAuthErr(msg); }
+    } else if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+      msg = 'Sai mật khẩu, vui lòng thử lại.';
+    } else if (e.code === 'auth/invalid-email') {
+      msg = 'Địa chỉ email không hợp lệ.';
+    } else {
+      msg = e.message;
+    }
+    showAuthErr(msg);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Đăng nhập hệ thống';
   }
 }
 
-// ── Portal session check ───────────────────────────────────────────────────────
-(function init() {
-  // Kiểm tra session portal (phải là admin/superadmin)
-  const sess = JSON.parse(localStorage.getItem(PORTAL_KEY) || 'null');
-  if (!sess || !['admin','superadmin'].includes(sess.role)) {
-    if (!sess) { location.href = 'index.html'; return; }
-    // Nếu có session nhưng không phải admin → block
-    if (!ADMIN_EMAILS.includes(sess.email) && !['admin','superadmin'].includes(sess.role)) {
-      location.href = 'index.html'; return;
+function showAuthErr(msg) {
+  document.getElementById('authErr').textContent = msg;
+}
+
+function doLogout() {
+  if (!confirm('Bạn có chắc muốn đăng xuất?')) return;
+  auth.signOut().then(() => location.reload());
+}
+
+// ── Đổi mật khẩu ─────────────────────────────────────────────────────────────
+function openCpw() {
+  document.getElementById('cpwCurrent').value = '';
+  document.getElementById('cpwNew').value = '';
+  document.getElementById('cpwConfirm').value = '';
+  document.getElementById('cpwErr').textContent = '';
+  document.getElementById('cpwModal').classList.add('show');
+}
+function closeCpw() { document.getElementById('cpwModal').classList.remove('show'); }
+
+async function doChangePw() {
+  const current = document.getElementById('cpwCurrent').value;
+  const nw      = document.getElementById('cpwNew').value;
+  const confirm2 = document.getElementById('cpwConfirm').value;
+  const errEl   = document.getElementById('cpwErr');
+  errEl.textContent = '';
+
+  if (!current || !nw || !confirm2) { errEl.textContent = 'Vui lòng điền đầy đủ.'; return; }
+  if (nw.length < 6) { errEl.textContent = 'Mật khẩu mới phải từ 6 ký tự.'; return; }
+  if (nw !== confirm2) { errEl.textContent = 'Xác nhận mật khẩu không khớp.'; return; }
+
+  const user = auth.currentUser;
+  if (!user) { errEl.textContent = 'Phiên đăng nhập hết hạn, vui lòng tải lại.'; return; }
+
+  try {
+    // Re-authenticate trước khi đổi mật khẩu
+    const cred = firebase.auth.EmailAuthProvider.credential(user.email, current);
+    await user.reauthenticateWithCredential(cred);
+    await user.updatePassword(nw);
+    closeCpw();
+    alert('✅ Đổi mật khẩu thành công!');
+  } catch (e) {
+    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+      errEl.textContent = 'Mật khẩu hiện tại không đúng.';
+    } else {
+      errEl.textContent = e.message;
     }
   }
-  // Check cached secret
-  const cached = sessionStorage.getItem(SECRET_KEY);
-  if (cached) { panelSecret = cached; verifySecret(); }
-})();
+}
 
 // ── API helper ────────────────────────────────────────────────────────────────
 async function api(method, path, body) {
