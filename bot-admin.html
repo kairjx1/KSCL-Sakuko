@@ -284,6 +284,7 @@ select.fg-sel:focus{border-color:#d0021b}
     <div class="nav-item" onclick="goPage('perms')"><span class="icon">🔐</span><span>Phân quyền</span></div>
     <div class="nav-item" onclick="goPage('email')"><span class="icon">📧</span><span>Email</span></div>
     <div class="nav-item" onclick="goPage('panels')" style="margin-top:auto;border-top:1px solid #f1f5f9"><span class="icon">🗂️</span><span>Quản lý Panel</span></div>
+    <div class="nav-item" onclick="startBackup()" id="backupNavBtn" style="border-top:1px solid #f1f5f9;background:#f0fdf4;color:#15803d;font-weight:600"><span class="icon">☁️</span><span>SAO LƯU</span></div>
   </div>
 
   <div class="content">
@@ -551,6 +552,53 @@ select.fg-sel:focus{border-color:#d0021b}
       <div id="panelList"><div style="color:#94a3b8;font-size:13px">Đang tải...</div></div>
     </div>
 
+    <!-- BACKUP -->
+    <div class="page" id="page-backup">
+      <div class="page-title">☁️ Sao lưu hệ thống</div>
+      <div class="notify" id="backupNotify"></div>
+      <div class="card">
+        <div class="card-title">⚙️ Cấu hình nơi lưu</div>
+        <div class="fg" style="margin-bottom:12px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="bkGithubOn" onchange="saveBackupConfig()" style="width:16px;height:16px"> Sao lưu lên GitHub Repository
+          </label>
+        </div>
+        <div id="bkGithubFields">
+          <div class="fg">
+            <label>GitHub Repository Destination</label>
+            <input type="text" id="bkGithubRepo" placeholder="VD: kairjx1/lark-bot-backup" oninput="saveBackupConfig()">
+            <div class="hint">Cần thêm GITHUB_TOKEN vào Render Environment Variables</div>
+          </div>
+        </div>
+        <div class="fg" style="margin:12px 0">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="bkDriveOn" onchange="saveBackupConfig()" style="width:16px;height:16px"> Sao lưu lên Google Drive
+          </label>
+        </div>
+        <div id="bkDriveFields">
+          <div class="fg">
+            <label>Google Drive Folder Name</label>
+            <input type="text" id="bkDriveFolder" placeholder="VD: Sakuko_QC_Backups_2026" oninput="saveBackupConfig()">
+            <div class="hint">Cần thêm GOOGLE_SERVICE_ACCOUNT_JSON vào Render Environment Variables</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🗄️ Nội dung sao lưu</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;color:#475569">
+          <div style="background:#f8fafc;border-radius:8px;padding:12px">✅ Toàn bộ dữ liệu Firebase (JSON)</div>
+          <div style="background:#f8fafc;border-radius:8px;padding:12px">✅ Cấu hình bot & quy tắc</div>
+          <div style="background:#f8fafc;border-radius:8px;padding:12px">✅ Lịch sử email quan trọng</div>
+          <div style="background:#f8fafc;border-radius:8px;padding:12px">✅ Danh sách admin & OTP config</div>
+        </div>
+        <button class="btn btn-red" onclick="startBackup()" style="margin-top:16px;background:#15803d;font-size:15px;padding:12px 28px">☁️ Bắt đầu sao lưu ngay</button>
+      </div>
+      <div class="card" id="bkHistoryCard">
+        <div class="card-title">📜 Lịch sử sao lưu</div>
+        <div id="bkHistoryList" style="font-size:13px;color:#475569">Đang tải...</div>
+      </div>
+    </div>
+
     <!-- SEND -->
     <div class="page" id="page-send">
       <div class="page-title">Gửi tin nhắn</div>
@@ -567,6 +615,25 @@ select.fg-sel:focus{border-color:#d0021b}
         </div>
         <button class="btn btn-red" onclick="doSendMsg()">Gửi tin</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BACKUP PROGRESS -->
+<div class="modal-overlay" id="backupModal" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head">
+      <h3>☁️ Đang sao lưu...</h3>
+    </div>
+    <div class="modal-body">
+      <div id="bkProgressLog" style="font-size:13px;color:#475569;min-height:80px;margin-bottom:16px;line-height:1.8"></div>
+      <div style="background:#f1f5f9;border-radius:8px;height:12px;overflow:hidden">
+        <div id="bkProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#15803d,#22c55e);transition:width .4s ease;border-radius:8px"></div>
+      </div>
+      <div id="bkProgressPct" style="text-align:right;font-size:12px;color:#64748b;margin-top:4px">0%</div>
+    </div>
+    <div class="modal-foot" id="bkModalFoot" style="display:none">
+      <button class="btn btn-gray" onclick="document.getElementById('backupModal').style.display='none'">Đóng</button>
     </div>
   </div>
 </div>
@@ -825,6 +892,104 @@ function doLogout() {
   // Xóa OTP session để lần sau phải xác thực lại
   Object.keys(sessionStorage).forEach(k => { if (k.startsWith('otp_verified_')) sessionStorage.removeItem(k); });
   auth.signOut().then(() => location.reload());
+}
+
+// ── Backup ───────────────────────────────────────────────────────────────────
+function saveBackupConfig() {
+  const cfg = {
+    github_on:    document.getElementById('bkGithubOn').checked,
+    github_repo:  document.getElementById('bkGithubRepo').value.trim(),
+    drive_on:     document.getElementById('bkDriveOn').checked,
+    drive_folder: document.getElementById('bkDriveFolder').value.trim(),
+  };
+  localStorage.setItem('backup_config', JSON.stringify(cfg));
+}
+
+function loadBackupConfig() {
+  try {
+    const cfg = JSON.parse(localStorage.getItem('backup_config') || '{}');
+    document.getElementById('bkGithubOn').checked    = !!cfg.github_on;
+    document.getElementById('bkGithubRepo').value    = cfg.github_repo || '';
+    document.getElementById('bkDriveOn').checked     = !!cfg.drive_on;
+    document.getElementById('bkDriveFolder').value   = cfg.drive_folder || '';
+  } catch(e) {}
+}
+
+function _bkLog(msg) {
+  const el = document.getElementById('bkProgressLog');
+  el.innerHTML += `<div>${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function _bkProgress(pct) {
+  document.getElementById('bkProgressBar').style.width = pct + '%';
+  document.getElementById('bkProgressPct').textContent = pct + '%';
+}
+
+async function startBackup() {
+  loadBackupConfig();
+  const cfg = JSON.parse(localStorage.getItem('backup_config') || '{}');
+  if (!cfg.github_on && !cfg.drive_on) {
+    goPage('backup');
+    document.getElementById('backupNotify').innerHTML =
+      '<div class="notify error">⚠️ Chưa chọn nơi lưu. Vui lòng bật GitHub hoặc Google Drive.</div>';
+    return;
+  }
+  // Show modal
+  const modal = document.getElementById('backupModal');
+  modal.style.display = 'flex';
+  document.getElementById('bkProgressLog').innerHTML = '';
+  document.getElementById('bkModalFoot').style.display = 'none';
+  document.getElementById('backupNavBtn').style.opacity = '0.5';
+  _bkProgress(5);
+  _bkLog('🔄 Bắt đầu sao lưu...');
+
+  try {
+    const r = await apiCall('/api/panel/backup/start', 'POST', cfg);
+    if (!r.ok) throw new Error(r.msg || 'Lỗi server');
+    const jobId = r.job_id;
+    _bkLog('✅ Đã khởi động job sao lưu');
+    _bkProgress(15);
+
+    // Poll status
+    let done = false;
+    while (!done) {
+      await new Promise(res => setTimeout(res, 1500));
+      const s = await apiCall(`/api/panel/backup/status?job_id=${jobId}`, 'GET');
+      _bkProgress(s.pct || 15);
+      if (s.log && s.log !== _lastBkLog) {
+        _bkLog(s.log);
+        _lastBkLog = s.log;
+      }
+      if (s.done) {
+        done = true;
+        _bkProgress(100);
+        _bkLog(s.error ? `❌ Lỗi: ${s.error}` : '🎉 Sao lưu hoàn tất!');
+        document.getElementById('bkModalFoot').style.display = 'flex';
+        loadBackupHistory();
+      }
+    }
+  } catch(e) {
+    _bkLog('❌ Lỗi: ' + e.message);
+    document.getElementById('bkModalFoot').style.display = 'flex';
+  }
+  document.getElementById('backupNavBtn').style.opacity = '1';
+}
+let _lastBkLog = '';
+
+async function loadBackupHistory() {
+  try {
+    const snap = await db.ref('bot_backup_history').orderByChild('ts').limitToLast(5).once('value');
+    const items = [];
+    snap.forEach(c => items.unshift(c.val()));
+    const el = document.getElementById('bkHistoryList');
+    if (!items.length) { el.textContent = 'Chưa có lịch sử sao lưu.'; return; }
+    el.innerHTML = items.map(i => {
+      const dt = new Date(i.ts).toLocaleString('vi-VN');
+      const icon = i.ok ? '✅' : '❌';
+      return `<div style="padding:8px 0;border-bottom:1px solid #f1f5f9">${icon} <b>${dt}</b> — ${i.dest || ''} ${i.note || ''}</div>`;
+    }).join('');
+  } catch(e) {}
 }
 
 // ── Đổi mật khẩu ─────────────────────────────────────────────────────────────
@@ -1382,6 +1547,7 @@ function goPage(id) {
   if (id === 'perms') loadPerms();
   if (id === 'panels') renderPanelList();
   if (id === 'email') loadEmailImportant();
+  if (id === 'backup') { loadBackupConfig(); loadBackupHistory(); }
 }
 
 function loadRules() {
