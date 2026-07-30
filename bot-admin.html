@@ -250,6 +250,7 @@ select.fg-sel:focus{border-color:#d0021b}
     <div class="nav-item" onclick="goPage('autoreply')"><span class="icon">⚡</span><span>Trả lời tự động</span></div>
     <div class="nav-item" onclick="goPage('aichat')"><span class="icon">🤖</span><span>AI Chat</span></div>
     <div class="nav-item" onclick="goPage('perms')"><span class="icon">🔐</span><span>Phân quyền</span></div>
+    <div class="nav-item" onclick="goPage('email')"><span class="icon">📧</span><span>Email</span></div>
     <div class="nav-item" onclick="goPage('panels')" style="margin-top:auto;border-top:1px solid #f1f5f9"><span class="icon">🗂️</span><span>Quản lý Panel</span></div>
   </div>
 
@@ -448,6 +449,60 @@ select.fg-sel:focus{border-color:#d0021b}
       <div class="card">
         <div class="card-title">⚡ Danh sách quy tắc <span id="arCount" style="color:#94a3b8;font-weight:400;font-size:12px"></span></div>
         <div class="ar-list" id="arList"><div class="ar-empty">Đang tải...</div></div>
+      </div>
+    </div>
+
+    <!-- EMAIL -->
+    <div class="page" id="page-email">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <div class="page-title" style="margin-bottom:0">📧 Email quan trọng</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-gray btn-sm" onclick="loadEmailImportant()">🔄 Làm mới</button>
+          <button class="btn btn-gray btn-sm" onclick="triggerEmailScan()">🔍 Quét ngay</button>
+          <button class="btn btn-red btn-sm" onclick="sendEmailDigest()">📨 Gửi digest ngay</button>
+          <button class="btn btn-green btn-sm" onclick="openEmailRules()">⚙️ Quy tắc lọc</button>
+        </div>
+      </div>
+      <div class="notify" id="emailNotify"></div>
+
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <button class="btn btn-sm" id="efAll"   onclick="filterEmail('all')"    style="background:#d0021b;color:#fff">Tất cả</button>
+        <button class="btn btn-gray btn-sm" id="efUrgent"  onclick="filterEmail('urgent')">🚨 Khẩn</button>
+        <button class="btn btn-gray btn-sm" id="efPending" onclick="filterEmail('pending')">📌 Chưa xử lý</button>
+        <button class="btn btn-gray btn-sm" id="efDone"    onclick="filterEmail('done')">✅ Đã xong</button>
+      </div>
+
+      <div id="emailList"><div style="color:#94a3b8;padding:40px;text-align:center">Đang tải...</div></div>
+
+      <!-- Rule modal -->
+      <div class="panel-modal" id="emailRuleModal" onclick="if(event.target===this)closeEmailRules()">
+        <div class="modal" style="width:560px">
+          <div class="modal-head">
+            <h3>⚙️ Quy tắc lọc email quan trọng</h3>
+            <button class="modal-close" onclick="closeEmailRules()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div style="font-size:13px;color:#6b7a99;margin-bottom:14px">
+              Bot sẽ tự động đánh dấu quan trọng khi email khớp với rule bên dưới — <b>không tốn token AI</b>.
+            </div>
+            <div id="emailRuleList" style="margin-bottom:14px"></div>
+            <div style="border-top:1px solid #f0f2f7;padding-top:14px">
+              <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px">+ Thêm rule mới</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <select id="erType" style="padding:8px 10px;border:1px solid #dde3ef;border-radius:8px;font-size:13px;outline:none;background:#fff">
+                  <option value="sender">Người gửi (email)</option>
+                  <option value="keyword">Từ khóa (subject/nội dung)</option>
+                </select>
+                <input type="text" id="erValue" placeholder="VD: gd@sakuko.vn hoặc BBKK" style="flex:1;min-width:160px;padding:8px 12px;border:1px solid #dde3ef;border-radius:8px;font-size:13px;outline:none">
+                <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer">
+                  <input type="checkbox" id="erUrgent"> Khẩn
+                </label>
+                <button class="btn btn-red btn-sm" onclick="addEmailRule()">+ Thêm</button>
+              </div>
+            </div>
+          </div>
+          <div class="modal-foot"><button class="btn btn-gray" onclick="closeEmailRules()">Đóng</button></div>
+        </div>
       </div>
     </div>
 
@@ -1200,6 +1255,7 @@ function goPage(id) {
   if (id === 'aichat') loadAIConfig();
   if (id === 'perms') loadPerms();
   if (id === 'panels') renderPanelList();
+  if (id === 'email') loadEmailImportant();
 }
 
 function loadRules() {
@@ -1296,6 +1352,144 @@ function deleteRule(key, kw) {
     showNotify('arNotify', `✅ Đã xoá quy tắc "${kw}"`, true);
     setTimeout(() => showNotify('arNotify', ''), 3000);
   }).catch(e => showNotify('arNotify', '❌ ' + e.message, false));
+}
+
+// ── EMAIL ─────────────────────────────────────────────────────────────────────
+const EMAIL_RULES_PATH = 'bot_email_rules';
+let _emailFilter = 'all';
+let _emailItems  = [];
+
+async function loadEmailImportant() {
+  document.getElementById('emailList').innerHTML =
+    '<div style="color:#94a3b8;padding:40px;text-align:center">Đang tải...</div>';
+  try {
+    const d = await api('GET', '/api/panel/email/important?limit=50');
+    _emailItems = d.items || [];
+    renderEmailList();
+  } catch (e) {
+    document.getElementById('emailList').innerHTML =
+      `<div style="color:#dc2626;padding:20px">Lỗi tải email: ${e.message}</div>`;
+  }
+}
+
+function filterEmail(f) {
+  _emailFilter = f;
+  ['All','Urgent','Pending','Done'].forEach(x => {
+    const el = document.getElementById('ef' + x);
+    if (el) { el.style.background = ''; el.style.color = ''; el.className = 'btn btn-gray btn-sm'; }
+  });
+  const active = document.getElementById('ef' + f.charAt(0).toUpperCase() + f.slice(1));
+  if (active) { active.style.background = '#d0021b'; active.style.color = '#fff'; }
+  renderEmailList();
+}
+
+function renderEmailList() {
+  const el = document.getElementById('emailList');
+  let items = [..._emailItems];
+  if (_emailFilter === 'urgent')  items = items.filter(x => x.urgent && !x.done);
+  if (_emailFilter === 'pending') items = items.filter(x => !x.done);
+  if (_emailFilter === 'done')    items = items.filter(x => x.done);
+
+  if (!items.length) {
+    el.innerHTML = '<div style="color:#94a3b8;padding:40px;text-align:center">Không có email nào.</div>';
+    return;
+  }
+
+  el.innerHTML = items.map(em => {
+    const date = em.date ? new Date(em.date).toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) : '';
+    const scoreColor = em.score >= 9 ? '#dc2626' : em.score >= 7 ? '#d97706' : '#16a34a';
+    const urgentBadge = em.urgent ? '<span class="tag tag-red" style="font-size:10px">🚨 KHẨN</span>' : '';
+    const doneBadge   = em.done   ? '<span class="tag tag-green" style="font-size:10px">✅ Xong</span>' : '';
+    const deadlineTxt = em.deadline ? `<span class="tag tag-blue" style="font-size:10px">📅 ${em.deadline}</span>` : '';
+    const key = em.id ? em.id.replace(/[./#$]/g,'_').substring(0,120) : '';
+    return `
+    <div class="ar-item" style="${em.done ? 'opacity:.55' : ''}">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="font-size:22px;font-weight:800;color:${scoreColor};min-width:32px;text-align:center;line-height:1.2">${em.score||'?'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:700;color:#1a2332;margin-bottom:4px">${em.subject || '(Không có tiêu đề)'}</div>
+          <div style="font-size:12px;color:#6b7a99;margin-bottom:6px">👤 ${em.sender_name || em.sender || ''} &nbsp;·&nbsp; 🕐 ${date}</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">${urgentBadge}${doneBadge}${deadlineTxt}</div>
+          <div style="font-size:12px;color:#475569;line-height:1.5;border-left:3px solid #e5e7eb;padding-left:8px">${em.snippet || ''}</div>
+          ${em.reason ? `<div style="font-size:11px;color:#94a3b8;margin-top:5px">💡 ${em.reason}</div>` : ''}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        ${!em.done
+          ? `<button class="btn btn-green btn-sm" onclick="markEmailDone('${key}',true)">✅ Đánh dấu xong</button>`
+          : `<button class="btn btn-gray btn-sm" onclick="markEmailDone('${key}',false)">↩ Bỏ đánh dấu</button>`}
+        <button class="btn btn-gray btn-sm" onclick="deleteEmailItem('${key}')">🗑️ Xoá</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function triggerEmailScan() {
+  showNotify('emailNotify', '⏳ Đang yêu cầu bot quét email...', 'ok');
+  const d = await api('POST', '/api/panel/email/scan', {});
+  showNotify('emailNotify', d.ok ? '✅ ' + d.msg : '❌ ' + d.error, d.ok ? 'ok' : 'err');
+  setTimeout(() => { showNotify('emailNotify',''); if(d.ok) setTimeout(loadEmailImportant, 8000); }, 3000);
+}
+
+async function sendEmailDigest() {
+  showNotify('emailNotify', '⏳ Đang gửi digest...', 'ok');
+  const d = await api('POST', '/api/panel/email/digest', {});
+  showNotify('emailNotify', d.ok ? '✅ ' + d.msg : '❌ ' + d.error, d.ok ? 'ok' : 'err');
+  setTimeout(() => showNotify('emailNotify', ''), 3000);
+}
+
+async function markEmailDone(key, done) {
+  await api('POST', '/api/panel/email/done', { key, done });
+  const item = _emailItems.find(x => (x.id||'').replace(/[./#$]/g,'_').substring(0,120) === key);
+  if (item) item.done = done;
+  renderEmailList();
+}
+
+async function deleteEmailItem(key) {
+  if (!confirm('Xoá email này khỏi danh sách quan trọng?')) return;
+  await db.ref(`bot_email_important/${key}`).remove();
+  _emailItems = _emailItems.filter(x => (x.id||'').replace(/[./#$]/g,'_').substring(0,120) !== key);
+  renderEmailList();
+}
+
+// ── Email Rules ───────────────────────────────────────────────────────────────
+function openEmailRules() { loadEmailRules(); document.getElementById('emailRuleModal').classList.add('show'); }
+function closeEmailRules() { document.getElementById('emailRuleModal').classList.remove('show'); }
+
+async function loadEmailRules() {
+  const el = document.getElementById('emailRuleList');
+  el.innerHTML = '<div style="color:#94a3b8;font-size:13px">Đang tải...</div>';
+  const snap = await db.ref(EMAIL_RULES_PATH).once('value');
+  const rules = snap.val() || {};
+  const keys  = Object.keys(rules);
+  if (!keys.length) { el.innerHTML = '<div style="color:#94a3b8;font-size:13px">Chưa có rule nào.</div>'; return; }
+  el.innerHTML = keys.map(k => {
+    const r = rules[k];
+    const icon = r.type === 'sender' ? '👤' : '🔑';
+    const urgTag = r.urgent ? ' <span class="tag tag-red" style="font-size:10px">KHẨN</span>' : '';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8fafc;border-radius:8px;margin-bottom:6px">
+      <span style="font-size:14px">${icon}</span>
+      <span style="flex:1;font-size:13px;font-weight:600">${r.value}${urgTag}</span>
+      <span class="tag tag-gray" style="font-size:10px">${r.type === 'sender' ? 'Người gửi' : 'Từ khóa'}</span>
+      <button class="btn btn-gray btn-sm" onclick="deleteEmailRule('${k}')" style="color:#dc2626">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function addEmailRule() {
+  const type   = document.getElementById('erType').value;
+  const value  = document.getElementById('erValue').value.trim();
+  const urgent = document.getElementById('erUrgent').checked;
+  if (!value) return;
+  const key = value.toLowerCase().replace(/[^a-z0-9]/g,'_').substring(0,40) + '_' + Date.now();
+  await db.ref(`${EMAIL_RULES_PATH}/${key}`).set({ type, value, urgent, active: true });
+  document.getElementById('erValue').value = '';
+  loadEmailRules();
+}
+
+async function deleteEmailRule(key) {
+  await db.ref(`${EMAIL_RULES_PATH}/${key}`).remove();
+  loadEmailRules();
 }
 </script>
 </body>
