@@ -822,6 +822,8 @@ function showAuthErr(msg) {
 
 function doLogout() {
   if (!confirm('Bạn có chắc muốn đăng xuất?')) return;
+  // Xóa OTP session để lần sau phải xác thực lại
+  Object.keys(sessionStorage).forEach(k => { if (k.startsWith('otp_verified_')) sessionStorage.removeItem(k); });
   auth.signOut().then(() => location.reload());
 }
 
