@@ -336,6 +336,49 @@ select.fg-sel:focus{border-color:#d0021b}
           <p>4. Bot sẽ tự động load KB mới trong vòng 5 phút</p>
         </div>
       </div>
+
+      <!-- Q&A CACHE -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div class="card-title" style="margin-bottom:0">⚡ Q&amp;A Cache (câu hỏi lặp lại — 0 token)</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" onclick="loadQACache()" style="background:#e2e8f0;color:#1e293b">🔄 Tải lại</button>
+            <button class="btn btn-green" onclick="openQAModal(null)">+ Thêm mới</button>
+            <button class="btn btn-red" onclick="clearAllQA()" style="font-size:12px">🗑 Xóa tất cả</button>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:12px">
+          Bot trả lời ngay khi câu hỏi khớp ≥75% — không gọi AI, tiết kiệm token.
+          <span id="qaCacheCount" style="margin-left:8px;font-weight:600;color:#1e40af"></span>
+        </div>
+        <div style="margin-bottom:12px">
+          <input type="text" id="qaSearch" placeholder="🔍 Tìm câu hỏi..." oninput="renderQAList()"
+            style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div id="qaList" style="max-height:500px;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- MODAL SỬA Q&A -->
+    <div id="qaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center">
+      <div style="background:#fff;border-radius:16px;padding:28px;width:min(600px,95vw);box-shadow:0 20px 60px rgba(0,0,0,.2)">
+        <div style="font-size:17px;font-weight:700;margin-bottom:20px">✏️ Q&amp;A Cache</div>
+        <input type="hidden" id="qaOldQ">
+        <div class="fg" style="margin-bottom:14px">
+          <label style="font-weight:600;font-size:13px">Câu hỏi (từ khóa bot nhận diện)</label>
+          <input type="text" id="qaModalQ" placeholder="VD: quy trình hủy hàng là gì"
+            style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;margin-top:6px">
+        </div>
+        <div class="fg" style="margin-bottom:20px">
+          <label style="font-weight:600;font-size:13px">Câu trả lời</label>
+          <textarea id="qaModalA" rows="6" placeholder="Nhập câu trả lời đầy đủ..."
+            style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;margin-top:6px;resize:vertical;font-family:inherit"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="btn" onclick="document.getElementById('qaModal').style.display='none'" style="background:#e2e8f0;color:#1e293b">Hủy</button>
+          <button class="btn btn-green" onclick="saveQA()">💾 Lưu</button>
+        </div>
+      </div>
     </div>
 
     <!-- TEST -->
@@ -1517,6 +1560,93 @@ async function loadKB() {
   }
 }
 
+// ── Q&A Cache ─────────────────────────────────────────────────────────────────
+let _qaItems = [];
+
+async function loadQACache() {
+  document.getElementById('qaList').innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:12px">Đang tải...</div>';
+  try {
+    const d = await api('GET', '/api/panel/qa');
+    _qaItems = d.items || [];
+    document.getElementById('qaCacheCount').textContent = `${_qaItems.length} câu hỏi`;
+    renderQAList();
+  } catch (e) {
+    document.getElementById('qaList').innerHTML = '<div style="color:#ef4444">Lỗi: ' + e.message + '</div>';
+  }
+}
+
+function renderQAList() {
+  const q = (document.getElementById('qaSearch').value || '').toLowerCase();
+  const filtered = q ? _qaItems.filter(i => i.q.includes(q) || i.a.toLowerCase().includes(q)) : _qaItems;
+  if (!filtered.length) {
+    document.getElementById('qaList').innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:12px">Không có câu nào.</div>';
+    return;
+  }
+  document.getElementById('qaList').innerHTML = filtered.map((item, idx) => `
+    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#f8fafc">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px;color:#1e293b;margin-bottom:6px;word-break:break-word">❓ ${escHtml(item.q)}</div>
+          <div style="font-size:12px;color:#475569;white-space:pre-wrap;word-break:break-word;max-height:80px;overflow:hidden;line-height:1.5" id="qa-ans-${idx}">${escHtml(item.a)}</div>
+          ${item.a.length > 200 ? `<span style="font-size:11px;color:#3b82f6;cursor:pointer" onclick="toggleQAExpand(${idx})">Xem thêm ▼</span>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn" onclick="openQAModal(${idx})" style="background:#dbeafe;color:#1d4ed8;padding:5px 10px;font-size:12px">✏️</button>
+          <button class="btn btn-red" onclick="deleteQA('${escHtml(item.q)}')" style="padding:5px 10px;font-size:12px">🗑</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleQAExpand(idx) {
+  const el = document.getElementById('qa-ans-' + idx);
+  if (el.style.maxHeight === 'none') {
+    el.style.maxHeight = '80px';
+    el.nextElementSibling.textContent = 'Xem thêm ▼';
+  } else {
+    el.style.maxHeight = 'none';
+    el.nextElementSibling.textContent = 'Thu gọn ▲';
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function openQAModal(idx) {
+  const item = idx !== null ? _qaItems[idx] : null;
+  document.getElementById('qaOldQ').value   = item ? item.q : '';
+  document.getElementById('qaModalQ').value = item ? item.q : '';
+  document.getElementById('qaModalA').value = item ? item.a : '';
+  document.getElementById('qaModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('qaModalQ').focus(), 100);
+}
+
+async function saveQA() {
+  const q    = document.getElementById('qaModalQ').value.trim();
+  const a    = document.getElementById('qaModalA').value.trim();
+  const oldQ = document.getElementById('qaOldQ').value.trim();
+  if (!q || !a) { alert('Câu hỏi và câu trả lời không được rỗng.'); return; }
+  try {
+    await api('POST', '/api/panel/qa/upsert', { q, a, old_q: oldQ });
+    document.getElementById('qaModal').style.display = 'none';
+    await loadQACache();
+  } catch (e) { alert('Lỗi: ' + e.message); }
+}
+
+async function deleteQA(q) {
+  if (!confirm(`Xóa cache: "${q.slice(0,60)}..."?`)) return;
+  await api('POST', '/api/panel/qa/delete', { q });
+  await loadQACache();
+}
+
+async function clearAllQA() {
+  if (!confirm('Xóa TOÀN BỘ Q&A cache? Bot sẽ phải suy nghĩ lại tất cả câu hỏi.')) return;
+  await api('POST', '/api/panel/qa/clear', {});
+  await loadQACache();
+}
+
 // ── Test report ───────────────────────────────────────────────────────────────
 async function sendTestReport() {
   const target = document.getElementById('testTarget').value.trim();
@@ -1809,7 +1939,7 @@ function goPage(id) {
   event.currentTarget.classList.add('active');
   if (id === 'overview') loadOverview();
   if (id === 'logs') loadLogs(50);
-  if (id === 'kb') loadKB();
+  if (id === 'kb') { loadKB(); loadQACache(); }
   if (id === 'autoreply') loadRules();
   if (id === 'aichat') loadAIConfig();
   if (id === 'linkbase') loadLinkbase();
