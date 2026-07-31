@@ -1274,7 +1274,7 @@ async function doHealthCheck() {
   const el = document.getElementById('healthResult');
   el.textContent = 'Đang kiểm tra...';
   try {
-    const r = await fetch(RENDER_URL + '/health');
+    const r = await fetch((activePanel.url || '').replace(/\/$/, '') + '/health');
     const d = await r.json();
     el.innerHTML = `<span class="tag tag-green">✅ OK</span> Bot đang hoạt động — uptime ${d.uptime_s || '?'}s`;
   } catch (e) {
