@@ -649,6 +649,33 @@ select.fg-sel:focus{border-color:#d0021b}
         </div>
       </div>
     </div>
+      <div style="border:1px solid #dbeafe;border-radius:10px;padding:14px;margin-top:12px;background:#f0f9ff">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;margin-bottom:10px;color:#1d4ed8">
+          <input type="checkbox" id="m_bkAutoOn" style="width:16px;height:16px"> ⏰ Bật sao lưu TỰ ĐỘNG theo lịch
+        </label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div class="fg" style="margin:0;flex:1;min-width:120px">
+            <label style="font-size:12px">Giờ chạy (VN):</label>
+            <select id="m_bkAutoHour" style="margin-top:4px;padding:7px 10px;border:1px solid #cbd5e1;border-radius:7px;width:100%">
+              <option value="0">00:00 (nửa đêm)</option>
+              <option value="1">01:00</option>
+              <option value="2" selected>02:00 (khuyến nghị)</option>
+              <option value="3">03:00</option>
+              <option value="6">06:00</option>
+              <option value="8">08:00</option>
+              <option value="12">12:00</option>
+              <option value="18">18:00</option>
+              <option value="22">22:00</option>
+            </select>
+          </div>
+          <div class="fg" style="margin:0;flex:2;min-width:180px">
+            <label style="font-size:12px">Lark Open ID nhận thông báo:</label>
+            <input type="text" id="m_bkNotifyId" placeholder="ou_xxx... (open_id của bạn)" style="margin-top:4px">
+          </div>
+        </div>
+        <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Mỗi ngày server sẽ tự backup và gửi kết quả qua Lark DM</div>
+      </div>
+
       <div id="bkModalHistory" style="margin-top:16px;display:none">
         <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📜 5 bản sao lưu gần nhất</div>
         <div id="bkModalHistoryList" style="font-size:13px"></div>
@@ -957,6 +984,15 @@ function loadBackupConfig() {
   } catch(e) {}
 }
 
+async function loadAutoBackupConfig() {
+  try {
+    const cfg = await api('GET', '/api/panel/backup/autoconfig');
+    document.getElementById('m_bkAutoOn').checked    = !!cfg.enabled;
+    document.getElementById('m_bkAutoHour').value    = String(cfg.hour ?? 2);
+    document.getElementById('m_bkNotifyId').value    = cfg.notify_open_id || '';
+  } catch(e) {}
+}
+
 function _bkLog(msg) {
   const el = document.getElementById('bkProgressLog');
   el.innerHTML += `<div>${msg}</div>`;
@@ -970,6 +1006,7 @@ function _bkProgress(pct) {
 
 async function startBackup() {
   loadBackupConfig();
+  loadAutoBackupConfig();
   document.getElementById('backupConfigModal').style.display = 'flex';
   // Load history vào modal
   const histEl = document.getElementById('bkModalHistoryList');
@@ -999,7 +1036,7 @@ async function startBackup() {
   } catch(e) { histEl.textContent = 'Lỗi tải lịch sử.'; }
 }
 
-function startBackupFromModal() {
+async function startBackupFromModal() {
   const cfg = {
     github_on:    document.getElementById('m_bkGithubOn').checked,
     github_repo:  document.getElementById('m_bkGithubRepo').value.trim(),
@@ -1007,6 +1044,18 @@ function startBackupFromModal() {
     drive_folder: document.getElementById('m_bkDriveFolder').value.trim(),
   };
   localStorage.setItem('backup_config', JSON.stringify(cfg));
+  // Lưu auto backup config
+  const autoCfg = {
+    enabled:         document.getElementById('m_bkAutoOn').checked,
+    hour:            parseInt(document.getElementById('m_bkAutoHour').value),
+    minute:          0,
+    notify_open_id:  document.getElementById('m_bkNotifyId').value.trim(),
+    github_on:       cfg.github_on,
+    github_repo:     cfg.github_repo,
+    drive_on:        cfg.drive_on,
+    drive_folder:    cfg.drive_folder,
+  };
+  try { await api('POST', '/api/panel/backup/autoconfig', autoCfg); } catch(e) {}
   runBackupNow(cfg);
 }
 
