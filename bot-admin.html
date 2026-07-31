@@ -673,7 +673,10 @@ select.fg-sel:focus{border-color:#d0021b}
             <input type="text" id="m_bkNotifyId" placeholder="ou_xxx... (open_id của bạn)" style="margin-top:4px">
           </div>
         </div>
-        <div style="font-size:11px;color:#64748b;margin-top:8px">💡 Mỗi ngày server sẽ tự backup và gửi kết quả qua Lark DM</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:6px">
+          <div style="font-size:11px;color:#64748b">💡 Mỗi ngày server sẽ tự backup và gửi kết quả qua Lark DM</div>
+          <button class="btn" onclick="testAutoBackupNotify()" style="font-size:12px;padding:5px 12px;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer">📨 Gửi thử thông báo</button>
+        </div>
       </div>
 
       <div id="bkModalHistory" style="margin-top:16px;display:none">
@@ -982,6 +985,16 @@ function loadBackupConfig() {
     document.getElementById('m_bkDriveOn').checked     = !!cfg.drive_on;
     document.getElementById('m_bkDriveFolder').value   = cfg.drive_folder || '';
   } catch(e) {}
+}
+
+async function testAutoBackupNotify() {
+  const notifyId = document.getElementById('m_bkNotifyId').value.trim();
+  if (!notifyId) { alert('Nhập Lark Open ID trước!'); return; }
+  try {
+    const r = await api('POST', '/api/panel/backup/notify-test', { notify_open_id: notifyId });
+    if (r.ok) alert('✅ Đã gửi thông báo thử qua Lark!');
+    else alert('❌ Lỗi: ' + (r.error || 'unknown'));
+  } catch(e) { alert('❌ ' + e); }
 }
 
 async function loadAutoBackupConfig() {
