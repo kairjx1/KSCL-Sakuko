@@ -281,6 +281,7 @@ select.fg-sel:focus{border-color:#d0021b}
     <div class="nav-item" onclick="goPage('send')"><span class="icon">💬</span><span>Gửi tin</span></div>
     <div class="nav-item" onclick="goPage('autoreply')"><span class="icon">⚡</span><span>Trả lời tự động</span></div>
     <div class="nav-item" onclick="goPage('aichat')"><span class="icon">🤖</span><span>AI Chat</span></div>
+    <div class="nav-item" onclick="goPage('linkbase')"><span class="icon">🔗</span><span>Linkbase</span></div>
     <div class="nav-item" onclick="goPage('perms')"><span class="icon">🔐</span><span>Phân quyền</span></div>
     <div class="nav-item" onclick="goPage('email')"><span class="icon">📧</span><span>Email</span></div>
     <div class="nav-item" onclick="goPage('panels')" style="margin-top:auto;border-top:1px solid #f1f5f9"><span class="icon">🗂️</span><span>Quản lý Panel</span></div>
@@ -357,6 +358,28 @@ select.fg-sel:focus{border-color:#d0021b}
         <div class="card-title">🏥 Health check</div>
         <button class="btn btn-gray btn-sm" onclick="doHealthCheck()">Kiểm tra ngay</button>
         <div id="healthResult" style="margin-top:12px;font-size:13px;color:#475569"></div>
+      </div>
+    </div>
+
+    <!-- LINKBASE -->
+    <div class="page" id="page-linkbase">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div class="page-title" style="margin-bottom:0">🔗 Linkbase theo nhóm</div>
+      </div>
+      <div class="notify" id="linkbaseNotify"></div>
+      <div style="font-size:13px;color:#64748b;margin-bottom:16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px">
+        Gắn Lark Bitable / Doc / Excel cho từng nhóm chat. Bot sẽ ưu tiên đọc các base này khi trả lời câu hỏi trong nhóm đó.
+      </div>
+
+      <div class="card" id="linkbaseGroupList"></div>
+
+      <div class="card" style="border:2px dashed #cbd5e1">
+        <div class="card-title">➕ Thêm nhóm mới</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <input type="text" id="lb_newGroupId" placeholder="oc_... (chat_id nhóm)" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid #dde3ef;border-radius:8px;font-size:13px">
+          <input type="text" id="lb_newGroupName" placeholder="Tên nhóm (VD: Nhóm QC CVS)" style="flex:1;min-width:160px;padding:8px 12px;border:1px solid #dde3ef;border-radius:8px;font-size:13px">
+          <button class="btn btn-green btn-sm" onclick="lbAddGroup()">+ Thêm nhóm</button>
+        </div>
       </div>
     </div>
 
@@ -1147,6 +1170,96 @@ async function loadBackupHistory() {
   } catch(e) {}
 }
 
+// ── Linkbase ──────────────────────────────────────────────────────────────────
+const LB_PATH = 'bot_linkbase';
+let _lbData = {}; // { groupId: { name, bases: [{id, name, url, type}] } }
+
+async function loadLinkbase() {
+  const snap = await db.ref(LB_PATH).once('value');
+  _lbData = snap.val() || {};
+  renderLinkbase();
+}
+
+function renderLinkbase() {
+  const el = document.getElementById('linkbaseGroupList');
+  const groups = Object.entries(_lbData);
+  if (!groups.length) {
+    el.innerHTML = '<div style="color:#94a3b8;font-size:13px;text-align:center;padding:20px">Chưa có nhóm nào. Thêm nhóm bên dưới.</div>';
+    return;
+  }
+  el.innerHTML = groups.map(([gid, g]) => `
+    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <span style="font-weight:700;font-size:14px">💬 ${g.name || gid}</span>
+          <span style="font-size:11px;color:#94a3b8;margin-left:8px">${gid}</span>
+        </div>
+        <button onclick="lbRemoveGroup('${gid}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px">🗑</button>
+      </div>
+      <div id="lb_bases_${gid.replace(/[^a-z0-9]/gi,'_')}">
+        ${(g.bases||[]).map((b,i) => `
+          <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f1f5f9">
+            <span style="font-size:18px">${b.type==='bitable'?'🗃️':b.type==='doc'?'📄':'📊'}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:13px">${b.name}</div>
+              <div style="font-size:11px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.url}</div>
+            </div>
+            <span style="font-size:11px;padding:2px 7px;border-radius:4px;background:${b.type==='bitable'?'#ede9fe':b.type==='doc'?'#dbeafe':'#dcfce7'};color:${b.type==='bitable'?'#7c3aed':b.type==='doc'?'#1d4ed8':'#15803d'}">${b.type}</span>
+            <button onclick="lbRemoveBase('${gid}',${i})" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px">✕</button>
+          </div>
+        `).join('')}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <input type="text" id="lb_bname_${gid.replace(/[^a-z0-9]/gi,'_')}" placeholder="Tên base (VD: Base Hủy hàng)" style="flex:2;min-width:140px;padding:6px 10px;border:1px solid #dde3ef;border-radius:7px;font-size:12px">
+        <input type="text" id="lb_burl_${gid.replace(/[^a-z0-9]/gi,'_')}" placeholder="URL Lark Bitable / Doc / Excel" style="flex:4;min-width:200px;padding:6px 10px;border:1px solid #dde3ef;border-radius:7px;font-size:12px">
+        <select id="lb_btype_${gid.replace(/[^a-z0-9]/gi,'_')}" style="padding:6px 8px;border:1px solid #dde3ef;border-radius:7px;font-size:12px">
+          <option value="bitable">🗃️ Bitable</option>
+          <option value="doc">📄 Doc</option>
+          <option value="excel">📊 Excel</option>
+        </select>
+        <button class="btn btn-green btn-sm" onclick="lbAddBase('${gid}')">+ Thêm base</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function lbAddGroup() {
+  const gid = document.getElementById('lb_newGroupId').value.trim();
+  const name = document.getElementById('lb_newGroupName').value.trim();
+  if (!gid) { alert('Nhập chat_id nhóm!'); return; }
+  _lbData[gid] = { name: name || gid, bases: [] };
+  db.ref(`${LB_PATH}/${gid}`).set(_lbData[gid]);
+  document.getElementById('lb_newGroupId').value = '';
+  document.getElementById('lb_newGroupName').value = '';
+  renderLinkbase();
+}
+
+function lbRemoveGroup(gid) {
+  if (!confirm(`Xóa nhóm "${_lbData[gid]?.name}"?`)) return;
+  delete _lbData[gid];
+  db.ref(`${LB_PATH}/${gid}`).remove();
+  renderLinkbase();
+}
+
+function lbAddBase(gid) {
+  const key = gid.replace(/[^a-z0-9]/gi,'_');
+  const name = document.getElementById(`lb_bname_${key}`).value.trim();
+  const url  = document.getElementById(`lb_burl_${key}`).value.trim();
+  const type = document.getElementById(`lb_btype_${key}`).value;
+  if (!name || !url) { alert('Nhập tên và URL base!'); return; }
+  if (!_lbData[gid].bases) _lbData[gid].bases = [];
+  const base = { id: Date.now().toString(), name, url, type };
+  _lbData[gid].bases.push(base);
+  db.ref(`${LB_PATH}/${gid}/bases`).set(_lbData[gid].bases);
+  renderLinkbase();
+}
+
+function lbRemoveBase(gid, idx) {
+  _lbData[gid].bases.splice(idx, 1);
+  db.ref(`${LB_PATH}/${gid}/bases`).set(_lbData[gid].bases);
+  renderLinkbase();
+}
+
 // ── Đổi mật khẩu ─────────────────────────────────────────────────────────────
 function openCpw() {
   document.getElementById('cpwCurrent').value = '';
@@ -1699,6 +1812,7 @@ function goPage(id) {
   if (id === 'kb') loadKB();
   if (id === 'autoreply') loadRules();
   if (id === 'aichat') loadAIConfig();
+  if (id === 'linkbase') loadLinkbase();
   if (id === 'perms') loadPerms();
   if (id === 'panels') renderPanelList();
   if (id === 'email') loadEmailImportant();
