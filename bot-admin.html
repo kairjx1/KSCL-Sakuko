@@ -631,21 +631,21 @@ select.fg-sel:focus{border-color:#d0021b}
 
       <div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;margin-bottom:10px">
-          <input type="checkbox" id="bkGithubOn" style="width:16px;height:16px"> Sao lưu toàn bộ DB lên GitHub Repository
+          <input type="checkbox" id="m_bkGithubOn" style="width:16px;height:16px"> Sao lưu toàn bộ DB lên GitHub Repository
         </label>
         <div class="fg" style="margin:0">
           <label style="font-size:12px">GitHub Repository Destination:</label>
-          <input type="text" id="bkGithubRepo" placeholder="VD: kairjx1/lark-bot-backup" style="margin-top:4px">
+          <input type="text" id="m_bkGithubRepo" placeholder="VD: kairjx1/lark-bot-backup" style="margin-top:4px">
         </div>
       </div>
 
       <div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;margin-bottom:10px">
-          <input type="checkbox" id="bkDriveOn" style="width:16px;height:16px"> Sao lưu bản nén DB lên Google Drive
+          <input type="checkbox" id="m_bkDriveOn" style="width:16px;height:16px"> Sao lưu bản nén DB lên Google Drive
         </label>
         <div class="fg" style="margin:0">
           <label style="font-size:12px">Google Drive Folder Destination:</label>
-          <input type="text" id="bkDriveFolder" placeholder="VD: Sakuko_QC_Backups_2026" style="margin-top:4px">
+          <input type="text" id="m_bkDriveFolder" placeholder="VD: Sakuko_QC_Backups_2026" style="margin-top:4px">
         </div>
       </div>
     </div>
@@ -950,10 +950,10 @@ function saveBackupConfig() {
 function loadBackupConfig() {
   try {
     const cfg = JSON.parse(localStorage.getItem('backup_config') || '{}');
-    document.getElementById('bkGithubOn').checked    = !!cfg.github_on;
-    document.getElementById('bkGithubRepo').value    = cfg.github_repo || '';
-    document.getElementById('bkDriveOn').checked     = !!cfg.drive_on;
-    document.getElementById('bkDriveFolder').value   = cfg.drive_folder || '';
+    document.getElementById('m_bkGithubOn').checked    = !!cfg.github_on;
+    document.getElementById('m_bkGithubRepo').value    = cfg.github_repo || '';
+    document.getElementById('m_bkDriveOn').checked     = !!cfg.drive_on;
+    document.getElementById('m_bkDriveFolder').value   = cfg.drive_folder || '';
   } catch(e) {}
 }
 
@@ -1001,10 +1001,10 @@ async function startBackup() {
 
 function startBackupFromModal() {
   const cfg = {
-    github_on:    document.getElementById('bkGithubOn').checked,
-    github_repo:  document.getElementById('bkGithubRepo').value.trim(),
-    drive_on:     document.getElementById('bkDriveOn').checked,
-    drive_folder: document.getElementById('bkDriveFolder').value.trim(),
+    github_on:    document.getElementById('m_bkGithubOn').checked,
+    github_repo:  document.getElementById('m_bkGithubRepo').value.trim(),
+    drive_on:     document.getElementById('m_bkDriveOn').checked,
+    drive_folder: document.getElementById('m_bkDriveFolder').value.trim(),
   };
   localStorage.setItem('backup_config', JSON.stringify(cfg));
   runBackupNow(cfg);
