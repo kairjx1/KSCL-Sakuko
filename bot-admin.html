@@ -984,9 +984,10 @@ async function startBackup() {
     histEl.innerHTML = items.map((i, idx) => {
       const dt = new Date(i.ts).toLocaleString('vi-VN');
       const badge = idx === 0 ? '<span style="background:#dcfce7;color:#15803d;font-size:10px;padding:1px 5px;border-radius:4px;margin-left:4px">Mới nhất</span>' : '';
-      const link = i.gh_link
-        ? `<a href="${i.gh_link}" target="_blank" style="color:#2563eb;font-size:12px">📂 Xem / Tải về</a>`
-        : '<span style="color:#94a3b8;font-size:12px">Không có link</span>';
+      const links = [];
+      if (i.gh_link) links.push(`<a href="${i.gh_link}" target="_blank" style="color:#2563eb;font-size:12px">🐙 GitHub</a>`);
+      if (i.drive_link) links.push(`<a href="${i.drive_link}" target="_blank" style="color:#16a34a;font-size:12px">📁 Drive</a>`);
+      const link = links.length ? links.join(' &nbsp; ') : '<span style="color:#94a3b8;font-size:12px">Không có link</span>';
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f1f5f9">
         <div>
           <span style="font-size:12px">${i.ok?'✅':'❌'} <b>${dt}</b>${badge}</span>
