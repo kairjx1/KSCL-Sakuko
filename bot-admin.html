@@ -1118,9 +1118,10 @@ async function loadBackupHistory() {
     el.innerHTML = items.map((i, idx) => {
       const dt = new Date(i.ts).toLocaleString('vi-VN');
       const icon = i.ok ? '✅' : '❌';
-      const linkHtml = i.gh_link
-        ? `<a href="${i.gh_link}" target="_blank" style="color:#2563eb;text-decoration:underline;font-size:12px">📂 Xem file backup</a>`
-        : '';
+      const links = [];
+      if (i.gh_link) links.push(`<a href="${i.gh_link}" target="_blank" style="color:#2563eb;text-decoration:underline;font-size:12px">🐙 GitHub</a>`);
+      if (i.drive_link) links.push(`<a href="${i.drive_link}" target="_blank" style="color:#16a34a;text-decoration:underline;font-size:12px">📁 Drive</a>`);
+      const linkHtml = links.length ? links.join(' &nbsp; ') : '<span style="color:#94a3b8;font-size:12px">Không có link</span>';
       const isLatest = idx === 0;
       return `<div style="padding:10px 0;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
         <div>
