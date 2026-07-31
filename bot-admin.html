@@ -984,10 +984,20 @@ async function loadBackupHistory() {
     snap.forEach(c => items.unshift(c.val()));
     const el = document.getElementById('bkHistoryList');
     if (!items.length) { el.textContent = 'Chưa có lịch sử sao lưu.'; return; }
-    el.innerHTML = items.map(i => {
+    el.innerHTML = items.map((i, idx) => {
       const dt = new Date(i.ts).toLocaleString('vi-VN');
       const icon = i.ok ? '✅' : '❌';
-      return `<div style="padding:8px 0;border-bottom:1px solid #f1f5f9">${icon} <b>${dt}</b> — ${i.dest || ''} ${i.note || ''}</div>`;
+      const linkHtml = i.gh_link
+        ? `<a href="${i.gh_link}" target="_blank" style="color:#2563eb;text-decoration:underline;font-size:12px">📂 Xem file backup</a>`
+        : '';
+      const isLatest = idx === 0;
+      return `<div style="padding:10px 0;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <div>
+          ${icon} <b>${dt}</b>${isLatest ? ' <span style="background:#dcfce7;color:#15803d;font-size:11px;padding:2px 6px;border-radius:4px">Mới nhất</span>' : ''}
+          <div style="color:#64748b;font-size:12px;margin-top:2px">${i.dest || ''} — ${i.note || ''}</div>
+        </div>
+        <div>${linkHtml}</div>
+      </div>`;
     }).join('');
   } catch(e) {}
 }
