@@ -649,9 +649,14 @@ select.fg-sel:focus{border-color:#d0021b}
         </div>
       </div>
     </div>
+      <div id="bkModalHistory" style="margin-top:16px;display:none">
+        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📜 5 bản sao lưu gần nhất</div>
+        <div id="bkModalHistoryList" style="font-size:13px"></div>
+      </div>
+    </div>
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="document.getElementById('backupConfigModal').style.display='none'">Hủy</button>
-      <button class="btn btn-red" style="background:#15803d" onclick="saveBackupConfig();runBackupNow()">☁️ Lưu cấu hình Backup</button>
+      <button class="btn btn-red" style="background:#15803d" onclick="saveBackupConfig();runBackupNow()">☁️ Lưu cấu hình & Sao lưu ngay</button>
     </div>
   </div>
 </div>
@@ -963,9 +968,34 @@ function _bkProgress(pct) {
   document.getElementById('bkProgressPct').textContent = pct + '%';
 }
 
-function startBackup() {
+async function startBackup() {
   loadBackupConfig();
   document.getElementById('backupConfigModal').style.display = 'flex';
+  // Load history vào modal
+  const histEl = document.getElementById('bkModalHistoryList');
+  const histWrap = document.getElementById('bkModalHistory');
+  histEl.innerHTML = '<span style="color:#94a3b8">Đang tải...</span>';
+  histWrap.style.display = 'block';
+  try {
+    const snap = await db.ref('bot_backup_history').orderByChild('ts').limitToLast(5).once('value');
+    const items = [];
+    snap.forEach(c => items.unshift(c.val()));
+    if (!items.length) { histEl.textContent = 'Chưa có lịch sử.'; return; }
+    histEl.innerHTML = items.map((i, idx) => {
+      const dt = new Date(i.ts).toLocaleString('vi-VN');
+      const badge = idx === 0 ? '<span style="background:#dcfce7;color:#15803d;font-size:10px;padding:1px 5px;border-radius:4px;margin-left:4px">Mới nhất</span>' : '';
+      const link = i.gh_link
+        ? `<a href="${i.gh_link}" target="_blank" style="color:#2563eb;font-size:12px">📂 Xem / Tải về</a>`
+        : '<span style="color:#94a3b8;font-size:12px">Không có link</span>';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f1f5f9">
+        <div>
+          <span style="font-size:12px">${i.ok?'✅':'❌'} <b>${dt}</b>${badge}</span>
+          <div style="font-size:11px;color:#94a3b8">${i.note||''}</div>
+        </div>
+        ${link}
+      </div>`;
+    }).join('');
+  } catch(e) { histEl.textContent = 'Lỗi tải lịch sử.'; }
 }
 
 async function runBackupNow() {
