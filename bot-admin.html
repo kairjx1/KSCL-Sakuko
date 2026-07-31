@@ -1027,7 +1027,7 @@ async function startBackup() {
   histEl.innerHTML = '<span style="color:#94a3b8">Đang tải...</span>';
   histWrap.style.display = 'block';
   try {
-    const snap = await db.ref('bot_backup_history').orderByChild('ts').limitToLast(5).once('value');
+    const snap = await db.ref('bot_backup_history').orderByKey().limitToLast(5).once('value');
     const items = [];
     snap.forEach(c => items.unshift(c.val()));
     if (!items.length) { histEl.textContent = 'Chưa có lịch sử.'; return; }
@@ -1123,7 +1123,7 @@ let _lastBkLog = '';
 
 async function loadBackupHistory() {
   try {
-    const snap = await db.ref('bot_backup_history').orderByChild('ts').limitToLast(5).once('value');
+    const snap = await db.ref('bot_backup_history').orderByKey().limitToLast(5).once('value');
     const items = [];
     snap.forEach(c => items.unshift(c.val()));
     const el = document.getElementById('bkHistoryList');
