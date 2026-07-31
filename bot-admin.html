@@ -656,7 +656,7 @@ select.fg-sel:focus{border-color:#d0021b}
     </div>
     <div class="modal-foot">
       <button class="btn btn-gray" onclick="document.getElementById('backupConfigModal').style.display='none'">Hủy</button>
-      <button class="btn btn-red" style="background:#15803d" onclick="saveBackupConfig();runBackupNow()">☁️ Lưu cấu hình & Sao lưu ngay</button>
+      <button class="btn btn-red" style="background:#15803d" onclick="startBackupFromModal()">☁️ Lưu cấu hình & Sao lưu ngay</button>
     </div>
   </div>
 </div>
@@ -999,9 +999,19 @@ async function startBackup() {
   } catch(e) { histEl.textContent = 'Lỗi tải lịch sử.'; }
 }
 
-async function runBackupNow() {
+function startBackupFromModal() {
+  const cfg = {
+    github_on:    document.getElementById('bkGithubOn').checked,
+    github_repo:  document.getElementById('bkGithubRepo').value.trim(),
+    drive_on:     document.getElementById('bkDriveOn').checked,
+    drive_folder: document.getElementById('bkDriveFolder').value.trim(),
+  };
+  localStorage.setItem('backup_config', JSON.stringify(cfg));
+  runBackupNow(cfg);
+}
+
+async function runBackupNow(cfg) {
   document.getElementById('backupConfigModal').style.display = 'none';
-  const cfg = JSON.parse(localStorage.getItem('backup_config') || '{}');
   if (!cfg.github_on && !cfg.drive_on) {
     alert('⚠️ Chưa chọn nơi lưu. Vui lòng bật GitHub hoặc Google Drive.');
     document.getElementById('backupConfigModal').style.display = 'flex';
