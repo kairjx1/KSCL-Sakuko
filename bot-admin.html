@@ -945,7 +945,7 @@ async function startBackup() {
   _bkLog('🔄 Bắt đầu sao lưu...');
 
   try {
-    const r = await apiCall('/api/panel/backup/start', 'POST', cfg);
+    const r = await api('POST', '/api/panel/backup/start', cfg);
     if (!r.ok) throw new Error(r.msg || 'Lỗi server');
     const jobId = r.job_id;
     _bkLog('✅ Đã khởi động job sao lưu');
@@ -955,7 +955,7 @@ async function startBackup() {
     let done = false;
     while (!done) {
       await new Promise(res => setTimeout(res, 1500));
-      const s = await apiCall(`/api/panel/backup/status?job_id=${jobId}`, 'GET');
+      const s = await api('GET', `/api/panel/backup/status?job_id=${jobId}`);
       _bkProgress(s.pct || 15);
       if (s.log && s.log !== _lastBkLog) {
         _bkLog(s.log);
