@@ -619,6 +619,43 @@ select.fg-sel:focus{border-color:#d0021b}
   </div>
 </div>
 
+<!-- MODAL CẤU HÌNH SAO LƯU -->
+<div class="modal-overlay" id="backupConfigModal" style="display:none" onclick="if(event.target===this)document.getElementById('backupConfigModal').style.display='none'">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head">
+      <h3>☁️ Cấu hình Sao lưu (Backup)</h3>
+      <button class="modal-close" onclick="document.getElementById('backupConfigModal').style.display='none'">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#475569;margin-bottom:16px">Chỉ định nơi lưu trữ bản sao dự phòng của toàn bộ dữ liệu Firebase.</p>
+
+      <div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;margin-bottom:10px">
+          <input type="checkbox" id="bkGithubOn" style="width:16px;height:16px"> Sao lưu toàn bộ DB lên GitHub Repository
+        </label>
+        <div class="fg" style="margin:0">
+          <label style="font-size:12px">GitHub Repository Destination:</label>
+          <input type="text" id="bkGithubRepo" placeholder="VD: kairjx1/lark-bot-backup" style="margin-top:4px">
+        </div>
+      </div>
+
+      <div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;margin-bottom:10px">
+          <input type="checkbox" id="bkDriveOn" style="width:16px;height:16px"> Sao lưu bản nén DB lên Google Drive
+        </label>
+        <div class="fg" style="margin:0">
+          <label style="font-size:12px">Google Drive Folder Destination:</label>
+          <input type="text" id="bkDriveFolder" placeholder="VD: Sakuko_QC_Backups_2026" style="margin-top:4px">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-gray" onclick="document.getElementById('backupConfigModal').style.display='none'">Hủy</button>
+      <button class="btn btn-red" style="background:#15803d" onclick="saveBackupConfig();runBackupNow()">☁️ Lưu cấu hình Backup</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL BACKUP PROGRESS -->
 <div class="modal-overlay" id="backupModal" style="display:none">
   <div class="modal" style="max-width:440px">
@@ -926,16 +963,20 @@ function _bkProgress(pct) {
   document.getElementById('bkProgressPct').textContent = pct + '%';
 }
 
-async function startBackup() {
+function startBackup() {
   loadBackupConfig();
+  document.getElementById('backupConfigModal').style.display = 'flex';
+}
+
+async function runBackupNow() {
+  document.getElementById('backupConfigModal').style.display = 'none';
   const cfg = JSON.parse(localStorage.getItem('backup_config') || '{}');
   if (!cfg.github_on && !cfg.drive_on) {
-    goPage('backup');
-    document.getElementById('backupNotify').innerHTML =
-      '<div class="notify error">⚠️ Chưa chọn nơi lưu. Vui lòng bật GitHub hoặc Google Drive.</div>';
+    alert('⚠️ Chưa chọn nơi lưu. Vui lòng bật GitHub hoặc Google Drive.');
+    document.getElementById('backupConfigModal').style.display = 'flex';
     return;
   }
-  // Show modal
+  // Show progress modal
   const modal = document.getElementById('backupModal');
   modal.style.display = 'flex';
   document.getElementById('bkProgressLog').innerHTML = '';
