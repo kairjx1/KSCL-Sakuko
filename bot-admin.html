@@ -1438,7 +1438,7 @@ function renderLinkbase() {
               <div style="font-weight:700;color:#92400e;margin-bottom:4px">⚙️ Hướng dẫn đọc dữ liệu — Bot luôn dùng đúng theo cấu hình này</div>
               <div style="color:#92400e;font-size:11px;margin-bottom:12px">Áp dụng mọi loại base: kho hàng, đào tạo, nhân sự... Để trống = để AI tự đoán.</div>
               <div style="font-weight:600;color:#78350f;margin-bottom:6px;border-bottom:1px solid #fde68a;padding-bottom:4px">📌 Cột then chốt</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
                 <div>
                   <div style="font-weight:600;color:#78350f;margin-bottom:3px">📅 Cột ngày chính</div>
                   <input type="text" id="h_date_${hintKey}" value="${hints.date_field||''}" placeholder="VD: Ngày, Ngày tạo" style="width:100%;padding:6px 8px;border:1px solid #fcd34d;border-radius:6px;font-size:12px">
@@ -1454,6 +1454,20 @@ function renderLinkbase() {
                   <input type="text" id="h_group_${hintKey}" value="${hints.group_field||''}" placeholder="VD: Mã Siêu thị, Phòng ban" style="width:100%;padding:6px 8px;border:1px solid #fcd34d;border-radius:6px;font-size:12px">
                   <div style="color:#92400e;font-size:10px;margin-top:2px">Khi hỏi "theo kho/phòng ban..."</div>
                 </div>
+              </div>
+              <div style="background:#fff8ed;border:1px solid #fcd34d;border-radius:6px;padding:8px 10px;margin-bottom:10px">
+                <div style="font-weight:600;color:#78350f;margin-bottom:4px;font-size:12px">⚗️ Cột tính toán (khi cột Giá trị là công thức <code style="font-size:10px">fx</code> — API trả về 0)</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <div>
+                    <div style="color:#92400e;font-size:11px;margin-bottom:3px">Cột số lượng</div>
+                    <input type="text" id="h_qty_${hintKey}" value="${hints.qty_field||''}" placeholder="VD: Số lượng" style="width:100%;padding:5px 8px;border:1px solid #fcd34d;border-radius:6px;font-size:12px">
+                  </div>
+                  <div>
+                    <div style="color:#92400e;font-size:11px;margin-bottom:3px">Cột đơn giá</div>
+                    <input type="text" id="h_price_${hintKey}" value="${hints.price_field||''}" placeholder="VD: Giá bán lẻ" style="width:100%;padding:5px 8px;border:1px solid #fcd34d;border-radius:6px;font-size:12px">
+                  </div>
+                </div>
+                <div style="color:#92400e;font-size:10px;margin-top:4px">Bot sẽ tự tính: <b>Giá trị = Số lượng × Đơn giá</b> thay vì dùng cột công thức Lark (thường trả về 0 qua API)</div>
               </div>
               <div style="font-weight:600;color:#78350f;margin-bottom:6px;border-bottom:1px solid #fde68a;padding-bottom:4px">🗂️ Mapping cột theo nghĩa (tự do — thêm bao nhiêu cũng được)</div>
               <div style="font-size:11px;color:#92400e;margin-bottom:8px">VD: "kỹ năng" → "Kỹ năng đánh giá" · "tình huống" → "Loại tình huống" · "điểm" → "Điểm KPI"</div>
@@ -1619,6 +1633,8 @@ async function lbSaveHints(gid, idx, hintKey) {
     date_field:  document.getElementById(`h_date_${hintKey}`)?.value.trim() || '',
     value_field: document.getElementById(`h_value_${hintKey}`)?.value.trim() || '',
     group_field: document.getElementById(`h_group_${hintKey}`)?.value.trim() || '',
+    qty_field:   document.getElementById(`h_qty_${hintKey}`)?.value.trim() || '',
+    price_field: document.getElementById(`h_price_${hintKey}`)?.value.trim() || '',
     notes:       document.getElementById(`h_notes_${hintKey}`)?.value.trim() || '',
     mappings,
   };
