@@ -1242,8 +1242,33 @@ const AG_PATH = 'group_agent_config';
 let _agData = {}; // { chat_id: { name, soul, topics, allowed_senders: {open_id: {name}} } }
 
 async function loadAgentConfig() {
-  const snap = await db.ref(AG_PATH).once('value');
-  _agData = snap.val() || {};
+  // Load agent config + linkbase groups (để merge, tránh thêm lại)
+  const [agSnap, lbSnap, permSnap] = await Promise.all([
+    db.ref(AG_PATH).once('value'),
+    db.ref('bot_linkbase').once('value'),
+    db.ref('bot_permissions').once('value'),
+  ]);
+  _agData = agSnap.val() || {};
+  const lbGroups = lbSnap.val() || {};
+  const permGroups = (permSnap.val() || {}).groups || {};
+
+  // Merge: nhóm từ Linkbase và Phân quyền tự động xuất hiện trong Agent
+  const allGroupIds = new Set([
+    ...Object.keys(lbGroups),
+    ...Object.keys(permGroups),
+    ...Object.keys(_agData),
+  ]);
+  allGroupIds.forEach(gid => {
+    if (!_agData[gid]) {
+      // Lấy tên từ linkbase hoặc perms
+      const name = lbGroups[gid]?.name || permGroups[gid]?.label || gid;
+      _agData[gid] = { name, soul: '', topics: '', allowed_senders: {} };
+    } else if (!_agData[gid].name || _agData[gid].name === gid) {
+      // Cập nhật tên nếu linkbase/perms có tên đẹp hơn
+      _agData[gid].name = lbGroups[gid]?.name || permGroups[gid]?.label || _agData[gid].name || gid;
+    }
+  });
+
   renderAgentConfig();
 }
 
@@ -1251,7 +1276,7 @@ function renderAgentConfig() {
   const el = document.getElementById('agentGroupList');
   const groups = Object.entries(_agData);
   if (!groups.length) {
-    el.innerHTML = '<div class="card" style="color:#94a3b8;font-size:13px;text-align:center;padding:30px">Chưa có nhóm nào. Thêm nhóm bên dưới để bắt đầu cấu hình.</div>';
+    el.innerHTML = '<div class="card" style="color:#94a3b8;font-size:13px;text-align:center;padding:30px">Chưa có nhóm nào trong Linkbase hoặc Phân quyền.</div>';
     return;
   }
   el.innerHTML = groups.map(([gid, g]) => {
