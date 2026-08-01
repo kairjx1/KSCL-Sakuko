@@ -1428,17 +1428,63 @@ function renderLinkbase() {
       <!-- Danh sách base -->
       <div style="padding:0 16px">
         ${bases.length === 0 ? `<div style="color:#94a3b8;font-size:12px;padding:14px 0;text-align:center">Chưa có base nào — nhấn <b>+ Thêm base</b> bên dưới</div>` :
-          bases.map((b,i) => `
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9">
-            <span style="font-size:20px;flex-shrink:0">${b.type==='bitable'?'🗃️':b.type==='doc'?'📄':'📊'}</span>
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:600;font-size:13px;color:#1e293b">${b.name}</div>
-              <div style="font-size:11px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${b.url}">${b.url}</div>
+          bases.map((b,i) => {
+            const hints = b.hints || {};
+            const hintKey = (gid+'_'+i).replace(/[^a-z0-9]/gi,'_');
+            return `
+          <div style="border-bottom:1px solid #f1f5f9">
+            <!-- Base header row -->
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 0">
+              <span style="font-size:20px;flex-shrink:0">${b.type==='bitable'?'🗃️':b.type==='doc'?'📄':'📊'}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:13px;color:#1e293b">${b.name}</div>
+                <div style="font-size:11px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${b.url}">${b.url}</div>
+              </div>
+              <span style="font-size:11px;padding:3px 8px;border-radius:6px;font-weight:600;flex-shrink:0;background:${b.type==='bitable'?'#ede9fe':b.type==='doc'?'#dbeafe':'#dcfce7'};color:${b.type==='bitable'?'#7c3aed':b.type==='doc'?'#1d4ed8':'#15803d'}">${b.type}</span>
+              <button onclick="lbToggleHints('hints_${hintKey}')" style="background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;cursor:pointer;font-size:11px;padding:3px 8px;border-radius:6px;flex-shrink:0">⚙️ Gợi ý cột</button>
+              <button onclick="lbRemoveBase('${gid}',${i})" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:16px;padding:4px;flex-shrink:0" title="Xóa base">✕</button>
             </div>
-            <span style="font-size:11px;padding:3px 8px;border-radius:6px;font-weight:600;flex-shrink:0;background:${b.type==='bitable'?'#ede9fe':b.type==='doc'?'#dbeafe':'#dcfce7'};color:${b.type==='bitable'?'#7c3aed':b.type==='doc'?'#1d4ed8':'#15803d'}">${b.type}</span>
-            <button onclick="lbRemoveBase('${gid}',${i})" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:16px;padding:4px;flex-shrink:0" title="Xóa base">✕</button>
-          </div>
-        `).join('')}
+            <!-- Hints panel (ẩn mặc định) -->
+            <div id="hints_${hintKey}" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:10px;font-size:12px">
+              <div style="font-weight:700;color:#92400e;margin-bottom:10px">⚙️ Gợi ý cột — Bot dùng đúng cột này khi truy vấn, không cần AI đoán</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+                <div>
+                  <div style="font-weight:600;color:#78350f;margin-bottom:3px">💰 Cột tổng tiền / giá trị</div>
+                  <input type="text" id="h_value_${hintKey}" value="${hints.value_field||''}" placeholder="VD: Giá trị"
+                    style="width:100%;padding:6px 8px;border:1px solid #fcd34d;border-radius:6px;font-size:12px">
+                  <div style="color:#92400e;font-size:10px;margin-top:2px">Cột nào = Số lượng × Đơn giá</div>
+                </div>
+                <div>
+                  <div style="font-weight:600;color:#78350f;margin-bottom:3px">📅 Cột ngày chính</div>
+                  <input type="text" id="h_date_${hintKey}" value="${hints.date_field||''}" placeholder="VD: Ngày"
+                    style="width:100%;padding:6px 8px;border:1px solid #fcd34d;border-radius:6px;font-size:12px">
+                  <div style="color:#92400e;font-size:10px;margin-top:2px">Cột lọc theo ngày tháng</div>
+                </div>
+                <div>
+                  <div style="font-weight:600;color:#78350f;margin-bottom:3px">🏷️ Cột nhóm mặc định</div>
+                  <input type="text" id="h_group_${hintKey}" value="${hints.group_field||''}" placeholder="VD: Mã Siêu thị"
+                    style="width:100%;padding:6px 8px;border:1px solid #fcd34d;border-radius:6px;font-size:12px">
+                  <div style="color:#92400e;font-size:10px;margin-top:2px">Khi hỏi "theo kho/cửa hàng..."</div>
+                </div>
+                <div>
+                  <div style="font-weight:600;color:#78350f;margin-bottom:3px">🔢 Cột số lượng</div>
+                  <input type="text" id="h_qty_${hintKey}" value="${hints.qty_field||''}" placeholder="VD: Số lượng"
+                    style="width:100%;padding:6px 8px;border:1px solid #fcd34d;border-radius:6px;font-size:12px">
+                  <div style="color:#92400e;font-size:10px;margin-top:2px">Cột đếm số SP/bản ghi</div>
+                </div>
+              </div>
+              <div style="margin-bottom:8px">
+                <div style="font-weight:600;color:#78350f;margin-bottom:3px">📝 Ghi chú cho AI (mô tả bảng, lưu ý đặc biệt)</div>
+                <textarea id="h_notes_${hintKey}" rows="2" placeholder="VD: Bảng hủy hàng CVS. Giá trị = Số lượng × Giá bán lẻ. Mã Siêu thị là tên kho. Lý do hủy thường là Hết HSD."
+                  style="width:100%;padding:6px 8px;border:1px solid #fcd34d;border-radius:6px;font-size:12px;resize:vertical;font-family:inherit">${hints.notes||''}</textarea>
+              </div>
+              <button onclick="lbSaveHints('${gid}',${i},'${hintKey}')"
+                style="background:#d97706;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">
+                💾 Lưu gợi ý cột
+              </button>
+            </div>
+          </div>`;
+          }).join('')}
       </div>
 
       <!-- Form thêm base mới -->
@@ -1508,6 +1554,39 @@ function lbRemoveBase(gid, idx) {
   _lbData[gid].bases.splice(idx, 1);
   db.ref(`${LB_PATH}/${gid}/bases`).set(_lbData[gid].bases);
   renderLinkbase();
+}
+
+function lbToggleHints(panelId) {
+  const el = document.getElementById(panelId);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function lbSaveHints(gid, idx, hintKey) {
+  const base = (_lbData[gid]?.bases || [])[idx];
+  if (!base) return;
+  const hints = {
+    value_field: document.getElementById(`h_value_${hintKey}`)?.value.trim() || '',
+    date_field:  document.getElementById(`h_date_${hintKey}`)?.value.trim() || '',
+    group_field: document.getElementById(`h_group_${hintKey}`)?.value.trim() || '',
+    qty_field:   document.getElementById(`h_qty_${hintKey}`)?.value.trim() || '',
+    notes:       document.getElementById(`h_notes_${hintKey}`)?.value.trim() || '',
+  };
+  // Xóa key trống để Firebase gọn
+  Object.keys(hints).forEach(k => { if (!hints[k]) delete hints[k]; });
+  base.hints = hints;
+  await db.ref(`${LB_PATH}/${gid}/bases`).set(_lbData[gid].bases);
+  // Flash xanh trên panel
+  const panel = document.getElementById(`hints_${hintKey}`);
+  if (panel) {
+    const orig = panel.style.background;
+    panel.style.background = '#d1fae5';
+    setTimeout(() => { panel.style.background = orig; }, 800);
+  }
+  const n = document.getElementById('linkbaseNotify');
+  n.textContent = `✅ Đã lưu gợi ý cột cho base "${base.name}"`;
+  n.className = 'notify ok show';
+  setTimeout(() => n.className = 'notify', 2500);
 }
 
 // ── Đổi mật khẩu ─────────────────────────────────────────────────────────────
