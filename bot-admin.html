@@ -281,6 +281,7 @@ select.fg-sel:focus{border-color:#d0021b}
     <div class="nav-item" onclick="goPage('send')"><span class="icon">💬</span><span>Gửi tin</span></div>
     <div class="nav-item" onclick="goPage('autoreply')"><span class="icon">⚡</span><span>Trả lời tự động</span></div>
     <div class="nav-item" onclick="goPage('aichat')"><span class="icon">🤖</span><span>AI Chat</span></div>
+    <div class="nav-item" onclick="goPage('agent')"><span class="icon">🧿</span><span>Agent</span></div>
     <div class="nav-item" onclick="goPage('linkbase')"><span class="icon">🔗</span><span>Linkbase</span></div>
     <div class="nav-item" onclick="goPage('perms')"><span class="icon">🔐</span><span>Phân quyền</span></div>
     <div class="nav-item" onclick="goPage('email')"><span class="icon">📧</span><span>Email</span></div>
@@ -401,6 +402,29 @@ select.fg-sel:focus{border-color:#d0021b}
         <div class="card-title">🏥 Health check</div>
         <button class="btn btn-gray btn-sm" onclick="doHealthCheck()">Kiểm tra ngay</button>
         <div id="healthResult" style="margin-top:12px;font-size:13px;color:#475569"></div>
+      </div>
+    </div>
+
+    <!-- AGENT -->
+    <div class="page" id="page-agent">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div class="page-title" style="margin-bottom:0">🧿 Agent — Cấu hình AI theo nhóm</div>
+      </div>
+      <div class="notify" id="agentNotify"></div>
+      <div style="font-size:13px;color:#64748b;margin-bottom:16px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px">
+        Mỗi nhóm chat có thể có <b>Soul riêng</b> (tính cách bot), <b>chủ đề được phép</b> (bot chỉ trả lời đúng chủ đề) và <b>người được phép dùng AI</b>.
+        Để trống = không giới hạn.
+      </div>
+
+      <div id="agentGroupList"></div>
+
+      <div class="card" style="border:2px dashed #cbd5e1">
+        <div class="card-title">➕ Thêm nhóm mới</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="text" id="ag_newGroupId" placeholder="oc_... (chat_id nhóm)" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid #dde3ef;border-radius:8px;font-size:13px">
+          <input type="text" id="ag_newGroupName" placeholder="Tên nhóm (VD: Nhóm QC CVS)" style="flex:1;min-width:160px;padding:8px 12px;border:1px solid #dde3ef;border-radius:8px;font-size:13px">
+          <button class="btn btn-green btn-sm" onclick="agAddGroup()">+ Thêm nhóm</button>
+        </div>
       </div>
     </div>
 
@@ -1213,6 +1237,135 @@ async function loadBackupHistory() {
   } catch(e) {}
 }
 
+// ── Agent Config ──────────────────────────────────────────────────────────────
+const AG_PATH = 'group_agent_config';
+let _agData = {}; // { chat_id: { name, soul, topics, allowed_senders: {open_id: {name}} } }
+
+async function loadAgentConfig() {
+  const snap = await db.ref(AG_PATH).once('value');
+  _agData = snap.val() || {};
+  renderAgentConfig();
+}
+
+function renderAgentConfig() {
+  const el = document.getElementById('agentGroupList');
+  const groups = Object.entries(_agData);
+  if (!groups.length) {
+    el.innerHTML = '<div class="card" style="color:#94a3b8;font-size:13px;text-align:center;padding:30px">Chưa có nhóm nào. Thêm nhóm bên dưới để bắt đầu cấu hình.</div>';
+    return;
+  }
+  el.innerHTML = groups.map(([gid, g]) => {
+    const key = gid.replace(/[^a-z0-9]/gi,'_');
+    const name = g.name && g.name !== gid ? g.name : '(Chưa đặt tên)';
+    const soul = g.soul || '';
+    const topics = g.topics || '';
+    const senders = g.allowed_senders || {};
+    const senderList = Object.entries(senders);
+    return `
+    <div class="card" style="margin-bottom:16px;border:1px solid #e2e8f0;padding:0;overflow:hidden">
+      <!-- Header nhóm -->
+      <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:12px 16px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">🧿</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:15px;color:#1e293b">${name}</div>
+          <div style="font-size:11px;color:#94a3b8;font-family:monospace;margin-top:2px">${gid}</div>
+        </div>
+        <button onclick="agRemoveGroup('${gid}')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:18px;padding:4px" title="Xóa nhóm">🗑</button>
+      </div>
+
+      <!-- Soul -->
+      <div style="padding:14px 16px;border-bottom:1px solid #f1f5f9">
+        <div style="font-size:12px;font-weight:600;color:#6b7a99;margin-bottom:6px">🎭 Soul — Tính cách / Persona riêng của bot trong nhóm này</div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:6px">Ví dụ: "Bạn là trợ lý kiểm kê chuyên về CVS, nói chuyện ngắn gọn, dùng số liệu thực tế."</div>
+        <textarea id="ag_soul_${key}" rows="3" style="width:100%;padding:8px 10px;border:1px solid #dde3ef;border-radius:8px;font-size:13px;resize:vertical;font-family:inherit">${soul}</textarea>
+      </div>
+
+      <!-- Topics -->
+      <div style="padding:14px 16px;border-bottom:1px solid #f1f5f9">
+        <div style="font-size:12px;font-weight:600;color:#6b7a99;margin-bottom:6px">📌 Chủ đề được phép — Bot chỉ trả lời các chủ đề này</div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:6px">Nhập từ khoá cách nhau bằng dấu phẩy. Để trống = bot trả lời tất cả. Ví dụ: kiểm kê, xuất hàng, tồn kho</div>
+        <input type="text" id="ag_topics_${key}" value="${topics}" placeholder="kiểm kê, xuất hàng, tồn kho, báo cáo..."
+          style="width:100%;padding:8px 10px;border:1px solid #dde3ef;border-radius:8px;font-size:13px">
+      </div>
+
+      <!-- Allowed Senders -->
+      <div style="padding:14px 16px;border-bottom:1px solid #f1f5f9">
+        <div style="font-size:12px;font-weight:600;color:#6b7a99;margin-bottom:6px">👤 Người được phép dùng AI — Để trống = tất cả đều dùng được</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="ag_senders_${key}">
+          ${senderList.length === 0 ? '<span style="font-size:12px;color:#94a3b8;padding:4px 0">Tất cả thành viên đều được phép</span>' :
+            senderList.map(([sid, sv]) => `
+            <div style="display:flex;align-items:center;gap:4px;background:#e0f2fe;border:1px solid #bae6fd;border-radius:6px;padding:3px 8px;font-size:12px;color:#0369a1">
+              <span>👤 ${sv.name || sid}</span>
+              <button onclick="agRemoveSender('${gid}','${sid}')" style="background:none;border:none;color:#0369a1;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;opacity:.6" title="${sid}">✕</button>
+            </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <input type="text" id="ag_sid_${key}" placeholder="ou_... (open_id)" style="flex:1;min-width:150px;padding:6px 10px;border:1px solid #dde3ef;border-radius:6px;font-size:12px">
+          <input type="text" id="ag_sname_${key}" placeholder="Tên (VD: Hà QC)" style="flex:1;min-width:120px;padding:6px 10px;border:1px solid #dde3ef;border-radius:6px;font-size:12px">
+          <button class="btn btn-sm" style="background:#0284c7;color:#fff" onclick="agAddSender('${gid}')">+ Thêm</button>
+        </div>
+      </div>
+
+      <!-- Save button -->
+      <div style="padding:12px 16px;background:#f8fafc;display:flex;justify-content:flex-end">
+        <button class="btn btn-red" onclick="agSaveGroup('${gid}')">💾 Lưu cấu hình nhóm này</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function agAddGroup() {
+  const gid = document.getElementById('ag_newGroupId').value.trim();
+  const name = document.getElementById('ag_newGroupName').value.trim();
+  if (!gid) { alert('Nhập chat_id nhóm!'); return; }
+  _agData[gid] = { name: name || gid, soul: '', topics: '', allowed_senders: {} };
+  db.ref(`${AG_PATH}/${gid}`).set(_agData[gid]);
+  document.getElementById('ag_newGroupId').value = '';
+  document.getElementById('ag_newGroupName').value = '';
+  renderAgentConfig();
+}
+
+function agRemoveGroup(gid) {
+  if (!confirm(`Xóa cấu hình nhóm "${_agData[gid]?.name}"?`)) return;
+  delete _agData[gid];
+  db.ref(`${AG_PATH}/${gid}`).remove();
+  renderAgentConfig();
+}
+
+function agAddSender(gid) {
+  const key = gid.replace(/[^a-z0-9]/gi,'_');
+  const sid = document.getElementById(`ag_sid_${key}`).value.trim();
+  const sname = document.getElementById(`ag_sname_${key}`).value.trim();
+  if (!sid) { alert('Nhập open_id người dùng!'); return; }
+  if (!_agData[gid].allowed_senders) _agData[gid].allowed_senders = {};
+  _agData[gid].allowed_senders[sid] = { name: sname || sid };
+  db.ref(`${AG_PATH}/${gid}/allowed_senders/${sid}`).set({ name: sname || sid });
+  document.getElementById(`ag_sid_${key}`).value = '';
+  document.getElementById(`ag_sname_${key}`).value = '';
+  renderAgentConfig();
+}
+
+function agRemoveSender(gid, sid) {
+  if (!_agData[gid]?.allowed_senders) return;
+  delete _agData[gid].allowed_senders[sid];
+  db.ref(`${AG_PATH}/${gid}/allowed_senders/${sid}`).remove();
+  renderAgentConfig();
+}
+
+async function agSaveGroup(gid) {
+  const key = gid.replace(/[^a-z0-9]/gi,'_');
+  const soul = document.getElementById(`ag_soul_${key}`)?.value.trim() || '';
+  const topics = document.getElementById(`ag_topics_${key}`)?.value.trim() || '';
+  _agData[gid].soul = soul;
+  _agData[gid].topics = topics;
+  await db.ref(`${AG_PATH}/${gid}/soul`).set(soul);
+  await db.ref(`${AG_PATH}/${gid}/topics`).set(topics);
+  const n = document.getElementById('agentNotify');
+  n.textContent = `✅ Đã lưu cấu hình nhóm "${_agData[gid].name}"`;
+  n.className = 'notify ok show';
+  setTimeout(() => n.className = 'notify', 2500);
+}
+
 // ── Linkbase ──────────────────────────────────────────────────────────────────
 const LB_PATH = 'bot_linkbase';
 let _lbData = {}; // { groupId: { name, bases: [{id, name, url, type}] } }
@@ -1971,6 +2124,7 @@ function goPage(id) {
   if (id === 'kb') { loadKB(); loadQACache(); }
   if (id === 'autoreply') loadRules();
   if (id === 'aichat') loadAIConfig();
+  if (id === 'agent') loadAgentConfig();
   if (id === 'linkbase') loadLinkbase();
   if (id === 'perms') loadPerms();
   if (id === 'panels') renderPanelList();
