@@ -1495,11 +1495,19 @@ function renderLinkbase() {
       <div style="padding:12px 16px;background:#f8fafc;border-top:1px solid #e2e8f0">
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           <input type="text" id="lb_bname_${key}" placeholder="Tên base (VD: Base Hủy hàng)" style="flex:2;min-width:130px;padding:7px 10px;border:1px solid #dde3ef;border-radius:8px;font-size:12px">
-          <input type="text" id="lb_burl_${key}" placeholder="URL Lark Bitable / Doc / Excel" style="flex:4;min-width:200px;padding:7px 10px;border:1px solid #dde3ef;border-radius:8px;font-size:12px">
+          <input type="text" id="lb_burl_${key}" placeholder="Dán link bất kỳ: Bitable, Google Sheet, Doc, Web, Drive..." style="flex:4;min-width:200px;padding:7px 10px;border:1px solid #dde3ef;border-radius:8px;font-size:12px">
           <select id="lb_btype_${key}" style="padding:7px 8px;border:1px solid #dde3ef;border-radius:8px;font-size:12px;background:#fff">
-            <option value="bitable">🗃️ Bitable</option>
-            <option value="doc">📄 Doc</option>
-            <option value="excel">📊 Excel</option>
+            <option value="auto">🔍 Tự nhận dạng</option>
+            <option value="bitable">🗃️ Lark Bitable</option>
+            <option value="lark_doc">📄 Lark Doc / Wiki</option>
+            <option value="google_sheet">📊 Google Sheet</option>
+            <option value="google_doc">📝 Google Doc</option>
+            <option value="google_drive">☁️ Google Drive</option>
+            <option value="web">🌐 Trang web</option>
+            <option value="pdf_url">📕 File PDF (link)</option>
+            <option value="word_url">📘 File Word (link)</option>
+            <option value="ppt_url">📙 File PowerPoint (link)</option>
+            <option value="excel_url">📗 File Excel (link)</option>
           </select>
           <button class="btn btn-green" onclick="lbAddBase('${gid}')" style="padding:7px 14px;font-size:13px;font-weight:700;border-radius:8px;white-space:nowrap">➕ Thêm base</button>
         </div>
