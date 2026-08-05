@@ -644,7 +644,7 @@ function rDashboard(){
   const ddPct=ddData&&ddData.dt>0?ddData.cp/ddData.dt*100:null;
   const bbYear=Math.max(0,...(BB?.t1||[]).map(r=>r.nam||0))||2026;
   const bbRows=(BB?.t1||[]).filter(r=>r.thang===+kkM.slice(1)&&r.nam===bbYear);
-  const bbCnt=bbRows.length;const bbDenBu=bbRows.reduce((s,r)=>s+(r.denBu||0),0);
+  const bbCnt=bbRows.length;const bbDenBu=bbRows.reduce((s,r)=>s+Math.abs(r.denBu||0),0);
   // Health score
   const kkSc=[];
   if(taPct!=null)kkSc.push([taPct<=5?100:taPct<=10?80:taPct<=15?55:taPct<=20?30:10,35]);
@@ -1033,8 +1033,8 @@ function rKKOv(){
   const bbYear=Math.max(0,...(BB?.t1||[]).map(r=>r.nam||0))||2026;
   const bbRows=(BB?.t1||[]).filter(r=>r.thang===+m.slice(1)&&r.nam===bbYear);
   const bbCnt=bbRows.length;
-  const bbDenBu=bbRows.reduce((s,r)=>s+(r.denBu||0),0);
-  const bbCL=bbRows.reduce((s,r)=>s+(r.clMinus||0),0);
+  const bbDenBu=bbRows.reduce((s,r)=>s+Math.abs(r.denBu||0),0);
+  const bbCL=bbRows.reduce((s,r)=>s+Math.abs(r.clMinus||0),0);
 
   // ── Điểm sức khỏe tồn kho (0-100) ──
   const sc=[];
@@ -1486,8 +1486,8 @@ function rKKBienBan(){
   const kpis=`<div class="g4" style="margin-bottom:0">
     <div class="kpi" style="color:#1a2558"><div class="kpi-lb">Số biên bản</div><div class="kpi-v">${rows.length}<span class="kpi-u">BB</span></div><div class="kpi-tr" style="font-size:11px;color:#6b7280">${selM?'T'+selM+'/'+selY:'Năm '+selY}</div><div class="kpi-bg">📋</div></div>
     <div class="kpi" style="color:${totNet<0?'#dc2626':'#16a34a'}"><div class="kpi-lb">Chênh lệch ròng</div><div class="kpi-v">${totNet>=0?'+':'−'}${fmt(totNet)}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="font-size:10px;color:#6b7280">CL+ ${fmt(totCLp)} / CL− ${fmt(Math.abs(totCLm))}</div><div class="kpi-bg">⚖️</div></div>
-    <div class="kpi" style="color:#dc2626"><div class="kpi-lb">ST đền bù</div><div class="kpi-v">${totDenBu<0?fmt(totDenBu):'0'}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="color:#dc2626;font-size:11px">Tổng đền bù</div><div class="kpi-bg">⚠️</div></div>
-    <div class="kpi" style="color:#f97316"><div class="kpi-lb">Công ty hỗ trợ</div><div class="kpi-v">${totCT<0?fmt(Math.abs(totCT)):'0'}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="color:#f97316;font-size:11px">Dùng quỹ</div><div class="kpi-bg">🏢</div></div>
+    <div class="kpi" style="color:#dc2626"><div class="kpi-lb">ST đền bù</div><div class="kpi-v">${totDenBu!==0?fmt(Math.abs(totDenBu)):'0'}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="color:#dc2626;font-size:11px">Tổng đền bù</div><div class="kpi-bg">⚠️</div></div>
+    <div class="kpi" style="color:#f97316"><div class="kpi-lb">Công ty hỗ trợ</div><div class="kpi-v">${totCT!==0?fmt(Math.abs(totCT)):'0'}<span class="kpi-u">đ</span></div><div class="kpi-tr" style="color:#f97316;font-size:11px">Dùng quỹ</div><div class="kpi-bg">🏢</div></div>
   </div>`;
   /* TABLE 1 */
   const bbRows=rows.length?[...rows].sort((a,b)=>b.ngay-a.ngay).map(r=>{

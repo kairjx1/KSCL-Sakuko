@@ -62,10 +62,10 @@ function processT1(items){
       thang:parseInt(f['Tháng']||'0',10),
       nam:parseInt(f['Năm']||'2026',10),
       ngay:f['Ngày kiểm kê']||0,
-      clPlus:numStr(f['Chênh lệch +']),
-      clMinus:numStr(f['Chênh lệch -']),
-      denBu:Math.abs(numStr(f['Đền bù'])),
-      congtyHT:Math.abs(numStr(f['Công ty hỗ trợ'])),
+      clPlus:num(f['Chênh lệch +'])||numStr(f['Chênh lệch +']),
+      clMinus:num(f['Chênh lệch -'])||numStr(f['Chênh lệch -']),
+      denBu:num(f['Đền bù'])||numStr(f['Đền bù']),
+      congtyHT:num(f['Công ty hỗ trợ'])||numStr(f['Công ty hỗ trợ']),
       noiDung:txt(f['Nội dung , đề xuất']),
     };
   });
