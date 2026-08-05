@@ -72,8 +72,10 @@ async function discoverTables(token){
   for(const t of j.data?.items||[]){
     const name=t.name||'';
     const isTonAm=name.toLowerCase().includes('tồn âm')||name.toLowerCase().includes('ton am');
-    const isYear=name.includes('.26')||name.includes('2026');
-    if(!isTonAm||!isYear)continue;
+    if(!isTonAm)continue;
+    // Loại bỏ bảng năm cũ (.25, .24, .23... hoặc 2020-2025)
+    const isPrevYear=/\.(2[0-5])\b|202[0-5]/.test(name);
+    if(isPrevYear)continue;
     const m=name.match(/tháng\s*0?(\d+)/i);
     if(!m)continue;
     const n=parseInt(m[1]);if(n<1||n>12)continue;
