@@ -2010,18 +2010,21 @@ function qcDiemDownloadTemplate(){
 function qcDiemImportFile(input){
   const file=input.files[0];if(!file)return;
   input.value='';
+  // Đọc tháng/năm từ dropdown UI (ưu tiên) thay vì từ cột Excel — tránh nhảy tháng
+  const uiMonth=String(document.getElementById('qcd-month')?.value||S.qcDiemMonth||(new Date().getMonth()+1));
+  const uiYear=String(document.getElementById('qcd-year')?.value||S.qcDiemYear||new Date().getFullYear());
   const reader=new FileReader();
   reader.onload=function(e){
     try{
       const wb=XLSX.read(e.target.result,{type:'binary'});
       const ws1=wb.Sheets['Chấm điểm'];
       const rows1=ws1?XLSX.utils.sheet_to_json(ws1,{header:1}):[];
-      let month=null,year=null;
+      let xlsMonth=null;
       const newRows=[];
       for(let i=1;i<rows1.length;i++){
         const [t,y,st,max,thuc]=rows1[i];
         if(!st)continue;
-        if(!month&&t){month=String(parseInt(t));year=String(parseInt(y));}
+        if(!xlsMonth&&t){xlsMonth=String(parseInt(t));}
         newRows.push({st:String(st),max:String(max||''),thuc:String(thuc||'')});
       }
       const ws2=wb.Sheets['Lỗi hạng mục'];
@@ -2030,14 +2033,21 @@ function qcDiemImportFile(input){
       for(let i=1;i<rows2.length;i++){
         const [t,y,cat,tyle,soLoi]=rows2[i];
         if(!cat)continue;
-        if(!month&&t){month=String(parseInt(t));year=String(parseInt(y));}
+        if(!xlsMonth&&t){xlsMonth=String(parseInt(t));}
         newLoi.push({cat:String(cat),tyle:parseFloat(tyle)||0,soLoi:parseInt(soLoi)||0});
       }
       if(!newRows.length&&!newLoi.length){alert('File không có dữ liệu hoặc sai tên sheet (cần "Chấm điểm" và "Lỗi hạng mục")!');return;}
-      if(month){S.qcDiemMonth=month;S.qcDiemYear=year;}
+      // Cảnh báo nếu cột tháng trong Excel khác với tháng đang chọn trên UI
+      if(xlsMonth&&xlsMonth!==uiMonth){
+        const ok=confirm(`⚠️ File Excel có Tháng ${xlsMonth} nhưng dropdown đang chọn Tháng ${uiMonth}.\n\nNhấn OK để import vào Tháng ${uiMonth} (khuyên dùng).\nNhấn Cancel để dùng Tháng ${xlsMonth} từ file.`);
+        if(!ok){S.qcDiemMonth=xlsMonth;S.qcDiemYear=uiYear;}
+        else{S.qcDiemMonth=uiMonth;S.qcDiemYear=uiYear;}
+      }else{
+        S.qcDiemMonth=uiMonth;S.qcDiemYear=uiYear;
+      }
       S.qcDiemRows=newRows;S.qcDiemLoiHM=newLoi;S._qcDiemAutoLoaded=true;
       go('qc','Chấm điểm dịch vụ');
-      setTimeout(()=>{const s=document.getElementById('qcd-diem-saved');if(s){s.textContent=`✅ Đã import ${newRows.length} siêu thị & ${newLoi.length} hạng mục từ Excel!`;s.style.display='block';setTimeout(()=>s.style.display='none',5000);}},300);
+      setTimeout(()=>{const s=document.getElementById('qcd-diem-saved');if(s){s.textContent=`✅ Đã import ${newRows.length} siêu thị & ${newLoi.length} hạng mục từ Excel (T${S.qcDiemMonth}/${S.qcDiemYear})!`;s.style.display='block';setTimeout(()=>s.style.display='none',5000);}},300);
     }catch(err){alert('Lỗi đọc file Excel: '+err.message);}
   };
   reader.readAsBinaryString(file);
