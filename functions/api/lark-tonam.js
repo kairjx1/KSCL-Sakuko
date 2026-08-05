@@ -33,7 +33,7 @@ async function getToken(id,secret){
   return j.tenant_access_token;
 }
 
-const KNOWN_VIEWS={T01:'vewHqzX1XZ',T02:'vewvgrFCBc',T03:'vewqDpKLSv',T04:'vewuBDjb0W',T05:'vewHlcgIvH',T06:'vewbbA2pp3'};
+const KNOWN_VIEWS={T01:'vewHqzX1XZ',T02:'vewvgrFCBc',T03:'vewqDpKLSv',T04:'vewuBDjb0W',T05:'vewHlcgIvH',T06:'vewbbA2pp3',T07:'vewPC4mQFY'};
 async function getViewId(token,month,tableId){
   if(KNOWN_VIEWS[month])return KNOWN_VIEWS[month];
   try{
