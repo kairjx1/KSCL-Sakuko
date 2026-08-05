@@ -647,13 +647,13 @@ function rDashboard(){
   const xhYear=Object.keys(XH?.data||{}).sort().pop();
   const bbYear=Math.max(0,...(BB?.t1||[]).map(r=>r.nam||0))||2026;
   // ── Khi "Tất cả": tổng hợp mọi tháng; khi chọn tháng: dùng tháng đó hoặc gần nhất ──
-  let kkDT,taVal,taPct,xhVal,xhPct,ddPct,bbRows,bbCnt,bbDenBu,kkLabel;
+  let kkDT,taVal,taPct,xhVal,xhPct,ddPct,bbRows,bbCnt,bbDenBu,kkLabel,taData=null;
   if(_isAll){
     // Aggregate tất cả tháng
     kkDT=Object.values(kkRev).reduce((s,v)=>s+v,0);
     taVal=taMonths.reduce((s,mo)=>s+(TA?.months?.[mo]?.totalValue||0),0);
     taPct=kkDT>0&&taVal>0?taVal/kkDT*100:null;
-    xhVal=xhYear?Object.values(XH.data[xhYear]).reduce((s,d)=>s+(d?.value||0),0):0;
+    xhVal=xhYear&&XH?.data?.[xhYear]?Object.values(XH.data[xhYear]).reduce((s,d)=>s+(d?.value||0),0):0;
     xhPct=kkDT>0&&xhVal>0?xhVal/kkDT*100:null;
     const ddTotDT=DM.reduce((s,r)=>s+r.dt,0),ddTotCP=DM.reduce((s,r)=>s+(r.gv-r.tv-r.conlai),0);
     ddPct=ddTotDT>0?ddTotCP/ddTotDT*100:null;
@@ -663,7 +663,7 @@ function rDashboard(){
     // Tháng đơn — chọn tháng từ dashFrom hoặc kkM
     const selM=isSingleM?_pF(S.dashFrom):kkM;
     kkDT=kkRev[selM]||0;
-    const taData=TA?.months?.[selM]||null;
+    taData=TA?.months?.[selM]||null;
     taVal=taData?.totalValue||0; taPct=kkDT>0&&taVal>0?taVal/kkDT*100:null;
     const xhData=xhYear?XH?.data?.[xhYear]?.[selM]:null;
     xhVal=xhData?.value||0; xhPct=kkDT>0&&xhVal>0?xhVal/kkDT*100:null;
