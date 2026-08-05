@@ -584,6 +584,19 @@ function rDashboard(){
     {t:'T05',dt:17621137715,gv:497596584,tv:342066250,huy:22713000,cp:155530334,dinhmuc:37004389,conlai:266052256},
   ];
   const DS=DC?.stores?.length?DC.stores:[];
+  // ── KK caches (load sớm để tính allDataMonths) ──
+  if(!S.tonAmCache){try{S.tonAmCache=JSON.parse(localStorage.getItem('tonam_cache')||'null');}catch(e){}}
+  if(!S.bbkkCache){try{S.bbkkCache=JSON.parse(localStorage.getItem('bbkk_cache')||'null');}catch(e){}}
+  if(!S.xhCache){try{S.xhCache=JSON.parse(localStorage.getItem('xuathuy_cache')||'null');}catch(e){}}
+  const _TA=S.tonAmCache,_BB=S.bbkkCache,_XH=S.xhCache;
+  const _xhYear=Object.keys(_XH?.data||{}).sort().pop();
+  // ── Union months từ tất cả nguồn dữ liệu ──
+  const _allM=[...new Set([
+    ...DM.map(r=>r.t),
+    ...Object.keys(_TA?.months||{}),
+    ...(_xhYear?Object.keys(_XH.data[_xhYear]):[] ),
+    ...(_BB?.t1||[]).map(r=>`T${String(r.thang).padStart(2,'0')}`)
+  ])].filter(t=>/^T\d{2}$/.test(t)).sort();
   // ── Date range filter ──
   const _pF=n=>'T'+String(n).padStart(2,'0');
   const _isAll=!S.dashFrom||(!S.dashTo)||(S.dashFrom===1&&S.dashTo===12);
@@ -624,11 +637,8 @@ function rDashboard(){
   const qcMonth=S.qcOvMonth||S.qcExecMonth||'';
   const qcYear=S.qcOvYear||S.qcExecYear||'2026';
   const qcLabel=qcMonth?'T'+qcMonth+'/'+qcYear:'';
-  // ── KK data — lấy 4 cache giống rKKOv ──
-  if(!S.tonAmCache){try{S.tonAmCache=JSON.parse(localStorage.getItem('tonam_cache')||'null');}catch(e){}}
-  if(!S.bbkkCache){try{S.bbkkCache=JSON.parse(localStorage.getItem('bbkk_cache')||'null');}catch(e){}}
-  if(!S.xhCache){try{S.xhCache=JSON.parse(localStorage.getItem('xuathuy_cache')||'null');}catch(e){}}
-  const TA=S.tonAmCache,BB=S.bbkkCache,XH=S.xhCache;
+  // ── KK data — dùng cache đã load từ trên ──
+  const TA=_TA,BB=_BB,XH=_XH;
   const kkSrcs=[['Tồn âm',!!TA],['Biên bản KK',!!BB],['Xuất hủy',!!XH],['Đổi Date',!!DC]];
   const kkNSrc=kkSrcs.filter(s=>s[1]).length;
   const taMonths=Object.keys(TA?.months||{}).sort();
@@ -668,8 +678,9 @@ function rDashboard(){
   const fP=n=>(n*100).toFixed(2)+'%';
   const fMil=n=>{const a=Math.abs(n),s=n<0?'-':'';return a>=1e9?s+(a/1e9).toFixed(2)+'B':a>=1e6?s+(a/1e6).toFixed(0)+'M':a>=1e3?s+(a/1e3).toFixed(0)+'K':String(n);};
   const fmtV=v=>Math.abs(v)>=1e9?(v/1e9).toFixed(2)+' tỷ':Math.abs(v)>=1e6?(v/1e6).toFixed(1)+' tr':Math.abs(v)>0?Math.round(v/1e3)+'k':'—';
-  const CURR_M=isSingleM?_pF(S.dashFrom):(DMsrc[DMsrc.length-1]?.t||'T05');
-  const FIRST_M=_isAll?(DMsrc[0]?.t||'T01'):_pF(S.dashFrom||1);
+  // CURR_M = tháng mới nhất trong TẤT CẢ nguồn dữ liệu (không chỉ date)
+  const CURR_M=isSingleM?_pF(S.dashFrom):(_allM[_allM.length-1]||DMsrc[DMsrc.length-1]?.t||'T07');
+  const FIRST_M=_isAll?(_allM[0]||DMsrc[0]?.t||'T01'):_pF(S.dashFrom||1);
   const rangeLabel=isSingleM?CURR_M:(_isAll?(FIRST_M===CURR_M?CURR_M:FIRST_M+'→'+CURR_M):FIRST_M+'→'+_pF(S.dashTo||12));
   const ytdOk=tlDate<=NGUONG_DATE;
   const totCPnet=totCP-tonDG;
@@ -769,7 +780,7 @@ function rDashboard(){
   <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <span style="font-size:11.5px;font-weight:700;color:var(--t2);white-space:nowrap">📅 Khung thời gian:</span>
     <button onclick="dashFilter(1,12)" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${_isAll?'#1a2558':'rgba(0,0,0,.15)'};background:${_isAll?'#1a2558':'#fff'};color:${_isAll?'#fff':'var(--t1)'};cursor:pointer;font-weight:600">Tất cả</button>
-    ${DM.map(r=>{const m=parseInt(r.t.slice(1));const sel=S.dashFrom===m&&S.dashTo===m;return`<button onclick="dashFilter(${m},${m})" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${sel?'#e91e7b':'rgba(0,0,0,.15)'};background:${sel?'#e91e7b':'#fff'};color:${sel?'#fff':'var(--t1)'};cursor:pointer">${r.t}</button>`;}).join('')}
+    ${_allM.map(t=>{const m=parseInt(t.slice(1));const sel=S.dashFrom===m&&S.dashTo===m;const hasDd=DM.some(r=>r.t===t);return`<button onclick="dashFilter(${m},${m})" style="padding:4px 10px;font-size:11.5px;border-radius:6px;border:1px solid ${sel?'#e91e7b':'rgba(0,0,0,.15)'};background:${sel?'#e91e7b':'#fff'};color:${sel?'#fff':'var(--t1)'};cursor:pointer;opacity:${hasDd?1:0.7}" title="${hasDd?t:t+' (chưa có đổi date)'}">${t}</button>`;}).join('')}
     <span style="margin-left:auto;font-size:11px;color:var(--t3)">Đang xem: <strong style="color:#1a2558">${rangeLabel}/2026</strong> · ${DMsrc.length} tháng · ${isSingleM?'Tháng đơn':'Lũy kế'}</span>
   </div>
 </div>
@@ -866,7 +877,7 @@ function rDashboard(){
 <div class="g3 g-sm1" style="margin-bottom:12px;gap:12px;align-items:start">
   <!-- QC & Dịch vụ -->
   <div class="card" style="padding:16px">
-    <div style="font-size:12px;font-weight:700;color:#1a2558;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,.08)">🔍 QC & DỊCH VỤ — ${qcLabel||CURR_M+'/2026'}</div>
+    <div style="font-size:12px;font-weight:700;color:#1a2558;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,.08)">🔍 QC & DỊCH VỤ — ${qcHasData&&qcLabel?qcLabel:qcHasData?CURR_M+'/2026':'—'}</div>
     ${qcHasData?`<div style="font-size:12px;display:flex;flex-direction:column;gap:7px">
       <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Điểm TB dịch vụ</span><strong style="color:${qcOk?'#15803d':'#dc2626'}">${qcScore.toFixed(1)}% ${qcOk?'✅':'⚠️'}</strong></div>
       <div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">ST dưới 85%</span><strong style="color:${qcSTDuoi85.length?'#dc2626':'#15803d'}">${qcSTDuoi85.length}${qcSTDuoi85.length?' ← ưu tiên':' ✅'}</strong></div>
