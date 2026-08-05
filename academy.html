@@ -1018,7 +1018,11 @@ function rKKOv(){
   const xhM=xhY?Object.keys(XH.data[xhY]):[];
   const ddM=(DD?.monthly||[]).map(r=>r.t);
   const months=[...new Set([...taM,...xhM,...ddM])].sort();
-  if(!S.kkOvMonth||!months.includes(S.kkOvMonth))S.kkOvMonth=taM.sort().pop()||months[months.length-1]||'';
+  // Default: tháng mới nhất có tồn âm + ít nhất 1 nguồn khác (xuất hủy / đổi date / bbkk)
+  const bbM=new Set((BB?.t1||[]).map(r=>`T${String(r.thang).padStart(2,'0')}`));
+  const xhSet=new Set(xhM),ddSet=new Set(ddM);
+  const bestM=[...taM].sort().reverse().find(mo=>xhSet.has(mo)||ddSet.has(mo)||bbM.has(mo))||taM.sort().pop()||months[months.length-1]||'';
+  if(!S.kkOvMonth||!months.includes(S.kkOvMonth))S.kkOvMonth=bestM;
   const m=S.kkOvMonth;
   const rev=TA?.revenue||{};
   const dt=rev[m]||0;
