@@ -64,8 +64,8 @@ function processT1(items){
       ngay:f['Ngày kiểm kê']||0,
       clPlus:numStr(f['Chênh lệch +']),
       clMinus:numStr(f['Chênh lệch -']),
-      denBu:numStr(f['Đền bù']),
-      congtyHT:numStr(f['Công ty hỗ trợ']),
+      denBu:Math.abs(numStr(f['Đền bù'])),
+      congtyHT:Math.abs(numStr(f['Công ty hỗ trợ'])),
       noiDung:txt(f['Nội dung , đề xuất']),
     };
   });
