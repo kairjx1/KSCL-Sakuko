@@ -73,9 +73,8 @@ async function discoverTables(token){
     const name=t.name||'';
     const isTonAm=name.toLowerCase().includes('tồn âm')||name.toLowerCase().includes('ton am');
     if(!isTonAm)continue;
-    // Loại bỏ bảng năm cũ (.25, .24, .23... hoặc 2020-2025)
-    const isPrevYear=/\.(2[0-5])\b|202[0-5]/.test(name);
-    if(isPrevYear)continue;
+    // Chỉ lấy bảng tồn âm năm hiện tại (hậu tố .26) — bảng không có .26 là nguồn khác
+    if(!name.includes('.26'))continue;
     const m=name.match(/tháng\s*0?(\d+)/i);
     if(!m)continue;
     const n=parseInt(m[1]);if(n<1||n>12)continue;
