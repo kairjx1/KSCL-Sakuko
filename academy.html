@@ -642,19 +642,37 @@ function rDashboard(){
   const kkSrcs=[['Tồn âm',!!TA],['Biên bản KK',!!BB],['Xuất hủy',!!XH],['Đổi Date',!!DC]];
   const kkNSrc=kkSrcs.filter(s=>s[1]).length;
   const taMonths=Object.keys(TA?.months||{}).sort();
-  const kkM=taMonths[taMonths.length-1]||DMsrc[DMsrc.length-1]?.t||'T05';
+  const kkM=taMonths[taMonths.length-1]||DMsrc[DMsrc.length-1]?.t||'T07';
   const kkRev=TA?.revenue||{};
-  const kkDT=kkRev[kkM]||0;
-  const taData=TA?.months?.[kkM]||null;
-  const taVal=taData?.totalValue||0;const taPct=kkDT>0&&taVal>0?taVal/kkDT*100:null;
   const xhYear=Object.keys(XH?.data||{}).sort().pop();
-  const xhData=xhYear?XH?.data?.[xhYear]?.[kkM]:null;
-  const xhVal=xhData?.value||0;const xhPct=kkDT>0&&xhVal>0?xhVal/kkDT*100:null;
-  const ddData=(DC?.monthly||[]).find(r=>r.t===kkM)||null;
-  const ddPct=ddData&&ddData.dt>0?ddData.cp/ddData.dt*100:null;
   const bbYear=Math.max(0,...(BB?.t1||[]).map(r=>r.nam||0))||2026;
-  const bbRows=(BB?.t1||[]).filter(r=>r.thang===+kkM.slice(1)&&r.nam===bbYear);
-  const bbCnt=bbRows.length;const bbDenBu=bbRows.reduce((s,r)=>s+Math.abs(r.denBu||0),0);
+  // ── Khi "Tất cả": tổng hợp mọi tháng; khi chọn tháng: dùng tháng đó hoặc gần nhất ──
+  let kkDT,taVal,taPct,xhVal,xhPct,ddPct,bbRows,bbCnt,bbDenBu,kkLabel;
+  if(_isAll){
+    // Aggregate tất cả tháng
+    kkDT=Object.values(kkRev).reduce((s,v)=>s+v,0);
+    taVal=taMonths.reduce((s,mo)=>s+(TA?.months?.[mo]?.totalValue||0),0);
+    taPct=kkDT>0&&taVal>0?taVal/kkDT*100:null;
+    xhVal=xhYear?Object.values(XH.data[xhYear]).reduce((s,d)=>s+(d?.value||0),0):0;
+    xhPct=kkDT>0&&xhVal>0?xhVal/kkDT*100:null;
+    const ddTotDT=DM.reduce((s,r)=>s+r.dt,0),ddTotCP=DM.reduce((s,r)=>s+(r.gv-r.tv-r.conlai),0);
+    ddPct=ddTotDT>0?ddTotCP/ddTotDT*100:null;
+    bbRows=(BB?.t1||[]).filter(r=>r.nam===bbYear);
+    kkLabel='T01→'+kkM;
+  } else {
+    // Tháng đơn — chọn tháng từ dashFrom hoặc kkM
+    const selM=isSingleM?_pF(S.dashFrom):kkM;
+    kkDT=kkRev[selM]||0;
+    const taData=TA?.months?.[selM]||null;
+    taVal=taData?.totalValue||0; taPct=kkDT>0&&taVal>0?taVal/kkDT*100:null;
+    const xhData=xhYear?XH?.data?.[xhYear]?.[selM]:null;
+    xhVal=xhData?.value||0; xhPct=kkDT>0&&xhVal>0?xhVal/kkDT*100:null;
+    const ddData=(DC?.monthly||[]).find(r=>r.t===selM)||null;
+    ddPct=ddData&&ddData.dt>0?ddData.cp/ddData.dt*100:null;
+    bbRows=(BB?.t1||[]).filter(r=>r.thang===+selM.slice(1)&&r.nam===bbYear);
+    kkLabel=selM;
+  }
+  bbCnt=bbRows.length; bbDenBu=bbRows.reduce((s,r)=>s+Math.abs(r.denBu||0),0);
   // Health score
   const kkSc=[];
   if(taPct!=null)kkSc.push([taPct<=5?100:taPct<=10?80:taPct<=15?55:taPct<=20?30:10,35]);
@@ -830,7 +848,7 @@ function rDashboard(){
     </div>
     ${kkHasData?`
     <div style="font-size:28px;font-weight:800;color:${kkGrade[1]};line-height:1">${kkHealth!=null?kkHealth:'—'}<span style="font-size:14px;font-weight:600">${kkHealth!=null?'/100':''}</span></div>
-    <div style="font-size:12px;color:var(--t2);margin:4px 0">Sức khỏe tồn kho · ${kkM}/2026</div>
+    <div style="font-size:12px;color:var(--t2);margin:4px 0">Sức khỏe tồn kho · ${kkLabel}/2026</div>
     <div style="font-size:11.5px;margin-top:4px;display:flex;flex-direction:column;gap:3px">
       ${taPct!=null?`<div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Tồn âm</span><span style="color:${taPct>15?'#dc2626':taPct>10?'#f97316':'#15803d'};font-weight:600">${fmtV(taVal)} (${taPct.toFixed(1)}% DT)</span></div>`:''}
       ${xhPct!=null?`<div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Xuất hủy</span><span style="color:${xhPct>1?'#dc2626':xhPct>0.5?'#f97316':'#15803d'};font-weight:600">${fmtV(xhVal)} (${xhPct.toFixed(2)}% DT)</span></div>`:''}
@@ -912,7 +930,7 @@ function rDashboard(){
   </div>
   <!-- Kiểm kê & Tồn kho -->
   <div class="card" style="padding:16px">
-    <div style="font-size:12px;font-weight:700;color:#1a2558;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,.08)">📊 KIỂM KÊ & TỒN KHO — ${kkM}/2026</div>
+    <div style="font-size:12px;font-weight:700;color:#1a2558;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,.08)">📊 KIỂM KÊ & TỒN KHO — ${kkLabel}/2026</div>
     ${kkHasData?`<div style="font-size:12px;display:flex;flex-direction:column;gap:7px">
       ${kkHealth!=null?`<div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Sức khỏe tồn kho</span><strong style="color:${kkGrade[1]}">${kkGrade[0]} — ${kkHealth}/100</strong></div>`:''}
       ${taPct!=null?`<div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">Tồn âm / DT</span><strong style="color:${taPct>15?'#dc2626':taPct>10?'#f97316':'#15803d'}">${fmtV(taVal)} (${taPct.toFixed(1)}%)</strong></div>`:''}
