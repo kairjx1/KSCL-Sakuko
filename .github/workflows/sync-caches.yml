@@ -1,0 +1,83 @@
+name: Sync Lark caches
+
+on:
+  schedule:
+    # Chạy mỗi ngày lúc 19:00 UTC = 02:00 sáng giờ Việt Nam
+    - cron: '0 19 * * *'
+  workflow_dispatch:   # Cho phép chạy thủ công từ GitHub Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync caches from Cloudflare Functions
+        id: sync
+        run: |
+          set -e
+          BASE="https://kscl-sakuko.pages.dev/api"
+          CHANGED=0
+
+          fetch_and_save() {
+            local endpoint="$1"
+            local outfile="$2"
+            local label="$3"
+
+            echo "⬇️  Fetching $label..."
+            # Retry 3 lần, timeout 60s mỗi lần
+            for attempt in 1 2 3; do
+              HTTP=$(curl -sf --max-time 60 -w "%{http_code}" \
+                -o /tmp/resp_tmp.json \
+                "$BASE/$endpoint" 2>/dev/null) || true
+              if [ "$HTTP" = "200" ] && [ -s /tmp/resp_tmp.json ]; then
+                break
+              fi
+              echo "  Attempt $attempt failed (HTTP $HTTP), retrying..."
+              sleep 10
+            done
+
+            if [ "$HTTP" != "200" ] || [ ! -s /tmp/resp_tmp.json ]; then
+              echo "  ❌ $label: HTTP $HTTP — skip"
+              return
+            fi
+
+            # Kiểm tra response có ok:true hoặc ts
+            if ! python3 -c "import json,sys; d=json.load(open('/tmp/resp_tmp.json')); sys.exit(0 if d.get('ok') or d.get('ts') else 1)" 2>/dev/null; then
+              echo "  ⚠️  $label: invalid response — skip"
+              cat /tmp/resp_tmp.json | head -c 200
+              return
+            fi
+
+            # Compact JSON (giảm kích thước file)
+            python3 -c "import json; d=json.load(open('/tmp/resp_tmp.json')); print(json.dumps(d,separators=(',',':'),ensure_ascii=False))" > "$outfile"
+
+            echo "  ✅ $label saved ($(wc -c < "$outfile") bytes)"
+            CHANGED=1
+          }
+
+          fetch_and_save "lark-tonam"   "tonam-cache.json"   "Tồn âm"
+          fetch_and_save "lark-bbkk"    "bbkk-cache.json"    "Biên bản KK"
+          fetch_and_save "lark-xuathuy" "xuathuy-cache.json" "Xuất hủy"
+          fetch_and_save "lark-date"    "date-cache.json"    "Đổi date"
+
+          echo "changed=$CHANGED" >> $GITHUB_OUTPUT
+
+      - name: Commit & push if changed
+        if: steps.sync.outputs.changed == '1'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add tonam-cache.json bbkk-cache.json xuathuy-cache.json date-cache.json
+          # Chỉ commit nếu thực sự có thay đổi
+          if ! git diff --cached --quiet; then
+            TODAY=$(date -u '+%Y-%m-%d %H:%M UTC')
+            git commit -m "chore: sync Lark caches $TODAY [skip ci]"
+            git push
+            echo "🚀 Pushed updated caches"
+          else
+            echo "ℹ️  No changes to commit"
+          fi
