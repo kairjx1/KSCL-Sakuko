@@ -59,10 +59,11 @@ jobs:
             CHANGED=1
           }
 
+          # lark-tonam và lark-xuathuy: CF Function hoạt động tốt
           fetch_and_save "lark-tonam"   "tonam-cache.json"   "Tồn âm"
-          fetch_and_save "lark-bbkk"    "bbkk-cache.json"    "Biên bản KK"
           fetch_and_save "lark-xuathuy" "xuathuy-cache.json" "Xuất hủy"
-          fetch_and_save "lark-date"    "date-cache.json"    "Đổi date"
+          # lark-bbkk và lark-date: CF Function bị lỗi quyền (1254302)
+          # → máy local chạy sync-all-and-push.js để cập nhật 2 caches này
 
           echo "changed=$CHANGED" >> $GITHUB_OUTPUT
 
