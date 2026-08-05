@@ -89,7 +89,10 @@ function aggregate(records){
     const ma=txt(f['Mã Kho']);
     const ten=lkp(f['Tên ST'])||txt(f['Tên ST']);
     const ng=txt(f['Ngành']);
-    const ly=typeof f['Lý do']==='string'?f['Lý do']:txt(f['Lý do']);
+    // Lý do: hỗ trợ cả Text (T01-T06) và MultiSelect (T07+)
+    const lyRaw=f['Lý do'];
+    const lyArr=Array.isArray(lyRaw)?lyRaw.map(x=>typeof x==='string'?x:(x?.text||'')).filter(Boolean)
+      :(typeof lyRaw==='string'&&lyRaw?[lyRaw]:txt(lyRaw)?[txt(lyRaw)]:[]);
     const qh=fml(f['ST quá hạn']);
     const price=parseFloat(f['Giá bán lẻ'])||0;
     const qty=Math.abs(parseFloat(f['Tồn dự kiến POS*'])||1);
@@ -100,7 +103,7 @@ function aggregate(records){
     if(!agg.stores[k])agg.stores[k]={ten:storeName,count:0,qh:0,ch:0,value:0};
     agg.stores[k].count++;agg.stores[k].value+=value;
     if(qh==='quá hạn')agg.stores[k].qh++;else if(qh==='cận hạn')agg.stores[k].ch++;
-    if(ly){agg.lyDo[ly]=(agg.lyDo[ly]||0)+1;agg.lyDoValue[ly]=(agg.lyDoValue[ly]||0)+value;}
+    for(const ly of lyArr){agg.lyDo[ly]=(agg.lyDo[ly]||0)+1;agg.lyDoValue[ly]=(agg.lyDoValue[ly]||0)+value;}
     if(ng){agg.nganh[ng]=(agg.nganh[ng]||0)+1;agg.nganhValue[ng]=(agg.nganhValue[ng]||0)+value;}
   }
   agg.stores=Object.entries(agg.stores).sort((a,b)=>b[1].count-a[1].count).slice(0,25)
