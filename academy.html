@@ -2951,11 +2951,41 @@ function rQCOv(){
       </div>
     </div>`;
   } else {
-    // ALL: hiển thị đổi trả dạng tổng theo tháng
+    // ALL: tổng hợp top ST + nguyên nhân
+    const stTopMap={},causeMap={donKhach:0,donST:0,donHT:0};
+    monthsWithData.forEach(m=>{
+      const dt=(yearData[m]||{}).doitra||{};
+      // Merge top ST siêu thị
+      [...(dt.st&&dt.st.top||[]),...(dt.cvs&&dt.cvs.top||[])].forEach(s=>{
+        if(s&&s.name){stTopMap[s.name]=(stTopMap[s.name]||0)+(parseInt(s.don)||0);}
+      });
+      // Nguyên nhân
+      causeMap.donKhach+=(parseFloat((dt.st||{}).donKhach)||0)+(parseFloat((dt.cvs||{}).donKhach)||0);
+      causeMap.donST+=(parseFloat((dt.st||{}).donST)||0)+(parseFloat((dt.cvs||{}).donST)||0);
+      causeMap.donHT+=(parseFloat((dt.st||{}).donHT)||0)+(parseFloat((dt.cvs||{}).donHT)||0);
+    });
+    const topSTs=Object.entries(stTopMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const totalCause=causeMap.donKhach+causeMap.donST+causeMap.donHT||1;
     dtSection=`<div class="card" style="padding:14px 16px;margin-bottom:12px">
       <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px">🔄 Đổi trả hàng hóa — ${label} (tổng ${tongDT} đơn)</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        ${monthsWithData.map(m=>{const md=yearData[m]||{};const dt=md.doitra||{};const tot=(parseFloat((dt.st||{}).tongDon)||0)+(parseFloat((dt.cvs||{}).tongDon)||0);return tot?`<div style="padding:6px 12px;background:#f5f3ff;border-radius:8px;font-size:12px"><b>T${m}</b>: ${tot} đơn</div>`:''}).join('')}
+      <div class="g2" style="gap:16px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#6366f1;margin-bottom:8px">🏆 Top ST/CVS đổi trả nhiều nhất</div>
+          ${topSTs.length?topSTs.map(([name,don],i)=>{const pct=Math.round(don/tongDT*100);return`<div style="margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span>${i+1}. ${name}</span><b>${don} đơn (${pct}%)</b></div>
+            <div style="height:5px;background:#e5e7eb;border-radius:3px"><div style="height:5px;width:${Math.min(pct*2,100)}%;background:#6366f1;border-radius:3px"></div></div>
+          </div>`;}).join(''):`<div style="font-size:12px;color:var(--t2)">Chưa có dữ liệu top</div>`}
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:8px">📊 Nguyên nhân đổi trả</div>
+          ${[['Do khách hàng',causeMap.donKhach,'#0891b2'],['Do siêu thị / CVS',causeMap.donST,'#dc2626'],['Lỗi hệ thống',causeMap.donHT,'#d97706']].map(([lbl,val,color])=>{const p=Math.round(val/totalCause*100);return val>0?`<div style="margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span>${lbl}</span><b style="color:${color}">${val} đơn (${p}%)</b></div>
+            <div style="height:5px;background:#e5e7eb;border-radius:3px"><div style="height:5px;width:${p}%;background:${color};border-radius:3px"></div></div>
+          </div>`:''}).join('')}
+          <div style="margin-top:10px;border-top:1px solid var(--br);padding-top:8px;display:flex;flex-wrap:wrap;gap:6px">
+            ${monthsWithData.map(m=>{const md=yearData[m]||{};const dt=md.doitra||{};const tot=(parseFloat((dt.st||{}).tongDon)||0)+(parseFloat((dt.cvs||{}).tongDon)||0);return tot?`<div style="padding:4px 10px;background:#f5f3ff;border-radius:6px;font-size:11.5px"><b>T${m}</b>: ${tot}</div>`:''}).join('')}
+          </div>
+        </div>
       </div>
     </div>`;
   }
@@ -3028,23 +3058,38 @@ function rQCOv(){
     </table></div>
   </div>`:''
 
-  // Biên bản vi phạm chi tiết
-  const bbSection=bbs.length?`<div class="card" style="padding:14px 16px;margin-bottom:12px">
-    <div style="font-size:13px;font-weight:700;color:#ea580c;margin-bottom:10px">📄 Biên bản xử lý vi phạm — ${label} (${bbs.length} biên bản)</div>
-    <div class="tw"><table>
-      <thead><tr><th>#</th><th>Siêu thị / CVS</th><th>Loại vi phạm</th><th>Ngày</th><th>Hình thức xử lý</th><th>Ghi chú</th></tr></thead>
-      <tbody>${bbs.slice(0,20).map((b,i)=>`<tr>
-        <td>${i+1}</td>
-        <td>${b.st||b.cvsName||b.name||'—'}</td>
-        <td>${b.loai||b.type||b.loaiVP||'—'}</td>
-        <td>${b.ngay||b.date||''}</td>
-        <td>${b.hinhThuc||b.xuLy||'—'}</td>
-        <td style="font-size:11px;color:var(--t2)">${b.ghiChu||b.note||''}</td>
-      </tr>`).join('')}
-      ${bbs.length>20?`<tr><td colspan="6" style="text-align:center;font-size:12px;color:var(--t2)">... và ${bbs.length-20} biên bản khác</td></tr>`:''}
-      </tbody>
-    </table></div>
-  </div>`:''
+  // Biên bản vi phạm — thống kê ST + loại vi phạm phổ biến
+  let bbSection='';
+  if(bbs.length){
+    const bbByST={},bbByType={};
+    bbs.forEach(b=>{
+      const st=b.st||b.cvsName||b.name||'Chưa xác định';
+      const loai=b.loai||b.type||b.loaiVP||b.loaiVipham||'Khác';
+      bbByST[st]=(bbByST[st]||0)+1;
+      bbByType[loai]=(bbByType[loai]||0)+1;
+    });
+    const topBBST=Object.entries(bbByST).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const topBBType=Object.entries(bbByType).sort((a,b)=>b[1]-a[1]);
+    bbSection=`<div class="card" style="padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#ea580c;margin-bottom:10px">📄 Biên bản xử lý vi phạm — ${label} (${bbs.length} biên bản)</div>
+      <div class="g2" style="gap:16px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#ea580c;margin-bottom:8px">🏪 ST/CVS có biên bản nhiều nhất</div>
+          ${topBBST.map(([st,cnt],i)=>{const p=Math.round(cnt/bbs.length*100);return`<div style="margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span>${i+1}. ${st}</span><b style="color:#ea580c">${cnt} BB (${p}%)</b></div>
+            <div style="height:5px;background:#e5e7eb;border-radius:3px"><div style="height:5px;width:${Math.min(p*2,100)}%;background:#ea580c;border-radius:3px"></div></div>
+          </div>`;}).join('')}
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:8px">⚠️ Loại vi phạm phổ biến</div>
+          ${topBBType.map(([loai,cnt])=>{const p=Math.round(cnt/bbs.length*100);return`<div style="margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span>${loai}</span><b>${cnt} lần (${p}%)</b></div>
+            <div style="height:5px;background:#e5e7eb;border-radius:3px"><div style="height:5px;width:${p}%;background:#dc2626;border-radius:3px"></div></div>
+          </div>`;}).join('')}
+        </div>
+      </div>
+    </div>`;
+  }
 
   return`${selectorBar}${kpiCards}${warnSection}
 ${monthTableSection}
