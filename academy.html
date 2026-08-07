@@ -2454,11 +2454,11 @@ function rQCGianLan(){
       if(!topDK.length&&!topCTKM.length)return`<div style="font-size:12px;color:var(--t2);padding:8px 0">📊 Dữ liệu chi tiết ST sẽ có sau khi bấm <b>Đồng bộ Lark</b> lại lần nữa.</div>`;
       return`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;border-top:1px solid var(--br);padding-top:14px;margin-top:4px">
         <div>
-          <div style="font-weight:600;font-size:12px;color:#dc2626;margin-bottom:8px">🏪 ST/CVS có CGT định kỳ nhiều nhất</div>
+          <div style="font-weight:600;font-size:12px;color:#dc2626;margin-bottom:8px">🏪 Top ST có lỗi vi phạm check định kỳ</div>
           ${topDK.length?topDK.map(([st,v])=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:12px"><span>${st}</span><span><b style="color:#dc2626">${v.cgt} CGT</b> / ${v.total} check</span></div>`).join(''):'<div style="font-size:12px;color:#16a34a">✅ Không có CGT</div>'}
         </div>
         <div>
-          <div style="font-weight:600;font-size:12px;color:#a855f7;margin-bottom:8px">🎁 ST/CVS có CGT CTKM nhiều nhất</div>
+          <div style="font-weight:600;font-size:12px;color:#a855f7;margin-bottom:8px">🎁 Top ST có lỗi vi phạm check CTKM</div>
           ${topCTKM.length?topCTKM.map(([st,v])=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:12px"><span>${st}</span><span><b style="color:#a855f7">${v.cgt} CGT</b> / ${v.total} check</span></div>`).join(''):'<div style="font-size:12px;color:#16a34a">✅ Không có CGT</div>'}
         </div>
       </div>`;
