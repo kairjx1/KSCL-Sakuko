@@ -5071,6 +5071,7 @@ function afterRender(){
 
   // Init dynamic store table on Nhập liệu tab
   if(S.page==='baocao'&&S.tab==='Nhập liệu')qcLoadStores();
+  if(S.page==='qc'&&S.tab==='Tổng quan'&&!S.qcOvData&&!S._qcOvAutoLoad){S._qcOvAutoLoad=true;qcOvLoad(S.qcOvYear,S.qcOvMonth);}
   if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ'&&!S._qcDiemAutoLoaded){S._qcDiemAutoLoaded=true;qcDiemLoad(S.qcDiemYear,S.qcDiemMonth);}
   if(S.page==='qc'&&S.tab==='Đổi trả'&&!S._qcDTAutoLoaded){S._qcDTAutoLoaded=true;qcDTLoad(S.qcDTYear,S.qcDTMonth);}
   if(S.page==='qc'&&S.tab==='Check gian lận định kỳ và CTKM'){
