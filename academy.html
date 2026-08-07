@@ -455,9 +455,21 @@ function isAdmin(){return!!(S.profile&&ROLES[S.profile.role]?.admin)}
 /* ══════════════════════════════════════════
    ROUTER
 ══════════════════════════════════════════ */
+function _flushQCSaves(){
+  // Gọi trước khi DOM bị render lại — lưu ngay nếu có pending timer
+  if(_qcSaveT['qcdt-saved']){
+    clearTimeout(_qcSaveT['qcdt-saved']);delete _qcSaveT['qcdt-saved'];
+    if(S.page==='qc'&&S.tab==='Đổi trả')qcDTSave(null);
+  }
+  if(_qcSaveT['qcd-diem-saved']){
+    clearTimeout(_qcSaveT['qcd-diem-saved']);delete _qcSaveT['qcd-diem-saved'];
+    if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ')qcDiemSave(null);
+  }
+}
 function go(page,tab=''){
   if(page==='login'||page==='loading'){S.page=page;S.tab=tab;render();return;}
   if(!canAccess(page)){toast('Bạn không có quyền truy cập mục này','t-warn');return;}
+  _flushQCSaves(); // Flush pending auto-saves TRƯỚC KHI DOM bị thay thế
   S.page=page;S.tab=tab||'';
   destroyCharts(); render();
 }
@@ -6650,6 +6662,14 @@ function vfmt(n){return(Math.round(n)||0).toLocaleString('vi-VN');}
    INIT
 ══════════════════════════════════════════ */
 render();
+
+// Cảnh báo khi đóng tab / F5 refresh mà còn dữ liệu chưa lưu
+window.addEventListener('beforeunload',e=>{
+  if(Object.keys(_qcSaveT).some(k=>_qcSaveT[k])){
+    e.preventDefault();
+    e.returnValue='Bạn có dữ liệu chưa lưu. Rời trang sẽ mất dữ liệu!';
+  }
+});
 </script>
 
 <!-- ══════════════════════════════════════════════════════════
