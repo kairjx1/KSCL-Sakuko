@@ -2997,10 +2997,60 @@ function rQCOv(){
     </div>`;
   }
 
+  // Bảng tổng hợp theo tháng (chỉ hiện khi "Tất cả")
+  const monthTableSection=selMonth==='ALL'&&monthsWithData.length?`<div class="card" style="padding:14px 16px;margin-bottom:12px">
+    <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:10px">📅 Tổng hợp từng tháng — Năm ${selYear}</div>
+    <div class="tw"><table>
+      <thead><tr><th>Tháng</th><th>Điểm TB</th><th>ST chấm</th><th>ST &lt; 85%</th><th>Đổi trả</th><th>BB vi phạm</th><th>GL CGT</th></tr></thead>
+      <tbody>
+      ${monthsWithData.map(m=>{
+        const md=yearData[m];
+        const mrows=md.diem&&Array.isArray(md.diem.rows)?md.diem.rows:[];
+        const mMax=mrows.reduce((s,r)=>s+(parseFloat(r.max)||0),0);
+        const mThuc=mrows.reduce((s,r)=>s+(parseFloat(r.thuc)||0),0);
+        const mDiem=mMax>0?mThuc/mMax*100:0;
+        const mDuoi85=mrows.filter(r=>{const mx=parseFloat(r.max),tx=parseFloat(r.thuc);return mx>0&&tx/mx<0.85;}).length;
+        const mDT=(parseFloat((md.doitra&&md.doitra.st&&md.doitra.st.tongDon)||0))+(parseFloat((md.doitra&&md.doitra.cvs&&md.doitra.cvs.tongDon)||0));
+        const mBB=Array.isArray(md.bienbans)?md.bienbans.length:0;
+        const mCGT=((md.gianlam&&md.gianlam.dk&&md.gianlam.dk.cgt)||0)+((md.gianlam&&md.gianlam.ctkm&&md.gianlam.ctkm.cgt)||0);
+        const dc=mDiem>=90?'#16a34a':mDiem>=85?'#d97706':'#dc2626';
+        return`<tr>
+          <td><b>Tháng ${m}</b></td>
+          <td><b style="color:${dc}">${mDiem>0?fmt(mDiem):'—'}</b></td>
+          <td>${mrows.length}</td>
+          <td>${mDuoi85>0?`<b style="color:#dc2626">${mDuoi85}</b>`:mrows.length>0?'<span style="color:#16a34a">✓</span>':'—'}</td>
+          <td>${mDT>0?mDT:'—'}</td>
+          <td>${mBB>0?`<b style="color:#ea580c">${mBB}</b>`:'—'}</td>
+          <td>${mCGT>0?`<b style="color:#dc2626">${mCGT}</b>`:'—'}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>
+  </div>`:''
+
+  // Biên bản vi phạm chi tiết
+  const bbSection=bbs.length?`<div class="card" style="padding:14px 16px;margin-bottom:12px">
+    <div style="font-size:13px;font-weight:700;color:#ea580c;margin-bottom:10px">📄 Biên bản xử lý vi phạm — ${label} (${bbs.length} biên bản)</div>
+    <div class="tw"><table>
+      <thead><tr><th>#</th><th>Siêu thị / CVS</th><th>Loại vi phạm</th><th>Ngày</th><th>Hình thức xử lý</th><th>Ghi chú</th></tr></thead>
+      <tbody>${bbs.slice(0,20).map((b,i)=>`<tr>
+        <td>${i+1}</td>
+        <td>${b.st||b.cvsName||b.name||'—'}</td>
+        <td>${b.loai||b.type||b.loaiVP||'—'}</td>
+        <td>${b.ngay||b.date||''}</td>
+        <td>${b.hinhThuc||b.xuLy||'—'}</td>
+        <td style="font-size:11px;color:var(--t2)">${b.ghiChu||b.note||''}</td>
+      </tr>`).join('')}
+      ${bbs.length>20?`<tr><td colspan="6" style="text-align:center;font-size:12px;color:var(--t2)">... và ${bbs.length-20} biên bản khác</td></tr>`:''}
+      </tbody>
+    </table></div>
+  </div>`:''
+
   return`${selectorBar}${kpiCards}${warnSection}
+${monthTableSection}
 ${hotST.length?`<div class="card" style="padding:14px 16px;margin-bottom:12px"><div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:10px">🚨 ST cần theo dõi (dưới 90%) — ${label}</div>${hotST.slice(0,8).map(s=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br)"><span style="font-size:13px">${s.n}</span><span style="font-size:13px;font-weight:700;color:${clr(s.p)}">${fmt(s.p)}</span></div>`).join('')}</div>`:''}
 ${rows.length?`<div class="chart-box" style="margin-bottom:12px"><div class="chart-title">📊 Điểm dịch vụ theo siêu thị — ${label}</div><div class="chart-wrap" style="height:260px"><canvas id="c-ov-diem"></canvas></div></div>`:''}
-${loiSection}${dtSection}${glSection}
+${loiSection}${dtSection}${glSection}${bbSection}
 <div class="chart-box"><div class="chart-title">📈 Check gian lận định kỳ theo tháng — ${selYear}</div><div class="chart-wrap" style="height:200px"><canvas id="c-ov-gl"></canvas></div></div>`;}
 function rQCChart(){return`
 <div class="g2" style="margin-bottom:16px">
