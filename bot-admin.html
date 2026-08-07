@@ -544,7 +544,7 @@ select.fg-sel:focus{border-color:#d0021b}
         <div class="card-title">🎭 Vai trò & Giọng điệu (System Prompt)</div>
         <div class="fg">
           <textarea id="ai-role" rows="10" placeholder="Mô tả vai trò và cách trả lời của bot..."></textarea>
-          <div class="hint">Đây là persona của bot — định hình toàn bộ cách AI hiểu và trả lời.</div>
+          <div class="hint">Đây là persona của bot — định hình toàn bộ cách AI hiểu và trả lời. Gồm: quy tắc dùng dữ liệu, định dạng đường link, gợi ý open source và phong cách trả lời. Để trống sẽ dùng prompt mặc định từ server.</div>
         </div>
       </div>
 
@@ -2426,6 +2426,13 @@ QUY TẮC BẮT BUỘC:
 ĐƯỜNG LINK:
 - Khi trích dẫn tài liệu wiki/quy trình có chứa "URL: https://..." trong dữ liệu, LUÔN gắn link vào tên tài liệu.
 - Định dạng: [Tên tài liệu](URL)
+
+GỢI Ý OPEN SOURCE (áp dụng khi phân tích dữ liệu hoặc đề xuất giải pháp):
+- Sau khi trả lời chính, tự hỏi: "Có công cụ open source nào giúp tự động hóa việc này không?"
+- Nếu có → thêm mục "🔧 Công cụ hỗ trợ (Open Source):" vào cuối câu trả lời
+- Liệt kê 1-3 tool: Tên | Dùng để làm gì | Link GitHub nếu biết
+- Ưu tiên tool nhẹ, dễ deploy, phù hợp doanh nghiệp vừa và nhỏ
+- KHÔNG liệt kê khi hỏi thông tin đơn giản hoặc chào hỏi
 
 Phong cách: ngắn gọn, rõ ràng, tiếng Việt, chuyên nghiệp.`
 };
