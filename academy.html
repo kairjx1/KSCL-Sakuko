@@ -2811,9 +2811,12 @@ async function qcOvLoadYear(year){
       }
     });
     S._qcOvYearLoaded=y;
-    // Chỉ navigate nếu user vẫn đang ở Tổng quan
+    S._qcOvLoading=false;
     if(S.page==='qc'&&S.tab==='Tổng quan')render();
-  }catch(e){alert('Lỗi tải dữ liệu QC: '+e.message);}
+  }catch(e){
+    S._qcOvLoading=false;
+    alert('Lỗi tải dữ liệu QC: '+e.message);
+  }
 }
 async function qcOv2Load(year,month){
   S.qcOv2Year=String(year);S.qcOv2Month=String(month);
@@ -5359,10 +5362,9 @@ function afterRender(){
 
   // Init dynamic store table on Nhập liệu tab
   if(S.page==='baocao'&&S.tab==='Nhập liệu')qcLoadStores();
-  if(S.page==='qc'&&S.tab==='Tổng quan'&&S._qcOvYearLoaded!==S.qcOvSelYear){
+  if(S.page==='qc'&&S.tab==='Tổng quan'&&S._qcOvYearLoaded!==S.qcOvSelYear&&!S._qcOvLoading){
     const _db=getQCDB();
-    if(_db){qcOvLoadYear(S.qcOvSelYear);}
-    // Nếu chưa có Firebase, thử lại lần render tiếp
+    if(_db){S._qcOvLoading=true;qcOvLoadYear(S.qcOvSelYear);}
   }
   if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ'&&!S._qcDiemAutoLoaded){S._qcDiemAutoLoaded=true;qcDiemLoad(S.qcDiemYear,S.qcDiemMonth);}
   if(S.page==='qc'&&S.tab==='Đổi trả'&&!S._qcDTAutoLoaded){S._qcDTAutoLoaded=true;qcDTLoad(S.qcDTYear,S.qcDTMonth);}
