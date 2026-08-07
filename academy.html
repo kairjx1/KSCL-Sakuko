@@ -2417,16 +2417,16 @@ function rQCGianLan(){
   </div>
   <div id="qcgl-s2" class="qcd-sec-body">
     ${!hasYear?`<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">Chưa có dữ liệu năm ${eY}. Bấm 🔄 Đồng bộ Lark để tải.</div>`:`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
       <div>
         <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#3b82f6">🔍 Check Gian lận định kỳ</div>
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr style="background:rgba(59,130,246,0.15)">
             <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--br)">Tháng</th>
             <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--br)">Check ĐK</th>
-            <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--br)">Cần GT</th>
+            <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--br)">CGT</th>
           </tr></thead>
-          <tbody>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>{const r=yd[String(m)];const t=r&&r.dk&&r.dk.total||0;const c=r&&r.dk&&r.dk.cgt||0;return`<tr style="border-bottom:1px solid var(--br)"><td style="padding:6px 10px">T${m}</td><td style="padding:6px 10px;text-align:right">${t||'—'}</td><td style="padding:6px 10px;text-align:right;color:${c>0?'#dc2626':'#16a34a'}">${c||'—'}</td></tr>`;}).join('')}</tbody>
+          <tbody>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>{const r=yd[String(m)];const t=r&&r.dk&&r.dk.total||0;const c=r&&r.dk&&r.dk.cgt||0;return`<tr style="border-bottom:1px solid var(--br)"><td style="padding:6px 10px">T${m}</td><td style="padding:6px 10px;text-align:right">${t||'—'}</td><td style="padding:6px 10px;text-align:right;color:${c>0?'#dc2626':'#16a34a'}">${c>0?'<b>'+c+'</b>':'—'}</td></tr>`;}).join('')}</tbody>
         </table>
       </div>
       <div>
@@ -2435,12 +2435,34 @@ function rQCGianLan(){
           <thead><tr style="background:rgba(168,85,247,0.15)">
             <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--br)">Tháng</th>
             <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--br)">Check CTKM</th>
-            <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--br)">Cần GT</th>
+            <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--br)">CGT</th>
           </tr></thead>
-          <tbody>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>{const r=yd[String(m)];const t=r&&r.ctkm&&r.ctkm.total||0;const c=r&&r.ctkm&&r.ctkm.cgt||0;return`<tr style="border-bottom:1px solid var(--br)"><td style="padding:6px 10px">T${m}</td><td style="padding:6px 10px;text-align:right">${t||'—'}</td><td style="padding:6px 10px;text-align:right;color:${c>0?'#dc2626':'#16a34a'}">${c||'—'}</td></tr>`;}).join('')}</tbody>
+          <tbody>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>{const r=yd[String(m)];const t=r&&r.ctkm&&r.ctkm.total||0;const c=r&&r.ctkm&&r.ctkm.cgt||0;return`<tr style="border-bottom:1px solid var(--br)"><td style="padding:6px 10px">T${m}</td><td style="padding:6px 10px;text-align:right">${t||'—'}</td><td style="padding:6px 10px;text-align:right;color:${c>0?'#dc2626':'#16a34a'}">${c>0?'<b>'+c+'</b>':'—'}</td></tr>`;}).join('')}</tbody>
         </table>
       </div>
-    </div>`}
+    </div>
+    ${(()=>{
+      // Top ST có CGT từ stDetails (có sau khi đồng bộ lại)
+      const stDKMap={},stCTKMMap={};
+      [1,2,3,4,5,6,7,8,9,10,11,12].forEach(m=>{
+        const r=yd[String(m)];
+        if(r&&r.dk&&r.dk.stDetails)Object.entries(r.dk.stDetails).forEach(([st,v])=>{if(!stDKMap[st])stDKMap[st]={total:0,cgt:0};stDKMap[st].total+=v.total||0;stDKMap[st].cgt+=v.cgt||0;});
+        if(r&&r.ctkm&&r.ctkm.stDetails)Object.entries(r.ctkm.stDetails).forEach(([st,v])=>{if(!stCTKMMap[st])stCTKMMap[st]={total:0,cgt:0};stCTKMMap[st].total+=v.total||0;stCTKMMap[st].cgt+=v.cgt||0;});
+      });
+      const topDK=Object.entries(stDKMap).filter(([,v])=>v.cgt>0).sort((a,b)=>b[1].cgt-a[1].cgt).slice(0,8);
+      const topCTKM=Object.entries(stCTKMMap).filter(([,v])=>v.cgt>0).sort((a,b)=>b[1].cgt-a[1].cgt).slice(0,8);
+      if(!topDK.length&&!topCTKM.length)return`<div style="font-size:12px;color:var(--t2);padding:8px 0">📊 Dữ liệu chi tiết ST sẽ có sau khi bấm <b>Đồng bộ Lark</b> lại lần nữa.</div>`;
+      return`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;border-top:1px solid var(--br);padding-top:14px;margin-top:4px">
+        <div>
+          <div style="font-weight:600;font-size:12px;color:#dc2626;margin-bottom:8px">🏪 ST/CVS có CGT định kỳ nhiều nhất</div>
+          ${topDK.length?topDK.map(([st,v])=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:12px"><span>${st}</span><span><b style="color:#dc2626">${v.cgt} CGT</b> / ${v.total} check</span></div>`).join(''):'<div style="font-size:12px;color:#16a34a">✅ Không có CGT</div>'}
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:12px;color:#a855f7;margin-bottom:8px">🎁 ST/CVS có CGT CTKM nhiều nhất</div>
+          ${topCTKM.length?topCTKM.map(([st,v])=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:12px"><span>${st}</span><span><b style="color:#a855f7">${v.cgt} CGT</b> / ${v.total} check</span></div>`).join(''):'<div style="font-size:12px;color:#16a34a">✅ Không có CGT</div>'}
+        </div>
+      </div>`;
+    })()}`}
   </div>
 </div>
 <div style="margin-bottom:16px">

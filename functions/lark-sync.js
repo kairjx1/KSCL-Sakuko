@@ -79,7 +79,11 @@ export async function onRequest({ request, env }) {
     const agg = {};
     const slot = (y, m) => {
       const k = `${y}/${m}`;
-      if (!agg[k]) agg[k] = { y, m, dk:{ total:0, sp:0, dgt:0, cgt:0, loiVPs:{} }, ctkm:{ total:0, sp:0, cgt:0, loiVPs:{} } };
+      if (!agg[k]) agg[k] = {
+        y, m,
+        dk:{ total:0, sp:0, dgt:0, cgt:0, loiVPs:{}, stDetails:{} },
+        ctkm:{ total:0, sp:0, cgt:0, loiVPs:{}, stDetails:{} }
+      };
       return agg[k];
     };
 
@@ -88,14 +92,23 @@ export async function onRequest({ request, env }) {
       const y = getNum(f['Năm']); const m = getNum(f['Tháng']);
       if (!y || y < 2020 || !m) continue;
       const s = slot(y, m); s.dk.total++;
+      const stName = getTxt(f['Tên Siêu thị']).trim() || 'Chưa xác định';
+      if (!s.dk.stDetails[stName]) s.dk.stDetails[stName] = { total:0, cgt:0, loiVPs:{} };
+      s.dk.stDetails[stName].total++;
       const kq = getTxt(f['Kết quả check cam'] ?? f['Kết quả']).trim();
       if (DK_FAIL.has(kq)) {
         s.dk.sp++;
         const gt = f['Giải trình lý do'];
         const hasGT = Array.isArray(gt) ? gt.length > 0 : !!getTxt(gt);
-        if (hasGT) s.dk.dgt++; else s.dk.cgt++;
+        if (hasGT) s.dk.dgt++; else {
+          s.dk.cgt++;
+          s.dk.stDetails[stName].cgt++;
+        }
         for (const l of getArr(f['Lỗi vi phạm'])) {
-          const lk = l.trim(); if (lk) s.dk.loiVPs[lk] = (s.dk.loiVPs[lk]||0)+1;
+          const lk = l.trim(); if (lk) {
+            s.dk.loiVPs[lk] = (s.dk.loiVPs[lk]||0)+1;
+            s.dk.stDetails[stName].loiVPs[lk] = (s.dk.stDetails[stName].loiVPs[lk]||0)+1;
+          }
         }
       }
     }
@@ -105,9 +118,13 @@ export async function onRequest({ request, env }) {
       const y = getNum(f['Năm']); const m = getNum(f['Tháng']);
       if (!y || y < 2020 || !m) continue;
       const s = slot(y, m); s.ctkm.total++;
+      const stName = getTxt(f['Tên Siêu thị']).trim() || 'Chưa xác định';
+      if (!s.ctkm.stDetails[stName]) s.ctkm.stDetails[stName] = { total:0, cgt:0 };
+      s.ctkm.stDetails[stName].total++;
       const kq = getTxt(f['Kết quả']).trim();
       if (CTKM_FAIL.has(kq)) {
         s.ctkm.sp++; s.ctkm.cgt++;
+        s.ctkm.stDetails[stName].cgt++;
         if (kq) s.ctkm.loiVPs[kq] = (s.ctkm.loiVPs[kq]||0)+1;
       }
     }
