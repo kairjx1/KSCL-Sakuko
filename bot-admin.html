@@ -285,6 +285,7 @@ select.fg-sel:focus{border-color:#d0021b}
     <div class="nav-item" onclick="goPage('linkbase')"><span class="icon">🔗</span><span>Linkbase</span></div>
     <div class="nav-item" onclick="goPage('perms')"><span class="icon">🔐</span><span>Phân quyền</span></div>
     <div class="nav-item" onclick="goPage('email')"><span class="icon">📧</span><span>Email</span></div>
+    <div class="nav-item" onclick="goPage('morning')"><span class="icon">🌅</span><span>Bản tin sáng</span></div>
     <div class="nav-item" onclick="goPage('panels')" style="margin-top:auto;border-top:1px solid #f1f5f9"><span class="icon">🗂️</span><span>Quản lý Panel</span></div>
     <div class="nav-item" onclick="startBackup()" id="backupNavBtn" style="border-top:1px solid #f1f5f9;background:#f0fdf4;color:#15803d;font-weight:600"><span class="icon">☁️</span><span>SAO LƯU</span></div>
   </div>
@@ -640,6 +641,66 @@ select.fg-sel:focus{border-color:#d0021b}
         💡 Mỗi panel ứng với một bot riêng. Nhấn <b>Chọn panel này</b> để chuyển toàn bộ giao diện sang bot đó.
       </div>
       <div id="panelList"><div style="color:#94a3b8;font-size:13px">Đang tải...</div></div>
+    </div>
+
+    <!-- MORNING BAN TIN -->
+    <div class="page" id="page-morning">
+      <div class="page-title">🌅 Bản tin sáng</div>
+      <div class="notify" id="morningNotify"></div>
+
+      <div class="card">
+        <div class="card-title">⚙️ Cấu hình bản tin sáng</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+          <div class="fg" style="margin:0;flex:0 0 auto">
+            <label>Bật tự động</label>
+            <label style="display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
+              <input type="checkbox" id="morning-enabled" style="width:16px;height:16px">
+              <span style="font-size:13px;color:#374151">Gửi mỗi sáng tự động</span>
+            </label>
+          </div>
+          <div class="fg" style="margin:0">
+            <label>Giờ gửi (VN)</label>
+            <select id="morning-hour" style="padding:8px 10px;border:1px solid #dde3ef;border-radius:8px;font-size:14px">
+              <option value="6">06:00</option>
+              <option value="7">07:00</option>
+              <option value="7" data-min="30" selected>07:30 (khuyên dùng)</option>
+              <option value="8">08:00</option>
+              <option value="8" data-min="30">08:30</option>
+            </select>
+          </div>
+          <div class="fg" style="margin:0;flex:1;min-width:200px">
+            <label>Lark Open ID nhận bản tin</label>
+            <input type="text" id="morning-openid" placeholder="ou_... (open_id của bạn)">
+          </div>
+        </div>
+        <div class="fg">
+          <label>Chủ đề tập trung (mỗi dòng 1 chủ đề)</label>
+          <textarea id="morning-topics" rows="4" placeholder="QC kiểm tra cửa hàng&#10;Tồn kho & xuất hủy&#10;Nhân sự & đào tạo&#10;Vệ sinh thiết bị"></textarea>
+          <div class="hint">Bot sẽ tóm tắt tin theo các chủ đề này. Để trống sẽ dùng mặc định.</div>
+        </div>
+        <div class="row">
+          <button class="btn btn-red" onclick="saveMorningConfig()">💾 Lưu cấu hình</button>
+          <button class="btn btn-green" onclick="runMorningNow()">🚀 Gửi thử ngay</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">👁️ Xem trước nội dung</div>
+        <div id="morning-preview" style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;font-size:13px;line-height:1.8;min-height:120px;color:#475569;white-space:pre-wrap">
+          Bấm <b>Gửi thử ngay</b> để xem trước bản tin sáng sẽ gửi cho bạn.
+        </div>
+      </div>
+
+      <div class="card" style="background:#f0f9ff;border:1px solid #bae6fd">
+        <div class="card-title" style="color:#0369a1">📖 Hướng dẫn</div>
+        <div style="font-size:13px;color:#0369a1;line-height:1.8">
+          <b>Bản tin sáng</b> gồm 2 phần:<br>
+          • <b>🚀 5 điểm tin vận hành</b> — tóm tắt từ dữ liệu KB: wiki, quy trình, cảnh báo tồn kho<br>
+          • <b>🎯 3 việc ưu tiên</b> — Claude đề xuất việc cần làm nhất hôm nay<br><br>
+          Bot dùng <b>Claude AI</b> phân tích KB nội bộ Sakuko để tạo nội dung, <b>không bịa thêm</b>.<br>
+          Gửi qua <b>Lark DM</b> đến open_id bạn điền. Chạy tự động theo giờ đã cài.
+        </div>
+      </div>
     </div>
 
     <!-- BACKUP -->
@@ -2501,6 +2562,7 @@ function goPage(id) {
   if (id === 'panels') renderPanelList();
   if (id === 'email') loadEmailImportant();
   if (id === 'backup') { loadBackupConfig(); loadBackupHistory(); }
+  if (id === 'morning') loadMorningConfig();
 }
 
 function loadRules() {
@@ -2745,6 +2807,66 @@ async function addEmailRule() {
 async function deleteEmailRule(key) {
   await db.ref(`${EMAIL_RULES_PATH}/${key}`).remove();
   loadEmailRules();
+}
+
+// ── Bản tin sáng ─────────────────────────────────────────────────────────────
+const MORNING_PATH = 'bot_morning_config';
+
+async function loadMorningConfig() {
+  try {
+    const snap = await db.ref(MORNING_PATH).once('value');
+    const cfg = snap.val() || {};
+    document.getElementById('morning-enabled').checked = !!cfg.enabled;
+    document.getElementById('morning-openid').value = cfg.notify_open_id || '';
+    document.getElementById('morning-topics').value = cfg.topics || 'QC kiểm tra cửa hàng\nTồn kho & xuất hủy\nNhân sự & đào tạo\nVệ sinh cửa hàng & thiết bị\nQuy trình & SOP';
+    // Giờ
+    const h = cfg.hour ?? 7;
+    const m = cfg.minute ?? 30;
+    const sel = document.getElementById('morning-hour');
+    // Chọn option gần nhất
+    sel.value = h;
+  } catch(e) {}
+}
+
+async function saveMorningConfig() {
+  const cfg = {
+    enabled:        document.getElementById('morning-enabled').checked,
+    notify_open_id: document.getElementById('morning-openid').value.trim(),
+    topics:         document.getElementById('morning-topics').value.trim(),
+    hour:           7,
+    minute:         30,
+  };
+  try {
+    await api('POST', '/api/panel/morning/config', cfg);
+    showNotify('morningNotify', '✅ Đã lưu cấu hình bản tin sáng!', true);
+    setTimeout(() => showNotify('morningNotify', ''), 3000);
+  } catch(e) {
+    showNotify('morningNotify', '❌ Lỗi: ' + e.message, false);
+  }
+}
+
+async function runMorningNow() {
+  const openid = document.getElementById('morning-openid').value.trim();
+  if (!openid) { showNotify('morningNotify', '❌ Nhập Lark Open ID trước!', false); return; }
+  const btn = event.target;
+  btn.textContent = '⏳ Đang tạo...'; btn.disabled = true;
+  document.getElementById('morning-preview').textContent = '⏳ Đang gọi Claude AI tạo bản tin... (10-20 giây)';
+  showNotify('morningNotify', '⏳ Đang tạo và gửi bản tin sáng...', 'ok');
+  try {
+    const d = await api('POST', '/api/panel/morning/run-now', { notify_open_id: openid });
+    if (d.ok) {
+      showNotify('morningNotify', '✅ ' + (d.msg || 'Đã gửi bản tin sáng!'), true);
+      if (d.preview) document.getElementById('morning-preview').textContent = d.preview;
+      else document.getElementById('morning-preview').textContent = '✅ Đã gửi vào Lark DM của bạn. Kiểm tra tin nhắn trong Lark!';
+    } else {
+      showNotify('morningNotify', '❌ ' + (d.error || 'Lỗi không xác định'), false);
+      document.getElementById('morning-preview').textContent = '❌ ' + (d.error || 'Lỗi');
+    }
+  } catch(e) {
+    showNotify('morningNotify', '❌ ' + e.message, false);
+    document.getElementById('morning-preview').textContent = '❌ ' + e.message;
+  }
+  btn.textContent = '🚀 Gửi thử ngay'; btn.disabled = false;
 }
 </script>
 </body>
