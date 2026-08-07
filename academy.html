@@ -1971,7 +1971,8 @@ function qcDiemLoad(year,month){
     const d=snap.exists()?snap.val():null;
     S.qcDiemRows=d&&Array.isArray(d.rows)?d.rows:[];
     S.qcDiemLoiHM=d&&Array.isArray(d.loiHM)?d.loiHM:[];
-    go('qc','Chấm điểm dịch vụ');
+    // Chỉ render nếu user vẫn đang ở tab này (tránh override khi user đã click sang tab khác)
+    if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ')render();
   }).catch(e=>alert('Lỗi tải dữ liệu: '+e.message));
 }
 // Hàm lõi lưu dữ liệu — dùng chung cho manual save và auto-save sau import
@@ -2190,11 +2191,13 @@ function qcDTLoad(year,month){
   const y=String(year||S.qcDTYear||'2026'),m=String(month||S.qcDTMonth||'5');
   S.qcDTYear=y;S.qcDTMonth=m;
   const db=getQCDB();if(!db){alert('Không kết nối Firebase!');return;}
+  const dtToken=S._qcDTLoadSeq=(S._qcDTLoadSeq||0)+1;
   db.ref(`qc_doitra/${y}/${m}`).get().then(snap=>{
+    if(S._qcDTLoadSeq!==dtToken)return;
     const d=snap.exists()?snap.val():null;
     S.qcDTST=d&&d.st?d.st:{};
     S.qcDTCVS=d&&d.cvs?d.cvs:{};
-    go('qc','Đổi trả');
+    if(S.page==='qc'&&S.tab==='Đổi trả')render();
   }).catch(e=>alert('Lỗi tải: '+e.message));
 }
 function qcDTSave(btn){
@@ -2754,38 +2757,41 @@ async function qcOvLoad(year,month){
   };
   go('qc','Tổng quan');
 }
-// Load toàn bộ năm — dùng cho Tổng quan kiểu "Tất cả tháng"
+// Load toàn bộ năm — chỉ 4 Firebase requests thay vì 50
 async function qcOvLoadYear(year){
   const db=getQCDB();if(!db){alert('Không kết nối Firebase!');return;}
-  S.qcOvSelYear=String(year);
-  S.qcOvYearData={};
-  const months=['1','2','3','4','5','6','7','8','9','10','11','12'];
-  const[glSnap,khSnap,...mSnaps]=await Promise.all([
-    db.ref(`qc_gianlantctm/${year}`).get(),
-    db.ref(`qc_kh/${year}`).get(),
-    ...months.flatMap(m=>[
-      db.ref(`qc_diem/${year}/${m}`).get(),
-      db.ref(`qc_doitra/${year}/${m}`).get(),
-      db.ref(`qc_gianlantctm/${year}/${m}`).get(),
-      db.ref(`qc_bienbans/${year}/${m}`).get(),
-    ])
-  ]);
-  S.qcOvGLYear=glSnap.exists()?glSnap.val():{};
-  S.qcOvKHYear=khSnap.exists()?khSnap.val():{};
-  months.forEach((m,i)=>{
-    const[d1,d2,d3,d4]=mSnaps.slice(i*4,i*4+4);
-    const hasDiem=d1.exists(),hasDT=d2.exists(),hasGL=d3.exists(),hasBB=d4.exists();
-    if(hasDiem||hasDT||hasGL||hasBB){
-      S.qcOvYearData[m]={
-        diem:hasDiem?d1.val():null,
-        doitra:hasDT?d2.val():null,
-        gianlam:hasGL?d3.val():null,
-        bienbans:hasBB?Object.values(d4.val()):[],
-      };
-    }
-  });
-  S._qcOvYearLoaded=year;
-  go('qc','Tổng quan');
+  const y=String(year);
+  S.qcOvSelYear=y;
+  // Bump token để hủy load cũ nếu user đổi năm nhanh
+  const token=S._qcOvLoadSeq=(S._qcOvLoadSeq||0)+1;
+  try{
+    const[diemSnap,dtSnap,glSnap,bbSnap]=await Promise.all([
+      db.ref(`qc_diem/${y}`).get(),
+      db.ref(`qc_doitra/${y}`).get(),
+      db.ref(`qc_gianlantctm/${y}`).get(),
+      db.ref(`qc_bienbans/${y}`).get(),
+    ]);
+    if(S._qcOvLoadSeq!==token)return; // user đổi năm trong lúc load
+    const diemYear=diemSnap.exists()?diemSnap.val():{};
+    const dtYear=dtSnap.exists()?dtSnap.val():{};
+    const glYear=glSnap.exists()?glSnap.val():{};
+    const bbYear=bbSnap.exists()?bbSnap.val():{};
+    S.qcOvYearData={};
+    ['1','2','3','4','5','6','7','8','9','10','11','12'].forEach(m=>{
+      const hasDiem=!!(diemYear[m]),hasDT=!!(dtYear[m]),hasGL=!!(glYear[m]),hasBB=!!(bbYear[m]);
+      if(hasDiem||hasDT||hasGL||hasBB){
+        S.qcOvYearData[m]={
+          diem:hasDiem?diemYear[m]:null,
+          doitra:hasDT?dtYear[m]:null,
+          gianlam:hasGL?glYear[m]:null,
+          bienbans:hasBB?(typeof bbYear[m]==='object'?Object.values(bbYear[m]):[]):[],
+        };
+      }
+    });
+    S._qcOvYearLoaded=y;
+    // Chỉ navigate nếu user vẫn đang ở Tổng quan
+    if(S.page==='qc'&&S.tab==='Tổng quan')render();
+  }catch(e){alert('Lỗi tải dữ liệu QC: '+e.message);}
 }
 async function qcOv2Load(year,month){
   S.qcOv2Year=String(year);S.qcOv2Month=String(month);
