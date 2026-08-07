@@ -364,6 +364,7 @@ const MODS=[
 const _initDate=(()=>{const n=new Date(),m=n.getMonth()+1,y=n.getFullYear();return{m:String(m),y:String(y),py:String(y-1)};})();
 let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:_initDate.m,qcExecYear:_initDate.y,kkExecData:null,kkExecMonth:_initDate.m,kkExecYear:_initDate.y,dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:_initDate.m,qcDiemYear:_initDate.y,qcDiemLoiHM:[],qcDTMonth:_initDate.m,qcDTYear:_initDate.y,qcDTST:{},qcDTCVS:{},qcGLMonth:_initDate.m,qcGLYear:_initDate.y,qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:_initDate.m,qcBBYear:_initDate.y,qcBBList:[],qcBBYearData:{},qcDocsData:{},qcDocLists:{},
   qcOvMonth:_initDate.m,qcOvYear:_initDate.y,qcOvData:null,qcOv2Month:_initDate.m,qcOv2Year:_initDate.py,qcOv2Data:null,
+  qcOvYearData:{},qcOvSelMonth:'ALL',qcOvSelYear:_initDate.y,qcOvGLYear:{},qcOvKHYear:{},
   tonAmCache:null,tonAmMonth:'',tonAmFilter:{q:'',status:'all',nganh:'',sort:'value'},
   xhCache:null,xhYear:'',xhMonth:'ALL',xhQ:'',xhMode:'st',pendingLarkUser:null};
 
@@ -465,6 +466,10 @@ function _flushQCSaves(){
     clearTimeout(_qcSaveT['qcd-diem-saved']);delete _qcSaveT['qcd-diem-saved'];
     if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ')qcDiemSave(null);
   }
+  // Reset auto-load flags khi rời tab — để lần quay lại sẽ reload tươi từ Firebase
+  // (S.qcDTST/CVS không được sync real-time từ form nên phải reload)
+  if(S.page==='qc'&&S.tab==='Đổi trả')S._qcDTAutoLoaded=false;
+  if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ')S._qcDiemAutoLoaded=false;
 }
 function go(page,tab=''){
   if(page==='login'||page==='loading'){S.page=page;S.tab=tab;render();return;}
@@ -2749,6 +2754,39 @@ async function qcOvLoad(year,month){
   };
   go('qc','Tổng quan');
 }
+// Load toàn bộ năm — dùng cho Tổng quan kiểu "Tất cả tháng"
+async function qcOvLoadYear(year){
+  const db=getQCDB();if(!db){alert('Không kết nối Firebase!');return;}
+  S.qcOvSelYear=String(year);
+  S.qcOvYearData={};
+  const months=['1','2','3','4','5','6','7','8','9','10','11','12'];
+  const[glSnap,khSnap,...mSnaps]=await Promise.all([
+    db.ref(`qc_gianlantctm/${year}`).get(),
+    db.ref(`qc_kh/${year}`).get(),
+    ...months.flatMap(m=>[
+      db.ref(`qc_diem/${year}/${m}`).get(),
+      db.ref(`qc_doitra/${year}/${m}`).get(),
+      db.ref(`qc_gianlantctm/${year}/${m}`).get(),
+      db.ref(`qc_bienbans/${year}/${m}`).get(),
+    ])
+  ]);
+  S.qcOvGLYear=glSnap.exists()?glSnap.val():{};
+  S.qcOvKHYear=khSnap.exists()?khSnap.val():{};
+  months.forEach((m,i)=>{
+    const[d1,d2,d3,d4]=mSnaps.slice(i*4,i*4+4);
+    const hasDiem=d1.exists(),hasDT=d2.exists(),hasGL=d3.exists(),hasBB=d4.exists();
+    if(hasDiem||hasDT||hasGL||hasBB){
+      S.qcOvYearData[m]={
+        diem:hasDiem?d1.val():null,
+        doitra:hasDT?d2.val():null,
+        gianlam:hasGL?d3.val():null,
+        bienbans:hasBB?Object.values(d4.val()):[],
+      };
+    }
+  });
+  S._qcOvYearLoaded=year;
+  go('qc','Tổng quan');
+}
 async function qcOv2Load(year,month){
   S.qcOv2Year=String(year);S.qcOv2Month=String(month);
   const db=getQCDB();if(!db)return;
@@ -2768,127 +2806,197 @@ async function qcOv2Load(year,month){
   go('qc','Tổng quan');
 }
 function rQCOv(){
-  const eM=String(S.qcOvMonth||'6'),eY=String(S.qcOvYear||'2026');
-  const e2M=String(S.qcOv2Month||'6'),e2Y=String(S.qcOv2Year||'2025');
-  const d=S.qcOvData,d2=S.qcOv2Data;
+  const selYear=String(S.qcOvSelYear||new Date().getFullYear());
+  const selMonth=S.qcOvSelMonth||'ALL';
+  const yearData=S.qcOvYearData||{};
+  const hasData=Object.keys(yearData).length>0;
   const clr=v=>v>=90?'#16a34a':v>=85?'#d97706':'#dc2626';
   const fmt=v=>v.toFixed(1)+'%';
-  const selPri=`<select id="qcov-month" class="fi" style="width:70px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===eM?' selected':''}>T${m}</option>`).join('')}</select><select id="qcov-year" class="fi" style="width:85px">${yearOpts(eY)}</select>`;
-  const selCmp=`<select id="qcov2-month" class="fi" style="width:70px">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}"${String(m)===e2M?' selected':''}>T${m}</option>`).join('')}</select><select id="qcov2-year" class="fi" style="width:85px">${yearOpts(e2Y)}</select>`;
+  const monthsWithData=hasData?['1','2','3','4','5','6','7','8','9','10','11','12'].filter(m=>yearData[m]):[];
+
+  // Selector bar — kiểu Kiểm kê: dropdown Tất cả + các tháng có dữ liệu
+  const monthOpts=`<option value="ALL"${selMonth==='ALL'?' selected':''}>Tất cả</option>`
+    +['1','2','3','4','5','6','7','8','9','10','11','12'].map(m=>`<option value="${m}"${selMonth===m?' selected':''}${!hasData&&selMonth!==m?'':''}>Tháng ${m}</option>`).join('');
   const selectorBar=`<div class="card" style="padding:12px 16px;margin-bottom:12px">
     <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px">
       <span style="font-size:13px;font-weight:600;color:var(--t1)">📊 Tổng hợp KSCL</span>
-      <div style="display:flex;align-items:center;gap:6px;background:#f0f9ff;padding:6px 10px;border-radius:8px;border:1px solid #bae6fd">
-        <span style="font-size:12px;color:#0369a1;font-weight:600">Kỳ chính:</span>${selPri}
-        <button onclick="qcOvLoad(document.getElementById('qcov-year').value,document.getElementById('qcov-month').value)" class="btn b-pri b-sm">📥 Tải</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;background:#fdf4ff;padding:6px 10px;border-radius:8px;border:1px solid #e9d5ff">
-        <span style="font-size:12px;color:#7c3aed;font-weight:600">So sánh:</span>${selCmp}
-        <button onclick="qcOv2Load(document.getElementById('qcov2-year').value,document.getElementById('qcov2-month').value)" class="btn b-sm" style="background:#7c3aed;color:#fff">📊 Tải</button>
-        ${d2?`<button onclick="S.qcOv2Data=null;go('qc','Tổng quan')" class="btn b-sm" style="background:#e5e7eb;color:#6b7280">✕</button>`:''}
-      </div>
+      <select class="fi" style="width:85px" onchange="S.qcOvSelYear=this.value;S._qcOvYearLoaded=null;go('qc','Tổng quan')">${yearOpts(selYear)}</select>
+      <select class="fi" style="width:110px" onchange="S.qcOvSelMonth=this.value;go('qc','Tổng quan')">${monthOpts}</select>
+      ${hasData?`<span style="font-size:11px;color:var(--t2)">· ${monthsWithData.length} tháng có dữ liệu</span>`:''}
+      <div class="spacer"></div>
+      <button onclick="S._qcOvYearLoaded=null;go('qc','Tổng quan')" class="btn b-out b-sm">🔄 Tải lại</button>
     </div>
   </div>`;
-  if(!d)return`${selectorBar}<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px">📊</div><p style="color:var(--t2);font-size:13px;margin:12px 0">Chọn kỳ chính và bấm Tải để xem báo cáo tổng hợp</p></div>`;
-  const rows=d.diem&&Array.isArray(d.diem.rows)?d.diem.rows:[];
+
+  if(!hasData)return`${selectorBar}<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px">⏳</div><p style="color:var(--t2);font-size:13px;margin:12px 0">Đang tải dữ liệu năm ${selYear}...</p></div>`;
+
+  // Lấy dữ liệu theo tháng được chọn hoặc tổng hợp tất cả
+  let rows=[],tongDT=0,bbs=[],dkTotal=0,dkCGT=0,ctkmTotal=0,ctkmCGT=0,loiHM=[],stDTDon=0,cvsDTDon=0;
+  const label=selMonth==='ALL'?`Năm ${selYear}`:`T${selMonth}/${selYear}`;
+
+  if(selMonth==='ALL'){
+    // Tổng hợp từng tháng
+    const rowMap={};
+    monthsWithData.forEach(m=>{
+      const md=yearData[m];
+      // Diem — merge theo ST name
+      if(md.diem&&Array.isArray(md.diem.rows)){
+        md.diem.rows.forEach(r=>{
+          const key=r.st||r.stt||r.name||'?';
+          if(!rowMap[key])rowMap[key]={st:key,max:0,thuc:0};
+          rowMap[key].max+=(parseFloat(r.max)||0);
+          rowMap[key].thuc+=(parseFloat(r.thuc)||0);
+        });
+      }
+      // Đổi trả
+      if(md.doitra){
+        stDTDon+=(parseFloat((md.doitra.st||{}).tongDon)||0);
+        cvsDTDon+=(parseFloat((md.doitra.cvs||{}).tongDon)||0);
+      }
+      tongDT=stDTDon+cvsDTDon;
+      // Biên bản
+      if(Array.isArray(md.bienbans))bbs=bbs.concat(md.bienbans);
+      // Gian lận
+      if(md.gianlam){
+        dkTotal+=(md.gianlam.dk&&md.gianlam.dk.total)||0;
+        dkCGT+=(md.gianlam.dk&&md.gianlam.dk.cgt)||0;
+        ctkmTotal+=(md.gianlam.ctkm&&md.gianlam.ctkm.total)||0;
+        ctkmCGT+=(md.gianlam.ctkm&&md.gianlam.ctkm.cgt)||0;
+      }
+      // Lỗi HM — merge by cat
+      if(md.diem&&Array.isArray(md.diem.loiHM)){
+        md.diem.loiHM.forEach(l=>{
+          const ex=loiHM.find(x=>x.cat===l.cat);
+          if(ex){ex.soLoi=(parseFloat(ex.soLoi)||0)+(parseFloat(l.soLoi)||0);}
+          else loiHM.push({cat:l.cat,soLoi:parseFloat(l.soLoi)||0});
+        });
+      }
+    });
+    rows=Object.values(rowMap);
+    // Recalc tyle for loiHM
+    const totLoi=loiHM.reduce((s,l)=>s+l.soLoi,0);
+    loiHM=loiHM.map(l=>({...l,tyle:totLoi>0?(l.soLoi/totLoi*100).toFixed(1):0}));
+  } else {
+    const md=yearData[selMonth]||{};
+    rows=md.diem&&Array.isArray(md.diem.rows)?md.diem.rows:[];
+    const dt=md.doitra||{},stDT=dt.st||{},cvsDT=dt.cvs||{};
+    stDTDon=parseFloat(stDT.tongDon)||0;cvsDTDon=parseFloat(cvsDT.tongDon)||0;
+    tongDT=stDTDon+cvsDTDon;
+    bbs=Array.isArray(md.bienbans)?md.bienbans:[];
+    const gl=md.gianlam||{};
+    dkTotal=(gl.dk&&gl.dk.total)||0;dkCGT=(gl.dk&&gl.dk.cgt)||0;
+    ctkmTotal=(gl.ctkm&&gl.ctkm.total)||0;ctkmCGT=(gl.ctkm&&gl.ctkm.cgt)||0;
+    loiHM=md.diem&&Array.isArray(md.diem.loiHM)?md.diem.loiHM:[];
+  }
+
   const totMax=rows.reduce((s,r)=>s+(parseFloat(r.max)||0),0);
   const totThuc=rows.reduce((s,r)=>s+(parseFloat(r.thuc)||0),0);
   const diemTB=totMax>0?totThuc/totMax*100:0;
   const stDuoi85=rows.filter(r=>{const mx=parseFloat(r.max),tx=parseFloat(r.thuc);return mx>0&&tx/mx<0.85;});
   const stDuoi90=rows.filter(r=>{const mx=parseFloat(r.max),tx=parseFloat(r.thuc);return mx>0&&tx/mx>=0.85&&tx/mx<0.90;});
-  const dt=d.doitra||{},stDT=dt.st||{},cvsDT=dt.cvs||{};
-  const tongDT=(parseFloat(stDT.tongDon)||0)+(parseFloat(cvsDT.tongDon)||0);
-  const bbs=Array.isArray(d.bienbans)?d.bienbans:[];
-  const gl=d.gianlam||{};
-  const dkTotal=(gl.dk&&gl.dk.total)||0,dkCGT=(gl.dk&&gl.dk.cgt)||0;
-  const ctkmTotal=(gl.ctkm&&gl.ctkm.total)||0,ctkmCGT=(gl.ctkm&&gl.ctkm.cgt)||0;
-  const loiHM=d.diem&&Array.isArray(d.diem.loiHM)?d.diem.loiHM:[];
-  // Comparison deltas
-  let dD=null,dS85=null,dTongDT=null,dBB=null;
-  if(d2){
-    const rows2=d2.diem&&Array.isArray(d2.diem.rows)?d2.diem.rows:[];
-    const tot2Max=rows2.reduce((s,r)=>s+(parseFloat(r.max)||0),0);
-    const tot2Thuc=rows2.reduce((s,r)=>s+(parseFloat(r.thuc)||0),0);
-    const diem2=tot2Max>0?tot2Thuc/tot2Max*100:0;
-    dD=+(diemTB-diem2).toFixed(1);
-    dS85=stDuoi85.length-rows2.filter(r=>{const mx=parseFloat(r.max),tx=parseFloat(r.thuc);return mx>0&&tx/mx<0.85;}).length;
-    const dt2=d2.doitra||{},st2=dt2.st||{},cvs2=dt2.cvs||{};
-    dTongDT=tongDT-((parseFloat(st2.tongDon)||0)+(parseFloat(cvs2.tongDon)||0));
-    dBB=bbs.length-(Array.isArray(d2.bienbans)?d2.bienbans:[]).length;
-  }
-  const dTag=(v,inv)=>{if(v===null)return'';const good=inv?v<0:v>0;return v===0?'':`<span style="color:${good?'#16a34a':'#dc2626'};font-size:11px">${v>0?'▲':'▼'}${Math.abs(v)} vs T${e2M}/${e2Y}</span>`;};
-  const dTagF=(v)=>{if(v===null)return'';const good=v>0;return`<span style="color:${good?'#16a34a':'#dc2626'};font-size:11px">${v>0?'▲':'▼'}${Math.abs(v).toFixed(1)}% vs T${e2M}/${e2Y}</span>`;};
+
   // KPI cards
   const kpiCards=`<div class="g4" style="margin-bottom:12px">
-    <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Điểm TB dịch vụ</div><div style="font-size:28px;font-weight:800;color:${clr(diemTB)}">${fmt(diemTB)}</div><div style="font-size:11px;color:var(--t2)">${dD!==null?dTagF(dD):`${rows.length} ST được chấm`}</div></div>
-    <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">ST dưới 85%</div><div style="font-size:28px;font-weight:800;color:${stDuoi85.length?'#dc2626':'#16a34a'}">${stDuoi85.length}</div><div style="font-size:11px;color:var(--t2)">${dS85!==null?dTag(dS85,true):`${stDuoi90.length} ST trong 85–90%`}</div></div>
-    <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Tổng đổi trả</div><div style="font-size:28px;font-weight:800;color:#7c3aed">${tongDT||'—'}</div><div style="font-size:11px;color:var(--t2)">${dTongDT!==null?dTag(dTongDT,true):`ST: ${stDT.tongDon||0} · CVS: ${cvsDT.tongDon||0}`}</div></div>
-    <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Biên bản vi phạm</div><div style="font-size:28px;font-weight:800;color:${bbs.length?'#ea580c':'#16a34a'}">${bbs.length}</div><div style="font-size:11px;color:var(--t2)">${dBB!==null?dTag(dBB,true):`GL CGT: ${dkCGT+ctkmCGT}`}</div></div>
+    <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Điểm TB dịch vụ</div><div style="font-size:28px;font-weight:800;color:${clr(diemTB)}">${fmt(diemTB)}</div><div style="font-size:11px;color:var(--t2)">${rows.length} ST được chấm</div></div>
+    <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">ST dưới 85%</div><div style="font-size:28px;font-weight:800;color:${stDuoi85.length?'#dc2626':'#16a34a'}">${stDuoi85.length}</div><div style="font-size:11px;color:var(--t2)">${stDuoi90.length} ST trong 85–90%</div></div>
+    <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Tổng đổi trả</div><div style="font-size:28px;font-weight:800;color:#7c3aed">${tongDT||'—'}</div><div style="font-size:11px;color:var(--t2)">ST: ${stDTDon} · CVS: ${cvsDTDon}</div></div>
+    <div class="card" style="padding:14px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;margin-bottom:4px">Biên bản vi phạm</div><div style="font-size:28px;font-weight:800;color:${bbs.length?'#ea580c':'#16a34a'}">${bbs.length}</div><div style="font-size:11px;color:var(--t2)">GL CGT: ${dkCGT+ctkmCGT}</div></div>
   </div>`;
+
   // Auto warnings
   const warns=[];
-  if(stDuoi85.length>0)warns.push(`⚠️ <b>${stDuoi85.length} siêu thị dưới 85%</b> cần can thiệp ngay: ${stDuoi85.map(r=>(r.st||'').replace(/^Siêu thị\s+/i,'')).join(', ')}`);
+  if(stDuoi85.length>0)warns.push(`⚠️ <b>${stDuoi85.length} siêu thị dưới 85%</b>: ${stDuoi85.map(r=>(r.st||'').replace(/^Siêu thị\s+/i,'')).join(', ')}`);
   if(stDuoi90.length>0)warns.push(`🔶 ${stDuoi90.length} ST vùng cảnh báo 85–90%: ${stDuoi90.map(r=>(r.st||'').replace(/^Siêu thị\s+/i,'')).join(', ')}`);
   if(dkCGT>0||ctkmCGT>0)warns.push(`🚨 Phát hiện <b>${dkCGT+ctkmCGT} trường hợp gian lận</b> — ĐK: ${dkCGT} CGT · CTKM: ${ctkmCGT} CGT`);
-  if(d2&&dD!==null){if(dD>=3)warns.push(`✅ Điểm dịch vụ TB <b>cải thiện +${fmt(dD)}</b> so với T${e2M}/${e2Y}`);else if(dD<=-2)warns.push(`📉 Điểm dịch vụ TB <b>giảm ${fmt(Math.abs(dD))}</b> so với T${e2M}/${e2Y}, cần kiểm tra nguyên nhân`);}
-  if(loiHM.length>0){const topL=[...loiHM].sort((a,b)=>(parseFloat(b.soLoi)||0)-(parseFloat(a.soLoi)||0))[0];if(topL&&topL.cat)warns.push(`📋 Lỗi phát sinh nhiều nhất: <b>${topL.cat}</b> — ${topL.soLoi||0} lỗi (${topL.tyle||0}%)`);}
-  if(tongDT>50)warns.push(`📦 Tổng đổi trả <b>${tongDT} đơn</b> — cần rà soát nguyên nhân theo ST`);
+  if(loiHM.length>0){const topL=[...loiHM].sort((a,b)=>(parseFloat(b.soLoi)||0)-(parseFloat(a.soLoi)||0))[0];if(topL&&topL.cat)warns.push(`📋 Lỗi nhiều nhất: <b>${topL.cat}</b> — ${topL.soLoi||0} lỗi (${topL.tyle||0}%)`);}
+  if(tongDT>50)warns.push(`📦 Tổng đổi trả <b>${tongDT} đơn</b> — cần rà soát theo ST`);
   const warnSection=warns.length?`<div class="card" style="padding:14px 16px;margin-bottom:12px;border-left:3px solid #f59e0b;background:#fffbeb">
     <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px">💡 Nhận xét & Cảnh báo tự động</div>
     ${warns.map(w=>`<div style="font-size:12.5px;color:#78350f;margin-bottom:5px;line-height:1.5">${w}</div>`).join('')}
   </div>`:'';
-  // ST cần theo dõi
+
   const hotST=[...stDuoi85.map(r=>({n:r.st,p:parseFloat(r.thuc)/parseFloat(r.max)*100})),...stDuoi90.map(r=>({n:r.st,p:parseFloat(r.thuc)/parseFloat(r.max)*100}))].sort((a,b)=>a.p-b.p);
+
   // Lỗi phát sinh
   const loiSection=loiHM.length?`<div class="card" style="padding:14px 16px;margin-bottom:12px">
-    <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px">📋 Lỗi phát sinh theo danh mục</div>
+    <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px">📋 Lỗi phát sinh theo danh mục — ${label}</div>
     ${[...loiHM].sort((a,b)=>(parseFloat(b.soLoi)||0)-(parseFloat(a.soLoi)||0)).map(l=>{const p=parseFloat(l.tyle)||0;return`<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span>${l.cat||'—'}</span><b style="color:${p>=30?'#dc2626':p>=15?'#d97706':'#16a34a'}">${l.soLoi||0} lỗi (${p}%)</b></div><div style="height:6px;background:#e5e7eb;border-radius:3px"><div style="height:6px;width:${Math.min(p,100)}%;background:${p>=30?'#dc2626':p>=15?'#d97706':'#16a34a'};border-radius:3px"></div></div></div>`;}).join('')}
   </div>`:'';
-  // Đổi trả breakdown
-  const topST=[...(stDT.top||[])].filter(x=>x&&x.name).sort((a,b)=>(b.don||0)-(a.don||0)).slice(0,5);
-  const topCVS=[...(cvsDT.top||[])].filter(x=>x&&x.name).sort((a,b)=>(b.don||0)-(a.don||0)).slice(0,5);
-  const dtSection=`<div class="card" style="padding:14px 16px;margin-bottom:12px">
-    <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px">🔄 Đổi trả hàng hóa — T${eM}/${eY}</div>
-    <div class="g2" style="gap:14px">
-      <div><div style="font-size:12px;font-weight:700;color:#6366f1;margin-bottom:6px">🏪 Siêu thị — ${stDT.tongDon||0} đơn</div>
-        ${stDT.donKhach!=null||stDT.donST!=null?`<div style="font-size:11.5px;color:var(--t2);margin-bottom:6px">Do khách: ${stDT.donKhach||0} · Do ST: ${stDT.donST||0}${stDT.donHT!=null?` · Lỗi HT: ${stDT.donHT||0}`:''}</div>`:''}
-        ${topST.length?topST.map((s,i)=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--br)"><span>${i+1}. ${s.name}</span><b>${s.don||0}</b></div>`).join(''):`<div style="font-size:12px;color:var(--t2)">Chưa có top</div>`}
-        ${stDT.ghiChu?`<div style="font-size:11px;color:#4f46e5;margin-top:6px;padding:6px 8px;background:#eef2ff;border-radius:4px">${stDT.ghiChu}</div>`:''}
-      </div>
-      <div><div style="font-size:12px;font-weight:700;color:#0891b2;margin-bottom:6px">🛒 CVS — ${cvsDT.tongDon||0} đơn</div>
-        ${cvsDT.donKhach!=null||cvsDT.donST!=null?`<div style="font-size:11.5px;color:var(--t2);margin-bottom:6px">Do khách: ${cvsDT.donKhach||0} · Do ST: ${cvsDT.donST||0}${cvsDT.donHT!=null?` · Lỗi HT: ${cvsDT.donHT||0}`:''}</div>`:''}
-        ${topCVS.length?topCVS.map((s,i)=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--br)"><span>${i+1}. ${s.name}</span><b>${s.don||0}</b></div>`).join(''):`<div style="font-size:12px;color:var(--t2)">Chưa có top</div>`}
-        ${cvsDT.ghiChu?`<div style="font-size:11px;color:#0891b2;margin-top:6px;padding:6px 8px;background:#ecfeff;border-radius:4px">${cvsDT.ghiChu}</div>`:''}
-      </div>
-    </div>
-  </div>`;
-  // GL breakdown DK + CTKM
-  const dkVPs=Object.entries((gl.dk&&gl.dk.loiVPs)||{}).sort((a,b)=>b[1]-a[1]);
-  const ctkmVPs=Object.entries((gl.ctkm&&gl.ctkm.loiVPs)||{}).sort((a,b)=>b[1]-a[1]);
-  const glSection=`<div class="card" style="padding:14px 16px;margin-bottom:12px">
-    <div style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:10px">🔍 Check gian lận — T${eM}/${eY}</div>
-    <div class="g2" style="gap:14px">
-      <div><div style="font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:8px">📅 Định kỳ (ĐK)</div>
-        <div style="display:flex;gap:10px;margin-bottom:8px">
-          <div style="flex:1;padding:8px;text-align:center;background:#eff6ff;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#1d4ed8">${dkTotal}</div><div style="font-size:10px;color:var(--t2)">Tổng check</div></div>
-          <div style="flex:1;padding:8px;text-align:center;background:#fef2f2;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#dc2626">${dkCGT}</div><div style="font-size:10px;color:var(--t2)">CGT (gian lận)</div></div>
+
+  // Đổi trả breakdown (chỉ hiện chi tiết khi chọn tháng cụ thể)
+  let dtSection='';
+  if(selMonth!=='ALL'){
+    const md=yearData[selMonth]||{};
+    const dt=md.doitra||{},stDT=dt.st||{},cvsDT=dt.cvs||{};
+    const topST=[...(stDT.top||[])].filter(x=>x&&x.name).sort((a,b)=>(b.don||0)-(a.don||0)).slice(0,5);
+    const topCVS=[...(cvsDT.top||[])].filter(x=>x&&x.name).sort((a,b)=>(b.don||0)-(a.don||0)).slice(0,5);
+    dtSection=`<div class="card" style="padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px">🔄 Đổi trả hàng hóa — ${label}</div>
+      <div class="g2" style="gap:14px">
+        <div><div style="font-size:12px;font-weight:700;color:#6366f1;margin-bottom:6px">🏪 Siêu thị — ${stDT.tongDon||0} đơn</div>
+          ${stDT.donKhach!=null?`<div style="font-size:11.5px;color:var(--t2);margin-bottom:6px">Do khách: ${stDT.donKhach||0} · Do ST: ${stDT.donST||0}${stDT.donHT!=null?` · Lỗi HT: ${stDT.donHT||0}`:''}</div>`:''}
+          ${topST.length?topST.map((s,i)=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--br)"><span>${i+1}. ${s.name}</span><b>${s.don||0}</b></div>`).join(''):`<div style="font-size:12px;color:var(--t2)">Chưa có top</div>`}
+          ${stDT.ghiChu?`<div style="font-size:11px;color:#4f46e5;margin-top:6px;padding:6px 8px;background:#eef2ff;border-radius:4px">${stDT.ghiChu}</div>`:''}
         </div>
-        ${dkVPs.length?`<div style="font-size:11px;color:var(--t2);font-weight:600;margin-bottom:4px">Top lỗi vi phạm:</div>${dkVPs.slice(0,3).map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;border-bottom:1px solid var(--br)"><span>• ${k}</span><b>${v}</b></div>`).join('')}`:''}
-      </div>
-      <div><div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:8px">🎁 CTKM</div>
-        <div style="display:flex;gap:10px;margin-bottom:8px">
-          <div style="flex:1;padding:8px;text-align:center;background:#fdf4ff;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#7c3aed">${ctkmTotal}</div><div style="font-size:10px;color:var(--t2)">Tổng check</div></div>
-          <div style="flex:1;padding:8px;text-align:center;background:#fef2f2;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#dc2626">${ctkmCGT}</div><div style="font-size:10px;color:var(--t2)">CGT (gian lận)</div></div>
+        <div><div style="font-size:12px;font-weight:700;color:#0891b2;margin-bottom:6px">🛒 CVS — ${cvsDT.tongDon||0} đơn</div>
+          ${cvsDT.donKhach!=null?`<div style="font-size:11.5px;color:var(--t2);margin-bottom:6px">Do khách: ${cvsDT.donKhach||0} · Do ST: ${cvsDT.donST||0}${cvsDT.donHT!=null?` · Lỗi HT: ${cvsDT.donHT||0}`:''}</div>`:''}
+          ${topCVS.length?topCVS.map((s,i)=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--br)"><span>${i+1}. ${s.name}</span><b>${s.don||0}</b></div>`).join(''):`<div style="font-size:12px;color:var(--t2)">Chưa có top</div>`}
+          ${cvsDT.ghiChu?`<div style="font-size:11px;color:#0891b2;margin-top:6px;padding:6px 8px;background:#ecfeff;border-radius:4px">${cvsDT.ghiChu}</div>`:''}
         </div>
-        ${ctkmVPs.length?`<div style="font-size:11px;color:var(--t2);font-weight:600;margin-bottom:4px">Top lỗi vi phạm:</div>${ctkmVPs.slice(0,3).map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;border-bottom:1px solid var(--br)"><span>• ${k}</span><b>${v}</b></div>`).join('')}`:''}
       </div>
-    </div>
-  </div>`;
+    </div>`;
+  } else {
+    // ALL: hiển thị đổi trả dạng tổng theo tháng
+    dtSection=`<div class="card" style="padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:10px">🔄 Đổi trả hàng hóa — ${label} (tổng ${tongDT} đơn)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${monthsWithData.map(m=>{const md=yearData[m]||{};const dt=md.doitra||{};const tot=(parseFloat((dt.st||{}).tongDon)||0)+(parseFloat((dt.cvs||{}).tongDon)||0);return tot?`<div style="padding:6px 12px;background:#f5f3ff;border-radius:8px;font-size:12px"><b>T${m}</b>: ${tot} đơn</div>`:''}).join('')}
+      </div>
+    </div>`;
+  }
+
+  // GL breakdown
+  let glSection='';
+  if(selMonth!=='ALL'){
+    const gl=(yearData[selMonth]||{}).gianlam||{};
+    const dkVPs=Object.entries((gl.dk&&gl.dk.loiVPs)||{}).sort((a,b)=>b[1]-a[1]);
+    const ctkmVPs=Object.entries((gl.ctkm&&gl.ctkm.loiVPs)||{}).sort((a,b)=>b[1]-a[1]);
+    glSection=`<div class="card" style="padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:10px">🔍 Check gian lận — ${label}</div>
+      <div class="g2" style="gap:14px">
+        <div><div style="font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:8px">📅 Định kỳ (ĐK)</div>
+          <div style="display:flex;gap:10px;margin-bottom:8px">
+            <div style="flex:1;padding:8px;text-align:center;background:#eff6ff;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#1d4ed8">${dkTotal}</div><div style="font-size:10px;color:var(--t2)">Tổng check</div></div>
+            <div style="flex:1;padding:8px;text-align:center;background:#fef2f2;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#dc2626">${dkCGT}</div><div style="font-size:10px;color:var(--t2)">CGT</div></div>
+          </div>
+          ${dkVPs.length?dkVPs.slice(0,3).map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;border-bottom:1px solid var(--br)"><span>• ${k}</span><b>${v}</b></div>`).join(''):''}
+        </div>
+        <div><div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:8px">🎁 CTKM</div>
+          <div style="display:flex;gap:10px;margin-bottom:8px">
+            <div style="flex:1;padding:8px;text-align:center;background:#fdf4ff;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#7c3aed">${ctkmTotal}</div><div style="font-size:10px;color:var(--t2)">Tổng check</div></div>
+            <div style="flex:1;padding:8px;text-align:center;background:#fef2f2;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#dc2626">${ctkmCGT}</div><div style="font-size:10px;color:var(--t2)">CGT</div></div>
+          </div>
+          ${ctkmVPs.length?ctkmVPs.slice(0,3).map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0;border-bottom:1px solid var(--br)"><span>• ${k}</span><b>${v}</b></div>`).join(''):''}
+        </div>
+      </div>
+    </div>`;
+  } else {
+    glSection=`<div class="card" style="padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:10px">🔍 Check gian lận — ${label}</div>
+      <div class="g4">
+        <div style="padding:10px;text-align:center;background:#eff6ff;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#1d4ed8">${dkTotal}</div><div style="font-size:10px;color:var(--t2)">ĐK — Tổng check</div></div>
+        <div style="padding:10px;text-align:center;background:#fef2f2;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#dc2626">${dkCGT}</div><div style="font-size:10px;color:var(--t2)">ĐK — CGT</div></div>
+        <div style="padding:10px;text-align:center;background:#fdf4ff;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#7c3aed">${ctkmTotal}</div><div style="font-size:10px;color:var(--t2)">CTKM — Tổng</div></div>
+        <div style="padding:10px;text-align:center;background:#fef2f2;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#dc2626">${ctkmCGT}</div><div style="font-size:10px;color:var(--t2)">CTKM — CGT</div></div>
+      </div>
+    </div>`;
+  }
+
   return`${selectorBar}${kpiCards}${warnSection}
-${hotST.length?`<div class="card" style="padding:14px 16px;margin-bottom:12px"><div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:10px">🚨 ST cần theo dõi (dưới 90%)</div>${hotST.slice(0,8).map(s=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br)"><span style="font-size:13px">${s.n}</span><span style="font-size:13px;font-weight:700;color:${clr(s.p)}">${fmt(s.p)}</span></div>`).join('')}</div>`:''}
-${rows.length?`<div class="chart-box" style="margin-bottom:12px"><div class="chart-title">📊 Điểm dịch vụ theo siêu thị — T${eM}/${eY}${d2?` vs T${e2M}/${e2Y}`:''}</div><div class="chart-wrap" style="height:260px"><canvas id="c-ov-diem"></canvas></div></div>`:''}
+${hotST.length?`<div class="card" style="padding:14px 16px;margin-bottom:12px"><div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:10px">🚨 ST cần theo dõi (dưới 90%) — ${label}</div>${hotST.slice(0,8).map(s=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br)"><span style="font-size:13px">${s.n}</span><span style="font-size:13px;font-weight:700;color:${clr(s.p)}">${fmt(s.p)}</span></div>`).join('')}</div>`:''}
+${rows.length?`<div class="chart-box" style="margin-bottom:12px"><div class="chart-title">📊 Điểm dịch vụ theo siêu thị — ${label}</div><div class="chart-wrap" style="height:260px"><canvas id="c-ov-diem"></canvas></div></div>`:''}
 ${loiSection}${dtSection}${glSection}
-<div class="chart-box"><div class="chart-title">📈 Check gian lận định kỳ theo tháng — ${eY}</div><div class="chart-wrap" style="height:200px"><canvas id="c-ov-gl"></canvas></div></div>`;}
+<div class="chart-box"><div class="chart-title">📈 Check gian lận định kỳ theo tháng — ${selYear}</div><div class="chart-wrap" style="height:200px"><canvas id="c-ov-gl"></canvas></div></div>`;}
 function rQCChart(){return`
 <div class="g2" style="margin-bottom:16px">
   <div class="chart-box"><div class="chart-title">📊 Phân loại lỗi QC</div><div class="chart-wrap"><canvas id="c-qc-cat"></canvas></div></div>
@@ -5106,10 +5214,10 @@ function afterRender(){
 
   // Init dynamic store table on Nhập liệu tab
   if(S.page==='baocao'&&S.tab==='Nhập liệu')qcLoadStores();
-  if(S.page==='qc'&&S.tab==='Tổng quan'&&!S.qcOvData&&!S._qcOvAutoLoad){
+  if(S.page==='qc'&&S.tab==='Tổng quan'&&S._qcOvYearLoaded!==S.qcOvSelYear){
     const _db=getQCDB();
-    if(_db){S._qcOvAutoLoad=true;qcOvLoad(S.qcOvYear,S.qcOvMonth);}
-    // Nếu chưa có Firebase (auth chưa xong), để flag = false để thử lại lần render tiếp
+    if(_db){qcOvLoadYear(S.qcOvSelYear);}
+    // Nếu chưa có Firebase, thử lại lần render tiếp
   }
   if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ'&&!S._qcDiemAutoLoaded){S._qcDiemAutoLoaded=true;qcDiemLoad(S.qcDiemYear,S.qcDiemMonth);}
   if(S.page==='qc'&&S.tab==='Đổi trả'&&!S._qcDTAutoLoaded){S._qcDTAutoLoaded=true;qcDTLoad(S.qcDTYear,S.qcDTMonth);}
