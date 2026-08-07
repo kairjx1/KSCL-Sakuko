@@ -1351,10 +1351,17 @@ function agAddGroup() {
 }
 
 function agRemoveGroup(gid) {
-  if (!confirm(`Xóa cấu hình nhóm "${_agData[gid]?.name}"?`)) return;
+  const name = _agData[gid]?.name || gid;
+  if (!confirm(`Xóa cấu hình nhóm "${name}"?\nSau khi xóa có thể hoàn tác trong 10 giây.`)) return;
+  const snap = JSON.parse(JSON.stringify(_agData[gid]));
   delete _agData[gid];
   db.ref(`${AG_PATH}/${gid}`).remove();
   renderAgentConfig();
+  _showUndoToast('agentNotify', `Đã xóa nhóm Agent "${name}"`, () => {
+    _agData[gid] = snap;
+    db.ref(`${AG_PATH}/${gid}`).set(snap);
+    renderAgentConfig();
+  });
 }
 
 function agAddSender(gid) {
@@ -1372,9 +1379,17 @@ function agAddSender(gid) {
 
 function agRemoveSender(gid, sid) {
   if (!_agData[gid]?.allowed_senders) return;
+  const snap = JSON.parse(JSON.stringify(_agData[gid].allowed_senders[sid]));
+  const name = snap?.name || sid;
+  if (!confirm(`Xóa người dùng "${name}" khỏi nhóm?\nCó thể hoàn tác trong 10 giây.`)) return;
   delete _agData[gid].allowed_senders[sid];
   db.ref(`${AG_PATH}/${gid}/allowed_senders/${sid}`).remove();
   renderAgentConfig();
+  _showUndoToast('agentNotify', `Đã xóa người dùng "${name}"`, () => {
+    _agData[gid].allowed_senders[sid] = snap;
+    db.ref(`${AG_PATH}/${gid}/allowed_senders/${sid}`).set(snap);
+    renderAgentConfig();
+  });
 }
 
 async function agSaveGroup(gid) {
@@ -1549,10 +1564,17 @@ function lbAddGroup() {
 }
 
 function lbRemoveGroup(gid) {
-  if (!confirm(`Xóa nhóm "${_lbData[gid]?.name}"?`)) return;
+  const name = _lbData[gid]?.name || gid;
+  if (!confirm(`Xóa nhóm "${name}" và tất cả base?\nCó thể hoàn tác trong 10 giây.`)) return;
+  const snap = JSON.parse(JSON.stringify(_lbData[gid]));
   delete _lbData[gid];
   db.ref(`${LB_PATH}/${gid}`).remove();
   renderLinkbase();
+  _showUndoToast('linkbaseNotify', `Đã xóa nhóm "${name}"`, () => {
+    _lbData[gid] = snap;
+    db.ref(`${LB_PATH}/${gid}`).set(snap);
+    renderLinkbase();
+  });
 }
 
 function lbAddBase(gid) {
@@ -1861,12 +1883,18 @@ async function savePanel() {
 }
 
 async function deletePanel(id) {
-  if (!confirm(`Xóa panel "${_panels[id]?.name}"? Không thể hoàn tác.`)) return;
+  const name = _panels[id]?.name || id;
+  if (!confirm(`Xóa panel "${name}"?\nCó thể hoàn tác trong 10 giây.`)) return;
+  const snap = JSON.parse(JSON.stringify(_panels[id]));
   await db.ref('bot_panels/' + id).remove();
   delete _panels[id];
   if (activePanel.id === id) switchPanel(DEFAULT_PANEL.id);
   renderPanelList();
-  showNotify('panelsNotify', '🗑️ Đã xóa panel.', 'ok');
+  _showUndoToast('panelsNotify', `Đã xóa panel "${name}"`, async () => {
+    _panels[id] = snap;
+    await db.ref('bot_panels/' + id).set(snap);
+    renderPanelList();
+  });
 }
 
 async function testPanel(id) {
@@ -2035,9 +2063,14 @@ async function saveQA() {
 }
 
 async function deleteQA(q) {
-  if (!confirm(`Xóa cache: "${q.slice(0,60)}..."?`)) return;
+  if (!confirm(`Xóa câu hỏi cache:\n"${q.slice(0,80)}..."?\nCó thể hoàn tác trong 10 giây.`)) return;
+  const snapA = document.querySelector(`[data-qa-q="${CSS.escape(q)}"]`)?.dataset?.qaA || '';
   await api('POST', '/api/panel/qa/delete', { q });
   await loadQACache();
+  _showUndoToast('qaNotify', `Đã xóa câu hỏi cache`, async () => {
+    if (snapA) await api('POST', '/api/panel/qa/upsert', { q, a: snapA });
+    await loadQACache();
+  });
 }
 
 async function clearAllQA() {
@@ -2103,6 +2136,38 @@ function showNotify(id, msg, ok) {
   const el = document.getElementById(id);
   el.textContent = msg;
   el.className = 'notify' + (msg ? (' show ' + (ok ? 'ok' : 'err')) : '');
+}
+
+// ── Undo Toast dùng chung cho mọi chức năng xóa ──────────────────────────────
+let _undoTimer = null;
+function _showUndoToast(notifyId, msg, onUndo) {
+  if (_undoTimer) clearTimeout(_undoTimer);
+  const el = document.getElementById(notifyId);
+  if (!el) return;
+  el.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;background:#1e293b;color:#fff;padding:10px 14px;border-radius:8px;margin-bottom:10px;font-size:13px';
+  el.innerHTML = `<span>🗑️ ${msg}</span>
+    <button onclick="_doUndo()" style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-weight:700;cursor:pointer;font-size:12px;white-space:nowrap">↩️ Hoàn tác</button>`;
+  window._pendingUndo = onUndo;
+  _undoTimer = setTimeout(() => {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    window._pendingUndo = null;
+  }, 10000);
+}
+async function _doUndo() {
+  if (_undoTimer) clearTimeout(_undoTimer);
+  if (!window._pendingUndo) return;
+  const fn = window._pendingUndo;
+  window._pendingUndo = null;
+  await fn();
+  // Hiện thông báo khôi phục thành công trên tất cả notify có thể
+  ['linkbaseNotify','arNotify','agentNotify','panelsNotify','permsNotify','qaNotify','emailNotify'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.cssText = 'display:block;background:#dcfce7;color:#166534;padding:10px 14px;border-radius:8px;margin-bottom:10px;font-size:13px;font-weight:600';
+    el.innerHTML = '✅ Đã hoàn tác thành công!';
+    setTimeout(() => { el.style.display='none'; el.innerHTML=''; }, 3000);
+  });
 }
 
 // ── Phân quyền ───────────────────────────────────────────────────────────────
@@ -2213,8 +2278,15 @@ function addGroup() {
 }
 
 function removeGroup(id) {
+  const name = _permsGroups[id]?.label || id;
+  if (!confirm(`Xóa nhóm "${name}" khỏi phân quyền?\nCó thể hoàn tác trong 10 giây.`)) return;
+  const snap = JSON.parse(JSON.stringify(_permsGroups[id]));
   delete _permsGroups[id];
   renderGroups();
+  _showUndoToast('permsNotify', `Đã xóa nhóm "${name}"`, () => {
+    _permsGroups[id] = snap;
+    renderGroups();
+  });
 }
 
 function addUser() {
@@ -2229,8 +2301,15 @@ function addUser() {
 }
 
 function removeUser(id) {
+  const name = _permsUsers[id]?.label || id;
+  if (!confirm(`Xóa người dùng "${name}" khỏi phân quyền?\nCó thể hoàn tác trong 10 giây.`)) return;
+  const snap = JSON.parse(JSON.stringify(_permsUsers[id]));
   delete _permsUsers[id];
   renderUsers();
+  _showUndoToast('permsNotify', `Đã xóa người dùng "${name}"`, () => {
+    _permsUsers[id] = snap;
+    renderUsers();
+  });
 }
 
 function toggleUser(id) {
@@ -2437,11 +2516,16 @@ function saveRule() {
 }
 
 function deleteRule(key, kw) {
-  if (!confirm(`Xoá quy tắc "${kw}"?`)) return;
-  db.ref(`${AR_PATH}/${key}`).remove().then(() => {
+  if (!confirm(`Xóa quy tắc "${kw}"?\nCó thể hoàn tác trong 10 giây.`)) return;
+  let snapRule = null;
+  db.ref(`${AR_PATH}/${key}`).once('value').then(s => {
+    snapRule = s.val();
+    return db.ref(`${AR_PATH}/${key}`).remove();
+  }).then(() => {
     loadRules();
-    showNotify('arNotify', `✅ Đã xoá quy tắc "${kw}"`, true);
-    setTimeout(() => showNotify('arNotify', ''), 3000);
+    _showUndoToast('arNotify', `Đã xóa quy tắc "${kw}"`, () => {
+      if (snapRule) db.ref(`${AR_PATH}/${key}`).set(snapRule).then(() => loadRules());
+    });
   }).catch(e => showNotify('arNotify', '❌ ' + e.message, false));
 }
 
@@ -2537,10 +2621,15 @@ async function markEmailDone(key, done) {
 }
 
 async function deleteEmailItem(key) {
-  if (!confirm('Xoá email này khỏi danh sách quan trọng?')) return;
+  if (!confirm('Xóa email này khỏi danh sách quan trọng?\nCó thể hoàn tác trong 10 giây.')) return;
+  const snapItem = _emailItems.find(x => (x.id||'').replace(/[./#$]/g,'_').substring(0,120) === key);
   await db.ref(`bot_email_important/${key}`).remove();
   _emailItems = _emailItems.filter(x => (x.id||'').replace(/[./#$]/g,'_').substring(0,120) !== key);
   renderEmailList();
+  _showUndoToast('emailNotify', 'Đã xóa email quan trọng', async () => {
+    if (snapItem) await db.ref(`bot_email_important/${key}`).set(snapItem);
+    await loadEmailImportant();
+  });
 }
 
 // ── Email Rules ───────────────────────────────────────────────────────────────
