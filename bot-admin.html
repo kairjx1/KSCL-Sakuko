@@ -1570,10 +1570,48 @@ function lbAddBase(gid) {
   renderLinkbase();
 }
 
+let _lbTrash = null; // { gid, idx, base, timer }
+
 function lbRemoveBase(gid, idx) {
+  const base = _lbData[gid].bases[idx];
+  if (!confirm(`Xóa base "${base.name}"?\n\nSau khi xóa có thể hoàn tác trong 10 giây.`)) return;
+
+  // Lưu vào trash để undo
+  if (_lbTrash?.timer) clearTimeout(_lbTrash.timer);
+  _lbTrash = { gid, idx, base };
+
+  // Xóa khỏi local data và Firebase
   _lbData[gid].bases.splice(idx, 1);
   db.ref(`${LB_PATH}/${gid}/bases`).set(_lbData[gid].bases);
   renderLinkbase();
+
+  // Toast + nút hoàn tác
+  const n = document.getElementById('linkbaseNotify');
+  n.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;background:#1e293b;color:#fff;padding:10px 14px;border-radius:8px;margin-bottom:10px;font-size:13px';
+  n.innerHTML = `<span>🗑️ Đã xóa "<b>${base.name}</b>"</span>
+    <button onclick="lbUndoRemove()" style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-weight:700;cursor:pointer;font-size:12px">↩️ Hoàn tác</button>`;
+
+  _lbTrash.timer = setTimeout(() => {
+    _lbTrash = null;
+    n.style.display = 'none';
+    n.innerHTML = '';
+  }, 10000);
+}
+
+function lbUndoRemove() {
+  if (!_lbTrash) return;
+  clearTimeout(_lbTrash.timer);
+  const { gid, idx, base } = _lbTrash;
+  _lbTrash = null;
+  // Khôi phục về đúng vị trí cũ
+  if (!_lbData[gid]) return;
+  _lbData[gid].bases.splice(idx, 0, base);
+  db.ref(`${LB_PATH}/${gid}/bases`).set(_lbData[gid].bases);
+  renderLinkbase();
+  const n = document.getElementById('linkbaseNotify');
+  n.style.cssText = 'display:block;background:#dcfce7;color:#166534;padding:10px 14px;border-radius:8px;margin-bottom:10px;font-size:13px';
+  n.innerHTML = `✅ Đã khôi phục base "<b>${base.name}</b>"`;
+  setTimeout(() => { n.style.display = 'none'; n.innerHTML = ''; }, 3000);
 }
 
 function lbToggleHints(panelId) {
