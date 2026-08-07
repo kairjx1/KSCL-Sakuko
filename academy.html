@@ -364,7 +364,7 @@ const MODS=[
 const _initDate=(()=>{const n=new Date(),m=n.getMonth()+1,y=n.getFullYear();return{m:String(m),y:String(y),py:String(y-1)};})();
 let S={user:null,profile:null,page:'loading',tab:'',charts:{},data:{},qcExecData:null,qcExecMonth:_initDate.m,qcExecYear:_initDate.y,kkExecData:null,kkExecMonth:_initDate.m,kkExecYear:_initDate.y,dashFrom:1,dashTo:12,qcDiemRows:[],qcDiemMonth:_initDate.m,qcDiemYear:_initDate.y,qcDiemLoiHM:[],qcDTMonth:_initDate.m,qcDTYear:_initDate.y,qcDTST:{},qcDTCVS:{},qcGLMonth:_initDate.m,qcGLYear:_initDate.y,qcGLKH:0,qcGLKHData:{},qcGLData:null,qcGLYearData:{},qcBBMonth:_initDate.m,qcBBYear:_initDate.y,qcBBList:[],qcBBYearData:{},qcDocsData:{},qcDocLists:{},
   qcOvMonth:_initDate.m,qcOvYear:_initDate.y,qcOvData:null,qcOv2Month:_initDate.m,qcOv2Year:_initDate.py,qcOv2Data:null,
-  qcOvYearData:{},qcOvSelMonth:'ALL',qcOvSelYear:_initDate.y,qcOvGLYear:{},qcOvKHYear:{},
+  qcOvYearData:{},qcOvSelMonth:'ALL',qcOvSelYear:_initDate.y,qcOvCmpMonth:'',qcOvGLYear:{},qcOvKHYear:{},
   tonAmCache:null,tonAmMonth:'',tonAmFilter:{q:'',status:'all',nganh:'',sort:'value'},
   xhCache:null,xhYear:'',xhMonth:'ALL',xhQ:'',xhMode:'st',pendingLarkUser:null};
 
@@ -2817,12 +2817,17 @@ function rQCOv(){
   // Selector bar — kiểu Kiểm kê: dropdown Tất cả + các tháng có dữ liệu
   const monthOpts=`<option value="ALL"${selMonth==='ALL'?' selected':''}>Tất cả</option>`
     +['1','2','3','4','5','6','7','8','9','10','11','12'].map(m=>`<option value="${m}"${selMonth===m?' selected':''}${!hasData&&selMonth!==m?'':''}>Tháng ${m}</option>`).join('');
+  const cmpOpts=`<option value="">— Không so sánh —</option>`
+    +['1','2','3','4','5','6','7','8','9','10','11','12']
+      .filter(m=>m!==selMonth&&yearData[m])
+      .map(m=>`<option value="${m}"${S.qcOvCmpMonth===m?' selected':''}>Tháng ${m}</option>`).join('');
   const selectorBar=`<div class="card" style="padding:12px 16px;margin-bottom:12px">
     <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px">
       <span style="font-size:13px;font-weight:600;color:var(--t1)">📊 Tổng hợp KSCL</span>
-      <select class="fi" style="width:85px" onchange="S.qcOvSelYear=this.value;S._qcOvYearLoaded=null;go('qc','Tổng quan')">${yearOpts(selYear)}</select>
-      <select class="fi" style="width:110px" onchange="S.qcOvSelMonth=this.value;go('qc','Tổng quan')">${monthOpts}</select>
+      <select class="fi" style="width:85px" onchange="S.qcOvSelYear=this.value;S._qcOvYearLoaded=null;S.qcOvCmpMonth='';go('qc','Tổng quan')">${yearOpts(selYear)}</select>
+      <select class="fi" style="width:110px" onchange="S.qcOvSelMonth=this.value;S.qcOvCmpMonth='';go('qc','Tổng quan')">${monthOpts}</select>
       ${hasData?`<span style="font-size:11px;color:var(--t2)">· ${monthsWithData.length} tháng có dữ liệu</span>`:''}
+      ${selMonth!=='ALL'&&hasData?`<span style="font-size:12px;color:var(--t2)">So sánh:</span><select class="fi" style="width:110px" onchange="S.qcOvCmpMonth=this.value;go('qc','Tổng quan')">${cmpOpts}</select>`:''}
       <div class="spacer"></div>
       <button onclick="S._qcOvYearLoaded=null;go('qc','Tổng quan')" class="btn b-out b-sm">🔄 Tải lại</button>
     </div>
@@ -5086,25 +5091,42 @@ function afterRender(){
   mkC('c-qc-trend','line',T6,[{label:'Tổng lỗi',data:[...Z6],borderColor:CC[2]},{label:'Nghiêm trọng',data:[...Z6],borderColor:CC[3]}]);
   mkC('c-qc-dc','bar',['DC01','DC02','DC03','CH-Q1','CH-Q3','CH-HN'],[{label:'Số lỗi',data:[0,0,0,0,0,0],bg:CC[0]}]);
   // QC Tổng quan
-  if(S.page==='qc'&&S.tab==='Tổng quan'&&S.qcOvData){
-    const od=S.qcOvData;
-    const orows=od.diem&&Array.isArray(od.diem.rows)?od.diem.rows:[];
-    if(orows.length){
-      const olbls=orows.map(r=>{const n=(r.st||'').replace(/^Siêu thị\s+/i,'');return n.substring(0,10)||r.st.substring(0,8);});
-      const opct=orows.map(r=>{const mx=parseFloat(r.max),tx=parseFloat(r.thuc);return mx>0?+(tx/mx*100).toFixed(1):0;});
-      const datasets=[{label:`T${S.qcOvMonth}/${S.qcOvYear}`,data:opct,bg:opct.map(v=>v>=90?'rgba(22,163,74,.7)':v>=85?'rgba(217,119,6,.7)':'rgba(220,38,38,.7)'),borderColor:opct.map(v=>v>=90?'#16a34a':v>=85?'#d97706':'#dc2626'),borderWidth:2}];
-      if(S.qcOv2Data){
-        const orows2=(S.qcOv2Data.diem&&Array.isArray(S.qcOv2Data.diem.rows))?S.qcOv2Data.diem.rows:[];
-        const pct2=orows.map(r=>{const r2=orows2.find(x=>x.st===r.st);if(!r2)return 0;const mx=parseFloat(r2.max),tx=parseFloat(r2.thuc);return mx>0?+(tx/mx*100).toFixed(1):0;});
-        datasets.unshift({label:`T${S.qcOv2Month}/${S.qcOv2Year}`,data:pct2,bg:'rgba(99,102,241,.3)',borderColor:'#6366f1',borderWidth:2});
+  if(S.page==='qc'&&S.tab==='Tổng quan'&&Object.keys(S.qcOvYearData||{}).length){
+    const yd2=S.qcOvYearData;
+    const selM=S.qcOvSelMonth||'ALL';
+    const selY=String(S.qcOvSelYear||new Date().getFullYear());
+    // Tổng hợp rows để vẽ chart
+    let chartRows=[];
+    if(selM==='ALL'){
+      const rowMap={};
+      Object.values(yd2).forEach(md=>{
+        if(md.diem&&Array.isArray(md.diem.rows))md.diem.rows.forEach(r=>{
+          const k=r.st||'?';
+          if(!rowMap[k])rowMap[k]={st:k,max:0,thuc:0};
+          rowMap[k].max+=(parseFloat(r.max)||0);rowMap[k].thuc+=(parseFloat(r.thuc)||0);
+        });
+      });
+      chartRows=Object.values(rowMap);
+    } else {
+      chartRows=(yd2[selM]&&yd2[selM].diem&&Array.isArray(yd2[selM].diem.rows))?yd2[selM].diem.rows:[];
+    }
+    if(chartRows.length){
+      const olbls=chartRows.map(r=>{const n=(r.st||'').replace(/^Siêu thị\s+/i,'');return n.substring(0,10)||'?';});
+      const opct=chartRows.map(r=>{const mx=parseFloat(r.max),tx=parseFloat(r.thuc);return mx>0?+(tx/mx*100).toFixed(1):0;});
+      const lbl=selM==='ALL'?`Năm ${selY}`:`T${selM}/${selY}`;
+      const datasets=[{label:lbl,data:opct,bg:opct.map(v=>v>=90?'rgba(22,163,74,.7)':v>=85?'rgba(217,119,6,.7)':'rgba(220,38,38,.7)'),borderColor:opct.map(v=>v>=90?'#16a34a':v>=85?'#d97706':'#dc2626'),borderWidth:2}];
+      // So sánh tháng khác trong cùng năm
+      if(selM!=='ALL'&&S.qcOvCmpMonth&&yd2[S.qcOvCmpMonth]){
+        const cmpRows=(yd2[S.qcOvCmpMonth].diem&&Array.isArray(yd2[S.qcOvCmpMonth].diem.rows))?yd2[S.qcOvCmpMonth].diem.rows:[];
+        const pct2=chartRows.map(r=>{const r2=cmpRows.find(x=>x.st===r.st);if(!r2)return 0;const mx=parseFloat(r2.max),tx=parseFloat(r2.thuc);return mx>0?+(tx/mx*100).toFixed(1):0;});
+        datasets.unshift({label:`T${S.qcOvCmpMonth}/${selY}`,data:pct2,bg:'rgba(99,102,241,.3)',borderColor:'#6366f1',borderWidth:2});
       }
       mkC('c-ov-diem','bar',olbls,datasets,{scales:{y:{min:60,max:105,ticks:{callback:v=>v+'%'},grid:{color:'rgba(0,0,0,.06)'}},x:{grid:{display:false}}},plugins:{legend:{display:datasets.length>1}}});
     }
-    const yd=od.glYear||{},kh=od.khYear||{};
+    // GL chart theo tháng trong năm
     mkC('c-ov-gl','bar',TH,[
-      {label:'Thực tế',data:TH.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].dk&&yd[String(i+1)].dk.total)||0),bg:'rgba(59,130,246,.7)',borderColor:'#3b82f6'},
-      {label:'Kế hoạch',data:TH.map((_,i)=>kh[String(i+1)]||0),bg:'rgba(234,179,8,.5)',borderColor:'#eab308'},
-      {label:'CGT',data:TH.map((_,i)=>(yd[String(i+1)]&&yd[String(i+1)].dk&&yd[String(i+1)].dk.cgt)||0),bg:'rgba(220,38,38,.8)',borderColor:'#dc2626'}
+      {label:'ĐK Thực tế',data:TH.map((_,i)=>{const md=yd2[String(i+1)];return(md&&md.gianlam&&md.gianlam.dk&&md.gianlam.dk.total)||0;}),bg:'rgba(59,130,246,.7)',borderColor:'#3b82f6'},
+      {label:'CGT',data:TH.map((_,i)=>{const md=yd2[String(i+1)];return(md&&md.gianlam&&md.gianlam.dk&&md.gianlam.dk.cgt)||0;}),bg:'rgba(220,38,38,.8)',borderColor:'#dc2626'}
     ]);
   }
   // Báo cáo
