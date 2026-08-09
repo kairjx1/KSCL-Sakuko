@@ -3098,7 +3098,7 @@ function rQCOv(){
   if(bbs.length){
     const bbByST={},bbByType={};
     bbs.forEach(b=>{
-      const st=b.st||b.cvsName||b.name||'Chưa xác định';
+      const st=b.sieu_thi||b.st||b.cvsName||b.name||'Chưa xác định';
       const loai=b.loai||b.type||b.loaiVP||b.loaiVipham||'Khác';
       bbByST[st]=(bbByST[st]||0)+1;
       bbByType[loai]=(bbByType[loai]||0)+1;
