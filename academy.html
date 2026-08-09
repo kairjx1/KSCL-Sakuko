@@ -2781,17 +2781,19 @@ async function qcOvLoad(year,month){
 }
 // Load toàn bộ năm — chỉ 4 Firebase requests thay vì 50
 async function qcOvLoadYear(year){
-  const db=getQCDB();if(!db){alert('Không kết nối Firebase!');return;}
+  const db=getQCDB();if(!db){S._qcOvLoading=false;alert('Không kết nối Firebase!');return;}
   const y=String(year);
   S.qcOvSelYear=y;
   // Bump token để hủy load cũ nếu user đổi năm nhanh
   const token=S._qcOvLoadSeq=(S._qcOvLoadSeq||0)+1;
+  // Helper: timeout cho từng Firebase request
+  const withTO=(p,ms=15000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Firebase timeout — kiểm tra mạng và thử lại')),ms))]);
   try{
     const[diemSnap,dtSnap,glSnap,bbSnap]=await Promise.all([
-      db.ref(`qc_diem/${y}`).get(),
-      db.ref(`qc_doitra/${y}`).get(),
-      db.ref(`qc_gianlantctm/${y}`).get(),
-      db.ref(`qc_bienbans/${y}`).get(),
+      withTO(db.ref(`qc_diem/${y}`).get()),
+      withTO(db.ref(`qc_doitra/${y}`).get()),
+      withTO(db.ref(`qc_gianlantctm/${y}`).get()),
+      withTO(db.ref(`qc_bienbans/${y}`).get()),
     ]);
     if(S._qcOvLoadSeq!==token)return; // user đổi năm trong lúc load
     const diemYear=diemSnap.exists()?diemSnap.val():{};
@@ -2860,11 +2862,14 @@ function rQCOv(){
       ${hasData?`<span style="font-size:11px;color:var(--t2)">· ${monthsWithData.length} tháng có dữ liệu</span>`:''}
       ${selMonth!=='ALL'&&hasData?`<span style="font-size:12px;color:var(--t2)">So sánh:</span><select class="fi" style="width:110px" onchange="S.qcOvCmpMonth=this.value;go('qc','Tổng quan')">${cmpOpts}</select>`:''}
       <div class="spacer"></div>
-      <button onclick="S._qcOvYearLoaded=null;go('qc','Tổng quan')" class="btn b-out b-sm">🔄 Tải lại</button>
+      <button onclick="S._qcOvYearLoaded=null;S._qcOvLoading=false;go('qc','Tổng quan')" class="btn b-out b-sm">🔄 Tải lại</button>
     </div>
   </div>`;
 
-  if(!hasData)return`${selectorBar}<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px">⏳</div><p style="color:var(--t2);font-size:13px;margin:12px 0">Đang tải dữ liệu năm ${selYear}...</p></div>`;
+  // Phân biệt "đang load" vs "đã load xong nhưng không có data"
+  const isLoading = S._qcOvLoading || S._qcOvYearLoaded!==selYear;
+  if(!hasData && isLoading)return`${selectorBar}<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:48px">⏳</div><p style="color:var(--t2);font-size:13px;margin:12px 0">Đang tải dữ liệu năm ${selYear}...</p></div>`;
+  if(!hasData)return`${selectorBar}<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:32px">📭</div><p style="color:var(--t2);font-size:13px;margin:12px 0">Chưa có dữ liệu QC năm ${selYear}</p><button onclick="S._qcOvYearLoaded=null;S._qcOvLoading=false;go('qc','Tổng quan')" class="btn b-out b-sm" style="margin-top:8px">🔄 Tải lại</button></div>`;
 
   // Lấy dữ liệu theo tháng được chọn hoặc tổng hợp tất cả
   let rows=[],tongDT=0,bbs=[],dkTotal=0,dkCGT=0,ctkmTotal=0,ctkmCGT=0,loiHM=[],stDTDon=0,cvsDTDon=0;
