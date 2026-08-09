@@ -2871,7 +2871,7 @@ function rQCOv(){
   if(!hasData)return`${selectorBar}<div class="card" style="text-align:center;padding:48px 20px"><div style="font-size:32px">📭</div><p style="color:var(--t2);font-size:13px;margin:12px 0">Chưa có dữ liệu QC năm ${selYear}</p><button onclick="S._qcOvYearLoaded=null;S._qcOvLoading=false;go('qc','Tổng quan')" class="btn b-out b-sm" style="margin-top:8px">🔄 Tải lại</button></div>`;
 
   // Lấy dữ liệu theo tháng được chọn hoặc tổng hợp tất cả
-  let rows=[],tongDT=0,bbs=[],dkTotal=0,dkCGT=0,ctkmTotal=0,ctkmCGT=0,loiHM=[],stDTDon=0,cvsDTDon=0;
+  let rows=[],tongDT=0,bbs=[],dkTotal=0,dkCGT=0,ctkmTotal=0,ctkmCGT=0,loiHM=[],stDTDon=0,cvsDTDon=0,stDKMap={},stCTKMMap={};
   const label=selMonth==='ALL'?`Năm ${selYear}`:`T${selMonth}/${selYear}`;
 
   if(selMonth==='ALL'){
@@ -2902,6 +2902,8 @@ function rQCOv(){
         dkCGT+=(md.gianlam.dk&&md.gianlam.dk.cgt)||0;
         ctkmTotal+=(md.gianlam.ctkm&&md.gianlam.ctkm.total)||0;
         ctkmCGT+=(md.gianlam.ctkm&&md.gianlam.ctkm.cgt)||0;
+        if(md.gianlam.dk&&md.gianlam.dk.stDetails)Object.entries(md.gianlam.dk.stDetails).forEach(([st,v])=>{if(!stDKMap[st])stDKMap[st]={total:0,cgt:0};stDKMap[st].total+=v.total||0;stDKMap[st].cgt+=v.cgt||0;});
+        if(md.gianlam.ctkm&&md.gianlam.ctkm.stDetails)Object.entries(md.gianlam.ctkm.stDetails).forEach(([st,v])=>{if(!stCTKMMap[st])stCTKMMap[st]={total:0,cgt:0};stCTKMMap[st].total+=v.total||0;stCTKMMap[st].cgt+=v.cgt||0;});
       }
       // Lỗi HM — merge by cat
       if(md.diem&&Array.isArray(md.diem.loiHM)){
@@ -3051,6 +3053,19 @@ function rQCOv(){
       </div>
     </div>`;
   } else {
+    const topDK=Object.entries(stDKMap).filter(([,v])=>v.cgt>0).sort((a,b)=>b[1].cgt-a[1].cgt).slice(0,8);
+    const topCTKM=Object.entries(stCTKMMap).filter(([,v])=>v.cgt>0).sort((a,b)=>b[1].cgt-a[1].cgt).slice(0,8);
+    const hasSTDetail=topDK.length||topCTKM.length;
+    const stDetailHtml=hasSTDetail?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;border-top:1px solid var(--br);padding-top:12px;margin-top:12px">
+      <div>
+        <div style="font-weight:600;font-size:12px;color:#dc2626;margin-bottom:8px">🏪 Top ST có lỗi vi phạm check định kỳ</div>
+        ${topDK.length?topDK.map(([st,v])=>{const pct=v.total>0?Math.round(v.cgt/v.total*100):0;return`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--br);font-size:12px"><span>${st}</span><span><b style="color:#dc2626">${v.cgt} CGT</b><span style="color:var(--t2);font-size:11px"> / ${v.total} (${pct}%)</span></span></div>`;}).join(''):'<div style="font-size:12px;color:#16a34a;padding:4px 0">✅ Không có CGT</div>'}
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:12px;color:#a855f7;margin-bottom:8px">🎁 Top ST có lỗi vi phạm check CTKM</div>
+        ${topCTKM.length?topCTKM.map(([st,v])=>{const pct=v.total>0?Math.round(v.cgt/v.total*100):0;return`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--br);font-size:12px"><span>${st}</span><span><b style="color:#a855f7">${v.cgt} CGT</b><span style="color:var(--t2);font-size:11px"> / ${v.total} (${pct}%)</span></span></div>`;}).join(''):'<div style="font-size:12px;color:#16a34a;padding:4px 0">✅ Không có CGT</div>'}
+      </div>
+    </div>`:`<div style="font-size:12px;color:var(--t2);border-top:1px solid var(--br);padding-top:10px;margin-top:10px">📊 Chi tiết ST sẽ có sau khi bấm <b>Đồng bộ Lark</b> trong tab Check gian lận.</div>`;
     glSection=`<div class="card" style="padding:14px 16px;margin-bottom:12px">
       <div style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:10px">🔍 Check gian lận — ${label}</div>
       <div class="g4">
@@ -3059,6 +3074,7 @@ function rQCOv(){
         <div style="padding:10px;text-align:center;background:#fdf4ff;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#7c3aed">${ctkmTotal}</div><div style="font-size:10px;color:var(--t2)">CTKM — Tổng</div></div>
         <div style="padding:10px;text-align:center;background:#fef2f2;border-radius:8px"><div style="font-size:22px;font-weight:800;color:#dc2626">${ctkmCGT}</div><div style="font-size:10px;color:var(--t2)">CTKM — CGT</div></div>
       </div>
+      ${stDetailHtml}
     </div>`;
   }
 
