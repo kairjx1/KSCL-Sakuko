@@ -2786,29 +2786,28 @@ async function qcOvLoadYear(year){
   S.qcOvSelYear=y;
   // Bump token để hủy load cũ nếu user đổi năm nhanh
   const token=S._qcOvLoadSeq=(S._qcOvLoadSeq||0)+1;
-  // Helper: timeout cho từng Firebase request
-  const withTO=(p,ms=15000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Firebase timeout — kiểm tra mạng và thử lại')),ms))]);
+  // Helper: timeout + đọc từng tháng song song (an toàn với Firebase rules)
+  const withTO=(p,ms=12000)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('Firebase timeout — kiểm tra mạng và thử lại')),ms))]);
+  const MS=['1','2','3','4','5','6','7','8','9','10','11','12'];
   try{
-    const[diemSnap,dtSnap,glSnap,bbSnap]=await Promise.all([
-      withTO(db.ref(`qc_diem/${y}`).get()),
-      withTO(db.ref(`qc_doitra/${y}`).get()),
-      withTO(db.ref(`qc_gianlantctm/${y}`).get()),
-      withTO(db.ref(`qc_bienbans/${y}`).get()),
+    // Đọc từng tháng song song thay vì đọc parent node (Firebase rules an toàn hơn)
+    const [diemSnaps,dtSnaps,glSnaps,bbSnaps]=await Promise.all([
+      Promise.all(MS.map(m=>withTO(db.ref(`qc_diem/${y}/${m}`).get()))),
+      Promise.all(MS.map(m=>withTO(db.ref(`qc_doitra/${y}/${m}`).get()))),
+      Promise.all(MS.map(m=>withTO(db.ref(`qc_gianlantctm/${y}/${m}`).get()))),
+      Promise.all(MS.map(m=>withTO(db.ref(`qc_bienbans/${y}/${m}`).get()))),
     ]);
     if(S._qcOvLoadSeq!==token)return; // user đổi năm trong lúc load
-    const diemYear=diemSnap.exists()?diemSnap.val():{};
-    const dtYear=dtSnap.exists()?dtSnap.val():{};
-    const glYear=glSnap.exists()?glSnap.val():{};
-    const bbYear=bbSnap.exists()?bbSnap.val():{};
     S.qcOvYearData={};
-    ['1','2','3','4','5','6','7','8','9','10','11','12'].forEach(m=>{
-      const hasDiem=!!(diemYear[m]),hasDT=!!(dtYear[m]),hasGL=!!(glYear[m]),hasBB=!!(bbYear[m]);
-      if(hasDiem||hasDT||hasGL||hasBB){
+    MS.forEach((m,i)=>{
+      const diem=diemSnaps[i].exists()?diemSnaps[i].val():null;
+      const doitra=dtSnaps[i].exists()?dtSnaps[i].val():null;
+      const gianlam=glSnaps[i].exists()?glSnaps[i].val():null;
+      const bbRaw=bbSnaps[i].exists()?bbSnaps[i].val():null;
+      if(diem||doitra||gianlam||bbRaw){
         S.qcOvYearData[m]={
-          diem:hasDiem?diemYear[m]:null,
-          doitra:hasDT?dtYear[m]:null,
-          gianlam:hasGL?glYear[m]:null,
-          bienbans:hasBB?(typeof bbYear[m]==='object'?Object.values(bbYear[m]):[]):[],
+          diem,doitra,gianlam,
+          bienbans:bbRaw&&typeof bbRaw==='object'?Object.values(bbRaw):[],
         };
       }
     });
