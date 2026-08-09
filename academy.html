@@ -5366,7 +5366,7 @@ function afterRender(){
 
   // Init dynamic store table on Nhập liệu tab
   if(S.page==='baocao'&&S.tab==='Nhập liệu')qcLoadStores();
-  if(S.page==='qc'&&S.tab==='Tổng quan'&&S._qcOvYearLoaded!==S.qcOvSelYear&&!S._qcOvLoading){
+  if(S.page==='qc'&&(!S.tab||S.tab==='Tổng quan')&&S._qcOvYearLoaded!==S.qcOvSelYear&&!S._qcOvLoading){
     const _db=getQCDB();
     if(_db){S._qcOvLoading=true;qcOvLoadYear(S.qcOvSelYear);}
   }
