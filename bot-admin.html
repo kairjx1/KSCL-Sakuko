@@ -287,6 +287,7 @@ select.fg-sel:focus{border-color:#d0021b}
     <div class="nav-item" onclick="goPage('perms')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg></span><span>Phân quyền</span></div>
     <div class="nav-item" onclick="goPage('email')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span><span>Email</span></div>
     <div class="nav-item" onclick="goPage('morning')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span><span>Bản tin sáng</span></div>
+    <div class="nav-item" onclick="goPage('discover')"><span class="icon">🔍</span><span>Khám phá</span></div>
     <div class="nav-item" onclick="goPage('panels')" style="margin-top:auto;border-top:1px solid #f1f5f9"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></span><span>Quản lý Panel</span></div>
     <div class="nav-item" onclick="startBackup()" id="backupNavBtn" style="border-top:1px solid #f1f5f9;background:#f0fdf4;color:#15803d;font-weight:600"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg></span><span>SAO LƯU</span></div>
   </div>
@@ -663,6 +664,19 @@ select.fg-sel:focus{border-color:#d0021b}
           <div class="modal-foot"><button class="btn btn-gray" onclick="closeEmailRules()">Đóng</button></div>
         </div>
       </div>
+    </div>
+
+    <!-- DISCOVER -->
+    <div class="page" id="page-discover">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <div class="page-title" style="margin-bottom:0">🔍 Khám phá Firebase</div>
+        <button class="btn btn-gray btn-sm" onclick="loadDynamicSections()">🔄 Quét lại</button>
+      </div>
+      <div class="notify" id="dynNotify"></div>
+      <div style="font-size:13px;color:#64748b;margin-bottom:16px;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:10px 14px">
+        Tự động phát hiện các key Firebase mới (<code>bot_*</code>) chưa có UI riêng. Khi bot thêm tính năng mới và lưu vào Firebase, section tương ứng sẽ tự xuất hiện ở đây với <b>realtime listener</b>.
+      </div>
+      <div id="dynSections"><div style="color:#94a3b8;font-size:13px">Nhấn "Quét lại" để bắt đầu.</div></div>
     </div>
 
     <!-- PANELS -->
@@ -2619,12 +2633,27 @@ function toggleUser(id) {
   renderUsers();
 }
 
+// ── Auto sync helper: gọi reload-config sau khi lưu Firebase ────────────────
+async function _autoSyncAfterSave(notifyId, successMsg) {
+  showNotify(notifyId, successMsg + ' ⏳ Đang đồng bộ bot...', true);
+  try {
+    const d = await api('POST', '/api/panel/reload-config');
+    if (d && d.ok) {
+      showNotify(notifyId, successMsg + ' ✅ Bot đã cập nhật ngay!', true);
+    } else {
+      showNotify(notifyId, successMsg + ' (Bot sẽ tự cập nhật sau tối đa 5 phút)', true);
+    }
+  } catch(_) {
+    showNotify(notifyId, successMsg + ' (Bot sẽ tự cập nhật sau tối đa 5 phút)', true);
+  }
+  setTimeout(() => showNotify(notifyId, ''), 5000);
+}
+
 function savePerms() {
   const data = { groups: _permsGroups, users: _permsUsers, updated: Date.now() };
-  db.ref(PERMS_PATH).set(data).then(() => {
-    showNotify('permsNotify', '✅ Đã lưu phân quyền! Bot áp dụng trong vòng 5 phút.', true);
-    setTimeout(() => showNotify('permsNotify', ''), 4000);
-  }).catch(e => showNotify('permsNotify', '❌ Lỗi: ' + e.message, false));
+  db.ref(PERMS_PATH).set(data)
+    .then(() => _autoSyncAfterSave('permsNotify', '✅ Đã lưu phân quyền!'))
+    .catch(e => showNotify('permsNotify', '❌ Lỗi: ' + e.message, false));
 }
 
 // ── AI Chat Config ────────────────────────────────────────────────────────────
@@ -2708,10 +2737,9 @@ function saveAIConfig() {
     timeout:       parseInt(document.getElementById('ai-timeout').value),
     updated:       Date.now()
   };
-  db.ref(AI_CFG_PATH).set(cfg).then(() => {
-    showNotify('aiNotify', '✅ Đã lưu cấu hình AI! Bot sẽ áp dụng trong vòng 5 phút.', true);
-    setTimeout(() => showNotify('aiNotify', ''), 4000);
-  }).catch(e => showNotify('aiNotify', '❌ Lỗi lưu: ' + e.message, false));
+  db.ref(AI_CFG_PATH).set(cfg)
+    .then(() => _autoSyncAfterSave('aiNotify', '✅ Đã lưu cấu hình AI!'))
+    .catch(e => showNotify('aiNotify', '❌ Lỗi lưu: ' + e.message, false));
 }
 
 // ── Auto Reply ────────────────────────────────────────────────────────────────
@@ -2732,6 +2760,7 @@ function goPage(id) {
   if (id === 'linkbase') loadLinkbase();
   if (id === 'perms') loadPerms();
   if (id === 'panels') renderPanelList();
+  if (id === 'discover') loadDynamicSections();
   if (id === 'email') loadEmailImportant();
   if (id === 'backup') { loadBackupConfig(); loadBackupHistory(); }
   if (id === 'morning') loadMorningConfig();
@@ -2817,8 +2846,7 @@ function saveRule() {
   ref.set(rule).then(() => {
     closeModal();
     loadRules();
-    showNotify('arNotify', `✅ Đã ${_editingKey ? 'cập nhật' : 'thêm'} quy tắc "${kw}"`, true);
-    setTimeout(() => showNotify('arNotify', ''), 3000);
+    _autoSyncAfterSave('arNotify', `✅ Đã ${_editingKey ? 'cập nhật' : 'thêm'} quy tắc "${kw}"!`);
   }).catch(e => {
     showNotify('arNotify', '❌ Lỗi lưu: ' + e.message, false);
   });
@@ -3039,6 +3067,75 @@ async function runMorningNow() {
     document.getElementById('morning-preview').textContent = '❌ ' + e.message;
   }
   btn.textContent = '🚀 Gửi thử ngay'; btn.disabled = false;
+}
+
+// ── Dynamic Firebase Key Discovery ───────────────────────────────────────────
+// Các key đã có UI riêng — không hiện trong dynamic section
+const _KNOWN_FB_KEYS = new Set([
+  'bot_admins','bot_ai_config','bot_autoreplies','bot_backup_autoconfig',
+  'bot_backup_history','bot_chat_history','bot_email_important','bot_email_rules',
+  'bot_email_seen','bot_linkbase','bot_morning_config','bot_panels','bot_permissions',
+  'bot_muted_chats','bot_activity_log','group_agent_config',
+]);
+
+let _dynWatchers = {}; // key → Firebase listener ref
+
+async function loadDynamicSections() {
+  const container = document.getElementById('dynSections');
+  if (!container) return;
+  container.innerHTML = '<div style="color:#94a3b8;font-size:13px">Đang quét Firebase...</div>';
+
+  // Lấy tất cả keys ở root Firebase
+  const snap = await db.ref('/').once('value');
+  const allKeys = Object.keys(snap.val() || {});
+  const newKeys = allKeys.filter(k => k.startsWith('bot_') && !_KNOWN_FB_KEYS.has(k));
+
+  if (!newKeys.length) {
+    container.innerHTML = '<div style="color:#94a3b8;font-size:13px">Không có key mới nào ngoài các mục đã quản lý.</div>';
+    return;
+  }
+
+  container.innerHTML = newKeys.map(k => `
+    <div class="card" id="dyn-card-${k}">
+      <div class="card-title">🔑 ${k}
+        <span style="font-size:11px;color:#94a3b8;margin-left:auto">Tự phát hiện từ Firebase</span>
+      </div>
+      <div id="dyn-content-${k}" style="font-size:12px;color:#94a3b8">Đang tải...</div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn btn-gray btn-sm" onclick="editDynKey('${k}')">✏️ Sửa JSON</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Load + realtime listener cho mỗi key mới
+  newKeys.forEach(k => {
+    if (_dynWatchers[k]) _dynWatchers[k].off();
+    const ref = db.ref(k);
+    _dynWatchers[k] = ref;
+    ref.on('value', snap => {
+      const el = document.getElementById(`dyn-content-${k}`);
+      if (!el) return;
+      const val = snap.val();
+      if (val === null) { el.textContent = '(trống)'; return; }
+      const json = JSON.stringify(val, null, 2);
+      el.innerHTML = `<pre style="background:#f8fafc;padding:10px;border-radius:8px;overflow-x:auto;font-size:11px;max-height:200px;overflow-y:auto">${json.replace(/</g,'&lt;')}</pre>`;
+    });
+  });
+}
+
+async function editDynKey(k) {
+  const snap = await db.ref(k).once('value');
+  const current = JSON.stringify(snap.val() || {}, null, 2);
+  const newVal = prompt(`Sửa JSON cho "${k}":\n(Cẩn thận — đây là dữ liệu thật)`, current);
+  if (newVal === null) return;
+  try {
+    const parsed = JSON.parse(newVal);
+    await db.ref(k).set(parsed);
+    _showSyncToast(`✅ Đã lưu ${k}`, 'ok');
+    await _autoSyncAfterSave('dynNotify', `✅ Đã cập nhật ${k}!`);
+  } catch(e) {
+    _showSyncToast('❌ JSON không hợp lệ: ' + e.message, 'err');
+  }
 }
 </script>
 </body>
