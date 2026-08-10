@@ -2512,7 +2512,7 @@ Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
         ton_he_thong: ton?.ton_he_thong || 0,
         don_gia: ton?.don_gia || cat?.gia_ban_le || 0
       };
-    }).filter(d => d.totalSL > 0 || d.ton_he_thong > 0);
+    }).filter(d => d.totalSL > 0 || d.ton_he_thong !== 0);
     this.reportFilter = 'all';
     $$('#reportTabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === 'all'));
     this.renderReport();
