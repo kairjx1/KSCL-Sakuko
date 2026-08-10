@@ -746,7 +746,9 @@ select.fg-sel:focus{border-color:#d0021b}
         <button class="btn btn-red" onclick="startBackup()" style="margin-top:16px;background:#15803d;font-size:15px;padding:12px 28px">☁️ Bắt đầu sao lưu ngay</button>
       </div>
       <div class="card" id="bkHistoryCard">
-        <div class="card-title">📜 Lịch sử sao lưu</div>
+        <div class="card-title">📜 Lịch sử sao lưu
+          <button class="btn btn-gray btn-sm" onclick="loadBackupHistory()" style="margin-left:auto;font-size:11px;padding:3px 10px">🔄 Làm mới</button>
+        </div>
         <div id="bkHistoryList" style="font-size:13px;color:#475569">Đang tải...</div>
       </div>
     </div>
@@ -832,7 +834,10 @@ select.fg-sel:focus{border-color:#d0021b}
       </div>
 
       <div id="bkModalHistory" style="margin-top:16px;display:none">
-        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📜 5 bản sao lưu gần nhất</div>
+        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:8px">
+          📜 5 bản sao lưu gần nhất
+          <button onclick="reloadModalHistory()" style="font-size:10px;padding:2px 8px;background:#e2e8f0;border:none;border-radius:4px;cursor:pointer;color:#475569">🔄</button>
+        </div>
         <div id="bkModalHistoryList" style="font-size:13px"></div>
       </div>
     </div>
@@ -1208,6 +1213,42 @@ async function startBackup() {
       </div>`;
     }).join('');
   } catch(e) { histEl.textContent = 'Lỗi tải lịch sử.'; }
+}
+
+async function reloadModalHistory() {
+  // Re-load history vào modal mà không cần đóng/mở lại
+  const histEl = document.getElementById('bkModalHistoryList');
+  histEl.innerHTML = '<span style="color:#94a3b8">Đang tải...</span>';
+  try {
+    const snap = await db.ref('bot_backup_history').orderByKey().limitToLast(5).once('value');
+    const items = [];
+    snap.forEach(c => items.unshift(c.val()));
+    if (!items.length) { histEl.textContent = 'Chưa có lịch sử.'; return; }
+    _bkModalItems = items;
+    histEl.innerHTML = items.map((i, idx) => {
+      const dt = new Date(i.ts).toLocaleString('vi-VN');
+      const badge = idx === 0 ? '<span style="background:#dcfce7;color:#15803d;font-size:10px;padding:1px 5px;border-radius:4px;margin-left:4px">Mới nhất</span>' : '';
+      const links = [];
+      if (i.gh_link) links.push(`<a href="${i.gh_link}" target="_blank" style="color:#2563eb;font-size:12px">🐙 GitHub</a>`);
+      if (i.drive_link) links.push(`<a href="${i.drive_link}" target="_blank" style="color:#16a34a;font-size:12px">📁 Drive</a>`);
+      const link = links.length ? links.join(' &nbsp; ') : '<span style="color:#94a3b8;font-size:12px">Không có link</span>';
+      const errNote = (!i.ok && i.error) ? `<div style="font-size:11px;color:#dc2626">⚠️ ${i.error}</div>` : '';
+      const srcBadge = i.auto ? '<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:4px">⏰ Tự động</span>' : '<span style="font-size:10px;background:#f3e8ff;color:#7c3aed;padding:1px 5px;border-radius:4px">👤 Thủ công</span>';
+      return `<div style="padding:7px 0;border-bottom:1px solid #f1f5f9">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+          <div>
+            <span style="font-size:12px">${i.ok?'✅':'❌'} <b>${dt}</b>${badge} ${srcBadge}</span>
+            <div style="font-size:11px;color:#94a3b8">${i.note||''}${i.dest?' · '+i.dest:''}</div>
+            ${errNote}
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            ${link}
+            ${(i.gh_link||i.drive_link) ? `<button onclick="restoreFromBackup(_bkModalItems[${idx}])" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer">🔄 Khôi phục</button>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { histEl.textContent = 'Lỗi tải lịch sử: ' + e.message; }
 }
 
 async function startBackupFromModal() {
