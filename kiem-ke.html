@@ -992,7 +992,7 @@ const APP = {
     switch (this.sheetFilter) {
       case 'match': data = data.filter(d => d.ton_he_thong > 0 && d.ton_he_thong === (d.so_luong || 0)); break;
       case 'diff': data = data.filter(d => (d.ton_he_thong || 0) !== (d.so_luong || 0)); break;
-      case 'uncounted': data = data.filter(d => !d.so_luong && d.ton_he_thong > 0); break;
+      case 'uncounted': data = data.filter(d => !d.so_luong && d.ton_he_thong !== 0); break;
     }
     if (!data.length) {
       $('#sheetRows').innerHTML = '<div class="empty">Chưa có dữ liệu</div>';
@@ -1370,6 +1370,14 @@ const APP = {
         }
       }
 
+      // Parse số từ NAV — xử lý cả dạng (22) = -22
+      function parseNav(val) {
+        if (val === null || val === undefined || val === '') return 0;
+        const s = String(val).trim().replace(/\s/g, '');
+        if (/^\([\d,.]+\)$/.test(s)) return -parseFloat(s.slice(1,-1).replace(/,/g,'')) || 0;
+        return parseFloat(s.replace(/,/g,'')) || 0;
+      }
+
       const tonItems = [];
       for (const row of filtered) {
         const bc = String(row[sp2Col] || row[bcCol] || '').trim();  // Mã SP2 ưu tiên
@@ -1377,10 +1385,10 @@ const APP = {
         if (!bc) continue;
         let ton = 0;
         // Ưu tiên: Accounting Inventory + POS Sold (cột L + M của NAV)
-        if (accountCol && posCol) { ton = (parseFloat(row[accountCol]) || 0) + (parseFloat(row[posCol]) || 0); }
-        else if (tonCol) { ton = parseFloat(row[tonCol]) || 0; }
-        else if (retailCol) { ton = parseFloat(row[retailCol]) || 0; }
-        else if (accountCol) { ton = parseFloat(row[accountCol]) || 0; }
+        if (accountCol && posCol) { ton = parseNav(row[accountCol]) + parseNav(row[posCol]); }
+        else if (tonCol) { ton = parseNav(row[tonCol]); }
+        else if (retailCol) { ton = parseNav(row[retailCol]); }
+        else if (accountCol) { ton = parseNav(row[accountCol]); }
         tonItems.push({
           barcode: bc,
           ma_hang: maHang,
@@ -1685,7 +1693,7 @@ const APP = {
       rows = Object.values(byBarcode).map(d => {
         const ton = tonMap[d.barcode]; const cat = catalogMap[d.barcode];
         return { ...d, kho: khoName, nganh: ton?.nganh || cat?.nganh || d.nganh || '', ma_hang: ton?.ma_hang || cat?.ma_hang || d.ma_hang || '', ton_he_thong: ton?.ton_he_thong || 0, don_gia: ton?.don_gia || cat?.gia_ban_le || 0 };
-      }).filter(d => d.totalSL > 0 || d.ton_he_thong > 0);
+      }).filter(d => d.totalSL > 0 || d.ton_he_thong !== 0);
     }
     if (!rows.length) return this.toast('Không có dữ liệu');
 
@@ -2516,7 +2524,7 @@ Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
       case 'thieu': data = data.filter(d => d.totalSL < d.ton_he_thong); break;
       case 'khop': data = data.filter(d => d.totalSL === d.ton_he_thong && d.totalSL > 0); break;
       case 'nostock': data = data.filter(d => d.totalSL > 0 && !d.ton_he_thong); break;
-      case 'noscan': data = data.filter(d => d.ton_he_thong > 0 && !d.totalSL); break;
+      case 'noscan': data = data.filter(d => d.ton_he_thong !== 0 && !d.totalSL); break;
     }
     if (!data.length) { $('#reportTable').innerHTML = '<div class="empty">Không có dữ liệu</div>'; return; }
     let html = '<table><thead><tr><th>#</th><th>Kho</th><th>Ngành</th><th>Mã Item</th><th>Barcode</th><th>Tên SP</th><th>Khu vực</th><th>Giá bán lẻ</th><th>Tồn HT</th><th>Kiểm lần 1</th><th>Chênh lệch</th><th>GT chênh lệch</th></tr></thead><tbody>';
