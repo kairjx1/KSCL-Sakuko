@@ -30,21 +30,32 @@ function extractText(val) {
   return String(val);
 }
 
-async function searchByKho(token, kho) {
+async function searchRecords(token, bodyExtra = {}) {
   const url = `${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${TABLE_TON}/records/search?page_size=500`;
-  const filter = { filter: { conjunction: 'and', conditions: [{ field_name: 'kho', operator: 'is', value: [kho] }] } };
+  const base = { field_names: ['barcode', 'ma_hang', 'ten_sp', 'kho', 'ton_he_thong', 'don_gia', 'nganh', 'dvt'] };
   let items = [], pageToken = null;
   do {
     const reqUrl = pageToken ? url + '&page_token=' + pageToken : url;
     const r = await fetch(reqUrl, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ field_names: ['barcode', 'ma_hang', 'ten_sp', 'kho', 'ton_he_thong', 'don_gia', 'nganh', 'dvt'], ...filter })
+      body: JSON.stringify({ ...base, ...bodyExtra })
     });
     const j = await r.json();
     items = items.concat(j.data?.items || []);
     pageToken = j.data?.has_more ? j.data.page_token : null;
   } while (pageToken);
+  return items;
+}
+
+async function searchByKho(token, kho) {
+  const filter = { filter: { conjunction: 'and', conditions: [{ field_name: 'kho', operator: 'is', value: [kho] }] } };
+  const items = await searchRecords(token, filter);
+  // Nếu không tìm thấy theo kho exact, thử contains (partial match)
+  if (items.length === 0) {
+    const fuzzy = { filter: { conjunction: 'and', conditions: [{ field_name: 'kho', operator: 'contains', value: [kho.split(/[\s-]/)[0]] }] } };
+    return searchRecords(token, fuzzy);
+  }
   return items;
 }
 
@@ -93,7 +104,8 @@ export async function onRequest({ request, env }) {
     if (request.method === 'GET') {
       const kho = url.searchParams.get('kho');
       if (!kho) return new Response(JSON.stringify({ ok: false, error: 'Cần tham số kho' }), { headers: CORS });
-      const items = await searchByKho(token, kho);
+      // kho=* → trả về tất cả (fallback khi không tìm được theo tên kho)
+      const items = kho === '*' ? await searchRecords(token) : await searchByKho(token, kho);
       const result = items.map(i => ({
         barcode: extractText(i.fields.barcode),
         ma_hang: extractText(i.fields.ma_hang),

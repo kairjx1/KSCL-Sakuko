@@ -2444,15 +2444,30 @@ Trân trọng./.\n(File đính kèm: ${this._emailAttachName||'BBKK.xlsx'})`;
     const counts = await dbGetAll('counts');
     const sessCounts = counts.filter(c => c.ma_dot === this.session?.ma_dot);
 
-    // Lấy tồn hệ thống theo kho
+    // Lấy tồn hệ thống theo kho — fetch fresh từ Lark Base mỗi lần
     const kho = this.session?.ten_dot || this.session?.ma_dot;
     let tonMap = {}, tonApiOk = false;
     if (API) {
       try {
-        const r = await fetch(`${API}/kk-ton?kho=${encodeURIComponent(kho)}`);
+        // cache-busting để đảm bảo real-time
+        const r = await fetch(`${API}/kk-ton?kho=${encodeURIComponent(kho)}&_t=${Date.now()}`);
         const j = await r.json();
-        if (j.ok) { tonApiOk = true; j.items.forEach(it => { tonMap[it.barcode] = it; }); }
-      } catch {}
+        if (j.ok && j.items?.length > 0) {
+          tonApiOk = true;
+          j.items.forEach(it => { tonMap[it.barcode] = it; });
+          // Cập nhật lại local cache
+          const curKhoKey = kho;
+          const existing = await dbGetAll('ton_stock').catch(() => []);
+          for (const e of existing.filter(x => x.kho === curKhoKey)) await dbDelete('ton_stock', e.id).catch(()=>{});
+          for (const it of j.items) await dbPut('ton_stock', { id: it.barcode + '::' + curKhoKey, kho: curKhoKey, ...it }).catch(()=>{});
+        } else if (j.ok && j.items?.length === 0) {
+          // Không tìm được theo tên kho, thử lấy tất cả và match theo barcode đã scan
+          this.toast('⚠️ Không tìm được tồn HT theo kho "' + kho + '", đang thử tìm theo mã hàng...');
+          const r2 = await fetch(`${API}/kk-ton?kho=*&_t=${Date.now()}`);
+          const j2 = await r2.json();
+          if (j2.ok) { tonApiOk = true; j2.items.forEach(it => { tonMap[it.barcode] = it; }); }
+        }
+      } catch(e) { console.warn('kk-ton fetch error:', e); }
     }
     if (!tonApiOk) {
       const local = await dbGetAll('ton_stock').catch(() => []);
