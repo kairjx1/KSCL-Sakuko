@@ -2191,26 +2191,43 @@ function startOverviewAutoRefresh() {
 // ── Force sync config ─────────────────────────────────────────────────────────
 async function syncNow() {
   const btn = document.getElementById('syncNowBtn');
-  if (!btn) return;
-  btn.disabled = true;
-  btn.textContent = '⏳ Đang đồng bộ...';
+  // Tìm nút sync nào đang được gọi (ở các trang khác nhau)
+  const allSyncBtns = [...document.querySelectorAll('button')].filter(b => b.textContent.includes('Đồng bộ ngay'));
+  allSyncBtns.forEach(b => { b.disabled = true; b.textContent = '⏳ Đang đồng bộ...'; });
+  _showSyncToast('⏳ Đang đồng bộ config...', 'info');
   try {
     const d = await api('POST', '/api/panel/reload-config');
     if (d.ok) {
-      btn.textContent = '✅ Đồng bộ xong!';
-      setTimeout(() => { btn.textContent = '⚡ Đồng bộ ngay'; btn.disabled = false; }, 2500);
+      allSyncBtns.forEach(b => { b.textContent = '✅ Xong!'; });
+      setTimeout(() => { allSyncBtns.forEach(b => { b.textContent = '⚡ Đồng bộ ngay'; b.disabled = false; }); }, 2500);
       loadOverview();
-      // Show result
-      const msg = `✅ Đồng bộ config thành công!\n• Perms: ${d.perms_count} nhóm\n• AutoReply: ${d.autoreply_count} rules\n• AI: ${d.ai_model}\n• Muted: ${d.muted_count} chats`;
-      alert(msg);
+      _showSyncToast(`✅ Đồng bộ thành công! Perms: ${d.perms_count} nhóm • AutoReply: ${d.autoreply_count} rules • AI: ${d.ai_model} • Muted: ${d.muted_count}`, 'ok', 5000);
     } else {
-      btn.textContent = '❌ Lỗi'; btn.disabled = false;
-      setTimeout(() => { btn.textContent = '⚡ Đồng bộ ngay'; }, 2000);
+      allSyncBtns.forEach(b => { b.textContent = '⚡ Đồng bộ ngay'; b.disabled = false; });
+      _showSyncToast('❌ Đồng bộ thất bại', 'err');
     }
   } catch(e) {
-    btn.textContent = '❌ Lỗi: ' + e.message; btn.disabled = false;
-    setTimeout(() => { btn.textContent = '⚡ Đồng bộ ngay'; }, 3000);
+    allSyncBtns.forEach(b => { b.textContent = '⚡ Đồng bộ ngay'; b.disabled = false; });
+    _showSyncToast('❌ Lỗi: ' + e.message, 'err');
   }
+}
+
+function _showSyncToast(msg, type, duration) {
+  duration = duration || 3500;
+  let toast = document.getElementById('_syncToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = '_syncToast';
+    toast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.2);max-width:400px;transition:opacity .3s';
+    document.body.appendChild(toast);
+  }
+  const colors = {ok:'#059669', err:'#dc2626', info:'#2563eb'};
+  toast.style.background = colors[type] || colors.info;
+  toast.style.color = '#fff';
+  toast.style.opacity = '1';
+  toast.textContent = msg;
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, duration);
 }
 
 // ── Logs (Firebase Realtime) ─────────────────────────────────────────────────
