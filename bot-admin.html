@@ -1242,12 +1242,12 @@ async function startBackup() {
     histEl.innerHTML = items.map((i, idx) => {
       const dt = new Date(i.ts).toLocaleString('vi-VN');
       const badge = idx === 0 ? '<span style="background:#dcfce7;color:#15803d;font-size:10px;padding:1px 5px;border-radius:4px;margin-left:4px">Mới nhất</span>' : '';
-      const links = [];
-      if (i.gh_link) links.push(`<a href="${i.gh_link}" target="_blank" style="color:#2563eb;font-size:12px">🐙 GitHub</a>`);
-      if (i.drive_link) links.push(`<a href="${i.drive_link}" target="_blank" style="color:#16a34a;font-size:12px">📁 Drive</a>`);
-      const link = links.length ? links.join(' &nbsp; ') : '<span style="color:#94a3b8;font-size:12px">Không có link</span>';
+      const link = _bkLinkHtml(i);
       const errNote = (!i.ok && i.error) ? `<div style="font-size:11px;color:#dc2626">⚠️ ${i.error}</div>` : '';
-      const srcBadge = i.auto ? '<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:4px">⏰ Tự động</span>' : '<span style="font-size:10px;background:#f3e8ff;color:#7c3aed;padding:1px 5px;border-radius:4px">👤 Thủ công</span>';
+      const isRestore = (i.note||'').startsWith('RESTORE');
+      const srcBadge = isRestore ? '<span style="font-size:10px;background:#dcfce7;color:#15803d;padding:1px 5px;border-radius:4px">🔄 Khôi phục</span>'
+        : i.auto ? '<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:4px">⏰ Tự động</span>'
+        : '<span style="font-size:10px;background:#f3e8ff;color:#7c3aed;padding:1px 5px;border-radius:4px">👤 Thủ công</span>';
       return `<div style="padding:7px 0;border-bottom:1px solid #f1f5f9">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
           <div>
@@ -1278,10 +1278,7 @@ async function reloadModalHistory() {
     histEl.innerHTML = items.map((i, idx) => {
       const dt = new Date(i.ts).toLocaleString('vi-VN');
       const badge = idx === 0 ? '<span style="background:#dcfce7;color:#15803d;font-size:10px;padding:1px 5px;border-radius:4px;margin-left:4px">Mới nhất</span>' : '';
-      const links = [];
-      if (i.gh_link) links.push(`<a href="${i.gh_link}" target="_blank" style="color:#2563eb;font-size:12px">🐙 GitHub</a>`);
-      if (i.drive_link) links.push(`<a href="${i.drive_link}" target="_blank" style="color:#16a34a;font-size:12px">📁 Drive</a>`);
-      const link = links.length ? links.join(' &nbsp; ') : '<span style="color:#94a3b8;font-size:12px">Không có link</span>';
+      const link = _bkLinkHtml(i);
       const errNote = (!i.ok && i.error) ? `<div style="font-size:11px;color:#dc2626">⚠️ ${i.error}</div>` : '';
       const srcBadge = i.auto ? '<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:4px">⏰ Tự động</span>' : '<span style="font-size:10px;background:#f3e8ff;color:#7c3aed;padding:1px 5px;border-radius:4px">👤 Thủ công</span>';
       return `<div style="padding:7px 0;border-bottom:1px solid #f1f5f9">
@@ -1384,10 +1381,7 @@ async function loadBackupHistory() {
     el.innerHTML = items.map((i, idx) => {
       const dt = new Date(i.ts).toLocaleString('vi-VN');
       const icon = i.ok ? '✅' : '❌';
-      const links = [];
-      if (i.gh_link) links.push(`<a href="${i.gh_link}" target="_blank" style="color:#2563eb;text-decoration:underline;font-size:12px">🐙 GitHub</a>`);
-      if (i.drive_link) links.push(`<a href="${i.drive_link}" target="_blank" style="color:#16a34a;text-decoration:underline;font-size:12px">📁 Drive</a>`);
-      const linkHtml = links.length ? links.join(' &nbsp; ') : '<span style="color:#94a3b8;font-size:12px">Không có link</span>';
+      const linkHtml = _bkLinkHtml(i, 'font-size:12px;text-decoration:underline');
       const isLatest = idx === 0;
       const srcBadge = i.auto ? '<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:2px 6px;border-radius:4px">⏰ Tự động</span>' : '<span style="font-size:10px;background:#f3e8ff;color:#7c3aed;padding:2px 6px;border-radius:4px">👤 Thủ công</span>';
       const errNote = (!i.ok && i.error) ? `<div style="color:#dc2626;font-size:12px;margin-top:2px">⚠️ ${i.error}</div>` : '';
@@ -1409,6 +1403,25 @@ async function loadBackupHistory() {
 }
 
 let _bkModalItems = [], _bkHistItems = [];
+
+// Helper: trích link từ gh_link/drive_link hoặc từ note (cho bản restore)
+function _bkLinkHtml(i, style) {
+  const s = style || 'font-size:12px';
+  const links = [];
+  if (i.gh_link) links.push(`<a href="${i.gh_link}" target="_blank" style="color:#2563eb;${s}">🐙 GitHub</a>`);
+  if (i.drive_link) links.push(`<a href="${i.drive_link}" target="_blank" style="color:#16a34a;${s}">📁 Drive</a>`);
+  if (!links.length && i.note) {
+    // Thử trích URL từ note (bản restore lưu link trong note)
+    const m = i.note.match(/https?:\/\/[^\s·]+/);
+    if (m) {
+      const isGh = m[0].includes('github');
+      links.push(`<a href="${m[0]}" target="_blank" style="color:${isGh?'#2563eb':'#16a34a'};${s}">${isGh?'🐙 GitHub':'📁 Drive'}</a>`);
+      if (!i.gh_link) i.gh_link = isGh ? m[0] : '';
+      if (!i.drive_link) i.drive_link = !isGh ? m[0] : '';
+    }
+  }
+  return links.length ? links.join(' &nbsp; ') : `<span style="color:#94a3b8;${s}">Không có link</span>`;
+}
 
 async function restoreFromBackup(item) {
   if (!item) return;
