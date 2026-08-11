@@ -125,6 +125,24 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f0f2f
   .user-table th,.user-table td{padding:6px 4px}
 }
 </style>
+<script>
+(function(){
+  var c=document.createElement('canvas');c.width=c.height=64;
+  var x=c.getContext('2d'),a=0,s=1,ds=0.008;
+  var lnk=document.querySelector("link[rel*='icon']")||document.createElement('link');
+  lnk.rel='icon';document.head.appendChild(lnk);
+  function draw(){
+    x.clearRect(0,0,64,64);
+    x.save();x.translate(32,32);x.rotate(a);x.scale(s,s);
+    x.font='52px serif';x.textAlign='center';x.textBaseline='middle';
+    x.fillText('🌸',0,2);x.restore();
+    a+=0.018; s+=ds; if(s>1.08||s<0.92)ds=-ds;
+    lnk.href=c.toDataURL();
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
 </head>
 <body>
 
