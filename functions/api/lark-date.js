@@ -64,13 +64,21 @@ export async function onRequest({request,env}){
       fetchAll(token,TABLES.stores),
     ]);
     const yr='2026';
-    // Còn lại by month từ detail
+    // Aggregate detail table (Chi tiết date) by month — updated trước monthly summary
     const conlaiByMonth={};
+    const detailAgg={};
     for(const rec of b2){
       const f=rec.fields;
       const y=txt(f['Năm']||'');if(y&&y!==yr)continue;
       const m=txt(f['Tháng']).padStart(2,'0');if(!m||m==='00')continue;
-      conlaiByMonth['T'+m]=(conlaiByMonth['T'+m]||0)+num(f['Tồn kho dự kiến']);
+      const t='T'+m;
+      const conlai=num(f['Tồn kho dự kiến']);
+      conlaiByMonth[t]=(conlaiByMonth[t]||0)+conlai;
+      if(!detailAgg[t])detailAgg[t]={t,dt:0,gv:0,tv:0,huy:0,conlai:0,dinhmuc:0};
+      detailAgg[t].dt+=num(f['Doanh thu']);
+      detailAgg[t].gv+=num(f['Đầu vào(GV)']);
+      detailAgg[t].tv+=num(f['Thu về']);
+      detailAgg[t].conlai+=conlai;
     }
     const monthly=b3
       .filter(rec=>{const y=txt(rec.fields['Năm']||'');return!y||y===yr;})
@@ -86,6 +94,14 @@ export async function onRequest({request,env}){
         return{t,dt,gv,tv,huy,cp,dinhmuc,conlai};
       })
       .filter(Boolean).sort((a,b)=>a.t.localeCompare(b.t));
+    // Bổ sung tháng có trong detail nhưng chưa có trong monthly summary
+    const monthlySet=new Set(monthly.map(r=>r.t));
+    for(const[t,agg]of Object.entries(detailAgg)){
+      if(monthlySet.has(t))continue;
+      if(agg.dt===0&&agg.gv===0)continue;
+      agg.cp=agg.gv-agg.tv;monthly.push(agg);
+    }
+    monthly.sort((a,b)=>a.t.localeCompare(b.t));
     const stores=b1
       .filter(rec=>{const y=txt(rec.fields['Năm']||'');return!y||y===yr;})
       .map(rec=>{
