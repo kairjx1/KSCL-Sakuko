@@ -1280,7 +1280,10 @@ async function reloadModalHistory() {
       const badge = idx === 0 ? '<span style="background:#dcfce7;color:#15803d;font-size:10px;padding:1px 5px;border-radius:4px;margin-left:4px">Mới nhất</span>' : '';
       const link = _bkLinkHtml(i);
       const errNote = (!i.ok && i.error) ? `<div style="font-size:11px;color:#dc2626">⚠️ ${i.error}</div>` : '';
-      const srcBadge = i.auto ? '<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:4px">⏰ Tự động</span>' : '<span style="font-size:10px;background:#f3e8ff;color:#7c3aed;padding:1px 5px;border-radius:4px">👤 Thủ công</span>';
+      const isRestore2 = (i.note||'').startsWith('RESTORE');
+      const srcBadge = isRestore2 ? '<span style="font-size:10px;background:#dcfce7;color:#15803d;padding:1px 5px;border-radius:4px">🔄 Khôi phục</span>'
+        : i.auto ? '<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:4px">⏰ Tự động</span>'
+        : '<span style="font-size:10px;background:#f3e8ff;color:#7c3aed;padding:1px 5px;border-radius:4px">👤 Thủ công</span>';
       return `<div style="padding:7px 0;border-bottom:1px solid #f1f5f9">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
           <div>
@@ -1383,7 +1386,10 @@ async function loadBackupHistory() {
       const icon = i.ok ? '✅' : '❌';
       const linkHtml = _bkLinkHtml(i, 'font-size:12px;text-decoration:underline');
       const isLatest = idx === 0;
-      const srcBadge = i.auto ? '<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:2px 6px;border-radius:4px">⏰ Tự động</span>' : '<span style="font-size:10px;background:#f3e8ff;color:#7c3aed;padding:2px 6px;border-radius:4px">👤 Thủ công</span>';
+      const isRestore3 = (i.note||'').startsWith('RESTORE');
+      const srcBadge = isRestore3 ? '<span style="font-size:10px;background:#dcfce7;color:#15803d;padding:2px 6px;border-radius:4px">🔄 Khôi phục</span>'
+        : i.auto ? '<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:2px 6px;border-radius:4px">⏰ Tự động</span>'
+        : '<span style="font-size:10px;background:#f3e8ff;color:#7c3aed;padding:2px 6px;border-radius:4px">👤 Thủ công</span>';
       const errNote = (!i.ok && i.error) ? `<div style="color:#dc2626;font-size:12px;margin-top:2px">⚠️ ${i.error}</div>` : '';
       return `<div style="padding:10px 0;border-bottom:1px solid #f1f5f9">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">
