@@ -2853,6 +2853,7 @@ async function loadUserStats() {
       const blockBtn = isBlocked
         ? `<span style="font-size:11px;color:#94a3b8">🚫 Đã chặn</span>`
         : `<button class="btn btn-gray btn-sm" style="font-size:11px;padding:4px 10px" onclick="blockUserFromStats('${u.open_id}')">🚫 Chặn</button>`;
+      const deleteBtn = `<button class="btn btn-sm" style="font-size:11px;padding:4px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5" onclick="deleteUserStats('${u.open_id}','${(u.name||u.open_id.slice(-8)).replace(/'/g,'')}')">🗑 Xóa</button>`;
 
       html += `<tr style="background:${rowBg};border-bottom:1px solid #f1f5f9">
         <td style="padding:10px 14px;color:#94a3b8">${i+1}</td>
@@ -2865,7 +2866,7 @@ async function loadUserStats() {
         <td style="padding:10px 14px;color:#475569;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${u.last_query || ''}">${u.last_query || '—'}</td>
         <td style="padding:10px 14px;color:#94a3b8;white-space:nowrap;font-size:12px">${lastTime}</td>
         <td style="padding:10px 14px;text-align:center">${typeTag}</td>
-        <td style="padding:10px 14px;white-space:nowrap">${blockBtn}</td>
+        <td style="padding:10px 14px;white-space:nowrap;display:flex;gap:6px;align-items:center">${blockBtn} ${deleteBtn}</td>
       </tr>`;
     });
 
@@ -2873,6 +2874,21 @@ async function loadUserStats() {
     tbl.innerHTML = html;
   } catch(e) {
     tbl.innerHTML = `<div style="padding:16px;color:#ef4444;font-size:13px">❌ ${e.message}</div>`;
+  }
+}
+
+async function deleteUserStats(openId, displayName) {
+  if (!confirm(`Xóa toàn bộ thống kê của "${displayName}"?\n\nDữ liệu sẽ bị xóa khỏi bộ nhớ bot và Firebase.\nBot vẫn tiếp tục đếm lại từ đầu nếu họ tiếp tục nhắn.`)) return;
+  try {
+    const d = await api('POST', `/api/panel/user-stats/reset/${openId}`);
+    if (d.ok) {
+      showNotify('permsNotify', `✅ Đã xóa thống kê của ${displayName}`, true);
+      setTimeout(loadUserStats, 500);
+    } else {
+      showNotify('permsNotify', `❌ Lỗi: ${d.error || 'Không xác định'}`, false);
+    }
+  } catch(e) {
+    showNotify('permsNotify', `❌ ${e.message}`, false);
   }
 }
 
