@@ -412,8 +412,48 @@ select.fg-sel:focus{border-color:#d0021b}
 
     <!-- TEST -->
     <div class="page" id="page-test">
-      <div class="page-title">Kiểm tra Bot</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div class="page-title" style="margin-bottom:0">🛰️ Kiểm tra &amp; Giám sát</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="svcAutoRefreshLabel" style="font-size:12px;color:#94a3b8">⏱ Tự cập nhật mỗi 30s</span>
+          <button class="btn btn-gray btn-sm" onclick="refreshAllServices()" id="svcRefreshBtn">🔄 Làm mới</button>
+        </div>
+      </div>
       <div class="notify" id="testNotify"></div>
+
+      <!-- ── DASHBOARD TRẠNG THÁI ── -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="background:linear-gradient(135deg,#1e3a5f,#1d4ed8);padding:14px 18px;color:#fff;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-weight:700;font-size:15px;letter-spacing:.3px">📊 Trạng thái dịch vụ realtime</span>
+          <span id="svcLastUpdated" style="font-size:11px;opacity:.7">Đang tải...</span>
+        </div>
+        <div id="svcGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0">
+          <!-- các ô dịch vụ được render bởi JS -->
+          <div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px">Đang kiểm tra...</div>
+        </div>
+      </div>
+
+      <!-- ── TỔNG HỢP BOT ── -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:11px 18px;font-weight:700;font-size:14px;color:#1e293b">
+          🤖 Thống kê Bot
+        </div>
+        <div id="botStatsBar" style="display:flex;flex-wrap:wrap;gap:0;padding:0">
+          <div style="padding:18px;text-align:center;color:#94a3b8;font-size:13px;width:100%">Đang tải...</div>
+        </div>
+      </div>
+
+      <!-- ── CF FUNCTIONS ── -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:11px 18px;font-weight:700;font-size:14px;color:#1e293b">
+          ☁️ Cloudflare Functions
+        </div>
+        <div id="cfFuncGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0">
+          <div style="padding:18px;text-align:center;color:#94a3b8;font-size:13px">Đang kiểm tra...</div>
+        </div>
+      </div>
+
+      <!-- ── TEST LỆNH ── -->
       <div class="card">
         <div class="card-title">📨 Gửi báo cáo xuất hủy test</div>
         <div class="fg">
@@ -445,8 +485,24 @@ select.fg-sel:focus{border-color:#d0021b}
         </div>
         <div id="testDoiDateResult" style="margin-top:12px;font-size:13px;color:#475569"></div>
       </div>
+
+      <!-- ── FORCE RELOAD CONFIG ── -->
       <div class="card">
-        <div class="card-title">🏥 Health check</div>
+        <div class="card-title">⚡ Force Reload Config</div>
+        <div style="font-size:13px;color:#64748b;margin-bottom:12px">
+          Tải lại toàn bộ cấu hình từ Firebase ngay lập tức (phân quyền, autoreply, AI, muted). Bot SSE watcher cũng sẽ cập nhật tự động &lt;1s sau khi bạn lưu trong Lark.
+        </div>
+        <div class="row">
+          <button class="btn btn-gray btn-sm" onclick="doForceReload()" id="forceReloadBtn">⚡ Reload ngay</button>
+          <span id="forceReloadStatus" style="font-size:13px;color:#6b7a99"></span>
+        </div>
+        <div id="forceReloadResult" style="margin-top:12px;font-size:13px;color:#475569"></div>
+      </div>
+
+      <!-- ── HEALTH CHECK ── -->
+      <div class="card">
+        <div class="card-title">🏥 Health check đầy đủ</div>
+        <div style="font-size:13px;color:#64748b;margin-bottom:12px">Chạy toàn bộ kiểm tra và hiển thị kết quả chi tiết.</div>
         <button class="btn btn-gray btn-sm" onclick="doHealthCheck()">Kiểm tra ngay</button>
         <div id="healthResult" style="margin-top:12px;font-size:13px;color:#475569"></div>
       </div>
@@ -2481,16 +2537,198 @@ async function sendTestDoiDate() {
   }
 }
 
+// ── Realtime Service Dashboard ────────────────────────────────────────────────
+let _svcTimer = null;
+
+function _svcDot(ok, ms) {
+  const dot = ok ? '🟢' : '🔴';
+  const msStr = (ms >= 0) ? `<span style="font-size:11px;color:#94a3b8;margin-left:4px">${ms}ms</span>` : '';
+  return dot + msStr;
+}
+
+function _renderSvcGrid(services) {
+  const grid = document.getElementById('svcGrid');
+  if (!grid) return;
+  const rows = [
+    { key: 'bot', label: '🤖 Render Bot', sub: s => s.uptime_human || '', note: s => s.ok ? '' : 'Không kết nối được' },
+    { key: 'firebase', label: '🔥 Firebase DB', sub: s => '', note: s => s.error || '' },
+    { key: 'redis', label: '💾 Redis (Upstash)', sub: s => '', note: s => s.error || '' },
+  ];
+  let html = '';
+  rows.forEach(r => {
+    const s = services[r.key] || { ok: false, ms: -1 };
+    const bgOk = s.ok ? '#f0fdf4' : '#fff1f2';
+    const borderOk = s.ok ? '#86efac' : '#fca5a5';
+    const sub = r.sub(s);
+    const note = r.note(s);
+    html += `<div style="padding:16px 18px;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;background:${bgOk};border-left:3px solid ${borderOk}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span style="font-weight:600;font-size:13px;color:#1e293b">${r.label}</span>
+        <span>${_svcDot(s.ok, s.ms !== undefined ? s.ms : -1)}</span>
+      </div>
+      ${sub ? `<div style="font-size:12px;color:#64748b">${sub}</div>` : ''}
+      ${note ? `<div style="font-size:11px;color:#ef4444;margin-top:2px">⚠️ ${note}</div>` : ''}
+    </div>`;
+  });
+  grid.innerHTML = html;
+}
+
+function _renderBotStats(bot) {
+  const bar = document.getElementById('botStatsBar');
+  if (!bar || !bot) return;
+  const items = [
+    { label: 'Uptime', val: bot.uptime_human || '-' },
+    { label: 'KB chunks', val: (bot.kb_chunks || 0).toLocaleString() },
+    { label: 'Nhóm phân quyền', val: bot.perms_groups || 0 },
+    { label: 'Autoreply rules', val: bot.autoreply_count || 0 },
+    { label: 'Muted chats', val: bot.muted_count || 0 },
+    { label: 'AI Model', val: (bot.ai_model || '-').replace('claude-', 'claude-').split('-20')[0] },
+    { label: 'Firebase', val: bot.firebase_configured ? '✅ Cấu hình' : '❌ Chưa cấu hình' },
+    { label: 'Redis', val: bot.redis_configured ? '✅ Cấu hình' : '❌ Chưa cấu hình' },
+  ];
+  bar.innerHTML = items.map(i => `
+    <div style="padding:14px 20px;border-right:1px solid #e2e8f0;min-width:110px;text-align:center">
+      <div style="font-size:18px;font-weight:700;color:#1d4ed8">${i.val}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px">${i.label}</div>
+    </div>`).join('');
+}
+
+async function _checkCfFunctions() {
+  const cfGrid = document.getElementById('cfFuncGrid');
+  if (!cfGrid) return;
+  const BASE = 'https://kscl-sakuko.pages.dev';
+  const fns = [
+    { label: '/api/lark-date', url: BASE + '/api/lark-date', check: j => j.ok || Array.isArray(j.monthly) || Array.isArray(j) },
+    { label: '/api/lark-xuathuy', url: BASE + '/api/lark-xuathuy', check: j => j.ok !== false },
+    { label: '/api/lark-whoami', url: BASE + '/api/lark-whoami', check: j => true },
+    { label: '/api/kk-count', url: BASE + '/api/kk-count', check: j => true },
+    { label: 'Pages (main)', url: BASE + '/', check: null },
+  ];
+  cfGrid.innerHTML = fns.map(f => `<div id="cf_${f.label.replace(/\//g,'_')}" style="padding:14px 18px;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0">
+    <div style="font-weight:600;font-size:12px;color:#1e293b;font-family:monospace">${f.label}</div>
+    <div style="font-size:12px;color:#94a3b8;margin-top:4px">⏳ Đang ping...</div>
+  </div>`).join('');
+
+  await Promise.allSettled(fns.map(async f => {
+    const id = 'cf_' + f.label.replace(/\//g, '_');
+    const el = document.getElementById(id);
+    const t0 = Date.now();
+    try {
+      const resp = await fetch(f.url, { method: 'GET', cache: 'no-store', signal: AbortSignal.timeout(12000) });
+      const ms = Date.now() - t0;
+      let ok = resp.ok;
+      if (ok && f.check) {
+        try { const j = await resp.json(); ok = f.check(j); } catch(e) { /* HTML page, still ok */ }
+      }
+      const bg = ok ? '#f0fdf4' : '#fff1f2';
+      const bd = ok ? '#86efac' : '#fca5a5';
+      if (el) el.outerHTML = `<div style="padding:14px 18px;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;background:${bg};border-left:3px solid ${bd}">
+        <div style="font-weight:600;font-size:12px;color:#1e293b;font-family:monospace">${f.label}</div>
+        <div style="font-size:12px;margin-top:4px">${ok ? '🟢' : '🔴'} ${resp.status} <span style="color:#94a3b8">${ms}ms</span></div>
+      </div>`;
+    } catch (e) {
+      const ms = Date.now() - t0;
+      if (el) el.outerHTML = `<div style="padding:14px 18px;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;background:#fff1f2;border-left:3px solid #fca5a5">
+        <div style="font-weight:600;font-size:12px;color:#1e293b;font-family:monospace">${f.label}</div>
+        <div style="font-size:11px;color:#ef4444;margin-top:4px">❌ ${e.message || 'Lỗi'}</div>
+      </div>`;
+    }
+  }));
+}
+
+async function refreshAllServices() {
+  const btn = document.getElementById('svcRefreshBtn');
+  const lastEl = document.getElementById('svcLastUpdated');
+  if (btn) btn.textContent = '⏳';
+  try {
+    const d = await api('GET', '/api/panel/services');
+    if (d.ok && d.services) {
+      _renderSvcGrid(d.services);
+      _renderBotStats(d.services.bot);
+    }
+    const now = new Date();
+    if (lastEl) lastEl.textContent = `Cập nhật lúc ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  } catch(e) {
+    const grid = document.getElementById('svcGrid');
+    if (grid) grid.innerHTML = `<div style="padding:16px;color:#ef4444;font-size:13px">❌ Không kết nối được bot: ${e.message}</div>`;
+  }
+  _checkCfFunctions();
+  if (btn) btn.textContent = '🔄 Làm mới';
+}
+
+function _startSvcAutoRefresh() {
+  refreshAllServices();
+  if (_svcTimer) clearInterval(_svcTimer);
+  _svcTimer = setInterval(refreshAllServices, 30000);
+}
+
+async function doForceReload() {
+  const btn = document.getElementById('forceReloadBtn');
+  const st = document.getElementById('forceReloadStatus');
+  const res = document.getElementById('forceReloadResult');
+  if (btn) btn.textContent = '⏳ Đang reload...';
+  if (st) st.textContent = '';
+  try {
+    const d = await api('POST', '/api/panel/reload-config');
+    if (d.ok) {
+      if (st) st.textContent = '✅ Đã reload!';
+      if (res) res.innerHTML = `<span style="color:#059669">✅ Đã reload: <b>${(d.reloaded || []).join(', ')}</b>. Perms: ${d.perms_count || 0}, Autoreply: ${d.autoreply_count || 0}.</span>`;
+      setTimeout(refreshAllServices, 800);
+    } else {
+      if (st) st.textContent = '❌ Lỗi';
+      if (res) res.innerHTML = `<span style="color:#dc2626">❌ ${d.error || 'Không xác định'}</span>`;
+    }
+  } catch(e) {
+    if (st) st.textContent = '❌ Lỗi';
+    if (res) res.innerHTML = `<span style="color:#dc2626">❌ ${e.message}</span>`;
+  }
+  if (btn) { btn.textContent = '⚡ Reload ngay'; }
+}
+
 async function doHealthCheck() {
   const el = document.getElementById('healthResult');
   el.textContent = 'Đang kiểm tra...';
+  const results = [];
+  // 1. Bot /health
   try {
-    const r = await fetch((activePanel.url || '').replace(/\/$/, '') + '/health');
+    const t0 = Date.now();
+    const r = await fetch((activePanel?.url || '').replace(/\/$/, '') + '/health', { signal: AbortSignal.timeout(8000) });
     const d = await r.json();
-    el.innerHTML = `<span class="tag tag-green">✅ OK</span> Bot đang hoạt động — uptime ${d.uptime_s || '?'}s`;
-  } catch (e) {
-    el.innerHTML = `<span class="tag tag-red">❌ Lỗi</span> Không kết nối được: ${e.message}`;
-  }
+    results.push(`🟢 Bot /health: OK (${Date.now()-t0}ms) — uptime ${d.uptime_s||'?'}s`);
+  } catch (e) { results.push(`🔴 Bot /health: ${e.message}`); }
+  // 2. Bot /api/panel/status
+  try {
+    const t0 = Date.now();
+    const d = await api('GET', '/api/panel/status');
+    results.push(`🟢 /api/panel/status: OK (${Date.now()-t0}ms) — ${d.perms_groups_count||0} nhóm, ${d.autoreply_count||0} rules`);
+  } catch (e) { results.push(`🔴 /api/panel/status: ${e.message}`); }
+  // 3. /api/panel/services (Firebase + Redis)
+  try {
+    const t0 = Date.now();
+    const d = await api('GET', '/api/panel/services');
+    if (d.services?.firebase) {
+      const fb = d.services.firebase;
+      results.push(`${fb.ok ? '🟢' : '🔴'} Firebase: ${fb.ok ? `OK ${fb.ms}ms` : fb.error}`);
+    }
+    if (d.services?.redis) {
+      const rd = d.services.redis;
+      results.push(`${rd.ok ? '🟢' : '🔴'} Redis: ${rd.ok ? `OK ${rd.ms}ms` : rd.error}`);
+    }
+  } catch (e) { results.push(`🔴 /api/panel/services: ${e.message}`); }
+  // 4. Cloudflare Pages
+  try {
+    const t0 = Date.now();
+    const r = await fetch('https://kscl-sakuko.pages.dev/', { signal: AbortSignal.timeout(8000) });
+    results.push(`${r.ok ? '🟢' : '🔴'} Cloudflare Pages: ${r.status} (${Date.now()-t0}ms)`);
+  } catch (e) { results.push(`🔴 Cloudflare Pages: ${e.message}`); }
+  // 5. CF /api/lark-date
+  try {
+    const t0 = Date.now();
+    const r = await fetch('https://kscl-sakuko.pages.dev/api/lark-date', { signal: AbortSignal.timeout(15000) });
+    results.push(`${r.ok ? '🟢' : '🔴'} CF /api/lark-date: ${r.status} (${Date.now()-t0}ms)`);
+  } catch (e) { results.push(`🔴 CF /api/lark-date: ${e.message}`); }
+
+  el.innerHTML = results.map(r => `<div style="margin:3px 0">${r}</div>`).join('');
 }
 
 // ── Send msg ──────────────────────────────────────────────────────────────────
@@ -2830,6 +3068,7 @@ function goPage(id) {
   if (id === 'email') loadEmailImportant();
   if (id === 'backup') { loadBackupConfig(); loadBackupHistory(); }
   if (id === 'morning') loadMorningConfig();
+  if (id === 'test') _startSvcAutoRefresh();
 }
 
 function loadRules() {
