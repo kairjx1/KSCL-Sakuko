@@ -2831,7 +2831,7 @@ async function loadUserStats() {
     let html = `<table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="background:#f1f5f9;text-align:left">
         <th style="padding:10px 14px;font-weight:600;color:#475569;white-space:nowrap">#</th>
-        <th style="padding:10px 14px;font-weight:600;color:#475569">Open ID</th>
+        <th style="padding:10px 14px;font-weight:600;color:#475569">Người dùng</th>
         <th style="padding:10px 14px;font-weight:600;color:#475569;text-align:center">Tổng</th>
         <th style="padding:10px 14px;font-weight:600;color:#475569;text-align:center">Hôm nay</th>
         <th style="padding:10px 14px;font-weight:600;color:#475569">Câu hỏi gần nhất</th>
@@ -2856,7 +2856,10 @@ async function loadUserStats() {
 
       html += `<tr style="background:${rowBg};border-bottom:1px solid #f1f5f9">
         <td style="padding:10px 14px;color:#94a3b8">${i+1}</td>
-        <td style="padding:10px 14px;font-family:monospace;font-size:11px;color:#334155;max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${u.open_id}">${u.open_id}</td>
+        <td style="padding:10px 14px;max-width:180px" title="${u.open_id}">
+          ${u.name ? `<div style="font-weight:600;font-size:13px;color:#1e293b">${u.name}</div>` : ''}
+          <div style="font-family:monospace;font-size:10px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis">${u.open_id}</div>
+        </td>
         <td style="padding:10px 14px;text-align:center;font-weight:700;color:${countColor}">${u.count}</td>
         <td style="padding:10px 14px;text-align:center;font-weight:600;color:${todayColor}">${todayCount || '—'}</td>
         <td style="padding:10px 14px;color:#475569;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${u.last_query || ''}">${u.last_query || '—'}</td>
