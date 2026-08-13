@@ -3855,7 +3855,7 @@ async function loadPromptTemplates() {
   const el = document.getElementById('brain-prompt-list');
   el.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:16px;text-align:center">Đang tải...</div>';
   try {
-    const d = await brainApi('GET', '/api/brain/prompt-config');
+    const d = await brainApi('GET', '/api/brain/prompt-config?all=1');
     const templates = d.templates || {};
     const keys = Object.keys(templates);
     if (!keys.length) { el.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:16px;text-align:center">Chưa có template nào.</div>'; return; }
@@ -3890,7 +3890,7 @@ function openPromptModal(name, t) {
 function closePromptModal() { document.getElementById('prompt-modal').style.display = 'none'; }
 
 async function editPromptTemplate(k) {
-  const d = await brainApi('GET', '/api/brain/prompt-config');
+  const d = await brainApi('GET', '/api/brain/prompt-config?all=1');
   openPromptModal(k, (d.templates||{})[k]);
 }
 
