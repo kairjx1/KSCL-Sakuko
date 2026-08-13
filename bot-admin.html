@@ -112,6 +112,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f7;color:#1a233
 .ar-reply{font-size:13px;color:#374151;line-height:1.5;white-space:pre-wrap;border-left:3px solid #e5e7eb;padding-left:10px;margin-top:6px}
 .ar-actions{position:absolute;top:12px;right:12px;display:flex;gap:6px}
 .ar-empty{text-align:center;padding:40px;color:#94a3b8;font-size:14px}
+.brain-tab{padding:8px 18px;border:none;background:none;color:#7c3aed;font-size:13px;font-weight:500;cursor:pointer;border-bottom:3px solid transparent;border-radius:0;transition:.15s;white-space:nowrap}
+.brain-tab.active{border-bottom-color:#7c3aed;font-weight:700;color:#4c1d95}
+.brain-tab:hover{background:#f5f3ff}
+.brain-key-card{background:#fff;border:1px solid #ede9fe;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brain-key-card:hover{border-color:#c4b5fd}
+.dag-card{background:#fff;border:1px solid #ede9fe;border-radius:12px;padding:14px 16px}
+.dag-card:hover{border-color:#c4b5fd}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:500}
 .modal{background:#fff;border-radius:14px;width:520px;max-width:96vw;box-shadow:0 24px 64px rgba(0,0,0,.2);overflow:hidden}
 .modal-head{padding:18px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
@@ -290,6 +297,7 @@ select.fg-sel:focus{border-color:#d0021b}
     <div class="nav-item" onclick="goPage('email')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span><span>Email</span></div>
     <div class="nav-item" onclick="goPage('morning')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span><span>Bản tin sáng</span></div>
     <div class="nav-item" onclick="goPage('discover')"><span class="icon">🔍</span><span>Khám phá</span></div>
+    <div class="nav-item" onclick="goPage('brain')" style="background:linear-gradient(135deg,#fdf4ff,#ede9fe);color:#7c3aed;font-weight:600"><span class="icon">🧠</span><span>Nâng cao</span></div>
     <div class="nav-item" onclick="goPage('panels')" style="margin-top:auto;border-top:1px solid #f1f5f9"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></span><span>Quản lý Panel</span></div>
     <div class="nav-item" onclick="startBackup()" id="backupNavBtn" style="border-top:1px solid #f1f5f9;background:#f0fdf4;color:#15803d;font-weight:600"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg></span><span>SAO LƯU</span></div>
   </div>
@@ -761,6 +769,131 @@ select.fg-sel:focus{border-color:#d0021b}
     </div>
 
     <!-- DISCOVER -->
+    <!-- ══════════════════════ PAGE: NÂNG CAO (BRAIN) ══════════════════════ -->
+    <div class="page" id="page-brain">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+        <div style="font-size:32px">🧠</div>
+        <div>
+          <div class="page-title" style="margin-bottom:2px">Brain Service – Nâng cao</div>
+          <div style="font-size:13px;color:#7c3aed">Tòa thứ 2: API Key Pool · Knowledge DAG · Prompt Templates · Context Handoff · Analytics</div>
+        </div>
+        <button class="btn btn-gray btn-sm" style="margin-left:auto" onclick="loadBrainStatus()">🔄 Làm mới</button>
+      </div>
+
+      <!-- Circuit Breaker Status -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px">
+        <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:12px;padding:16px">
+          <div style="font-size:11px;color:#7c3aed;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Trạng thái kết nối</div>
+          <div id="brain-circuit-state" style="font-size:22px;font-weight:700;color:#4c1d95">–</div>
+          <div id="brain-circuit-detail" style="font-size:12px;color:#6b7280;margin-top:4px">Đang tải...</div>
+        </div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px">
+          <div style="font-size:11px;color:#15803d;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Brain URL</div>
+          <div id="brain-url-display" style="font-size:12px;color:#166534;word-break:break-all">Đang tải...</div>
+        </div>
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:16px">
+          <div style="font-size:11px;color:#c2410c;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tổng queries hôm nay</div>
+          <div id="brain-today-queries" style="font-size:22px;font-weight:700;color:#7c2d12">–</div>
+        </div>
+        <div style="background:#fdf2f8;border:1px solid #f9a8d4;border-radius:12px;padding:16px">
+          <div style="font-size:11px;color:#be185d;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Tổng tokens hôm nay</div>
+          <div id="brain-today-tokens" style="font-size:22px;font-weight:700;color:#831843">–</div>
+        </div>
+      </div>
+
+      <!-- Sub-tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:2px solid #ede9fe;padding-bottom:0">
+        <button class="brain-tab active" onclick="switchBrainTab('keys')" id="btab-keys">🔑 API Keys</button>
+        <button class="brain-tab" onclick="switchBrainTab('dag')" id="btab-dag">🕸️ Knowledge DAG</button>
+        <button class="brain-tab" onclick="switchBrainTab('prompt')" id="btab-prompt">✏️ Prompt Templates</button>
+        <button class="brain-tab" onclick="switchBrainTab('analytics')" id="btab-analytics">📊 Analytics</button>
+      </div>
+
+      <!-- SUB: API Keys -->
+      <div id="bpanel-keys" class="brain-panel">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <input id="brain-key-input" type="password" placeholder="Paste API key mới vào đây..." style="flex:1;min-width:200px;padding:8px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+          <input id="brain-key-label" type="text" placeholder="Nhãn (VD: key-gpt-1)" style="width:160px;padding:8px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+          <input id="brain-key-limit" type="number" placeholder="Giới hạn/ngày" value="1000" style="width:130px;padding:8px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+          <button class="btn" style="background:#7c3aed;color:#fff" onclick="addBrainKey()">➕ Thêm key</button>
+        </div>
+        <div id="brain-keys-list" style="display:grid;gap:10px">
+          <div style="color:#9ca3af;font-size:13px;padding:20px;text-align:center">Đang tải danh sách key...</div>
+        </div>
+      </div>
+
+      <!-- SUB: Knowledge DAG -->
+      <div id="bpanel-dag" class="brain-panel" style="display:none">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="btn" style="background:#7c3aed;color:#fff" onclick="openAddNodeModal()">➕ Thêm node</button>
+          <input id="dag-search" type="text" placeholder="Tìm kiếm node..." style="flex:1;min-width:160px;padding:8px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px" oninput="filterDagNodes()">
+        </div>
+        <div id="brain-dag-list" style="display:grid;gap:10px">
+          <div style="color:#9ca3af;font-size:13px;padding:20px;text-align:center">Đang tải Knowledge Graph...</div>
+        </div>
+        <!-- Modal thêm node -->
+        <div id="add-node-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
+          <div style="background:#fff;border-radius:16px;padding:28px;width:min(520px,95vw);max-height:90vh;overflow-y:auto">
+            <div style="font-size:16px;font-weight:700;color:#4c1d95;margin-bottom:18px">🕸️ Thêm Node mới</div>
+            <div style="display:grid;gap:12px">
+              <input id="node-title" placeholder="Tiêu đề node *" style="padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+              <textarea id="node-content" placeholder="Nội dung kiến thức (tóm tắt, định nghĩa...)" rows="4" style="padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px;resize:vertical"></textarea>
+              <input id="node-tags" placeholder="Tags (phân cách bằng dấu phẩy): qc, vải, chất lượng" style="padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+              <input id="node-related" placeholder="Node liên quan (ID, phân cách bằng dấu phẩy)" style="padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+              <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+                <button class="btn btn-gray" onclick="closeAddNodeModal()">Huỷ</button>
+                <button class="btn" style="background:#7c3aed;color:#fff" onclick="saveNewNode()">💾 Lưu node</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB: Prompt Templates -->
+      <div id="bpanel-prompt" class="brain-panel" style="display:none">
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="btn" style="background:#7c3aed;color:#fff" onclick="openPromptModal()">➕ Thêm template</button>
+        </div>
+        <div id="brain-prompt-list" style="display:grid;gap:10px">
+          <div style="color:#9ca3af;font-size:13px;padding:20px;text-align:center">Đang tải templates...</div>
+        </div>
+        <!-- Modal -->
+        <div id="prompt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
+          <div style="background:#fff;border-radius:16px;padding:28px;width:min(600px,95vw);max-height:90vh;overflow-y:auto">
+            <div style="font-size:16px;font-weight:700;color:#4c1d95;margin-bottom:18px">✏️ Cấu hình Prompt Template</div>
+            <div style="display:grid;gap:12px">
+              <input id="pt-name" placeholder="Tên template *" style="padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+              <input id="pt-desc" placeholder="Mô tả ngắn" style="padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+              <div>
+                <div style="font-size:12px;color:#7c3aed;font-weight:600;margin-bottom:6px">🔼 Prefix (thêm vào trước system prompt)</div>
+                <textarea id="pt-prefix" rows="4" placeholder="VD: Bạn là trợ lý KSCL chuyên nghiệp. Luôn trả lời bằng tiếng Việt..." style="width:100%;padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
+              </div>
+              <div>
+                <div style="font-size:12px;color:#7c3aed;font-weight:600;margin-bottom:6px">🔽 Suffix (thêm vào sau system prompt)</div>
+                <textarea id="pt-suffix" rows="3" placeholder="VD: Kết thúc mỗi câu trả lời bằng emoji phù hợp." style="width:100%;padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
+              </div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                <input type="checkbox" id="pt-enabled" checked style="width:16px;height:16px;accent-color:#7c3aed">
+                <span>Bật template này (áp dụng ngay cho bot)</span>
+              </label>
+              <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+                <button class="btn btn-gray" onclick="closePromptModal()">Huỷ</button>
+                <button class="btn" style="background:#7c3aed;color:#fff" onclick="savePromptTemplate()">💾 Lưu</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB: Analytics -->
+      <div id="bpanel-analytics" class="brain-panel" style="display:none">
+        <div id="brain-analytics-content" style="display:grid;gap:14px">
+          <div style="color:#9ca3af;font-size:13px;padding:20px;text-align:center">Đang tải analytics...</div>
+        </div>
+      </div>
+    </div>
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+
     <div class="page" id="page-discover">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
         <div class="page-title" style="margin-bottom:0">🔍 Khám phá Firebase</div>
@@ -3176,6 +3309,7 @@ function goPage(id) {
   if (id === 'backup') { loadBackupConfig(); loadBackupHistory(); }
   if (id === 'morning') loadMorningConfig();
   if (id === 'test') _startSvcAutoRefresh();
+  if (id === 'brain') loadBrainStatus();
 }
 
 function loadRules() {
@@ -3549,6 +3683,253 @@ async function editDynKey(k) {
     _showSyncToast('❌ JSON không hợp lệ: ' + e.message, 'err');
   }
 }
+
+// ══════════════════════ BRAIN SERVICE ══════════════════════════════════════════
+const BRAIN_URL = 'https://lark-brain.onrender.com';
+const BRAIN_SECRET = 'brain-secret-2026';
+
+async function brainApi(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json', 'X-Brain-Secret': BRAIN_SECRET } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(BRAIN_URL + path, opts);
+  return r.json();
+}
+
+function switchBrainTab(tab) {
+  document.querySelectorAll('.brain-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.brain-panel').forEach(p => p.style.display = 'none');
+  document.getElementById('btab-' + tab).classList.add('active');
+  document.getElementById('bpanel-' + tab).style.display = '';
+  if (tab === 'keys') loadBrainKeys();
+  if (tab === 'dag') loadDagNodes();
+  if (tab === 'prompt') loadPromptTemplates();
+  if (tab === 'analytics') loadBrainAnalytics();
+}
+
+async function loadBrainStatus() {
+  // Lấy status từ Core Bot (qua /api/panel/brain-status)
+  try {
+    const d = await api('GET', '/api/panel/brain-status');
+    const c = d.circuit || {};
+    const stateMap = { closed: '🟢 Hoạt động', open: '🔴 Tắt (circuit open)', half_open: '🟡 Thử lại...' };
+    document.getElementById('brain-circuit-state').textContent = stateMap[c.state] || c.state || '–';
+    document.getElementById('brain-circuit-detail').textContent = `Lỗi liên tiếp: ${c.fail_count || 0}`;
+    document.getElementById('brain-url-display').textContent = c.brain_url || 'Chưa cấu hình';
+  } catch(e) {
+    document.getElementById('brain-circuit-state').textContent = '⚠️ Lỗi kết nối';
+    document.getElementById('brain-circuit-detail').textContent = e.message;
+  }
+  // Analytics tổng hợp
+  try {
+    const a = await brainApi('GET', '/api/brain/analytics');
+    if (a.ok) {
+      const today = new Date().toISOString().slice(0,10);
+      document.getElementById('brain-today-queries').textContent = (a.daily?.[today]?.queries || 0).toLocaleString();
+      document.getElementById('brain-today-tokens').textContent = (a.daily?.[today]?.tokens || 0).toLocaleString();
+    }
+  } catch(e) {}
+  // Load sub-tab đang active
+  loadBrainKeys();
+}
+
+// ── API Keys ───────────────────────────────────────────────────────────────────
+async function loadBrainKeys() {
+  const el = document.getElementById('brain-keys-list');
+  el.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:16px;text-align:center">Đang tải...</div>';
+  try {
+    const d = await brainApi('GET', '/api/brain/keys');
+    if (!d.ok || !d.keys?.length) { el.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:16px;text-align:center">Chưa có key nào. Thêm key mới ở trên.</div>'; return; }
+    el.innerHTML = d.keys.map(k => `
+      <div class="brain-key-card">
+        <div style="font-size:20px">🔑</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;color:#4c1d95;font-size:14px">${k.label || k.id}</div>
+          <div style="font-size:12px;color:#6b7280">Giới hạn/ngày: ${k.daily_limit||'–'} · Đã dùng hôm nay: <b>${k.used_today??'–'}</b></div>
+        </div>
+        <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${k.active!==false?'#f0fdf4':'#fef2f2'};color:${k.active!==false?'#15803d':'#dc2626'}">${k.active!==false?'✅ Bật':'⏸ Tắt'}</span>
+        <button class="btn btn-gray btn-sm" onclick="deleteBrainKey('${k.id}')">🗑️</button>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = `<div style="color:#ef4444;font-size:13px;padding:16px">Lỗi: ${e.message}</div>`; }
+}
+
+async function addBrainKey() {
+  const key = document.getElementById('brain-key-input').value.trim();
+  const label = document.getElementById('brain-key-label').value.trim();
+  const limit = parseInt(document.getElementById('brain-key-limit').value) || 1000;
+  if (!key) return alert('Vui lòng nhập API key!');
+  await brainApi('POST', '/api/brain/keys', { key, label: label||key.slice(-8), daily_limit: limit });
+  document.getElementById('brain-key-input').value = '';
+  document.getElementById('brain-key-label').value = '';
+  loadBrainKeys();
+}
+
+async function deleteBrainKey(id) {
+  if (!confirm('Xoá key này?')) return;
+  await brainApi('DELETE', '/api/brain/keys/' + id);
+  loadBrainKeys();
+}
+
+// ── Knowledge DAG ──────────────────────────────────────────────────────────────
+let _allDagNodes = [];
+
+async function loadDagNodes() {
+  const el = document.getElementById('brain-dag-list');
+  el.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:16px;text-align:center">Đang tải...</div>';
+  try {
+    const d = await brainApi('GET', '/api/brain/dag/nodes');
+    _allDagNodes = d.nodes || [];
+    renderDagNodes(_allDagNodes);
+  } catch(e) { el.innerHTML = `<div style="color:#ef4444;font-size:13px;padding:16px">Lỗi: ${e.message}</div>`; }
+}
+
+function renderDagNodes(nodes) {
+  const el = document.getElementById('brain-dag-list');
+  if (!nodes.length) { el.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:16px;text-align:center">Chưa có node nào.</div>'; return; }
+  el.innerHTML = nodes.map(n => `
+    <div class="dag-card">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;color:#4c1d95;font-size:14px;margin-bottom:4px">${n.title||n.id}</div>
+          <div style="font-size:12px;color:#374151;line-height:1.5;margin-bottom:6px">${(n.content||'').slice(0,180)}${n.content?.length>180?'…':''}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${(n.tags||[]).map(t=>`<span style="padding:2px 8px;background:#ede9fe;color:#6d28d9;border-radius:10px;font-size:11px">${t}</span>`).join('')}
+            ${n.related?.length?`<span style="padding:2px 8px;background:#f0fdf4;color:#15803d;border-radius:10px;font-size:11px">🔗 ${n.related.length} liên kết</span>`:''}
+          </div>
+        </div>
+        <button class="btn btn-gray btn-sm" onclick="deleteDagNode('${n.id}')">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+function filterDagNodes() {
+  const q = document.getElementById('dag-search').value.toLowerCase();
+  renderDagNodes(_allDagNodes.filter(n => (n.title+n.content+(n.tags||[]).join(' ')).toLowerCase().includes(q)));
+}
+
+function openAddNodeModal() { document.getElementById('add-node-modal').style.display = 'flex'; }
+function closeAddNodeModal() { document.getElementById('add-node-modal').style.display = 'none'; }
+
+async function saveNewNode() {
+  const title = document.getElementById('node-title').value.trim();
+  const content = document.getElementById('node-content').value.trim();
+  const tags = document.getElementById('node-tags').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const related = document.getElementById('node-related').value.split(',').map(s=>s.trim()).filter(Boolean);
+  if (!title) return alert('Vui lòng nhập tiêu đề!');
+  await brainApi('POST', '/api/brain/dag/nodes', { title, content, tags, related });
+  closeAddNodeModal();
+  ['node-title','node-content','node-tags','node-related'].forEach(id => document.getElementById(id).value = '');
+  loadDagNodes();
+}
+
+async function deleteDagNode(id) {
+  if (!confirm('Xoá node này?')) return;
+  await brainApi('DELETE', '/api/brain/dag/nodes/' + id);
+  loadDagNodes();
+}
+
+// ── Prompt Templates ──────────────────────────────────────────────────────────
+let _editingPromptName = null;
+
+async function loadPromptTemplates() {
+  const el = document.getElementById('brain-prompt-list');
+  el.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:16px;text-align:center">Đang tải...</div>';
+  try {
+    const d = await brainApi('GET', '/api/brain/prompt-config');
+    const templates = d.templates || {};
+    const keys = Object.keys(templates);
+    if (!keys.length) { el.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:16px;text-align:center">Chưa có template nào.</div>'; return; }
+    el.innerHTML = keys.map(k => {
+      const t = templates[k];
+      return `<div style="background:#fff;border:1px solid ${t.enabled?'#c4b5fd':'#e5e7eb'};border-radius:12px;padding:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="font-weight:700;color:#4c1d95;flex:1">${t.name||k}</div>
+          <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${t.enabled?'#f5f3ff':'#f3f4f6'};color:${t.enabled?'#7c3aed':'#6b7280'}">${t.enabled?'✅ Đang bật':'⏸ Tắt'}</span>
+          <button class="btn btn-gray btn-sm" onclick="editPromptTemplate('${k}')">✏️</button>
+          <button class="btn btn-gray btn-sm" onclick="deletePromptTemplate('${k}')">🗑️</button>
+        </div>
+        ${t.description?`<div style="font-size:12px;color:#6b7280;margin-bottom:8px">${t.description}</div>`:''}
+        ${t.prefix?`<div style="font-size:12px;background:#f5f3ff;border-radius:6px;padding:6px 10px;margin-bottom:6px"><b>Prefix:</b> ${t.prefix.slice(0,120)}${t.prefix.length>120?'…':''}</div>`:''}
+        ${t.suffix?`<div style="font-size:12px;background:#fdf4ff;border-radius:6px;padding:6px 10px"><b>Suffix:</b> ${t.suffix.slice(0,100)}${t.suffix.length>100?'…':''}</div>`:''}
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = `<div style="color:#ef4444;font-size:13px;padding:16px">Lỗi: ${e.message}</div>`; }
+}
+
+function openPromptModal(name, t) {
+  _editingPromptName = name || null;
+  document.getElementById('pt-name').value = t?.name || '';
+  document.getElementById('pt-desc').value = t?.description || '';
+  document.getElementById('pt-prefix').value = t?.prefix || '';
+  document.getElementById('pt-suffix').value = t?.suffix || '';
+  document.getElementById('pt-enabled').checked = t?.enabled !== false;
+  document.getElementById('pt-name').disabled = !!name;
+  document.getElementById('prompt-modal').style.display = 'flex';
+}
+
+function closePromptModal() { document.getElementById('prompt-modal').style.display = 'none'; }
+
+async function editPromptTemplate(k) {
+  const d = await brainApi('GET', '/api/brain/prompt-config');
+  openPromptModal(k, (d.templates||{})[k]);
+}
+
+async function savePromptTemplate() {
+  const name = document.getElementById('pt-name').value.trim();
+  if (!name) return alert('Vui lòng nhập tên template!');
+  await brainApi('POST', '/api/brain/prompt-config', {
+    name, description: document.getElementById('pt-desc').value,
+    prefix: document.getElementById('pt-prefix').value,
+    suffix: document.getElementById('pt-suffix').value,
+    enabled: document.getElementById('pt-enabled').checked
+  });
+  closePromptModal();
+  loadPromptTemplates();
+}
+
+async function deletePromptTemplate(k) {
+  if (!confirm(`Xoá template "${k}"?`)) return;
+  await brainApi('POST', '/api/brain/prompt-config', { name: k, _delete: true });
+  loadPromptTemplates();
+}
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+async function loadBrainAnalytics() {
+  const el = document.getElementById('brain-analytics-content');
+  el.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:16px;text-align:center">Đang tải...</div>';
+  try {
+    const d = await brainApi('GET', '/api/brain/analytics');
+    if (!d.ok) { el.innerHTML = '<div style="color:#ef4444;padding:16px">Brain offline hoặc chưa có dữ liệu.</div>'; return; }
+    const daily = d.daily || {};
+    const days = Object.keys(daily).sort().reverse().slice(0,14);
+    el.innerHTML = `
+      <div style="background:#fff;border:1px solid #ede9fe;border-radius:12px;padding:16px;overflow-x:auto">
+        <div style="font-weight:700;color:#4c1d95;margin-bottom:14px;font-size:14px">📅 Thống kê 14 ngày gần nhất</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr>
+            <th style="text-align:left;padding:8px;border-bottom:2px solid #ede9fe;color:#7c3aed">Ngày</th>
+            <th style="text-align:right;padding:8px;border-bottom:2px solid #ede9fe;color:#7c3aed">Queries</th>
+            <th style="text-align:right;padding:8px;border-bottom:2px solid #ede9fe;color:#7c3aed">Tokens</th>
+          </tr></thead>
+          <tbody>
+            ${days.length ? days.map(day => `<tr>
+              <td style="padding:8px;border-bottom:1px solid #f3f4f6;color:#374151">${day}</td>
+              <td style="padding:8px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600;color:#4c1d95">${(daily[day]?.queries||0).toLocaleString()}</td>
+              <td style="padding:8px;border-bottom:1px solid #f3f4f6;text-align:right;color:#6b7280">${(daily[day]?.tokens||0).toLocaleString()}</td>
+            </tr>`).join('') : '<tr><td colspan="3" style="padding:16px;text-align:center;color:#9ca3af">Chưa có dữ liệu</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+      <div style="background:#fff;border:1px solid #ede9fe;border-radius:12px;padding:16px">
+        <div style="font-weight:700;color:#4c1d95;margin-bottom:10px;font-size:14px">🔑 Thống kê theo API Key</div>
+        ${Object.keys(d.key_usage||{}).length ? Object.entries(d.key_usage).map(([k,v])=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6">
+            <div style="flex:1;font-size:13px;color:#374151">${k}</div>
+            <div style="font-size:13px;font-weight:600;color:#7c3aed">${(v||0).toLocaleString()} tokens</div>
+          </div>`).join('') : '<div style="color:#9ca3af;font-size:13px;padding:8px 0">Chưa có dữ liệu</div>'}
+      </div>`;
+  } catch(e) { el.innerHTML = `<div style="color:#ef4444;font-size:13px;padding:16px">Lỗi: ${e.message}</div>`; }
+}
+// ═══════════════════════════════════════════════════════════════════════════════
 </script>
 </body>
 </html>
