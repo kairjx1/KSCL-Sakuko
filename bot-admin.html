@@ -834,7 +834,7 @@ select.fg-sel:focus{border-color:#d0021b}
         <!-- Modal thêm node -->
         <div id="add-node-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
           <div style="background:#fff;border-radius:16px;padding:28px;width:min(520px,95vw);max-height:90vh;overflow-y:auto">
-            <div style="font-size:16px;font-weight:700;color:#4c1d95;margin-bottom:18px">🕸️ Thêm Node mới</div>
+            <div id="add-node-modal-title" style="font-size:16px;font-weight:700;color:#4c1d95;margin-bottom:18px">🕸️ Thêm Node mới</div>
             <div style="display:grid;gap:12px">
               <input id="node-title" placeholder="Tiêu đề node *" style="padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
               <textarea id="node-content" placeholder="Nội dung kiến thức (tóm tắt, định nghĩa...)" rows="4" style="padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px;resize:vertical"></textarea>
@@ -3796,7 +3796,8 @@ function renderDagNodes(nodes) {
             ${n.related?.length?`<span style="padding:2px 8px;background:#f0fdf4;color:#15803d;border-radius:10px;font-size:11px">🔗 ${n.related.length} liên kết</span>`:''}
           </div>
         </div>
-        <button class="btn btn-gray btn-sm" onclick="deleteDagNode('${n.id}')">🗑️</button>
+        <button class="btn btn-gray btn-sm" onclick="editDagNode('${n.id}')" title="Sửa">✏️</button>
+        <button class="btn btn-gray btn-sm" onclick="deleteDagNode('${n.id}')" title="Xoá">🗑️</button>
       </div>
     </div>`).join('');
 }
@@ -3806,18 +3807,38 @@ function filterDagNodes() {
   renderDagNodes(_allDagNodes.filter(n => (n.title+n.content+(n.tags||[]).join(' ')).toLowerCase().includes(q)));
 }
 
-function openAddNodeModal() { document.getElementById('add-node-modal').style.display = 'flex'; }
-function closeAddNodeModal() { document.getElementById('add-node-modal').style.display = 'none'; }
+let _editingNodeId = null;
+
+function openAddNodeModal(node) {
+  _editingNodeId = node?.id || null;
+  document.getElementById('add-node-modal-title').textContent = node ? '✏️ Sửa Node' : '🕸️ Thêm Node mới';
+  document.getElementById('node-title').value = node?.title || '';
+  document.getElementById('node-content').value = node?.content || '';
+  document.getElementById('node-tags').value = (node?.tags||[]).join(', ');
+  document.getElementById('node-related').value = (node?.links||[]).join(', ');
+  document.getElementById('node-title').disabled = !!node;
+  document.getElementById('add-node-modal').style.display = 'flex';
+}
+function closeAddNodeModal() {
+  document.getElementById('add-node-modal').style.display = 'none';
+  _editingNodeId = null;
+}
+
+function editDagNode(id) {
+  const node = _allDagNodes.find(n => n.id === id);
+  if (node) openAddNodeModal(node);
+}
 
 async function saveNewNode() {
   const title = document.getElementById('node-title').value.trim();
   const content = document.getElementById('node-content').value.trim();
   const tags = document.getElementById('node-tags').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const related = document.getElementById('node-related').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const links = document.getElementById('node-related').value.split(',').map(s=>s.trim()).filter(Boolean);
   if (!title) return alert('Vui lòng nhập tiêu đề!');
-  await brainApi('POST', '/api/brain/dag/nodes', { title, content, tags, related });
+  const payload = { title, content, tags, links };
+  if (_editingNodeId) payload.id = _editingNodeId;
+  await brainApi('POST', '/api/brain/dag/nodes', payload);
   closeAddNodeModal();
-  ['node-title','node-content','node-tags','node-related'].forEach(id => document.getElementById(id).value = '');
   loadDagNodes();
 }
 
