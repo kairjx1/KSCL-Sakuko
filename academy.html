@@ -632,8 +632,12 @@ function rDashboard(){
   const NGUONG_DATE=0.0021;
   const ebitDate=(tlDate-NGUONG_DATE)*totDT;
   const dateOk=tlDate<=NGUONG_DATE;
-  // ── QC data — ưu tiên qcOvData (dữ liệu thật từ module QC), fallback qcExecData ──
-  const qov=S.qcOvData;
+  // ── QC data — ưu tiên qcOvData (single month), fallback qcOvYearData (latest month), fallback qcExecData ──
+  const _qcYD=S.qcOvYearData||{};
+  const _qcLatestM=Object.keys(_qcYD).filter(m=>_qcYD[m]?.diem).sort((a,b)=>+a-+b).pop();
+  const qov=S.qcOvData||(_qcLatestM?_qcYD[_qcLatestM]:null);
+  // Nếu dùng yearData thì cập nhật qcMonth cho đúng
+  if(!S.qcOvData&&_qcLatestM){S.qcOvMonth=_qcLatestM;S.qcOvYear=S.qcOvSelYear||'2026';}
   const qd=S.qcExecData;
   const qovRows=qov?.diem&&Array.isArray(qov.diem.rows)?qov.diem.rows:[];
   const qovTotMax=qovRows.reduce((s,r)=>s+(parseFloat(r.max)||0),0);
@@ -2803,7 +2807,9 @@ async function qcOvLoadYear(year){
     });
     S._qcOvYearLoaded=y;
     S._qcOvLoading=false;
+    // Re-render cả QC Tổng quan lẫn EBIT Dashboard (home) sau khi load xong
     if(S.page==='qc'&&S.tab==='Tổng quan')render();
+    else if(S.page==='home')render();
   }catch(e){
     S._qcOvLoading=false;
     alert('Lỗi tải dữ liệu QC: '+e.message);
@@ -5367,7 +5373,8 @@ function afterRender(){
 
   // Init dynamic store table on Nhập liệu tab
   if(S.page==='baocao'&&S.tab==='Nhập liệu')qcLoadStores();
-  if(S.page==='qc'&&(!S.tab||S.tab==='Tổng quan')&&S._qcOvYearLoaded!==S.qcOvSelYear&&!S._qcOvLoading){
+  // Auto-load QC year data: cả khi ở QC tab lẫn EBIT Tổng quan (home)
+  if((S.page==='qc'&&(!S.tab||S.tab==='Tổng quan')||S.page==='home')&&S._qcOvYearLoaded!==S.qcOvSelYear&&!S._qcOvLoading){
     const _db=getQCDB();
     if(_db){S._qcOvLoading=true;qcOvLoadYear(S.qcOvSelYear);}
   }
