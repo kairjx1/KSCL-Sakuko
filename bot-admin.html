@@ -803,10 +803,13 @@ select.fg-sel:focus{border-color:#d0021b}
 
       <!-- Sub-tabs -->
       <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:2px solid #ede9fe;padding-bottom:0">
-        <button class="brain-tab active" onclick="switchBrainTab('keys')" id="btab-keys">🔑 API Keys</button>
+        <button class="brain-tab active" onclick="switchBrainTab('keys')" id="btab-keys">🤖 Bé KSCL Mini</button>
         <button class="brain-tab" onclick="switchBrainTab('dag')" id="btab-dag">🕸️ Knowledge DAG</button>
         <button class="brain-tab" onclick="switchBrainTab('prompt')" id="btab-prompt">✏️ Prompt Templates</button>
         <button class="brain-tab" onclick="switchBrainTab('analytics')" id="btab-analytics">📊 Analytics</button>
+        <button class="brain-tab" onclick="switchBrainTab('voice')" id="btab-voice">🎙️ Voice Studio</button>
+        <button class="brain-tab" onclick="switchBrainTab('content')" id="btab-content">📄 Content Factory</button>
+        <button class="brain-tab" onclick="switchBrainTab('quick')" id="btab-quick">⚡ Quick Commands</button>
       </div>
 
       <!-- SUB: API Keys -->
@@ -889,6 +892,135 @@ select.fg-sel:focus{border-color:#d0021b}
       <div id="bpanel-analytics" class="brain-panel" style="display:none">
         <div id="brain-analytics-content" style="display:grid;gap:14px">
           <div style="color:#9ca3af;font-size:13px;padding:20px;text-align:center">Đang tải analytics...</div>
+        </div>
+      </div>
+
+      <!-- SUB: Voice Studio -->
+      <div id="bpanel-voice" class="brain-panel" style="display:none">
+        <div style="display:grid;gap:16px">
+          <!-- Config card -->
+          <div style="background:#fff;border:1px solid #ede9fe;border-radius:12px;padding:18px">
+            <div style="font-weight:700;color:#4c1d95;font-size:14px;margin-bottom:14px">⚙️ Cấu hình Voice Studio</div>
+            <div style="display:grid;gap:10px">
+              <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer">
+                <input type="checkbox" id="voice-enabled" style="width:16px;height:16px;accent-color:#7c3aed">
+                <span>Bật Voice TTS cho bot</span>
+              </label>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <div style="flex:1;min-width:140px">
+                  <div style="font-size:12px;color:#6b7280;margin-bottom:4px">Provider</div>
+                  <select id="voice-provider" style="width:100%;padding:8px 10px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+                    <option value="openai">OpenAI TTS-1</option>
+                  </select>
+                </div>
+                <div style="flex:1;min-width:140px">
+                  <div style="font-size:12px;color:#6b7280;margin-bottom:4px">Giọng đọc</div>
+                  <select id="voice-id" style="width:100%;padding:8px 10px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+                    <option value="nova">Nova (nữ, tươi sáng)</option>
+                    <option value="alloy">Alloy (trung tính)</option>
+                    <option value="echo">Echo (nam, trầm)</option>
+                    <option value="fable">Fable (nam, ấm)</option>
+                    <option value="onyx">Onyx (nam, mạnh)</option>
+                    <option value="shimmer">Shimmer (nữ, nhẹ nhàng)</option>
+                  </select>
+                </div>
+                <div style="flex:0 0 120px">
+                  <div style="font-size:12px;color:#6b7280;margin-bottom:4px">Tốc độ (0.25–4)</div>
+                  <input type="number" id="voice-speed" value="1.0" min="0.25" max="4" step="0.25" style="width:100%;padding:8px 10px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+                </div>
+              </div>
+              <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px;font-size:12px;color:#0369a1">
+                💡 Yêu cầu: thêm <b>OPENAI_API_KEY</b> vào Render env vars của lark-brain. Phí ~$0.015/1000 ký tự.
+              </div>
+              <button class="btn" style="background:#7c3aed;color:#fff;width:fit-content" onclick="saveVoiceConfig()">💾 Lưu cấu hình</button>
+            </div>
+          </div>
+          <!-- Test TTS -->
+          <div style="background:#fff;border:1px solid #ede9fe;border-radius:12px;padding:18px">
+            <div style="font-weight:700;color:#4c1d95;font-size:14px;margin-bottom:12px">🎤 Thử Voice TTS</div>
+            <textarea id="voice-test-text" rows="3" placeholder="Nhập văn bản để nghe thử..." style="width:100%;padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;margin-bottom:10px">Xin chào! Tôi là trợ lý KSCL Sakuko, sẵn sàng hỗ trợ bạn.</textarea>
+            <div style="display:flex;gap:10px;align-items:center">
+              <button class="btn" style="background:#7c3aed;color:#fff" onclick="testVoiceTTS()">▶️ Nghe thử</button>
+              <div id="voice-test-status" style="font-size:13px;color:#6b7280"></div>
+            </div>
+            <div id="voice-player" style="margin-top:12px;display:none">
+              <audio id="voice-audio" controls style="width:100%;border-radius:8px"></audio>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB: Content Factory -->
+      <div id="bpanel-content" class="brain-panel" style="display:none">
+        <div style="display:grid;gap:16px">
+          <div style="background:#fff;border:1px solid #ede9fe;border-radius:12px;padding:18px">
+            <div style="font-weight:700;color:#4c1d95;font-size:14px;margin-bottom:14px">⚙️ Tạo nội dung tự động bằng AI</div>
+            <div style="display:grid;gap:10px">
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <div style="flex:1;min-width:160px">
+                  <div style="font-size:12px;color:#6b7280;margin-bottom:4px">Loại nội dung</div>
+                  <select id="content-type" style="width:100%;padding:8px 10px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+                    <option value="card">📌 Card thông tin</option>
+                    <option value="report">📋 Báo cáo có cấu trúc</option>
+                    <option value="summary">📝 Executive Summary</option>
+                    <option value="slide">📊 Outline Slide</option>
+                  </select>
+                </div>
+              </div>
+              <input id="content-topic" placeholder="Chủ đề * (VD: Kết quả đổi date tuần 32, Tổng kết KPI tháng 8...)" style="padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+              <textarea id="content-context" rows="3" placeholder="Thông tin bổ sung (tùy chọn): số liệu, dữ liệu cụ thể..." style="padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px;resize:vertical"></textarea>
+              <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;font-size:12px;color:#15803d">
+                💡 AI sẽ tạo nội dung có cấu trúc. Yêu cầu ít nhất một trong: DeepSeek / GPT / Gemini API key.
+              </div>
+              <button class="btn" style="background:#7c3aed;color:#fff;width:fit-content" onclick="generateContent()">✨ Tạo nội dung</button>
+            </div>
+          </div>
+          <div id="content-result" style="display:none;background:#fff;border:1px solid #ede9fe;border-radius:12px;padding:18px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+              <div style="font-weight:700;color:#4c1d95;font-size:14px;flex:1">📄 Kết quả</div>
+              <button class="btn btn-gray btn-sm" onclick="copyContentResult()">📋 Copy</button>
+            </div>
+            <div id="content-result-body"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB: Quick Commands -->
+      <div id="bpanel-quick" class="brain-panel" style="display:none">
+        <!-- Quick Buttons -->
+        <div style="background:#fff;border:1px solid #ede9fe;border-radius:12px;padding:18px;margin-bottom:16px">
+          <div style="font-weight:700;color:#4c1d95;font-size:14px;margin-bottom:12px">⚡ Lệnh nhanh — Click để copy vào clipboard</div>
+          <div id="quick-buttons-grid" style="display:flex;flex-wrap:wrap;gap:8px">
+            <div style="color:#9ca3af;font-size:13px">Đang tải...</div>
+          </div>
+        </div>
+        <!-- Manage Commands -->
+        <div style="background:#fff;border:1px solid #ede9fe;border-radius:12px;padding:18px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <div style="font-weight:700;color:#4c1d95;font-size:14px;flex:1">📝 Quản lý lệnh nhanh</div>
+            <button class="btn" style="background:#7c3aed;color:#fff" onclick="openQuickCmdModal()">➕ Thêm lệnh</button>
+          </div>
+          <div id="quick-commands-list" style="display:grid;gap:8px">
+            <div style="color:#9ca3af;font-size:13px">Đang tải...</div>
+          </div>
+        </div>
+        <!-- Modal thêm lệnh -->
+        <div id="quick-cmd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
+          <div style="background:#fff;border-radius:16px;padding:28px;width:min(480px,95vw)">
+            <div style="font-size:16px;font-weight:700;color:#4c1d95;margin-bottom:18px">⚡ Thêm lệnh nhanh</div>
+            <div style="display:grid;gap:10px">
+              <div style="display:flex;gap:8px">
+                <input id="qc-icon" placeholder="Icon" value="⚡" style="width:60px;padding:9px;border:1px solid #ddd6fe;border-radius:8px;font-size:18px;text-align:center">
+                <input id="qc-label" placeholder="Tên lệnh *" style="flex:1;padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+              </div>
+              <input id="qc-command" placeholder="Nội dung lệnh * (VD: báo cáo đổi date hôm nay)" style="padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+              <input id="qc-desc" placeholder="Mô tả ngắn" style="padding:9px 12px;border:1px solid #ddd6fe;border-radius:8px;font-size:13px">
+              <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+                <button class="btn btn-gray" onclick="closeQuickCmdModal()">Huỷ</button>
+                <button class="btn" style="background:#7c3aed;color:#fff" onclick="saveQuickCmd()">💾 Lưu</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -3700,10 +3832,12 @@ function switchBrainTab(tab) {
   document.querySelectorAll('.brain-panel').forEach(p => p.style.display = 'none');
   document.getElementById('btab-' + tab).classList.add('active');
   document.getElementById('bpanel-' + tab).style.display = '';
-  if (tab === 'keys') loadBrainKeys();
-  if (tab === 'dag') loadDagNodes();
-  if (tab === 'prompt') loadPromptTemplates();
-  if (tab === 'analytics') loadBrainAnalytics();
+  if (tab === 'keys')     loadBrainKeys();
+  if (tab === 'dag')      loadDagNodes();
+  if (tab === 'prompt')   loadPromptTemplates();
+  if (tab === 'analytics')loadBrainAnalytics();
+  if (tab === 'voice')    loadVoiceConfig();
+  if (tab === 'quick')    loadQuickCommands();
 }
 
 async function loadBrainStatus() {
@@ -3913,42 +4047,271 @@ async function deletePromptTemplate(k) {
   loadPromptTemplates();
 }
 
-// ── Analytics ─────────────────────────────────────────────────────────────────
+// ── Analytics (với bar chart) ──────────────────────────────────────────────────
 async function loadBrainAnalytics() {
   const el = document.getElementById('brain-analytics-content');
   el.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:16px;text-align:center">Đang tải...</div>';
   try {
-    const d = await brainApi('GET', '/api/brain/analytics');
+    const d = await brainApi('GET', '/api/brain/analytics?days=14');
     if (!d.ok) { el.innerHTML = '<div style="color:#ef4444;padding:16px">Brain offline hoặc chưa có dữ liệu.</div>'; return; }
     const daily = d.daily || {};
-    const days = Object.keys(daily).sort().reverse().slice(0,14);
-    el.innerHTML = `
+    const days  = Object.keys(daily).sort().slice(-14);
+    const maxQ  = Math.max(1, ...days.map(day => daily[day]?.queries || 0));
+
+    const barChart = days.length ? `
+      <div style="background:#fff;border:1px solid #ede9fe;border-radius:12px;padding:18px;overflow-x:auto">
+        <div style="font-weight:700;color:#4c1d95;margin-bottom:16px;font-size:14px">📊 Biểu đồ queries 14 ngày</div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:120px;min-width:${days.length*44}px">
+          ${days.map(day => {
+            const q = daily[day]?.queries || 0;
+            const h = Math.max(4, Math.round((q / maxQ) * 100));
+            const label = day.slice(5); // MM-DD
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:36px">
+              <div style="font-size:10px;color:#7c3aed;font-weight:600">${q||''}</div>
+              <div style="width:100%;height:${h}px;background:linear-gradient(180deg,#7c3aed,#a78bfa);border-radius:4px 4px 0 0;min-height:4px"></div>
+              <div style="font-size:10px;color:#9ca3af;white-space:nowrap">${label}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : '';
+
+    const table = `
       <div style="background:#fff;border:1px solid #ede9fe;border-radius:12px;padding:16px;overflow-x:auto">
-        <div style="font-weight:700;color:#4c1d95;margin-bottom:14px;font-size:14px">📅 Thống kê 14 ngày gần nhất</div>
+        <div style="font-weight:700;color:#4c1d95;margin-bottom:14px;font-size:14px">📅 Chi tiết 14 ngày gần nhất</div>
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr>
             <th style="text-align:left;padding:8px;border-bottom:2px solid #ede9fe;color:#7c3aed">Ngày</th>
             <th style="text-align:right;padding:8px;border-bottom:2px solid #ede9fe;color:#7c3aed">Queries</th>
             <th style="text-align:right;padding:8px;border-bottom:2px solid #ede9fe;color:#7c3aed">Tokens</th>
+            <th style="text-align:right;padding:8px;border-bottom:2px solid #ede9fe;color:#7c3aed">Ước tính chi phí</th>
           </tr></thead>
           <tbody>
-            ${days.length ? days.map(day => `<tr>
-              <td style="padding:8px;border-bottom:1px solid #f3f4f6;color:#374151">${day}</td>
-              <td style="padding:8px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600;color:#4c1d95">${(daily[day]?.queries||0).toLocaleString()}</td>
-              <td style="padding:8px;border-bottom:1px solid #f3f4f6;text-align:right;color:#6b7280">${(daily[day]?.tokens||0).toLocaleString()}</td>
-            </tr>`).join('') : '<tr><td colspan="3" style="padding:16px;text-align:center;color:#9ca3af">Chưa có dữ liệu</td></tr>'}
+            ${days.length ? [...days].reverse().map(day => {
+              const q = daily[day]?.queries || 0;
+              const t = daily[day]?.tokens  || 0;
+              const cost = (t * 0.000003).toFixed(4); // ~$3/1M tokens
+              return `<tr>
+                <td style="padding:8px;border-bottom:1px solid #f3f4f6;color:#374151">${day}</td>
+                <td style="padding:8px;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:600;color:#4c1d95">${q.toLocaleString()}</td>
+                <td style="padding:8px;border-bottom:1px solid #f3f4f6;text-align:right;color:#6b7280">${t.toLocaleString()}</td>
+                <td style="padding:8px;border-bottom:1px solid #f3f4f6;text-align:right;color:#059669;font-size:12px">~$${cost}</td>
+              </tr>`;
+            }).join('') : '<tr><td colspan="4" style="padding:16px;text-align:center;color:#9ca3af">Chưa có dữ liệu</td></tr>'}
           </tbody>
         </table>
-      </div>
+      </div>`;
+
+    const providerStats = `
       <div style="background:#fff;border:1px solid #ede9fe;border-radius:12px;padding:16px">
-        <div style="font-weight:700;color:#4c1d95;margin-bottom:10px;font-size:14px">🔑 Thống kê theo API Key</div>
+        <div style="font-weight:700;color:#4c1d95;margin-bottom:10px;font-size:14px">🤖 Thống kê theo Provider / API Key</div>
         ${Object.keys(d.key_usage||{}).length ? Object.entries(d.key_usage).map(([k,v])=>`
           <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6">
-            <div style="flex:1;font-size:13px;color:#374151">${k}</div>
-            <div style="font-size:13px;font-weight:600;color:#7c3aed">${(v||0).toLocaleString()} tokens</div>
+            <div style="font-size:18px">${k==='deepseek'?'🔵':k==='openai'?'🟢':k==='gemini'?'🔴':'🔑'}</div>
+            <div style="flex:1;font-size:13px;color:#374151;font-weight:500">${k}</div>
+            <div style="font-size:13px;font-weight:600;color:#7c3aed">${(v||0).toLocaleString()} lần</div>
           </div>`).join('') : '<div style="color:#9ca3af;font-size:13px;padding:8px 0">Chưa có dữ liệu</div>'}
       </div>`;
+
+    el.innerHTML = barChart + table + providerStats;
   } catch(e) { el.innerHTML = `<div style="color:#ef4444;font-size:13px;padding:16px">Lỗi: ${e.message}</div>`; }
+}
+
+// ── Voice Studio ───────────────────────────────────────────────────────────────
+async function loadVoiceConfig() {
+  try {
+    const d = await brainApi('GET', '/api/brain/voice-config');
+    if (!d.ok) return;
+    const c = d.config || {};
+    document.getElementById('voice-enabled').checked   = !!c.enabled;
+    document.getElementById('voice-provider').value    = c.provider  || 'openai';
+    document.getElementById('voice-id').value          = c.voice_id  || 'nova';
+    document.getElementById('voice-speed').value       = c.speed     || 1.0;
+  } catch(e) {}
+}
+
+async function saveVoiceConfig() {
+  const cfg = {
+    enabled:   document.getElementById('voice-enabled').checked,
+    provider:  document.getElementById('voice-provider').value,
+    voice_id:  document.getElementById('voice-id').value,
+    speed:     parseFloat(document.getElementById('voice-speed').value) || 1.0,
+  };
+  const d = await brainApi('POST', '/api/brain/voice-config', cfg);
+  if (d.ok) { alert('✅ Đã lưu cấu hình Voice Studio!'); }
+  else       { alert('❌ Lỗi: ' + (d.error||'Không xác định')); }
+}
+
+async function testVoiceTTS() {
+  const text = document.getElementById('voice-test-text').value.trim();
+  if (!text) return alert('Nhập văn bản muốn nghe thử!');
+  const status = document.getElementById('voice-test-status');
+  status.textContent = '⏳ Đang tạo audio...';
+  try {
+    const d = await brainApi('POST', '/api/brain/tts', { text });
+    if (!d.ok) { status.textContent = '❌ ' + d.error; return; }
+    const audio = document.getElementById('voice-audio');
+    audio.src = 'data:audio/mp3;base64,' + d.audio_b64;
+    document.getElementById('voice-player').style.display = '';
+    audio.play();
+    status.textContent = `✅ ${d.chars} ký tự → audio MP3`;
+  } catch(e) { status.textContent = '❌ ' + e.message; }
+}
+
+// ── Content Factory ────────────────────────────────────────────────────────────
+let _lastContentResult = null;
+
+async function generateContent() {
+  const type    = document.getElementById('content-type').value;
+  const topic   = document.getElementById('content-topic').value.trim();
+  const context = document.getElementById('content-context').value.trim();
+  if (!topic) return alert('Vui lòng nhập chủ đề!');
+  const btn = event.target;
+  btn.textContent = '⏳ Đang tạo...'; btn.disabled = true;
+  try {
+    const d = await brainApi('POST', '/api/brain/content/generate', { type, topic, context });
+    btn.textContent = '✨ Tạo nội dung'; btn.disabled = false;
+    if (!d.ok) { alert('❌ ' + d.error); return; }
+    _lastContentResult = d;
+    renderContentResult(d);
+  } catch(e) { btn.textContent = '✨ Tạo nội dung'; btn.disabled = false; alert('❌ ' + e.message); }
+}
+
+function renderContentResult(d) {
+  const el = document.getElementById('content-result-body');
+  const c  = d.content || {};
+  const typeLabels = { card:'📌 Card', report:'📋 Báo cáo', summary:'📝 Summary', slide:'📊 Slide' };
+
+  let html = `<div style="font-size:12px;color:#6b7280;margin-bottom:10px">Loại: <b>${typeLabels[d.type]||d.type}</b> · Provider: <b>${d.provider||'–'}</b></div>`;
+
+  if (d.type === 'card') {
+    html += `<div style="background:#f5f3ff;border-radius:10px;padding:14px">
+      <div style="font-weight:700;font-size:15px;color:#4c1d95;margin-bottom:8px">${c.title||''}</div>
+      <div style="font-size:13px;color:#374151;margin-bottom:10px">${c.summary||''}</div>
+      ${(c.bullets||[]).map(b=>`<div style="font-size:13px;color:#374151;padding:3px 0">• ${b}</div>`).join('')}
+      ${c.footer?`<div style="font-size:12px;color:#9ca3af;margin-top:10px;border-top:1px solid #ddd6fe;padding-top:8px">${c.footer}</div>`:''}
+    </div>`;
+  } else if (d.type === 'report') {
+    html += `<div style="background:#f5f3ff;border-radius:10px;padding:14px">
+      <div style="font-weight:700;font-size:15px;color:#4c1d95;margin-bottom:12px">${c.title||''}</div>
+      ${(c.sections||[]).map(s=>`
+        <div style="margin-bottom:12px">
+          <div style="font-weight:600;color:#6d28d9;font-size:13px;margin-bottom:4px">${s.heading||''}</div>
+          <div style="font-size:13px;color:#374151;line-height:1.6">${s.content||''}</div>
+        </div>`).join('')}
+      ${c.conclusion?`<div style="background:#ede9fe;border-radius:8px;padding:10px;font-size:13px;margin-top:8px"><b>Kết luận:</b> ${c.conclusion}</div>`:''}
+    </div>`;
+  } else if (d.type === 'summary') {
+    html += `<div style="background:#f5f3ff;border-radius:10px;padding:14px">
+      <div style="font-size:15px;font-weight:700;color:#4c1d95;margin-bottom:10px">${c.headline||''}</div>
+      ${(c.key_points||[]).length?`<div style="font-weight:600;font-size:12px;color:#7c3aed;margin-bottom:6px">KEY POINTS</div>${c.key_points.map(p=>`<div style="font-size:13px;color:#374151;padding:3px 0">• ${p}</div>`).join('')}`:''}
+      ${(c.action_items||[]).length?`<div style="font-weight:600;font-size:12px;color:#7c3aed;margin:10px 0 6px">ACTION ITEMS</div>${c.action_items.map(a=>`<div style="font-size:13px;color:#374151;padding:3px 0">→ ${a}</div>`).join('')}`:''}
+    </div>`;
+  } else if (d.type === 'slide') {
+    html += `<div style="background:#f5f3ff;border-radius:10px;padding:14px">
+      <div style="font-weight:700;font-size:15px;color:#4c1d95;margin-bottom:12px">🎞️ ${c.title||''}</div>
+      ${(c.slides||[]).map((s,i)=>`
+        <div style="background:#fff;border:1px solid #ddd6fe;border-radius:8px;padding:10px 14px;margin-bottom:8px">
+          <div style="font-weight:600;color:#6d28d9;font-size:13px;margin-bottom:6px">Slide ${i+1}: ${s.title||''}</div>
+          ${(s.bullets||[]).map(b=>`<div style="font-size:12px;color:#374151;padding:2px 0">• ${b}</div>`).join('')}
+        </div>`).join('')}
+    </div>`;
+  } else {
+    html += `<pre style="font-size:12px;color:#374151;white-space:pre-wrap;background:#f5f3ff;border-radius:8px;padding:12px">${c.raw||JSON.stringify(c,null,2)}</pre>`;
+  }
+
+  el.innerHTML = html;
+  document.getElementById('content-result').style.display = '';
+}
+
+function copyContentResult() {
+  if (!_lastContentResult) return;
+  const text = JSON.stringify(_lastContentResult.content, null, 2);
+  navigator.clipboard.writeText(text).then(()=>alert('✅ Đã copy JSON vào clipboard!'));
+}
+
+// ── Quick Commands ─────────────────────────────────────────────────────────────
+let _quickCommands = [];
+
+async function loadQuickCommands() {
+  try {
+    const d = await brainApi('GET', '/api/brain/quick-commands');
+    _quickCommands = d.commands || [];
+    renderQuickButtons(_quickCommands);
+    renderQuickList(_quickCommands);
+  } catch(e) {}
+}
+
+function renderQuickButtons(cmds) {
+  const el = document.getElementById('quick-buttons-grid');
+  if (!cmds.length) { el.innerHTML = '<div style="color:#9ca3af;font-size:13px">Chưa có lệnh nào.</div>'; return; }
+  el.innerHTML = cmds.map(c => `
+    <button onclick="copyQuickCmd('${c.id}')" title="${c.description||c.command}"
+      style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:20px;cursor:pointer;font-size:13px;font-weight:500;color:#4c1d95;transition:.15s"
+      onmouseover="this.style.background='#ede9fe'" onmouseout="this.style.background='#f5f3ff'">
+      <span style="font-size:16px">${c.icon||'⚡'}</span>${c.label}
+    </button>`).join('');
+}
+
+function renderQuickList(cmds) {
+  const el = document.getElementById('quick-commands-list');
+  if (!cmds.length) { el.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:8px 0">Chưa có lệnh nào.</div>'; return; }
+  el.innerHTML = cmds.map(c => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px">
+      <span style="font-size:20px">${c.icon||'⚡'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:13px;color:#374151">${c.label}</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:2px">${c.command}</div>
+      </div>
+      <button class="btn btn-gray btn-sm" onclick="copyQuickCmd('${c.id}')" title="Copy lệnh">📋</button>
+      <button class="btn btn-gray btn-sm" onclick="deleteQuickCmd('${c.id}')" title="Xoá">🗑️</button>
+    </div>`).join('');
+}
+
+function copyQuickCmd(id) {
+  const cmd = _quickCommands.find(c => c.id === id);
+  if (!cmd) return;
+  navigator.clipboard.writeText(cmd.command).then(() => {
+    // Flash notification
+    const el = document.getElementById('quick-buttons-grid');
+    const old = el.style.outline;
+    el.style.outline = '2px solid #7c3aed';
+    setTimeout(()=>el.style.outline=old, 600);
+    // Toast
+    const t = document.createElement('div');
+    t.textContent = `✅ Đã copy: "${cmd.command}"`;
+    Object.assign(t.style, {position:'fixed',bottom:'20px',left:'50%',transform:'translateX(-50%)',background:'#4c1d95',color:'#fff',padding:'10px 20px',borderRadius:'20px',fontSize:'13px',zIndex:9999,boxShadow:'0 4px 20px rgba(0,0,0,.2)'});
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(), 2500);
+  });
+}
+
+function openQuickCmdModal() {
+  document.getElementById('qc-icon').value = '⚡';
+  document.getElementById('qc-label').value = '';
+  document.getElementById('qc-command').value = '';
+  document.getElementById('qc-desc').value = '';
+  document.getElementById('quick-cmd-modal').style.display = 'flex';
+}
+function closeQuickCmdModal() { document.getElementById('quick-cmd-modal').style.display = 'none'; }
+
+async function saveQuickCmd() {
+  const label   = document.getElementById('qc-label').value.trim();
+  const command = document.getElementById('qc-command').value.trim();
+  if (!label || !command) return alert('Vui lòng nhập tên lệnh và nội dung lệnh!');
+  await brainApi('POST', '/api/brain/quick-commands', {
+    label, command,
+    icon:        document.getElementById('qc-icon').value.trim() || '⚡',
+    description: document.getElementById('qc-desc').value.trim(),
+    order: _quickCommands.length + 1,
+  });
+  closeQuickCmdModal();
+  loadQuickCommands();
+}
+
+async function deleteQuickCmd(id) {
+  if (!confirm('Xoá lệnh nhanh này?')) return;
+  await brainApi('DELETE', '/api/brain/quick-commands/' + id);
+  loadQuickCommands();
 }
 // ═══════════════════════════════════════════════════════════════════════════════
 </script>
