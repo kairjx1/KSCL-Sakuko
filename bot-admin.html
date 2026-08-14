@@ -319,6 +319,16 @@ select.fg-sel:focus{border-color:#d0021b}
         <div class="stat-card"><div class="label">Nhóm whitelist</div><div class="value" id="st-perms">—</div><div class="sub" id="st-perms-sub">phân quyền</div></div>
         <div class="stat-card"><div class="label">Chat đang muted</div><div class="value" id="st-muted">—</div><div class="sub">bot bị tắt trong nhóm</div></div>
       </div>
+      <!-- AI Status realtime card -->
+      <div class="card" style="border:1.5px solid #ede9fe">
+        <div class="card-title" style="color:#4c1d95">🤖 Trạng thái AI — Realtime
+          <button class="btn btn-gray btn-sm" style="margin-left:auto" onclick="loadOverview()">🔄</button>
+        </div>
+        <div id="ai-status-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+          <div style="color:#9ca3af;font-size:13px">Đang tải...</div>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-title">⚙️ Cấu hình hiện tại
           <span id="cfg-sync-badges" style="margin-left:auto;font-size:11px;display:flex;gap:6px"></span>
@@ -662,6 +672,16 @@ select.fg-sel:focus{border-color:#d0021b}
             <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
             <option value="llama-3.1-70b-versatile">llama-3.1-70b-versatile</option>
           </select>
+        </div>
+        <div class="fg">
+          <label>Fallback Model (dự phòng khi primary lỗi)</label>
+          <select class="fg-sel" id="ai-groq-fallback">
+            <option value="gemma2-9b-it">gemma2-9b-it (Khuyến nghị — thay thế 8b-instant)</option>
+            <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
+            <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
+            <option value="llama-3.1-70b-versatile">llama-3.1-70b-versatile</option>
+          </select>
+          <div class="hint">Model này được dùng khi Primary Model lỗi. Không nên dùng llama-3.1-8b-instant (đã bị Groq dừng 16/8/2026).</div>
         </div>
         <div class="fg">
           <label>Max tokens</label>
@@ -2546,6 +2566,25 @@ async function loadOverview() {
       <span title="Lần cuối load autoreply" style="background:#d1fae5;color:#065f46;padding:2px 7px;border-radius:10px;cursor:default">⚡ AutoReply ${fmtTs(d.autoreply_last_load)}</span>
       <span title="Lần cuối load AI config" style="background:#ede9fe;color:#5b21b6;padding:2px 7px;border-radius:10px;cursor:default">⚡ AI ${fmtTs(d.ai_cfg_last_load)}</span>
     `;
+    // AI Status card
+    const prov = d.providers || {};
+    const brainOk = d.brain_circuit === 'closed';
+    const aiCards = [
+      { label:'Claude', model: d.ai_model||'—', ok: prov.claude, icon:'🟣' },
+      { label:'Groq Primary', model: d.groq_model||'—', ok: prov.groq, icon:'🟠' },
+      { label:'Groq Fallback', model: d.groq_fallback_model||'gemma2-9b-it', ok: prov.groq, icon:'🟡' },
+      { label:'Brain Service', model: d.brain_url ? d.brain_url.replace('https://','') : 'Chưa cấu hình', ok: brainOk, icon:'🧠' },
+      { label:'DeepSeek', model: prov.deepseek ? 'deepseek-chat' : 'Chưa có key', ok: prov.deepseek, icon:'🔵' },
+      { label:'OpenAI GPT', model: prov.openai ? 'gpt-4o-mini' : 'Chưa có key', ok: prov.openai, icon:'🟢' },
+      { label:'Gemini', model: prov.gemini ? 'gemini-1.5-flash' : 'Chưa có key', ok: prov.gemini, icon:'🔴' },
+    ];
+    document.getElementById('ai-status-grid').innerHTML = aiCards.map(c => `
+      <div style="background:${c.ok?'#f0fdf4':'#f9fafb'};border:1px solid ${c.ok?'#bbf7d0':'#e5e7eb'};border-radius:10px;padding:10px 12px">
+        <div style="font-size:11px;color:#6b7280;font-weight:600;margin-bottom:4px">${c.icon} ${c.label}</div>
+        <div style="font-size:12px;color:${c.ok?'#15803d':'#9ca3af'};font-weight:500;word-break:break-all">${c.model}</div>
+        <div style="font-size:10px;margin-top:4px;color:${c.ok?'#16a34a':'#d1d5db'}">${c.ok?'● Hoạt động':'○ Chưa có'}</div>
+      </div>`).join('');
+
     document.getElementById('configRows').innerHTML = `
       <div class="info-row"><span class="key">Lịch báo cáo</span><span class="val">${d.report_schedule}</span></div>
       <div class="info-row"><span class="key">Nhóm nhận báo cáo</span><span class="val tag tag-blue" style="font-size:12px">${d.report_open_id}</span></div>
@@ -2554,7 +2593,10 @@ async function loadOverview() {
       <div class="info-row"><span class="key">Auto-reply rules</span><span class="val">${d.autoreply_count ?? 0} quy tắc đang load</span></div>
       <div class="info-row"><span class="key">Nhóm được phép</span><span class="val">${d.perms_groups_count > 0 ? `<span class="tag tag-green">${d.perms_groups_count} nhóm whitelist</span>` : '<span class="tag tag-gray">Tất cả nhóm</span>'}</span></div>
       <div class="info-row"><span class="key">Nhóm đã load</span><span class="val" style="font-size:11px;font-family:monospace">${(d.perms_groups||[]).join(', ') || '(tất cả)'}</span></div>
-      <div class="info-row"><span class="key">AI model</span><span class="val tag tag-blue">${d.ai_model||'default'}</span></div>
+      <div class="info-row"><span class="key">Claude model</span><span class="val tag tag-blue">${d.ai_model||'default'}</span></div>
+      <div class="info-row"><span class="key">Groq primary</span><span class="val tag tag-blue">${d.groq_model||'llama-3.3-70b-versatile'}</span></div>
+      <div class="info-row"><span class="key">Groq fallback</span><span class="val tag tag-blue">${d.groq_fallback_model||'gemma2-9b-it'}</span></div>
+      <div class="info-row"><span class="key">Brain circuit</span><span class="val"><span style="color:${d.brain_circuit==='closed'?'#16a34a':'#dc2626'}">${d.brain_circuit==='closed'?'🟢 Hoạt động':'🔴 '+d.brain_circuit}</span></span></div>
     `;
     // Muted chats from Firebase status
     const mutedHtml = (d.muted_chats || []).map(id =>
@@ -3340,6 +3382,7 @@ const AI_DEFAULTS = {
   claude_model: 'claude-sonnet-4-5',
   claude_tokens: 1024,
   groq_model: 'llama-3.3-70b-versatile',
+  groq_fallback_model: 'gemma2-9b-it',
   groq_tokens: 1024,
   history: 20,
   timeout: 30,
@@ -3380,8 +3423,9 @@ function loadAIConfig() {
   // Fill defaults trước
   document.getElementById('ai-claude-model').value = AI_DEFAULTS.claude_model;
   document.getElementById('ai-claude-tokens').value = AI_DEFAULTS.claude_tokens;
-  document.getElementById('ai-groq-model').value = AI_DEFAULTS.groq_model;
-  document.getElementById('ai-groq-tokens').value = AI_DEFAULTS.groq_tokens;
+  document.getElementById('ai-groq-model').value    = AI_DEFAULTS.groq_model;
+  document.getElementById('ai-groq-fallback').value = AI_DEFAULTS.groq_fallback_model;
+  document.getElementById('ai-groq-tokens').value   = AI_DEFAULTS.groq_tokens;
   document.getElementById('ai-topics').value = AI_DEFAULTS.topics;
   document.getElementById('ai-role').value = AI_DEFAULTS.role;
   document.getElementById('ai-history').value = AI_DEFAULTS.history;
@@ -3393,8 +3437,9 @@ function loadAIConfig() {
     if (!d) return;
     if (d.claude_model)  document.getElementById('ai-claude-model').value  = d.claude_model;
     if (d.claude_tokens) document.getElementById('ai-claude-tokens').value = d.claude_tokens;
-    if (d.groq_model)    document.getElementById('ai-groq-model').value    = d.groq_model;
-    if (d.groq_tokens)   document.getElementById('ai-groq-tokens').value   = d.groq_tokens;
+    if (d.groq_model)         document.getElementById('ai-groq-model').value    = d.groq_model;
+    if (d.groq_fallback_model)document.getElementById('ai-groq-fallback').value = d.groq_fallback_model;
+    if (d.groq_tokens)        document.getElementById('ai-groq-tokens').value   = d.groq_tokens;
     if (d.topics)        document.getElementById('ai-topics').value        = d.topics;
     if (d.role)          document.getElementById('ai-role').value          = d.role;
     if (d.history)       document.getElementById('ai-history').value       = d.history;
@@ -3406,8 +3451,9 @@ function saveAIConfig() {
   const cfg = {
     claude_model:  document.getElementById('ai-claude-model').value,
     claude_tokens: parseInt(document.getElementById('ai-claude-tokens').value),
-    groq_model:    document.getElementById('ai-groq-model').value,
-    groq_tokens:   parseInt(document.getElementById('ai-groq-tokens').value),
+    groq_model:           document.getElementById('ai-groq-model').value,
+    groq_fallback_model:  document.getElementById('ai-groq-fallback').value,
+    groq_tokens:          parseInt(document.getElementById('ai-groq-tokens').value),
     topics:        document.getElementById('ai-topics').value.trim(),
     role:          document.getElementById('ai-role').value.trim(),
     history:       parseInt(document.getElementById('ai-history').value),
