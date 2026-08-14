@@ -795,7 +795,10 @@ select.fg-sel:focus{border-color:#d0021b}
 
       <!-- Tab: Live Feed -->
       <div id="council-tab-feed">
-        <div style="font-size:12px;color:#94a3b8;margin-bottom:14px">Khi người dùng hỏi bot Lark — hội đồng AI họp và Claude tổng hợp. Mỗi cuộc họp xuất hiện tại đây.</div>
+        <div style="font-size:12px;color:#64748b;background:#fef9c3;border:1px solid #fde047;border-radius:7px;padding:9px 13px;margin-bottom:14px">
+          <b>⚡ Logic kích hoạt:</b> Hội đồng AI chỉ họp khi câu hỏi <b>không có dữ liệu Linkbase</b>. Khi nhóm chat có cấu hình Linkbase → Claude đọc dữ liệu thực trực tiếp, hội đồng bị bỏ qua hoàn toàn để tránh AI bịa số liệu.
+        </div>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:14px">Mỗi lần hội đồng họp (câu hỏi chuyên môn tổng quát) — ghi nhận tại đây theo thời gian thực.</div>
         <div id="council-feed">
           <div style="text-align:center;padding:60px 20px;color:#94a3b8">
             <div style="font-size:48px;margin-bottom:12px">🏛️</div>
@@ -807,8 +810,14 @@ select.fg-sel:focus{border-color:#d0021b}
 
       <!-- Tab: Cấu hình vai trò -->
       <div id="council-tab-config" style="display:none">
-        <div style="font-size:13px;color:#64748b;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;margin-bottom:14px">
-          Tạo <b>nhóm cấu hình</b> khác nhau cho từng nhóm chat Lark. Mỗi AI có thể có <b>nhiều nhiệm vụ</b> + base dữ liệu riêng. Nhóm <b>Mặc định</b> áp dụng cho các chat chưa được gắn nhóm riêng.
+        <div style="font-size:13px;color:#64748b;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;margin-bottom:10px">
+          Tạo <b>nhóm cấu hình</b> khác nhau cho từng nhóm chat Lark. Mỗi AI có thể có <b>nhiều nhiệm vụ</b> + base tài liệu tham khảo riêng. Nhóm <b>Mặc định</b> áp dụng cho các chat chưa được gắn nhóm riêng.
+        </div>
+        <div style="font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:9px 13px;margin-bottom:14px;line-height:1.6">
+          <b>📌 Khi nào hội đồng được kích hoạt?</b><br>
+          • Nhóm chat <b>có Linkbase</b> → Claude đọc dữ liệu thực trực tiếp, <b>hội đồng bị bỏ qua</b> hoàn toàn.<br>
+          • Nhóm chat <b>không có Linkbase</b> (hoặc Linkbase trống) → Hội đồng họp, mỗi AI đóng góp góc nhìn chuyên môn.<br>
+          • Base dữ liệu cấu hình ở đây là <b>tài liệu tham khảo nền</b> (best practice, chính sách, quy trình), KHÔNG phải dữ liệu vận hành cụ thể của cửa hàng.
         </div>
         <div class="notify" id="councilCfgNotify"></div>
 
@@ -827,8 +836,8 @@ select.fg-sel:focus{border-color:#d0021b}
 
         <!-- Shared bases for active group -->
         <div class="card" style="margin-top:14px;border:2px dashed #cbd5e1">
-          <div class="card-title">📊 Base dữ liệu dùng chung (nhóm này)</div>
-          <div style="font-size:12px;color:#6b7a99;margin-bottom:12px">Tất cả AI trong nhóm này đều đọc các base này mỗi khi họp hội đồng.</div>
+          <div class="card-title">📚 Tài liệu tham khảo dùng chung (nhóm này)</div>
+          <div style="font-size:12px;color:#6b7a99;margin-bottom:12px">Tất cả AI đều đọc các tài liệu này khi họp. Dùng cho best practice, quy trình, chính sách — không phải dữ liệu vận hành cụ thể (dữ liệu vận hành → cấu hình Linkbase).</div>
           <div id="council-shared-bases"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
             <input type="text" id="csb_name" placeholder="Tên base (VD: Base Kiểm Kê CVS)" style="flex:1;min-width:160px;padding:8px 12px;border:1px solid #dde3ef;border-radius:8px;font-size:13px">
