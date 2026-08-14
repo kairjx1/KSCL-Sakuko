@@ -4036,13 +4036,17 @@ function _buildTaskBlock(prov, ti, task, c) {
         <div id="cr_bases_${prov}_${ti}" style="display:flex;flex-direction:column;gap:5px;margin-bottom:7px">
           ${bases.map((b,bi) => _buildBaseRow(prov, ti, bi, b)).join('')}
         </div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px">
           <input type="text" id="cr_bname_${prov}_${ti}" placeholder="Tên base"
             style="flex:1;min-width:120px;padding:5px 8px;border:1px solid #dde3ef;border-radius:6px;font-size:12px">
           <input type="text" id="cr_burl_${prov}_${ti}" placeholder="Link Bitable / Doc..."
             style="flex:2;min-width:180px;padding:5px 8px;border:1px solid #dde3ef;border-radius:6px;font-size:12px">
           <select id="cr_btype_${prov}_${ti}" style="padding:5px 7px;border:1px solid #dde3ef;border-radius:6px;font-size:12px;background:#fff"
             onchange="councilAutoDetectType(this,'cr_burl_${prov}_${ti}')"></select>
+        </div>
+        <div style="display:flex;gap:5px">
+          <input type="text" id="cr_bdesc_${prov}_${ti}" placeholder="📋 Mô tả nội dung (VD: Bảng ghi nhận điều chỉnh hàng xuất hủy, cột: Mã ST, Tên SP, Số lượng, Ngày...)"
+            style="flex:1;padding:5px 8px;border:1px solid #fbbf24;border-radius:6px;font-size:12px;background:#fffbeb">
           <button class="btn btn-gray btn-sm" onclick="councilAddBase('${prov}',${ti})">+ Thêm</button>
         </div>
       </div>
@@ -4051,14 +4055,31 @@ function _buildTaskBlock(prov, ti, task, c) {
 
 function _buildBaseRow(prov, ti, bi, base) {
   const icon = _councilTypeIcon(base.type);
-  return `<div style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:5px 9px">
-    <span style="font-size:13px">${icon}</span>
-    <div style="flex:1;min-width:0">
-      <div style="font-size:12px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(base.name||'(không tên)')}</div>
-      <div style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(base.url||'')}</div>
+  const hasDesc = base.description && base.description.trim();
+  return `<div style="background:#f8fafc;border:1px solid ${hasDesc ? '#fbbf24' : '#e2e8f0'};border-radius:6px;padding:6px 10px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:13px">${icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(base.name||'(không tên)')}</div>
+        <div style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(base.url||'')}</div>
+      </div>
+      <button onclick="councilRemoveBase('${prov}',${ti},${bi})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;padding:0 2px">×</button>
     </div>
-    <button onclick="councilRemoveBase('${prov}',${ti},${bi})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;padding:0 2px">×</button>
+    ${hasDesc
+      ? `<div style="font-size:11px;color:#92400e;background:#fffbeb;border-radius:4px;padding:3px 7px;margin-top:4px">📋 ${esc(base.description)}</div>`
+      : `<div style="font-size:11px;color:#f59e0b;margin-top:3px;cursor:pointer" onclick="councilEditBaseDesc('${prov}',${ti},${bi})">⚠️ Chưa có mô tả — AI khó hiểu bảng này. <u>Thêm mô tả</u></div>`
+    }
   </div>`;
+}
+
+function councilEditBaseDesc(prov, ti, bi) {
+  const grp = _councilGroups[_activeGroupId];
+  const base = grp?.providers?.[prov]?.tasks?.[ti]?.bases?.[bi];
+  if (!base) return;
+  const desc = prompt('Mô tả nội dung bảng này (AI sẽ đọc mô tả này trước khi đọc data):\nVD: Bảng ghi nhận hàng xuất hủy, gồm: Mã ST, Tên SP, Số lượng hủy, Ngày hủy, Lý do', base.description || '');
+  if (desc === null) return;
+  base.description = desc.trim();
+  _renderCouncilRoles(grp);
 }
 
 // ─── Task actions ─────────────────────────────────────────────────────────────
@@ -4085,12 +4106,13 @@ function councilRemoveTask(prov, ti) {
 function councilAddBase(prov, ti) {
   const name = document.getElementById(`cr_bname_${prov}_${ti}`).value.trim();
   const url  = document.getElementById(`cr_burl_${prov}_${ti}`).value.trim();
+  const desc = document.getElementById(`cr_bdesc_${prov}_${ti}`)?.value.trim() || '';
   let   type = document.getElementById(`cr_btype_${prov}_${ti}`).value;
   if (type === 'auto' && url) type = _councilDetectType(url);
   if (!url) { alert('Nhập link base trước'); return; }
   _syncFormToCfg();
   const grp = _councilGroups[_activeGroupId];
-  grp.providers[prov].tasks[ti].bases.push({ name, url, type });
+  grp.providers[prov].tasks[ti].bases.push({ name, url, type, description: desc });
   _renderCouncilRoles(grp);
 }
 
