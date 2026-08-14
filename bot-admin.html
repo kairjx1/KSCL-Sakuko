@@ -823,11 +823,7 @@ select.fg-sel:focus{border-color:#d0021b}
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
             <input type="text" id="csb_name" placeholder="Tên base (VD: Base Kiểm Kê CVS)" style="flex:1;min-width:160px;padding:8px 12px;border:1px solid #dde3ef;border-radius:8px;font-size:13px">
             <input type="text" id="csb_url" placeholder="Link Bitable / Lark Doc / Google Sheet..." style="flex:2;min-width:240px;padding:8px 12px;border:1px solid #dde3ef;border-radius:8px;font-size:13px">
-            <select id="csb_type" style="padding:8px 10px;border:1px solid #dde3ef;border-radius:8px;font-size:13px;background:#fff">
-              <option value="bitable">📊 Bitable</option>
-              <option value="doc">📄 Lark Doc</option>
-              <option value="sheet">📋 Sheet</option>
-            </select>
+            <select id="csb_type" style="padding:8px 10px;border:1px solid #dde3ef;border-radius:8px;font-size:13px;background:#fff" onchange="councilAutoDetectType(this,'csb_url')"></select>
             <button class="btn btn-green btn-sm" onclick="councilAddSharedBase()">+ Thêm base</button>
           </div>
         </div>
@@ -3672,6 +3668,57 @@ function _buildCouncilCard(entry, animate) {
   return wrap;
 }
 
+// ── Council base-type helpers ─────────────────────────────────────────────────
+const COUNCIL_BASE_TYPES = [
+  { value: 'auto',       label: '🔍 Tự nhận dạng',        icon: '🔍' },
+  { value: 'bitable',   label: '📊 Lark Bitable',          icon: '📊' },
+  { value: 'doc',       label: '📄 Lark Doc / Wiki',        icon: '📄' },
+  { value: 'gsheet',    label: '📋 Google Sheet',           icon: '📋' },
+  { value: 'gdoc',      label: '📝 Google Doc',             icon: '📝' },
+  { value: 'gdrive',    label: '☁️ Google Drive',           icon: '☁️' },
+  { value: 'web',       label: '🌐 Trang web',              icon: '🌐' },
+  { value: 'pdf',       label: '📕 File PDF (link)',        icon: '📕' },
+  { value: 'word',      label: '📘 File Word (link)',       icon: '📘' },
+  { value: 'ppt',       label: '📙 File PowerPoint (link)', icon: '📙' },
+  { value: 'excel',     label: '📗 File Excel (link)',      icon: '📗' },
+];
+
+function _councilBaseTypeOpts(selected) {
+  return COUNCIL_BASE_TYPES.map(t =>
+    `<option value="${t.value}" ${t.value === selected ? 'selected' : ''}>${t.label}</option>`
+  ).join('');
+}
+
+function _councilTypeIcon(type) {
+  return (COUNCIL_BASE_TYPES.find(t => t.value === type) || {icon:'🔗'}).icon;
+}
+
+function _councilDetectType(url) {
+  if (!url) return 'auto';
+  if (/larksuite\.com\/base\/|feishu\.cn\/base\//.test(url)) return 'bitable';
+  if (/larksuite\.com\/docx\/|feishu\.cn\/docx\/|larksuite\.com\/wiki\//.test(url)) return 'doc';
+  if (/docs\.google\.com\/spreadsheets/.test(url)) return 'gsheet';
+  if (/docs\.google\.com\/document/.test(url)) return 'gdoc';
+  if (/drive\.google\.com/.test(url)) return 'gdrive';
+  if (/\.pdf($|\?)/.test(url)) return 'pdf';
+  if (/\.docx?($|\?)/.test(url)) return 'word';
+  if (/\.pptx?($|\?)/.test(url)) return 'ppt';
+  if (/\.xlsx?($|\?)/.test(url)) return 'excel';
+  return 'web';
+}
+
+function councilAutoDetectType(selectEl, urlInputId) {
+  if (selectEl.value !== 'auto') return; // chỉ auto khi chọn "Tự nhận dạng"
+  const url = document.getElementById(urlInputId)?.value?.trim() || '';
+  selectEl.value = _councilDetectType(url) || 'auto';
+}
+
+function _initCouncilSelect(elId, selected) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = _councilBaseTypeOpts(selected || 'auto');
+}
+
 // ── Council Config ────────────────────────────────────────────────────────────
 const COUNCIL_CFG_PATH = 'bot_council_roles';
 const COUNCIL_ROLE_DEFAULTS = {
@@ -3726,6 +3773,8 @@ async function loadCouncilConfig() {
 function _renderCouncilRoles() {
   const list = document.getElementById('council-role-list');
   list.innerHTML = '';
+  // Init shared-base type select (chỉ cần 1 lần)
+  _initCouncilSelect('csb_type', 'auto');
   const COLORS = {
     deepseek: { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8' },
     openai:   { bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
@@ -3784,20 +3833,28 @@ function _renderCouncilRoles() {
             style="flex:1;min-width:140px;padding:6px 10px;border:1px solid #dde3ef;border-radius:7px;font-size:12px">
           <input type="text" id="cr_burl_${prov}" placeholder="Link Bitable / Doc..."
             style="flex:2;min-width:200px;padding:6px 10px;border:1px solid #dde3ef;border-radius:7px;font-size:12px">
-          <select id="cr_btype_${prov}" style="padding:6px 8px;border:1px solid #dde3ef;border-radius:7px;font-size:12px;background:#fff">
-            <option value="bitable">📊 Bitable</option>
-            <option value="doc">📄 Doc</option>
-            <option value="sheet">📋 Sheet</option>
-          </select>
+          <select id="cr_btype_${prov}" style="padding:6px 8px;border:1px solid #dde3ef;border-radius:7px;font-size:12px;background:#fff" onchange="councilAutoDetectType(this,'cr_burl_${prov}')"></select>
           <button class="btn btn-gray btn-sm" onclick="councilAddBase('${prov}')">+ Thêm</button>
         </div>
       </div>`;
     list.appendChild(card);
+    // Init type selects sau khi card đã vào DOM
+    _initCouncilSelect(`cr_btype_${prov}`, 'auto');
+    // Auto-detect khi user nhập URL
+    const urlEl = document.getElementById(`cr_burl_${prov}`);
+    const typeEl = document.getElementById(`cr_btype_${prov}`);
+    if (urlEl && typeEl) {
+      urlEl.addEventListener('blur', () => {
+        if (typeEl.value === 'auto' && urlEl.value.trim()) {
+          typeEl.value = _councilDetectType(urlEl.value.trim());
+        }
+      });
+    }
   });
 }
 
 function _buildBaseRow(prov, idx, base) {
-  const typeIcon = { bitable: '📊', doc: '📄', sheet: '📋' }[base.type] || '🔗';
+  const typeIcon = _councilTypeIcon(base.type);
   return `<div id="cr_base_${prov}_${idx}" style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:6px 10px">
     <span style="font-size:13px">${typeIcon}</span>
     <div style="flex:1;min-width:0">
@@ -3811,7 +3868,8 @@ function _buildBaseRow(prov, idx, base) {
 function councilAddBase(prov) {
   const name = document.getElementById(`cr_bname_${prov}`).value.trim();
   const url  = document.getElementById(`cr_burl_${prov}`).value.trim();
-  const type = document.getElementById(`cr_btype_${prov}`).value;
+  let   type = document.getElementById(`cr_btype_${prov}`).value;
+  if (type === 'auto' && url) type = _councilDetectType(url);
   if (!url) { alert('Nhập link base trước'); return; }
   if (!_councilCfg.roles) _councilCfg.roles = {};
   if (!_councilCfg.roles[prov]) _councilCfg.roles[prov] = {};
@@ -3850,7 +3908,8 @@ function _renderSharedBases() {
 function councilAddSharedBase() {
   const name = document.getElementById('csb_name').value.trim();
   const url  = document.getElementById('csb_url').value.trim();
-  const type = document.getElementById('csb_type').value;
+  let   type = document.getElementById('csb_type').value;
+  if (type === 'auto' && url) type = _councilDetectType(url);
   if (!url) { alert('Nhập link base trước'); return; }
   if (!_councilCfg.shared_bases) _councilCfg.shared_bases = [];
   _councilCfg.shared_bases.push({ name, url, type });
