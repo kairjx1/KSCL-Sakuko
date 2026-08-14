@@ -4066,7 +4066,10 @@ function _buildBaseRow(prov, ti, bi, base) {
       <button onclick="councilRemoveBase('${prov}',${ti},${bi})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;padding:0 2px">×</button>
     </div>
     ${hasDesc
-      ? `<div style="font-size:11px;color:#92400e;background:#fffbeb;border-radius:4px;padding:3px 7px;margin-top:4px">📋 ${esc(base.description)}</div>`
+      ? `<div style="display:flex;align-items:flex-start;gap:6px;margin-top:4px">
+           <div style="flex:1;font-size:11px;color:#92400e;background:#fffbeb;border-radius:4px;padding:3px 7px">📋 ${esc(base.description)}</div>
+           <button onclick="councilEditBaseDesc('${prov}',${ti},${bi})" style="background:none;border:1px solid #fbbf24;border-radius:4px;color:#92400e;cursor:pointer;font-size:10px;padding:2px 6px;white-space:nowrap">✏️ Sửa</button>
+         </div>`
       : `<div style="font-size:11px;color:#f59e0b;margin-top:3px;cursor:pointer" onclick="councilEditBaseDesc('${prov}',${ti},${bi})">⚠️ Chưa có mô tả — AI khó hiểu bảng này. <u>Thêm mô tả</u></div>`
     }
   </div>`;
