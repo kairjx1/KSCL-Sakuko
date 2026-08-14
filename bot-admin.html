@@ -3602,6 +3602,7 @@ const COUNCIL_META = {
   deepseek: { label: 'DeepSeek',   icon: '🔵', color: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8' },
   openai:   { label: 'OpenAI GPT', icon: '🟢', color: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
   gemini:   { label: 'Gemini',     icon: '🔴', color: '#fef2f2', border: '#fecaca', text: '#dc2626' },
+  groq:     { label: 'Groq Llama', icon: '🟠', color: '#fff7ed', border: '#fed7aa', text: '#c2410c' },
 };
 let _councilRef = null;
 let _councilRendered = new Set();
@@ -3737,10 +3738,17 @@ const COUNCIL_ROLE_DEFAULTS = {
     bases: [],
   },
   gemini: {
-    label: 'Gemini', icon: '🔴', enabled: true,
+    label: 'Gemini', icon: '🔴', enabled: false,
     role_name: 'Chuyên gia QC Hình Ảnh',
     role_desc: 'Kiểm tra hình ảnh, checklist vệ sinh, tiêu chuẩn trưng bày',
     analysis: 'Xem xét báo cáo QC hình ảnh: ST nào thiếu checklist, hình ảnh không đạt, vi phạm tiêu chuẩn trưng bày trong kỳ.',
+    bases: [],
+  },
+  groq: {
+    label: 'Groq Llama', icon: '🟠', enabled: true,
+    role_name: 'Chuyên gia QC & Vận hành',
+    role_desc: 'Phân tích checklist vận hành, QC hình ảnh, tiêu chuẩn trưng bày và báo cáo định kỳ',
+    analysis: 'Tìm siêu thị thiếu checklist QC, hình ảnh không đạt, vi phạm tiêu chuẩn trưng bày. Gợi ý cải thiện dựa trên tiêu chuẩn ngành.',
     bases: [],
   },
 };
@@ -3779,8 +3787,9 @@ function _renderCouncilRoles() {
     deepseek: { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8' },
     openai:   { bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
     gemini:   { bg: '#fef2f2', border: '#fecaca', text: '#dc2626' },
+    groq:     { bg: '#fff7ed', border: '#fed7aa', text: '#c2410c' },
   };
-  ['deepseek', 'openai', 'gemini'].forEach(prov => {
+  ['deepseek', 'openai', 'gemini', 'groq'].forEach(prov => {
     const def  = COUNCIL_ROLE_DEFAULTS[prov];
     const cfg  = (_councilCfg.roles || {})[prov] || {};
     const c    = COLORS[prov];
