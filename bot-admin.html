@@ -807,18 +807,28 @@ select.fg-sel:focus{border-color:#d0021b}
 
       <!-- Tab: Cấu hình vai trò -->
       <div id="council-tab-config" style="display:none">
-        <div style="font-size:13px;color:#64748b;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;margin-bottom:16px">
-          Mỗi AI trong hội đồng có <b>vai trò chuyên biệt</b> + <b>nguồn dữ liệu riêng</b> (Bitable/Doc). Bot đọc data từ base được gắn, rồi giao cho đúng AI phân tích trước khi Claude tổng hợp.
+        <div style="font-size:13px;color:#64748b;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+          Tạo <b>nhóm cấu hình</b> khác nhau cho từng nhóm chat Lark. Mỗi AI có thể có <b>nhiều nhiệm vụ</b> + base dữ liệu riêng. Nhóm <b>Mặc định</b> áp dụng cho các chat chưa được gắn nhóm riêng.
         </div>
         <div class="notify" id="councilCfgNotify"></div>
 
-        <!-- Role cards -->
+        <!-- Group selector bar -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
+          <span style="font-size:12px;font-weight:600;color:#64748b;margin-right:4px">📁 NHÓM:</span>
+          <div id="council-group-tabs" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
+          <button onclick="councilAddGroup()" style="padding:5px 12px;font-size:12px;font-weight:600;background:#7c3aed;color:#fff;border:none;border-radius:7px;cursor:pointer;white-space:nowrap">+ Nhóm mới</button>
+        </div>
+
+        <!-- Group detail (chat binding) -->
+        <div id="council-group-detail" style="margin-bottom:14px"></div>
+
+        <!-- Role cards for active group -->
         <div id="council-role-list" style="display:flex;flex-direction:column;gap:14px"></div>
 
-        <!-- Thêm base dùng chung (toàn hệ thống) -->
+        <!-- Shared bases for active group -->
         <div class="card" style="margin-top:14px;border:2px dashed #cbd5e1">
-          <div class="card-title">📊 Base dữ liệu dùng chung (tất cả nhóm)</div>
-          <div style="font-size:12px;color:#6b7a99;margin-bottom:12px">Các Bitable/Doc này sẽ được đọc mỗi khi hội đồng họp, không phân biệt nhóm chat. Thêm vào đây để AI tham khảo.</div>
+          <div class="card-title">📊 Base dữ liệu dùng chung (nhóm này)</div>
+          <div style="font-size:12px;color:#6b7a99;margin-bottom:12px">Tất cả AI trong nhóm này đều đọc các base này mỗi khi họp hội đồng.</div>
           <div id="council-shared-bases"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
             <input type="text" id="csb_name" placeholder="Tên base (VD: Base Kiểm Kê CVS)" style="flex:1;min-width:160px;padding:8px 12px;border:1px solid #dde3ef;border-radius:8px;font-size:13px">
@@ -3720,41 +3730,62 @@ function _initCouncilSelect(elId, selected) {
   el.innerHTML = _councilBaseTypeOpts(selected || 'auto');
 }
 
-// ── Council Config ────────────────────────────────────────────────────────────
+// ── Council Config — Groups + Sub-tasks ──────────────────────────────────────
 const COUNCIL_CFG_PATH = 'bot_council_roles';
-const COUNCIL_ROLE_DEFAULTS = {
-  deepseek: {
-    label: 'DeepSeek', icon: '🔵', enabled: true,
-    role_name: 'Chuyên gia Kiểm Kê',
-    role_desc: 'Phân tích số liệu tồn kho, chênh lệch kiểm kê, hàng âm tồn',
-    analysis: 'Tìm siêu thị có chênh lệch kiểm kê âm vượt 0.08% doanh thu. Liệt kê tên ST, giá trị chênh lệch, % so với DT.',
-    bases: [],
-  },
-  openai: {
-    label: 'OpenAI GPT', icon: '🟢', enabled: true,
-    role_name: 'Chuyên gia Đổi Date',
-    role_desc: 'Theo dõi đổi date sản phẩm, phát hiện bất thường, nghi vấn',
-    analysis: 'Tìm siêu thị có tỷ lệ đổi date cao bất thường hoặc đổi date nhiều lần một mặt hàng. Ghi chú nghi vấn nếu có.',
-    bases: [],
-  },
-  gemini: {
-    label: 'Gemini', icon: '🔴', enabled: false,
-    role_name: 'Chuyên gia QC Hình Ảnh',
-    role_desc: 'Kiểm tra hình ảnh, checklist vệ sinh, tiêu chuẩn trưng bày',
-    analysis: 'Xem xét báo cáo QC hình ảnh: ST nào thiếu checklist, hình ảnh không đạt, vi phạm tiêu chuẩn trưng bày trong kỳ.',
-    bases: [],
-  },
-  groq: {
-    label: 'Groq Llama', icon: '🟠', enabled: true,
-    role_name: 'Chuyên gia QC & Vận hành',
-    role_desc: 'Phân tích checklist vận hành, QC hình ảnh, tiêu chuẩn trưng bày và báo cáo định kỳ',
-    analysis: 'Tìm siêu thị thiếu checklist QC, hình ảnh không đạt, vi phạm tiêu chuẩn trưng bày. Gợi ý cải thiện dựa trên tiêu chuẩn ngành.',
-    bases: [],
-  },
+
+const _CR_COLORS = {
+  deepseek: { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8' },
+  openai:   { bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
+  gemini:   { bg: '#fef2f2', border: '#fecaca', text: '#dc2626' },
+  groq:     { bg: '#fff7ed', border: '#fed7aa', text: '#c2410c' },
 };
 
-let _councilCfg = {};
+const COUNCIL_ROLE_DEFAULTS = {
+  deepseek: { label: 'DeepSeek',   icon: '🔵', enabled: true,
+    role_name: 'Chuyên gia Kiểm Kê',
+    role_desc: 'Phân tích tồn kho, chênh lệch kiểm kê, hàng âm tồn',
+    tasks: [{ id: 't1', name: 'Kiểm kê tổng hợp',
+      criteria: 'Tìm siêu thị có chênh lệch kiểm kê âm vượt 0.08% doanh thu. Liệt kê tên ST, giá trị chênh lệch, % so với DT.',
+      bases: [] }] },
+  openai: { label: 'OpenAI GPT', icon: '🟢', enabled: true,
+    role_name: 'Chuyên gia Đổi Date',
+    role_desc: 'Theo dõi đổi date sản phẩm, phát hiện bất thường',
+    tasks: [{ id: 't1', name: 'Phát hiện đổi date bất thường',
+      criteria: 'Tìm siêu thị có tỷ lệ đổi date cao bất thường hoặc đổi date nhiều lần một mặt hàng. Ghi chú nghi vấn nếu có.',
+      bases: [] }] },
+  gemini: { label: 'Gemini', icon: '🔴', enabled: false,
+    role_name: 'Chuyên gia QC Hình Ảnh',
+    role_desc: 'Kiểm tra hình ảnh, checklist vệ sinh, tiêu chuẩn trưng bày',
+    tasks: [{ id: 't1', name: 'QC hình ảnh tổng hợp',
+      criteria: 'ST nào thiếu checklist, hình ảnh không đạt, vi phạm tiêu chuẩn trưng bày trong kỳ.',
+      bases: [] }] },
+  groq: { label: 'Groq Llama', icon: '🟠', enabled: true,
+    role_name: 'Chuyên gia Vận hành',
+    role_desc: 'Checklist vận hành, QC, tiêu chuẩn trưng bày',
+    tasks: [{ id: 't1', name: 'Vận hành & QC',
+      criteria: 'Tìm siêu thị thiếu checklist QC, vi phạm tiêu chuẩn trưng bày. Gợi ý cải thiện.',
+      bases: [] }] },
+};
 
+// Nhóm mặc định nếu Firebase trống
+const _DEFAULT_GROUP = {
+  name: 'Mặc định',
+  description: 'Áp dụng cho tất cả nhóm chat chưa được cấu hình riêng',
+  chat_ids: [],
+  providers: {
+    deepseek: JSON.parse(JSON.stringify(COUNCIL_ROLE_DEFAULTS.deepseek)),
+    openai:   JSON.parse(JSON.stringify(COUNCIL_ROLE_DEFAULTS.openai)),
+    gemini:   JSON.parse(JSON.stringify(COUNCIL_ROLE_DEFAULTS.gemini)),
+    groq:     JSON.parse(JSON.stringify(COUNCIL_ROLE_DEFAULTS.groq)),
+  },
+  shared_bases: [],
+};
+
+let _councilCfg     = {};   // toàn bộ config từ Firebase
+let _councilGroups  = {};   // { gid: groupObj }
+let _activeGroupId  = 'default';
+
+// ─── Tab switch ───────────────────────────────────────────────────────────────
 function switchCouncilTab(tab) {
   document.getElementById('council-tab-feed').style.display   = tab === 'feed'   ? '' : 'none';
   document.getElementById('council-tab-config').style.display = tab === 'config' ? '' : 'none';
@@ -3769,32 +3800,163 @@ function switchCouncilTab(tab) {
   if (tab === 'config') loadCouncilConfig();
 }
 
+// ─── Load & render ────────────────────────────────────────────────────────────
 async function loadCouncilConfig() {
   try {
     const snap = await db.ref(COUNCIL_CFG_PATH).once('value');
-    _councilCfg = snap.val() || {};
-    _renderCouncilRoles();
-    _renderSharedBases();
+    const raw = snap.val() || {};
+
+    // Migration: nếu dùng cấu trúc cũ (có raw.roles), chuyển sang groups
+    if (raw.roles && !raw.groups) {
+      _councilGroups = {
+        default: {
+          name: 'Mặc định', description: '', chat_ids: [],
+          providers: _migrateOldRoles(raw.roles),
+          shared_bases: raw.shared_bases || [],
+        }
+      };
+    } else if (raw.groups) {
+      _councilGroups = raw.groups;
+    } else {
+      _councilGroups = { default: JSON.parse(JSON.stringify(_DEFAULT_GROUP)) };
+    }
+    // Đảm bảo luôn có nhóm default
+    if (!_councilGroups.default) {
+      _councilGroups.default = JSON.parse(JSON.stringify(_DEFAULT_GROUP));
+    }
+    _councilCfg = raw;
+    if (!_councilGroups[_activeGroupId]) _activeGroupId = 'default';
+    _renderGroupBar();
+    _renderActiveGroup();
   } catch(e) { console.error('[COUNCIL_CFG]', e); }
 }
 
-function _renderCouncilRoles() {
+function _migrateOldRoles(oldRoles) {
+  const providers = {};
+  for (const [prov, cfg] of Object.entries(oldRoles)) {
+    const def = COUNCIL_ROLE_DEFAULTS[prov] || {};
+    providers[prov] = {
+      label: def.label || prov, icon: def.icon || '🤖',
+      enabled: cfg.enabled !== undefined ? cfg.enabled : true,
+      role_name: cfg.role_name || def.role_name || '',
+      role_desc: cfg.role_desc || def.role_desc || '',
+      tasks: cfg.tasks || [{
+        id: 't1', name: 'Nhiệm vụ chính',
+        criteria: cfg.analysis || def.tasks?.[0]?.criteria || '',
+        bases: cfg.bases || [],
+      }],
+    };
+  }
+  return providers;
+}
+
+// ─── Group bar ────────────────────────────────────────────────────────────────
+function _renderGroupBar() {
+  const bar = document.getElementById('council-group-tabs');
+  bar.innerHTML = '';
+  Object.entries(_councilGroups).forEach(([gid, grp]) => {
+    const active = gid === _activeGroupId;
+    const btn = document.createElement('div');
+    btn.style.cssText = `display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;border:2px solid ${active ? '#7c3aed' : '#e2e8f0'};background:${active ? '#7c3aed' : '#fff'};color:${active ? '#fff' : '#475569'};transition:all .15s`;
+    btn.innerHTML = `<span>${grp.name || gid}</span>`;
+    if (grp.chat_ids && grp.chat_ids.length) btn.innerHTML += `<span style="font-size:10px;opacity:.7">(${grp.chat_ids.length} chat)</span>`;
+    if (gid !== 'default') {
+      const x = document.createElement('span');
+      x.textContent = '×';
+      x.style.cssText = 'margin-left:2px;font-size:14px;line-height:1;opacity:.7';
+      x.onclick = (e) => { e.stopPropagation(); councilDeleteGroup(gid); };
+      btn.appendChild(x);
+    }
+    btn.onclick = () => councilSwitchGroup(gid);
+    bar.appendChild(btn);
+  });
+}
+
+function councilSwitchGroup(gid) {
+  _syncFormToCfg();
+  _activeGroupId = gid;
+  _renderGroupBar();
+  _renderActiveGroup();
+}
+
+function councilAddGroup() {
+  const name = prompt('Tên nhóm mới (VD: Nhóm QC, Nhóm Sales):');
+  if (!name || !name.trim()) return;
+  const gid = 'g_' + Date.now();
+  _councilGroups[gid] = {
+    name: name.trim(), description: '', chat_ids: [],
+    providers: JSON.parse(JSON.stringify({
+      deepseek: COUNCIL_ROLE_DEFAULTS.deepseek,
+      openai:   COUNCIL_ROLE_DEFAULTS.openai,
+      gemini:   COUNCIL_ROLE_DEFAULTS.gemini,
+      groq:     COUNCIL_ROLE_DEFAULTS.groq,
+    })),
+    shared_bases: [],
+  };
+  _activeGroupId = gid;
+  _renderGroupBar();
+  _renderActiveGroup();
+}
+
+function councilDeleteGroup(gid) {
+  if (gid === 'default') return;
+  const grp = _councilGroups[gid];
+  if (!confirm(`Xóa nhóm "${grp?.name || gid}"?`)) return;
+  delete _councilGroups[gid];
+  if (_activeGroupId === gid) _activeGroupId = 'default';
+  _renderGroupBar();
+  _renderActiveGroup();
+}
+
+// ─── Render active group ──────────────────────────────────────────────────────
+function _renderActiveGroup() {
+  const grp = _councilGroups[_activeGroupId] || {};
+  _renderGroupDetail(grp);
+  _renderCouncilRoles(grp);
+  _renderSharedBases(grp);
+  _initCouncilSelect('csb_type', 'auto');
+}
+
+function _renderGroupDetail(grp) {
+  const el = document.getElementById('council-group-detail');
+  const isDefault = _activeGroupId === 'default';
+  el.innerHTML = `
+    <div class="card" style="padding:14px 16px;border:1.5px solid #e2e8f0">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:${isDefault?'0':'12px'}">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:4px">📛 Tên nhóm</div>
+          <input id="cg_name" type="text" value="${esc(grp.name||'')}" ${isDefault?'readonly style="background:#f8fafc"':''}
+            style="width:100%;padding:7px 10px;border:1px solid #dde3ef;border-radius:7px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:4px">📝 Mô tả</div>
+          <input id="cg_desc" type="text" value="${esc(grp.description||'')}"
+            placeholder="VD: Nhóm QC miền Nam"
+            style="width:100%;padding:7px 10px;border:1px solid #dde3ef;border-radius:7px;font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
+      ${isDefault ? '' : `
+      <div>
+        <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:6px">💬 Gắn với nhóm chat Lark (Chat ID, mỗi dòng 1 ID)</div>
+        <textarea id="cg_chatids" rows="2" placeholder="oc_xxxxxxxx&#10;oc_yyyyyyyy"
+          style="width:100%;padding:7px 10px;border:1px solid #dde3ef;border-radius:7px;font-size:12px;resize:vertical;box-sizing:border-box;font-family:monospace">${(grp.chat_ids||[]).join('\n')}</textarea>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px">Khi bot nhận tin nhắn từ chat này → tự động dùng cấu hình nhóm này. Chat ID lấy từ URL Lark hoặc log bot.</div>
+      </div>`}
+    </div>`;
+}
+
+// ─── AI cards ─────────────────────────────────────────────────────────────────
+function _renderCouncilRoles(grp) {
   const list = document.getElementById('council-role-list');
   list.innerHTML = '';
-  // Init shared-base type select (chỉ cần 1 lần)
-  _initCouncilSelect('csb_type', 'auto');
-  const COLORS = {
-    deepseek: { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8' },
-    openai:   { bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
-    gemini:   { bg: '#fef2f2', border: '#fecaca', text: '#dc2626' },
-    groq:     { bg: '#fff7ed', border: '#fed7aa', text: '#c2410c' },
-  };
+  const providers = grp?.providers || {};
+
   ['deepseek', 'openai', 'gemini', 'groq'].forEach(prov => {
     const def  = COUNCIL_ROLE_DEFAULTS[prov];
-    const cfg  = (_councilCfg.roles || {})[prov] || {};
-    const c    = COLORS[prov];
+    const cfg  = providers[prov] || {};
+    const c    = _CR_COLORS[prov];
     const enabled = cfg.enabled !== undefined ? cfg.enabled : def.enabled;
-    const bases   = cfg.bases || def.bases || [];
+    const tasks   = cfg.tasks || def.tasks || [];
 
     const card = document.createElement('div');
     card.className = 'card';
@@ -3807,107 +3969,150 @@ function _renderCouncilRoles() {
           <div style="font-size:11px;color:#94a3b8">Provider: ${prov}</div>
         </div>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600;color:${c.text}">
-          <input type="checkbox" id="cr_enabled_${prov}" ${enabled ? 'checked' : ''}
-            style="width:16px;height:16px;cursor:pointer">
+          <input type="checkbox" id="cr_enabled_${prov}" ${enabled ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer">
           Hoạt động
         </label>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
         <div>
-          <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:4px">🎯 Tên vai trò</div>
-          <input type="text" id="cr_role_${prov}" value="${cfg.role_name || def.role_name}"
+          <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:4px">🎯 Tên vai trò chung</div>
+          <input type="text" id="cr_role_${prov}" value="${esc(cfg.role_name || def.role_name)}"
             placeholder="VD: Chuyên gia Kiểm Kê"
             style="width:100%;padding:7px 10px;border:1px solid #dde3ef;border-radius:7px;font-size:13px;box-sizing:border-box">
         </div>
         <div>
           <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:4px">📝 Mô tả ngắn</div>
-          <input type="text" id="cr_desc_${prov}" value="${cfg.role_desc || def.role_desc}"
-            placeholder="Mô tả chuyên môn của AI này"
+          <input type="text" id="cr_desc_${prov}" value="${esc(cfg.role_desc || def.role_desc)}"
             style="width:100%;padding:7px 10px;border:1px solid #dde3ef;border-radius:7px;font-size:13px;box-sizing:border-box">
         </div>
       </div>
-      <div style="margin-bottom:12px">
-        <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:4px">🔍 Tiêu chí phân tích (AI sẽ dùng prompt này khi đọc data)</div>
-        <textarea id="cr_analysis_${prov}" rows="3"
-          style="width:100%;padding:7px 10px;border:1px solid #dde3ef;border-radius:7px;font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit"
-          placeholder="VD: Tìm ST có chênh lệch âm > 0.08% DT...">${cfg.analysis || def.analysis}</textarea>
-      </div>
+
+      <!-- Sub-tasks -->
       <div>
-        <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:6px">🗄️ Base dữ liệu giao cho AI này đọc</div>
-        <div id="cr_bases_${prov}" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
-          ${bases.map((b,i) => _buildBaseRow(prov, i, b)).join('')}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:11px;font-weight:700;color:${c.text};text-transform:uppercase;letter-spacing:.5px">📋 Nhiệm vụ phân tích</div>
+          <button onclick="councilAddTask('${prov}')" style="padding:4px 10px;font-size:11px;font-weight:600;background:${c.border};color:${c.text};border:none;border-radius:6px;cursor:pointer">+ Thêm nhiệm vụ</button>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <input type="text" id="cr_bname_${prov}" placeholder="Tên base (VD: Kiểm Kê CVS)"
-            style="flex:1;min-width:140px;padding:6px 10px;border:1px solid #dde3ef;border-radius:7px;font-size:12px">
-          <input type="text" id="cr_burl_${prov}" placeholder="Link Bitable / Doc..."
-            style="flex:2;min-width:200px;padding:6px 10px;border:1px solid #dde3ef;border-radius:7px;font-size:12px">
-          <select id="cr_btype_${prov}" style="padding:6px 8px;border:1px solid #dde3ef;border-radius:7px;font-size:12px;background:#fff" onchange="councilAutoDetectType(this,'cr_burl_${prov}')"></select>
-          <button class="btn btn-gray btn-sm" onclick="councilAddBase('${prov}')">+ Thêm</button>
+        <div id="cr_tasks_${prov}" style="display:flex;flex-direction:column;gap:10px">
+          ${tasks.map((t,ti) => _buildTaskBlock(prov, ti, t, c)).join('')}
         </div>
       </div>`;
     list.appendChild(card);
-    // Init type selects sau khi card đã vào DOM
-    _initCouncilSelect(`cr_btype_${prov}`, 'auto');
-    // Auto-detect khi user nhập URL
-    const urlEl = document.getElementById(`cr_burl_${prov}`);
-    const typeEl = document.getElementById(`cr_btype_${prov}`);
-    if (urlEl && typeEl) {
-      urlEl.addEventListener('blur', () => {
-        if (typeEl.value === 'auto' && urlEl.value.trim()) {
-          typeEl.value = _councilDetectType(urlEl.value.trim());
-        }
-      });
-    }
+    // Init type selects trong mỗi task
+    tasks.forEach((t, ti) => {
+      _initCouncilSelect(`cr_btype_${prov}_${ti}`, 'auto');
+      const urlEl  = document.getElementById(`cr_burl_${prov}_${ti}`);
+      const typeEl = document.getElementById(`cr_btype_${prov}_${ti}`);
+      if (urlEl && typeEl) {
+        urlEl.addEventListener('blur', () => {
+          if (typeEl.value === 'auto' && urlEl.value.trim())
+            typeEl.value = _councilDetectType(urlEl.value.trim());
+        });
+      }
+    });
   });
 }
 
-function _buildBaseRow(prov, idx, base) {
-  const typeIcon = _councilTypeIcon(base.type);
-  return `<div id="cr_base_${prov}_${idx}" style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:6px 10px">
-    <span style="font-size:13px">${typeIcon}</span>
+function _buildTaskBlock(prov, ti, task, c) {
+  const bases = task.bases || [];
+  const canDelete = ti > 0; // task đầu tiên không xóa được (hoặc cho xóa tất)
+  return `
+    <div id="cr_task_${prov}_${ti}" style="background:#fff;border:1.5px solid ${c.border};border-radius:9px;padding:12px 14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:13px;color:#94a3b8;font-weight:700">#${ti+1}</span>
+        <input type="text" id="cr_tname_${prov}_${ti}" value="${esc(task.name||'Nhiệm vụ '+(ti+1))}"
+          placeholder="Tên nhiệm vụ (VD: Kiểm kê tồn kho)"
+          style="flex:1;padding:5px 9px;border:1px solid #dde3ef;border-radius:6px;font-size:13px;font-weight:600">
+        ${canDelete ? `<button onclick="councilRemoveTask('${prov}',${ti})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;padding:0 2px;line-height:1" title="Xóa nhiệm vụ này">×</button>` : ''}
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:4px">🔍 Tiêu chí phân tích</div>
+        <textarea id="cr_tcrit_${prov}_${ti}" rows="2"
+          style="width:100%;padding:6px 9px;border:1px solid #dde3ef;border-radius:6px;font-size:12px;resize:vertical;box-sizing:border-box;font-family:inherit"
+          placeholder="AI sẽ phân tích theo tiêu chí này khi đọc data...">${esc(task.criteria||'')}</textarea>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:6px">🗄️ Base dữ liệu cho nhiệm vụ này</div>
+        <div id="cr_bases_${prov}_${ti}" style="display:flex;flex-direction:column;gap:5px;margin-bottom:7px">
+          ${bases.map((b,bi) => _buildBaseRow(prov, ti, bi, b)).join('')}
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <input type="text" id="cr_bname_${prov}_${ti}" placeholder="Tên base"
+            style="flex:1;min-width:120px;padding:5px 8px;border:1px solid #dde3ef;border-radius:6px;font-size:12px">
+          <input type="text" id="cr_burl_${prov}_${ti}" placeholder="Link Bitable / Doc..."
+            style="flex:2;min-width:180px;padding:5px 8px;border:1px solid #dde3ef;border-radius:6px;font-size:12px">
+          <select id="cr_btype_${prov}_${ti}" style="padding:5px 7px;border:1px solid #dde3ef;border-radius:6px;font-size:12px;background:#fff"
+            onchange="councilAutoDetectType(this,'cr_burl_${prov}_${ti}')"></select>
+          <button class="btn btn-gray btn-sm" onclick="councilAddBase('${prov}',${ti})">+ Thêm</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function _buildBaseRow(prov, ti, bi, base) {
+  const icon = _councilTypeIcon(base.type);
+  return `<div style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:5px 9px">
+    <span style="font-size:13px">${icon}</span>
     <div style="flex:1;min-width:0">
-      <div style="font-size:12px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${base.name || '(không tên)'}</div>
-      <div style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${base.url || ''}</div>
+      <div style="font-size:12px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(base.name||'(không tên)')}</div>
+      <div style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(base.url||'')}</div>
     </div>
-    <button onclick="councilRemoveBase('${prov}',${idx})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;padding:0 2px">×</button>
+    <button onclick="councilRemoveBase('${prov}',${ti},${bi})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;padding:0 2px">×</button>
   </div>`;
 }
 
-function councilAddBase(prov) {
-  const name = document.getElementById(`cr_bname_${prov}`).value.trim();
-  const url  = document.getElementById(`cr_burl_${prov}`).value.trim();
-  let   type = document.getElementById(`cr_btype_${prov}`).value;
+// ─── Task actions ─────────────────────────────────────────────────────────────
+function councilAddTask(prov) {
+  _syncFormToCfg();
+  const grp = _councilGroups[_activeGroupId];
+  if (!grp.providers[prov]) grp.providers[prov] = {};
+  if (!grp.providers[prov].tasks) grp.providers[prov].tasks = [];
+  grp.providers[prov].tasks.push({ id: 't'+Date.now(), name: '', criteria: '', bases: [] });
+  _renderCouncilRoles(grp);
+}
+
+function councilRemoveTask(prov, ti) {
+  if (!confirm('Xóa nhiệm vụ này?')) return;
+  _syncFormToCfg();
+  const grp = _councilGroups[_activeGroupId];
+  grp.providers[prov].tasks.splice(ti, 1);
+  if (!grp.providers[prov].tasks.length)
+    grp.providers[prov].tasks = [{ id: 't1', name: 'Nhiệm vụ chính', criteria: '', bases: [] }];
+  _renderCouncilRoles(grp);
+}
+
+// ─── Base actions ─────────────────────────────────────────────────────────────
+function councilAddBase(prov, ti) {
+  const name = document.getElementById(`cr_bname_${prov}_${ti}`).value.trim();
+  const url  = document.getElementById(`cr_burl_${prov}_${ti}`).value.trim();
+  let   type = document.getElementById(`cr_btype_${prov}_${ti}`).value;
   if (type === 'auto' && url) type = _councilDetectType(url);
   if (!url) { alert('Nhập link base trước'); return; }
-  if (!_councilCfg.roles) _councilCfg.roles = {};
-  if (!_councilCfg.roles[prov]) _councilCfg.roles[prov] = {};
-  if (!_councilCfg.roles[prov].bases) _councilCfg.roles[prov].bases = [];
-  _councilCfg.roles[prov].bases.push({ name, url, type });
-  _syncFormToCfg(); // capture current form values first
-  _renderCouncilRoles();
-  document.getElementById(`cr_bname_${prov}`).value = '';
-  document.getElementById(`cr_burl_${prov}`).value  = '';
-}
-
-function councilRemoveBase(prov, idx) {
   _syncFormToCfg();
-  if (_councilCfg.roles && _councilCfg.roles[prov] && _councilCfg.roles[prov].bases)
-    _councilCfg.roles[prov].bases.splice(idx, 1);
-  _renderCouncilRoles();
+  const grp = _councilGroups[_activeGroupId];
+  grp.providers[prov].tasks[ti].bases.push({ name, url, type });
+  _renderCouncilRoles(grp);
 }
 
-function _renderSharedBases() {
+function councilRemoveBase(prov, ti, bi) {
+  _syncFormToCfg();
+  const grp = _councilGroups[_activeGroupId];
+  grp.providers[prov].tasks[ti].bases.splice(bi, 1);
+  _renderCouncilRoles(grp);
+}
+
+// ─── Shared bases ─────────────────────────────────────────────────────────────
+function _renderSharedBases(grp) {
   const el = document.getElementById('council-shared-bases');
-  const shared = _councilCfg.shared_bases || [];
+  const shared = grp?.shared_bases || [];
   if (!shared.length) { el.innerHTML = '<div style="font-size:12px;color:#94a3b8;margin-bottom:6px">Chưa có base dùng chung.</div>'; return; }
   el.innerHTML = shared.map((b,i) => {
-    const typeIcon = { bitable: '📊', doc: '📄', sheet: '📋' }[b.type] || '🔗';
+    const icon = _councilTypeIcon(b.type);
     return `<div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:6px 10px;margin-bottom:6px">
-      <span>${typeIcon}</span>
+      <span>${icon}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;font-weight:600">${b.name||'(không tên)'}</div>
-        <div style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.url||''}</div>
+        <div style="font-size:12px;font-weight:600">${esc(b.name||'(không tên)')}</div>
+        <div style="font-size:11px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.url||'')}</div>
       </div>
       <button onclick="councilRemoveSharedBase(${i})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;padding:0 2px">×</button>
     </div>`;
@@ -3920,36 +4125,62 @@ function councilAddSharedBase() {
   let   type = document.getElementById('csb_type').value;
   if (type === 'auto' && url) type = _councilDetectType(url);
   if (!url) { alert('Nhập link base trước'); return; }
-  if (!_councilCfg.shared_bases) _councilCfg.shared_bases = [];
-  _councilCfg.shared_bases.push({ name, url, type });
-  _renderSharedBases();
+  const grp = _councilGroups[_activeGroupId];
+  if (!grp.shared_bases) grp.shared_bases = [];
+  grp.shared_bases.push({ name, url, type });
+  _renderSharedBases(grp);
   document.getElementById('csb_name').value = '';
   document.getElementById('csb_url').value  = '';
 }
 
 function councilRemoveSharedBase(idx) {
-  _councilCfg.shared_bases = (_councilCfg.shared_bases || []).filter((_,i) => i !== idx);
-  _renderSharedBases();
+  const grp = _councilGroups[_activeGroupId];
+  grp.shared_bases = (grp.shared_bases || []).filter((_,i) => i !== idx);
+  _renderSharedBases(grp);
 }
 
+// ─── Sync form → in-memory ────────────────────────────────────────────────────
 function _syncFormToCfg() {
-  if (!_councilCfg.roles) _councilCfg.roles = {};
-  ['deepseek','openai','gemini'].forEach(prov => {
-    if (!_councilCfg.roles[prov]) _councilCfg.roles[prov] = {};
-    const r = _councilCfg.roles[prov];
-    r.enabled   = document.getElementById(`cr_enabled_${prov}`)?.checked ?? true;
-    r.role_name = document.getElementById(`cr_role_${prov}`)?.value || '';
-    r.role_desc = document.getElementById(`cr_desc_${prov}`)?.value || '';
-    r.analysis  = document.getElementById(`cr_analysis_${prov}`)?.value || '';
-    if (!r.bases) r.bases = [];
+  const grp = _councilGroups[_activeGroupId];
+  if (!grp) return;
+
+  // Sync group name/desc/chat_ids
+  const nameEl = document.getElementById('cg_name');
+  const descEl = document.getElementById('cg_desc');
+  const cidsEl = document.getElementById('cg_chatids');
+  if (nameEl) grp.name        = nameEl.value.trim() || grp.name;
+  if (descEl) grp.description = descEl.value.trim();
+  if (cidsEl) grp.chat_ids    = cidsEl.value.split('\n').map(s=>s.trim()).filter(Boolean);
+
+  // Sync providers
+  if (!grp.providers) grp.providers = {};
+  ['deepseek','openai','gemini','groq'].forEach(prov => {
+    if (!grp.providers[prov]) grp.providers[prov] = {};
+    const p = grp.providers[prov];
+    p.enabled   = document.getElementById(`cr_enabled_${prov}`)?.checked ?? true;
+    p.role_name = document.getElementById(`cr_role_${prov}`)?.value || '';
+    p.role_desc = document.getElementById(`cr_desc_${prov}`)?.value || '';
+
+    // Sync tasks
+    const taskEls = document.querySelectorAll(`[id^="cr_task_${prov}_"]`);
+    if (!p.tasks) p.tasks = [];
+    taskEls.forEach((_, ti) => {
+      if (!p.tasks[ti]) p.tasks[ti] = { id:'t'+ti, name:'', criteria:'', bases:[] };
+      p.tasks[ti].name     = document.getElementById(`cr_tname_${prov}_${ti}`)?.value || '';
+      p.tasks[ti].criteria = document.getElementById(`cr_tcrit_${prov}_${ti}`)?.value || '';
+      if (!p.tasks[ti].bases) p.tasks[ti].bases = [];
+    });
   });
 }
 
+// ─── Save ─────────────────────────────────────────────────────────────────────
 async function saveCouncilConfig() {
   _syncFormToCfg();
   const notify = document.getElementById('councilCfgNotify');
   try {
-    await db.ref(COUNCIL_CFG_PATH).set(_councilCfg);
+    const toSave = { groups: _councilGroups };
+    await db.ref(COUNCIL_CFG_PATH).set(toSave);
+    _renderGroupBar(); // refresh group names
     notify.textContent = '✅ Đã lưu cấu hình hội đồng!';
     notify.style.cssText = 'display:block;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-bottom:12px';
     setTimeout(() => { notify.style.display = 'none'; }, 3000);
