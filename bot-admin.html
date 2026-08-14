@@ -770,52 +770,26 @@ select.fg-sel:focus{border-color:#d0021b}
 
     <!-- COUNCIL AI -->
     <div class="page" id="page-council">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-        <div class="page-title" style="margin-bottom:0">🏛️ Hội đồng AI — Realtime</div>
-        <div style="font-size:12px;color:#94a3b8">DeepSeek + OpenAI + Gemini → Claude tổng hợp</div>
-      </div>
-
-      <!-- Input -->
-      <div class="card" style="margin-bottom:16px">
-        <div style="display:flex;gap:10px;align-items:flex-end">
-          <div style="flex:1">
-            <label style="font-size:12px;color:#64748b;font-weight:600;display:block;margin-bottom:6px">Câu hỏi cho Hội đồng</label>
-            <textarea id="council-input" rows="3" placeholder="Nhập câu hỏi bạn muốn hỏi tất cả AI... (Enter để gửi)" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:14px;resize:vertical;font-family:inherit;outline:none;transition:border-color 0.2s" onkeydown="if(event.ctrlKey&&event.key==='Enter')askCouncil()"></textarea>
-          </div>
-          <button onclick="askCouncil()" id="council-btn" class="btn btn-red" style="min-width:100px;height:42px">
-            🏛️ Hỏi hội đồng
-          </button>
-        </div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:6px">Ctrl+Enter để gửi • Brain URL: <span id="council-brain-url" style="font-family:monospace">—</span></div>
-      </div>
-
-      <!-- Status bar -->
-      <div id="council-status" style="display:none;background:#fef9f0;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:13px;color:#92400e;margin-bottom:16px;display:flex;align-items:center;gap:8px">
-        <span id="council-status-icon">⏳</span>
-        <span id="council-status-text">Đang gửi câu hỏi...</span>
-      </div>
-
-      <!-- Perspectives grid -->
-      <div id="council-perspectives" style="display:none">
-        <div style="font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">💬 Góc nhìn từ các AI</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:20px" id="council-cards"></div>
-      </div>
-
-      <!-- Claude synthesis -->
-      <div id="council-synthesis-wrap" style="display:none">
-        <div style="font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🟣 Claude tổng hợp</div>
-        <div style="background:linear-gradient(135deg,#faf5ff,#ede9fe);border:1.5px solid #c4b5fd;border-radius:12px;padding:18px 20px">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-            <span style="font-size:20px">🟣</span>
-            <span style="font-weight:700;color:#7c3aed">Claude (Anthropic)</span>
-            <span style="font-size:11px;color:#a78bfa;margin-left:auto" id="council-elapsed"></span>
-          </div>
-          <div id="council-synthesis-text" style="font-size:14px;line-height:1.7;color:#1e293b;white-space:pre-wrap"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px">
+        <div class="page-title" style="margin-bottom:0">🏛️ Hội đồng AI — Live Feed</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="council-live-dot" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#16a34a">
+            <span style="width:8px;height:8px;background:#16a34a;border-radius:50%;animation:pulse 1.5s infinite"></span>
+            Đang lắng nghe Lark
+          </span>
+          <button class="btn btn-gray btn-sm" onclick="loadCouncilFeed()">🔄 Làm mới</button>
         </div>
       </div>
+      <div style="font-size:12px;color:#94a3b8;margin-bottom:16px">Khi người dùng hỏi bot Lark — hội đồng AI (DeepSeek + OpenAI + Gemini) họp và Claude tổng hợp câu trả lời cuối cùng. Mỗi cuộc họp xuất hiện tại đây.</div>
 
-      <!-- History -->
-      <div id="council-history" style="margin-top:24px"></div>
+      <!-- Live feed -->
+      <div id="council-feed">
+        <div style="text-align:center;padding:60px 20px;color:#94a3b8">
+          <div style="font-size:48px;margin-bottom:12px">🏛️</div>
+          <div style="font-size:14px">Đang chờ câu hỏi từ người dùng Lark...</div>
+          <div style="font-size:12px;margin-top:6px">Trang này tự động cập nhật khi có cuộc họp mới</div>
+        </div>
+      </div>
     </div>
 
     <!-- AUTO REPLY -->
@@ -3580,140 +3554,75 @@ function saveAIConfig() {
     .catch(e => showNotify('aiNotify', '❌ Lỗi lưu: ' + e.message, false));
 }
 
-// ── Council AI ───────────────────────────────────────────────────────────────
-const PROVIDER_META = {
-  deepseek: { label: 'DeepSeek',    icon: '🔵', color: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8' },
-  openai:   { label: 'OpenAI GPT',  icon: '🟢', color: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
-  gemini:   { label: 'Gemini',      icon: '🔴', color: '#fef2f2', border: '#fecaca', text: '#dc2626' },
+// ── Council AI — Live Feed từ Firebase ──────────────────────────────────────
+const COUNCIL_META = {
+  deepseek: { label: 'DeepSeek',   icon: '🔵', color: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8' },
+  openai:   { label: 'OpenAI GPT', icon: '🟢', color: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
+  gemini:   { label: 'Gemini',     icon: '🔴', color: '#fef2f2', border: '#fecaca', text: '#dc2626' },
 };
+let _councilRef = null;
+let _councilRendered = new Set();
 
-let _councilHistory = [];
-let _councilBusy = false;
+function initCouncil() {
+  loadCouncilFeed();
+  if (_councilRef) return;
+  _councilRef = db.ref('bot_council_log').orderByKey().limitToLast(20);
+  _councilRef.on('child_added', snap => {
+    const entry = snap.val();
+    if (!entry || _councilRendered.has(snap.key)) return;
+    _councilRendered.add(snap.key);
+    _prependCouncilEntry(entry);
+  });
+}
 
-let _councilBrainUrl = '';
-let _councilBrainSecret = 'brain-secret-2026';
-
-async function initCouncil() {
-  if (_councilBrainUrl) {
-    document.getElementById('council-brain-url').textContent = _councilBrainUrl.replace('https://','');
-    return;
-  }
+async function loadCouncilFeed() {
   try {
-    const d = await api('GET', '/api/panel/status');
-    if (d.brain_url) {
-      _councilBrainUrl = d.brain_url;
-      document.getElementById('council-brain-url').textContent = d.brain_url.replace('https://','');
-    }
-  } catch(e) {}
+    const snap = await db.ref('bot_council_log').orderByKey().limitToLast(20).once('value');
+    const entries = [];
+    snap.forEach(child => entries.push({ key: child.key, ...child.val() }));
+    const feed = document.getElementById('council-feed');
+    if (!entries.length) { feed.innerHTML = '<div data-placeholder style="text-align:center;padding:60px 20px;color:#94a3b8"><div style="font-size:48px;margin-bottom:12px">🏛️</div><div style="font-size:14px">Đang chờ câu hỏi từ người dùng Lark...</div><div style="font-size:12px;margin-top:6px">Trang này tự động cập nhật khi có cuộc họp mới</div></div>'; return; }
+    feed.innerHTML = '';
+    _councilRendered.clear();
+    entries.reverse().forEach(e => { _councilRendered.add(e.key); feed.appendChild(_buildCouncilCard(e)); });
+  } catch(e) { console.error('[COUNCIL]', e); }
 }
 
-function _councilSetStatus(icon, text, show = true) {
-  const el = document.getElementById('council-status');
-  el.style.display = show ? 'flex' : 'none';
-  document.getElementById('council-status-icon').textContent = icon;
-  document.getElementById('council-status-text').textContent = text;
+function _prependCouncilEntry(entry) {
+  const feed = document.getElementById('council-feed');
+  const placeholder = feed.querySelector('[data-placeholder]');
+  if (placeholder) placeholder.remove();
+  const card = _buildCouncilCard(entry, true);
+  feed.insertBefore(card, feed.firstChild);
 }
 
-async function askCouncil() {
-  if (_councilBusy) return;
-  const q = document.getElementById('council-input').value.trim();
-  if (!q) return;
-  _councilBusy = true;
-
-  // Reset UI
-  document.getElementById('council-cards').innerHTML = '';
-  document.getElementById('council-perspectives').style.display = 'none';
-  document.getElementById('council-synthesis-wrap').style.display = 'none';
-  document.getElementById('council-btn').disabled = true;
-  document.getElementById('council-btn').textContent = '⏳ Đang hỏi...';
-
-  _councilSetStatus('⏳', 'Đang gửi câu hỏi đến hội đồng AI...');
-
-  try {
-    if (!_councilBrainUrl) {
-      await initCouncil();
-      if (!_councilBrainUrl) {
-        _councilSetStatus('❌', 'Chưa cấu hình Brain URL. Vào Quản lý Panel để thêm Brain Service URL.');
-        return;
-      }
-    }
-
-    _councilSetStatus('🔄', 'Các AI đang suy nghĩ song song...');
-
-    const resp = await fetch(_councilBrainUrl + '/api/brain/council', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Brain-Secret': _councilBrainSecret },
-      body: JSON.stringify({ question: q }),
-    });
-    const d = await resp.json();
-
-    if (!d.ok) {
-      _councilSetStatus('❌', 'Lỗi: ' + (d.error || 'unknown'));
-      return;
-    }
-
-    // Show perspectives with animation
-    _councilSetStatus('✅', `${d.providers_used.length} AI đã trả lời • Claude đang tổng hợp...`);
-    document.getElementById('council-perspectives').style.display = 'block';
-
-    const cards = document.getElementById('council-cards');
-    d.providers_used.forEach((prov, i) => {
-      const meta = PROVIDER_META[prov] || { label: prov, icon: '🤖', color: '#f9fafb', border: '#e5e7eb', text: '#374151' };
-      const ans  = d.perspectives[prov] || '(Không có câu trả lời)';
-      const card = document.createElement('div');
-      card.style.cssText = `background:${meta.color};border:1.5px solid ${meta.border};border-radius:12px;padding:16px;opacity:0;transform:translateY(12px);transition:all 0.35s ease ${i*0.12}s`;
-      card.innerHTML = `
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
-          <span style="font-size:18px">${meta.icon}</span>
-          <span style="font-weight:700;color:${meta.text};font-size:13px">${meta.label}</span>
-        </div>
-        <div style="font-size:13px;line-height:1.65;color:#1e293b;white-space:pre-wrap">${ans}</div>
-      `;
-      cards.appendChild(card);
-      requestAnimationFrame(() => setTimeout(() => { card.style.opacity='1'; card.style.transform='translateY(0)'; }, i*120));
-    });
-
-    // Show synthesis with delay
-    setTimeout(() => {
-      _councilSetStatus('🟣', `Claude tổng hợp xong • ${d.elapsed_sec}s`, true);
-      const synthWrap = document.getElementById('council-synthesis-wrap');
-      const synthText = document.getElementById('council-synthesis-text');
-      synthText.textContent = d.synthesis || '(Không có)';
-      document.getElementById('council-elapsed').textContent = `⏱ ${d.elapsed_sec}s`;
-      synthWrap.style.display = 'block';
-      synthWrap.style.opacity = '0';
-      synthWrap.style.transform = 'translateY(12px)';
-      synthWrap.style.transition = 'all 0.4s ease';
-      requestAnimationFrame(() => { synthWrap.style.opacity='1'; synthWrap.style.transform='translateY(0)'; });
-
-      // Add to history
-      _councilHistory.unshift({ q, perspectives: d.perspectives, synthesis: d.synthesis, elapsed: d.elapsed_sec, ts: new Date().toLocaleTimeString('vi-VN') });
-      if (_councilHistory.length > 10) _councilHistory.pop();
-      _renderCouncilHistory();
-    }, d.providers_used.length * 120 + 200);
-
-  } catch (e) {
-    _councilSetStatus('❌', 'Lỗi kết nối Brain: ' + e.message);
-  } finally {
-    _councilBusy = false;
-    document.getElementById('council-btn').disabled = false;
-    document.getElementById('council-btn').textContent = '🏛️ Hỏi hội đồng';
+function _buildCouncilCard(entry, animate) {
+  const wrap = document.createElement('div');
+  wrap.style.marginBottom = '20px';
+  if (animate) {
+    wrap.style.cssText = 'margin-bottom:20px;opacity:0;transform:translateY(-10px);transition:all 0.4s ease';
+    requestAnimationFrame(() => requestAnimationFrame(() => { wrap.style.opacity='1'; wrap.style.transform='translateY(0)'; }));
   }
-}
-
-function _renderCouncilHistory() {
-  if (!_councilHistory.length) return;
-  const el = document.getElementById('council-history');
-  el.innerHTML = `<div style="font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">📜 Lịch sử hội đồng (${_councilHistory.length})</div>` +
-    _councilHistory.map((h, i) => `
-      <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;background:#fafafa" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-size:13px;font-weight:600;color:#1e293b">${h.q.slice(0,80)}${h.q.length>80?'…':''}</div>
-          <span style="font-size:11px;color:#94a3b8">${h.ts} • ${h.elapsed}s</span>
-        </div>
-      </div>
-      <div style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;padding:12px 14px;margin-top:-9px;margin-bottom:8px;font-size:13px;line-height:1.65;white-space:pre-wrap">${h.synthesis}</div>
-    `).join('');
+  const ts = entry.ts ? new Date(entry.ts).toLocaleString('vi-VN') : '';
+  const providers = entry.providers || Object.keys(entry.perspectives || {});
+  let perspHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px">';
+  for (const [prov, ans] of Object.entries(entry.perspectives || {})) {
+    const m = COUNCIL_META[prov] || { label: prov, icon: '🤖', color: '#f9fafb', border: '#e5e7eb', text: '#374151' };
+    const short = (ans||'').length > 450 ? ans.slice(0,450) + '…' : (ans||'(trống)');
+    perspHTML += `<div style="background:${m.color};border:1.5px solid ${m.border};border-radius:10px;padding:12px 14px"><div style="font-size:11px;font-weight:700;color:${m.text};margin-bottom:7px">${m.icon} ${m.label}</div><div style="font-size:12px;line-height:1.6;color:#374151;white-space:pre-wrap">${short}</div></div>`;
+  }
+  perspHTML += '</div>';
+  wrap.innerHTML = `<div style="border:1px solid #e2e8f0;border-radius:14px;padding:16px 18px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
+    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">
+      <div style="flex:1"><div style="font-size:11px;color:#94a3b8;margin-bottom:4px">${ts} • ${providers.length} AI tham gia</div><div style="font-size:15px;font-weight:700;color:#1e293b;line-height:1.4">❓ ${entry.question||''}</div></div>
+    </div>
+    ${perspHTML}
+    <div style="background:linear-gradient(135deg,#faf5ff,#ede9fe);border:1.5px solid #c4b5fd;border-radius:12px;padding:14px 16px">
+      <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:8px">🟣 CLAUDE TỔNG HỢP</div>
+      <div style="font-size:13px;line-height:1.7;color:#1e293b;white-space:pre-wrap">${entry.synthesis||'(đang xử lý...)'}</div>
+    </div>
+  </div>`;
+  return wrap;
 }
 
 // ── Auto Reply ────────────────────────────────────────────────────────────────
