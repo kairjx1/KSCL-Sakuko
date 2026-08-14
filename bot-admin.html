@@ -291,6 +291,7 @@ select.fg-sel:focus{border-color:#d0021b}
     <div class="nav-item" onclick="goPage('send')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></span><span>Gửi tin</span></div>
     <div class="nav-item" onclick="goPage('autoreply')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span><span>Trả lời tự động</span></div>
     <div class="nav-item" onclick="goPage('aichat')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="2" x2="9" y2="4"/><line x1="15" y1="2" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="22"/><line x1="15" y1="20" x2="15" y2="22"/><line x1="20" y1="9" x2="22" y2="9"/><line x1="20" y1="15" x2="22" y2="15"/><line x1="2" y1="9" x2="4" y2="9"/><line x1="2" y1="15" x2="4" y2="15"/></svg></span><span>AI Chat</span></div>
+    <div class="nav-item" onclick="goPage('council')" style="background:linear-gradient(135deg,#fefce8,#fef9c3);color:#92400e;font-weight:600"><span class="icon">🏛️</span><span>Hội đồng AI</span></div>
     <div class="nav-item" onclick="goPage('agent')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="10" r="2.5"/><path d="M8 18c0-2.2 1.8-4 4-4s4 1.8 4 4" stroke-linecap="round"/></svg></span><span>Agent</span></div>
     <div class="nav-item" onclick="goPage('linkbase')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span><span>Linkbase</span></div>
     <div class="nav-item" onclick="goPage('perms')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg></span><span>Phân quyền</span></div>
@@ -765,6 +766,56 @@ select.fg-sel:focus{border-color:#d0021b}
           <input type="number" id="ai-timeout" value="30" min="10" max="120">
         </div>
       </div>
+    </div>
+
+    <!-- COUNCIL AI -->
+    <div class="page" id="page-council">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div class="page-title" style="margin-bottom:0">🏛️ Hội đồng AI — Realtime</div>
+        <div style="font-size:12px;color:#94a3b8">DeepSeek + OpenAI + Gemini → Claude tổng hợp</div>
+      </div>
+
+      <!-- Input -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;gap:10px;align-items:flex-end">
+          <div style="flex:1">
+            <label style="font-size:12px;color:#64748b;font-weight:600;display:block;margin-bottom:6px">Câu hỏi cho Hội đồng</label>
+            <textarea id="council-input" rows="3" placeholder="Nhập câu hỏi bạn muốn hỏi tất cả AI... (Enter để gửi)" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:14px;resize:vertical;font-family:inherit;outline:none;transition:border-color 0.2s" onkeydown="if(event.ctrlKey&&event.key==='Enter')askCouncil()"></textarea>
+          </div>
+          <button onclick="askCouncil()" id="council-btn" class="btn btn-red" style="min-width:100px;height:42px">
+            🏛️ Hỏi hội đồng
+          </button>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:6px">Ctrl+Enter để gửi • Brain URL: <span id="council-brain-url" style="font-family:monospace">—</span></div>
+      </div>
+
+      <!-- Status bar -->
+      <div id="council-status" style="display:none;background:#fef9f0;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:13px;color:#92400e;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+        <span id="council-status-icon">⏳</span>
+        <span id="council-status-text">Đang gửi câu hỏi...</span>
+      </div>
+
+      <!-- Perspectives grid -->
+      <div id="council-perspectives" style="display:none">
+        <div style="font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">💬 Góc nhìn từ các AI</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:20px" id="council-cards"></div>
+      </div>
+
+      <!-- Claude synthesis -->
+      <div id="council-synthesis-wrap" style="display:none">
+        <div style="font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🟣 Claude tổng hợp</div>
+        <div style="background:linear-gradient(135deg,#faf5ff,#ede9fe);border:1.5px solid #c4b5fd;border-radius:12px;padding:18px 20px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <span style="font-size:20px">🟣</span>
+            <span style="font-weight:700;color:#7c3aed">Claude (Anthropic)</span>
+            <span style="font-size:11px;color:#a78bfa;margin-left:auto" id="council-elapsed"></span>
+          </div>
+          <div id="council-synthesis-text" style="font-size:14px;line-height:1.7;color:#1e293b;white-space:pre-wrap"></div>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div id="council-history" style="margin-top:24px"></div>
     </div>
 
     <!-- AUTO REPLY -->
@@ -3529,6 +3580,142 @@ function saveAIConfig() {
     .catch(e => showNotify('aiNotify', '❌ Lỗi lưu: ' + e.message, false));
 }
 
+// ── Council AI ───────────────────────────────────────────────────────────────
+const PROVIDER_META = {
+  deepseek: { label: 'DeepSeek',    icon: '🔵', color: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8' },
+  openai:   { label: 'OpenAI GPT',  icon: '🟢', color: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
+  gemini:   { label: 'Gemini',      icon: '🔴', color: '#fef2f2', border: '#fecaca', text: '#dc2626' },
+};
+
+let _councilHistory = [];
+let _councilBusy = false;
+
+let _councilBrainUrl = '';
+let _councilBrainSecret = 'brain-secret-2026';
+
+async function initCouncil() {
+  if (_councilBrainUrl) {
+    document.getElementById('council-brain-url').textContent = _councilBrainUrl.replace('https://','');
+    return;
+  }
+  try {
+    const d = await api('GET', '/api/panel/status');
+    if (d.brain_url) {
+      _councilBrainUrl = d.brain_url;
+      document.getElementById('council-brain-url').textContent = d.brain_url.replace('https://','');
+    }
+  } catch(e) {}
+}
+
+function _councilSetStatus(icon, text, show = true) {
+  const el = document.getElementById('council-status');
+  el.style.display = show ? 'flex' : 'none';
+  document.getElementById('council-status-icon').textContent = icon;
+  document.getElementById('council-status-text').textContent = text;
+}
+
+async function askCouncil() {
+  if (_councilBusy) return;
+  const q = document.getElementById('council-input').value.trim();
+  if (!q) return;
+  _councilBusy = true;
+
+  // Reset UI
+  document.getElementById('council-cards').innerHTML = '';
+  document.getElementById('council-perspectives').style.display = 'none';
+  document.getElementById('council-synthesis-wrap').style.display = 'none';
+  document.getElementById('council-btn').disabled = true;
+  document.getElementById('council-btn').textContent = '⏳ Đang hỏi...';
+
+  _councilSetStatus('⏳', 'Đang gửi câu hỏi đến hội đồng AI...');
+
+  try {
+    if (!_councilBrainUrl) {
+      await initCouncil();
+      if (!_councilBrainUrl) {
+        _councilSetStatus('❌', 'Chưa cấu hình Brain URL. Vào Quản lý Panel để thêm Brain Service URL.');
+        return;
+      }
+    }
+
+    _councilSetStatus('🔄', 'Các AI đang suy nghĩ song song...');
+
+    const resp = await fetch(_councilBrainUrl + '/api/brain/council', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Brain-Secret': _councilBrainSecret },
+      body: JSON.stringify({ question: q }),
+    });
+    const d = await resp.json();
+
+    if (!d.ok) {
+      _councilSetStatus('❌', 'Lỗi: ' + (d.error || 'unknown'));
+      return;
+    }
+
+    // Show perspectives with animation
+    _councilSetStatus('✅', `${d.providers_used.length} AI đã trả lời • Claude đang tổng hợp...`);
+    document.getElementById('council-perspectives').style.display = 'block';
+
+    const cards = document.getElementById('council-cards');
+    d.providers_used.forEach((prov, i) => {
+      const meta = PROVIDER_META[prov] || { label: prov, icon: '🤖', color: '#f9fafb', border: '#e5e7eb', text: '#374151' };
+      const ans  = d.perspectives[prov] || '(Không có câu trả lời)';
+      const card = document.createElement('div');
+      card.style.cssText = `background:${meta.color};border:1.5px solid ${meta.border};border-radius:12px;padding:16px;opacity:0;transform:translateY(12px);transition:all 0.35s ease ${i*0.12}s`;
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+          <span style="font-size:18px">${meta.icon}</span>
+          <span style="font-weight:700;color:${meta.text};font-size:13px">${meta.label}</span>
+        </div>
+        <div style="font-size:13px;line-height:1.65;color:#1e293b;white-space:pre-wrap">${ans}</div>
+      `;
+      cards.appendChild(card);
+      requestAnimationFrame(() => setTimeout(() => { card.style.opacity='1'; card.style.transform='translateY(0)'; }, i*120));
+    });
+
+    // Show synthesis with delay
+    setTimeout(() => {
+      _councilSetStatus('🟣', `Claude tổng hợp xong • ${d.elapsed_sec}s`, true);
+      const synthWrap = document.getElementById('council-synthesis-wrap');
+      const synthText = document.getElementById('council-synthesis-text');
+      synthText.textContent = d.synthesis || '(Không có)';
+      document.getElementById('council-elapsed').textContent = `⏱ ${d.elapsed_sec}s`;
+      synthWrap.style.display = 'block';
+      synthWrap.style.opacity = '0';
+      synthWrap.style.transform = 'translateY(12px)';
+      synthWrap.style.transition = 'all 0.4s ease';
+      requestAnimationFrame(() => { synthWrap.style.opacity='1'; synthWrap.style.transform='translateY(0)'; });
+
+      // Add to history
+      _councilHistory.unshift({ q, perspectives: d.perspectives, synthesis: d.synthesis, elapsed: d.elapsed_sec, ts: new Date().toLocaleTimeString('vi-VN') });
+      if (_councilHistory.length > 10) _councilHistory.pop();
+      _renderCouncilHistory();
+    }, d.providers_used.length * 120 + 200);
+
+  } catch (e) {
+    _councilSetStatus('❌', 'Lỗi kết nối Brain: ' + e.message);
+  } finally {
+    _councilBusy = false;
+    document.getElementById('council-btn').disabled = false;
+    document.getElementById('council-btn').textContent = '🏛️ Hỏi hội đồng';
+  }
+}
+
+function _renderCouncilHistory() {
+  if (!_councilHistory.length) return;
+  const el = document.getElementById('council-history');
+  el.innerHTML = `<div style="font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">📜 Lịch sử hội đồng (${_councilHistory.length})</div>` +
+    _councilHistory.map((h, i) => `
+      <div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;background:#fafafa" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px;font-weight:600;color:#1e293b">${h.q.slice(0,80)}${h.q.length>80?'…':''}</div>
+          <span style="font-size:11px;color:#94a3b8">${h.ts} • ${h.elapsed}s</span>
+        </div>
+      </div>
+      <div style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;padding:12px 14px;margin-top:-9px;margin-bottom:8px;font-size:13px;line-height:1.65;white-space:pre-wrap">${h.synthesis}</div>
+    `).join('');
+}
+
 // ── Auto Reply ────────────────────────────────────────────────────────────────
 const AR_PATH = 'bot_autoreplies';
 let _editingKey = null;
@@ -3543,6 +3730,7 @@ function goPage(id) {
   if (id === 'kb') { loadKB(); loadQACache(); }
   if (id === 'autoreply') loadRules();
   if (id === 'aichat') loadAIConfig();
+  if (id === 'council') initCouncil();
   if (id === 'agent') loadAgentConfig();
   if (id === 'linkbase') loadLinkbase();
   if (id === 'perms') { loadPerms(); loadUserStats(); }
