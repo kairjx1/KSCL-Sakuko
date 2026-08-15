@@ -492,10 +492,22 @@ select.fg-sel:focus{border-color:#d0021b}
           AI đọc ảnh từng record hủy trong Bitable, kiểm tra tên hàng + số lượng có đúng không.
           Chỉ gửi DM khi phát hiện vấn đề. Dùng GPT-4o mini (~$1.5/tháng cho 300 records).
         </div>
+        <div style="padding:8px 12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:13px;color:#166534;margin-bottom:10px">
+          🕘 <b>Lịch tự động:</b> Bot chạy QC Vision lúc <b>9h30 sáng</b> hàng ngày, gửi kết quả vào nhóm hàng hóa tự động.
+          Nhóm mặc định: <code>oc_97f3ed3ef25d7659ae17a5b51f0a906d</code> (cấu hình qua env <code>QC_VISION_GROUP_ID</code>).
+        </div>
         <div class="fg" style="margin-bottom:10px">
-          <label>Gửi kết quả đến Open ID (admin nhận báo cáo)</label>
+          <label>Gửi kết quả test đến Open ID (admin nhận báo cáo test)</label>
           <input type="text" id="qcVisionTarget" value="ou_42034a8fa13e49f8884d88e203206a09" placeholder="ou_...">
-          <div class="hint">Tài khoản nhận toàn bộ báo cáo. Bot chỉ nhắn nếu có vấn đề.</div>
+          <div class="hint">Chỉ dùng khi bấm nút test thủ công. Lịch tự động 9h30 gửi vào nhóm.</div>
+        </div>
+        <div style="margin-bottom:12px;padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
+          <label style="font-size:12px;color:#64748b;margin-bottom:6px;display:block">🔎 Tìm open_id theo tên nhân viên</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="findUserQuery" placeholder="Nhập tên (VD: Minh Hà)..." style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;font-size:13px">
+            <button type="button" onclick="findUser()" style="padding:6px 14px;border-radius:6px;border:none;background:#3b82f6;color:#fff;font-size:13px;cursor:pointer">Tìm</button>
+          </div>
+          <div id="findUserResult" style="margin-top:8px;font-size:12px"></div>
         </div>
         <div style="display:flex;gap:12px;margin-bottom:10px">
           <div class="fg" style="flex:1">
@@ -3009,6 +3021,45 @@ async function clearAllQA() {
 }
 
 // ── QC Vision ────────────────────────────────────────────────────────────────
+async function findUser() {
+  const q   = document.getElementById('findUserQuery').value.trim();
+  const div = document.getElementById('findUserResult');
+  if (!q) return;
+  div.innerHTML = '⏳ Đang tìm...';
+  try {
+    const d = await api('GET', `/api/panel/find-user?q=${encodeURIComponent(q)}`);
+    if (!d.ok || !d.users?.length) {
+      div.innerHTML = '<span style="color:#dc2626">Không tìm thấy. Thử nhập SĐT hoặc email.</span>';
+      return;
+    }
+    div.innerHTML = d.users.map(u => `
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f1f5f9">
+        <span style="font-weight:500">${u.name}</span>
+        <span style="color:#94a3b8;font-size:11px">${u.dept||''}</span>
+        <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11px;cursor:pointer"
+              onclick="navigator.clipboard.writeText('${u.open_id}');this.style.background='#dcfce7';setTimeout(()=>this.style.background='#f1f5f9',1500)"
+              title="Click để copy">${u.open_id}</code>
+        <button onclick="addIdToField('qcIdList','qc-id-input','${u.open_id}')" style="padding:2px 8px;border-radius:4px;border:1px solid #3b82f6;background:#eff6ff;color:#3b82f6;font-size:11px;cursor:pointer">→ QC</button>
+        <button onclick="addIdToField('kkIdList','kk-id-input','${u.open_id}')" style="padding:2px 8px;border-radius:4px;border:1px solid #16a34a;background:#f0fdf4;color:#16a34a;font-size:11px;cursor:pointer">→ KK</button>
+      </div>`).join('');
+  } catch(e) {
+    div.innerHTML = `<span style="color:#dc2626">Lỗi: ${e.message}</span>`;
+  }
+}
+
+function addIdToField(listId, cls, openId) {
+  // Điền vào ô trống đầu tiên hoặc thêm ô mới
+  const inputs = document.querySelectorAll(`.${cls}`);
+  for (const inp of inputs) {
+    if (!inp.value.trim()) { inp.value = openId; return; }
+  }
+  addIdRow(listId, cls);
+  setTimeout(() => {
+    const all = document.querySelectorAll(`.${cls}`);
+    all[all.length - 1].value = openId;
+  }, 50);
+}
+
 function addIdRow(listId, cls) {
   const list = document.getElementById(listId);
   const row  = document.createElement('div');
