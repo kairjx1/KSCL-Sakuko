@@ -493,9 +493,19 @@ select.fg-sel:focus{border-color:#d0021b}
           Chỉ gửi DM khi phát hiện vấn đề. Dùng GPT-4o mini (~$1.5/tháng cho 300 records).
         </div>
         <div class="fg" style="margin-bottom:10px">
-          <label>Gửi kết quả đến Open ID</label>
+          <label>Gửi kết quả đến Open ID (admin nhận báo cáo)</label>
           <input type="text" id="qcVisionTarget" value="ou_42034a8fa13e49f8884d88e203206a09" placeholder="ou_...">
-          <div class="hint">Mặc định: tài khoản admin. Bot chỉ nhắn nếu có hàng nghi vấn.</div>
+          <div class="hint">Tài khoản nhận toàn bộ báo cáo. Bot chỉ nhắn nếu có vấn đề.</div>
+        </div>
+        <div style="display:flex;gap:12px;margin-bottom:10px">
+          <div class="fg" style="flex:1">
+            <label>🔍 QC — Open ID (tag khi có vấn đề ảnh)</label>
+            <input type="text" id="qcVisionQcId" placeholder="ou_... (để trống = không tag)">
+          </div>
+          <div class="fg" style="flex:1">
+            <label>📦 KK — Open ID (tag khi có ghi chú/đổi trả)</label>
+            <input type="text" id="qcVisionKkId" placeholder="ou_... (để trống = không tag)">
+          </div>
         </div>
         <div class="fg" style="margin-bottom:10px">
           <label>Kiểm tra ngày nào?</label>
@@ -2998,7 +3008,12 @@ async function runQCVision() {
   try {
     const force    = document.getElementById('qcVisionForce').checked;
     const daysBack = parseInt(document.getElementById('qcVisionDaysBack').value) || 1;
-    const d = await api('POST', '/api/panel/qc-vision-test', { open_id: target, force_send: force, days_back: daysBack });
+    const qcId     = document.getElementById('qcVisionQcId').value.trim();
+    const kkId     = document.getElementById('qcVisionKkId').value.trim();
+    const d = await api('POST', '/api/panel/qc-vision-test', {
+      open_id: target, force_send: force, days_back: daysBack,
+      qc_open_id: qcId, kk_open_id: kkId,
+    });
     if (d.ok) {
       st.textContent = '✅ Đã bắt đầu! Bot sẽ DM kết quả nếu phát hiện vấn đề.';
       notify.innerHTML = `<div style="margin-top:8px;padding:10px 12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:13px;color:#166534">
