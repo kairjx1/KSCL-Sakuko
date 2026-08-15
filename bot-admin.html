@@ -501,7 +501,7 @@ select.fg-sel:focus{border-color:#d0021b}
           <input type="text" id="qcVisionTarget" value="ou_42034a8fa13e49f8884d88e203206a09" placeholder="ou_...">
           <div class="hint">Chỉ dùng khi bấm nút test thủ công. Lịch tự động 9h30 gửi vào nhóm.</div>
         </div>
-        <div style="display:flex;gap:12px;margin-bottom:10px">
+        <div style="display:flex;gap:12px;margin-bottom:6px">
           <div class="fg" style="flex:1">
             <label>🔍 QC — Tag khi có vấn đề ảnh <span style="color:#94a3b8;font-weight:400">(Ctrl+click chọn nhiều)</span>
             <button type="button" onclick="loadUserList()" style="margin-left:6px;padding:1px 8px;border-radius:4px;border:1px solid #cbd5e1;background:#f8fafc;color:#64748b;font-size:11px;cursor:pointer">↻ Tải lại</button>
@@ -518,6 +518,11 @@ select.fg-sel:focus{border-color:#d0021b}
               <option disabled>⏳ Đang tải...</option>
             </select>
           </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <button id="saveQCConfigBtn" class="btn btn-green" onclick="saveQCConfig()" style="font-size:13px;padding:5px 14px">💾 Lưu cài đặt</button>
+          <span id="qcConfigBadge" style="font-size:12px;color:#16a34a"></span>
+          <span style="font-size:12px;color:#94a3b8">Lưu để bot 9h30 tự động tag đúng người mỗi ngày</span>
         </div>
         <div class="fg" style="margin-bottom:10px">
           <label>Kiểm tra ngày nào?</label>
@@ -3018,18 +3023,51 @@ async function loadUserList() {
   qcSel.innerHTML = '<option disabled>⏳ Đang tải...</option>';
   kkSel.innerHTML = '<option disabled>⏳ Đang tải...</option>';
   try {
-    const d = await api('GET', '/api/panel/find-user?q=');
-    const users = d.users || [];
+    const [usersRes, cfgRes] = await Promise.all([
+      api('GET', '/api/panel/find-user?q='),
+      api('GET', '/api/panel/qc-vision-config').catch(() => ({qc_ids:[], kk_ids:[]})),
+    ]);
+    const users = usersRes.users || [];
     if (!users.length) {
       const msg = '<option disabled>— Bot chưa ở trong nhóm hoặc chưa có thành viên —</option>';
       qcSel.innerHTML = msg; kkSel.innerHTML = msg; return;
     }
-    const opts = users.map(u => `<option value="${u.open_id}">${u.name}</option>`).join('');
-    qcSel.innerHTML = opts;
-    kkSel.innerHTML = opts;
+    const savedQC = cfgRes.qc_ids || [];
+    const savedKK = cfgRes.kk_ids || [];
+    const mkOpts = (saved) => users.map(u =>
+      `<option value="${u.open_id}"${saved.includes(u.open_id) ? ' selected' : ''}>${u.name}</option>`
+    ).join('');
+    qcSel.innerHTML = mkOpts(savedQC);
+    kkSel.innerHTML = mkOpts(savedKK);
+    // Hiện badge số người đã lưu
+    const badge = document.getElementById('qcConfigBadge');
+    if (badge) {
+      const total = new Set([...savedQC, ...savedKK]).size;
+      badge.textContent = total > 0 ? `✅ Đã lưu: ${savedQC.length} QC, ${savedKK.length} KK` : '';
+    }
   } catch(e) {
     const msg = `<option disabled>❌ Bot chưa sẵn sàng — nhấn ↻ Tải lại</option>`;
     qcSel.innerHTML = msg; kkSel.innerHTML = msg;
+  }
+}
+
+async function saveQCConfig() {
+  const qcIds = [...document.getElementById('qcSelect').selectedOptions].map(o=>o.value);
+  const kkIds = [...document.getElementById('kkSelect').selectedOptions].map(o=>o.value);
+  const btn = document.getElementById('saveQCConfigBtn');
+  const badge = document.getElementById('qcConfigBadge');
+  btn.disabled = true; btn.textContent = '⏳ Đang lưu...';
+  try {
+    await api('POST', '/api/panel/qc-vision-config', { qc_ids: qcIds, kk_ids: kkIds });
+    btn.textContent = '💾 Lưu cài đặt';
+    btn.disabled = false;
+    badge.textContent = `✅ Đã lưu: ${qcIds.length} QC, ${kkIds.length} KK`;
+    badge.style.color = '#16a34a';
+  } catch(e) {
+    btn.textContent = '💾 Lưu cài đặt';
+    btn.disabled = false;
+    badge.textContent = '❌ Lưu thất bại';
+    badge.style.color = '#dc2626';
   }
 }
 
