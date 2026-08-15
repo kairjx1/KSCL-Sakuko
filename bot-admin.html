@@ -502,12 +502,12 @@ select.fg-sel:focus{border-color:#d0021b}
           <div class="hint">Chỉ dùng khi bấm nút test thủ công. Lịch tự động 9h30 gửi vào nhóm.</div>
         </div>
         <div style="margin-bottom:12px;padding:10px 12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
-          <label style="font-size:12px;color:#64748b;margin-bottom:6px;display:block">🔎 Tìm open_id theo tên nhân viên</label>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input type="text" id="findUserQuery" placeholder="Nhập tên (VD: Minh Hà)..." style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;font-size:13px">
-            <button type="button" onclick="findUser()" style="padding:6px 14px;border-radius:6px;border:none;background:#3b82f6;color:#fff;font-size:13px;cursor:pointer">Tìm</button>
+          <label style="font-size:12px;color:#64748b;margin-bottom:6px;display:block">👥 Chọn nhân viên từ nhóm hàng hóa</label>
+          <input type="text" id="findUserQuery" placeholder="Lọc theo tên..." oninput="filterUsers()"
+            style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid #cbd5e1;font-size:13px;box-sizing:border-box;margin-bottom:6px">
+          <div id="findUserResult" style="max-height:180px;overflow-y:auto;font-size:12px">
+            <span style="color:#94a3b8">⏳ Đang tải danh sách...</span>
           </div>
-          <div id="findUserResult" style="margin-top:8px;font-size:12px"></div>
         </div>
         <div style="display:flex;gap:12px;margin-bottom:10px">
           <div class="fg" style="flex:1">
@@ -3021,30 +3021,36 @@ async function clearAllQA() {
 }
 
 // ── QC Vision ────────────────────────────────────────────────────────────────
-async function findUser() {
-  const q   = document.getElementById('findUserQuery').value.trim();
+let _allUsers = [];
+async function loadUserList() {
   const div = document.getElementById('findUserResult');
-  if (!q) return;
-  div.innerHTML = '⏳ Đang tìm...';
+  if (!div) return;
   try {
-    const d = await api('GET', `/api/panel/find-user?q=${encodeURIComponent(q)}`);
-    if (!d.ok || !d.users?.length) {
-      div.innerHTML = '<span style="color:#dc2626">Không tìm thấy. Thử nhập SĐT hoặc email.</span>';
-      return;
-    }
-    div.innerHTML = d.users.map(u => `
-      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f1f5f9">
-        <span style="font-weight:500">${u.name}</span>
-        <span style="color:#94a3b8;font-size:11px">${u.dept||''}</span>
-        <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11px;cursor:pointer"
-              onclick="navigator.clipboard.writeText('${u.open_id}');this.style.background='#dcfce7';setTimeout(()=>this.style.background='#f1f5f9',1500)"
-              title="Click để copy">${u.open_id}</code>
-        <button onclick="addIdToField('qcIdList','qc-id-input','${u.open_id}')" style="padding:2px 8px;border-radius:4px;border:1px solid #3b82f6;background:#eff6ff;color:#3b82f6;font-size:11px;cursor:pointer">→ QC</button>
-        <button onclick="addIdToField('kkIdList','kk-id-input','${u.open_id}')" style="padding:2px 8px;border-radius:4px;border:1px solid #16a34a;background:#f0fdf4;color:#16a34a;font-size:11px;cursor:pointer">→ KK</button>
-      </div>`).join('');
+    const d = await api('GET', '/api/panel/find-user?q=');
+    _allUsers = d.users || [];
+    renderUserList('');
   } catch(e) {
-    div.innerHTML = `<span style="color:#dc2626">Lỗi: ${e.message}</span>`;
+    if (div) div.innerHTML = `<span style="color:#dc2626">Lỗi tải: ${e.message}</span>`;
   }
+}
+function filterUsers() {
+  const q = document.getElementById('findUserQuery').value.trim().toLowerCase();
+  renderUserList(q);
+}
+function renderUserList(q) {
+  const div = document.getElementById('findUserResult');
+  if (!div) return;
+  const list = q ? _allUsers.filter(u => u.name.toLowerCase().includes(q)) : _allUsers;
+  if (!list.length) { div.innerHTML = '<span style="color:#94a3b8">Không tìm thấy</span>'; return; }
+  div.innerHTML = list.map(u => `
+    <div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid #f1f5f9">
+      <span style="min-width:120px;font-weight:500;font-size:12px">${u.name}</span>
+      <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:10px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer"
+            onclick="navigator.clipboard.writeText('${u.open_id}');this.style.background='#dcfce7';setTimeout(()=>this.style.background='#f1f5f9',1200)"
+            title="Click để copy: ${u.open_id}">${u.open_id}</code>
+      <button onclick="addIdToField('qcIdList','qc-id-input','${u.open_id}')" style="padding:1px 7px;border-radius:4px;border:1px solid #3b82f6;background:#eff6ff;color:#3b82f6;font-size:11px;cursor:pointer;white-space:nowrap">→ QC</button>
+      <button onclick="addIdToField('kkIdList','kk-id-input','${u.open_id}')" style="padding:1px 7px;border-radius:4px;border:1px solid #16a34a;background:#f0fdf4;color:#16a34a;font-size:11px;cursor:pointer;white-space:nowrap">→ KK</button>
+    </div>`).join('');
 }
 
 function addIdToField(listId, cls, openId) {
@@ -5263,6 +5269,19 @@ async function deleteQuickCmd(id) {
   await brainApi('DELETE', '/api/brain/quick-commands/' + id);
   loadQuickCommands();
 }
+// ── Auto-load user list khi section QC Vision hiển thị ──────────────────────
+(function() {
+  let _loaded = false;
+  function _maybeLoad() {
+    if (_loaded) return;
+    const el = document.getElementById('findUserResult');
+    if (el && el.offsetParent !== null) { _loaded = true; loadUserList(); }
+  }
+  // Load sau 1s (panel đã auth xong)
+  setTimeout(_maybeLoad, 1000);
+  // Cũng load khi user scroll tới
+  document.addEventListener('scroll', _maybeLoad, {passive: true});
+})();
 // ═══════════════════════════════════════════════════════════════════════════════
 </script>
 </body>
