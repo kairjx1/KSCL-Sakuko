@@ -503,7 +503,9 @@ select.fg-sel:focus{border-color:#d0021b}
         </div>
         <div style="display:flex;gap:12px;margin-bottom:10px">
           <div class="fg" style="flex:1">
-            <label>🔍 QC — Tag khi có vấn đề ảnh <span style="color:#94a3b8;font-weight:400">(Ctrl+click chọn nhiều)</span></label>
+            <label>🔍 QC — Tag khi có vấn đề ảnh <span style="color:#94a3b8;font-weight:400">(Ctrl+click chọn nhiều)</span>
+            <button type="button" onclick="loadUserList()" style="margin-left:6px;padding:1px 8px;border-radius:4px;border:1px solid #cbd5e1;background:#f8fafc;color:#64748b;font-size:11px;cursor:pointer">↻ Tải lại</button>
+          </label>
             <select id="qcSelect" multiple size="4"
               style="width:100%;border-radius:6px;border:1px solid #cbd5e1;padding:4px;font-size:13px">
               <option disabled>⏳ Đang tải...</option>
@@ -3013,16 +3015,21 @@ async function loadUserList() {
   const qcSel = document.getElementById('qcSelect');
   const kkSel = document.getElementById('kkSelect');
   if (!qcSel) return;
+  qcSel.innerHTML = '<option disabled>⏳ Đang tải...</option>';
+  kkSel.innerHTML = '<option disabled>⏳ Đang tải...</option>';
   try {
     const d = await api('GET', '/api/panel/find-user?q=');
     const users = d.users || [];
+    if (!users.length) {
+      const msg = '<option disabled>— Bot chưa ở trong nhóm hoặc chưa có thành viên —</option>';
+      qcSel.innerHTML = msg; kkSel.innerHTML = msg; return;
+    }
     const opts = users.map(u => `<option value="${u.open_id}">${u.name}</option>`).join('');
-    const empty = '<option disabled value="">— Chưa có thành viên —</option>';
-    qcSel.innerHTML = users.length ? opts : empty;
-    kkSel.innerHTML = users.length ? opts : empty;
+    qcSel.innerHTML = opts;
+    kkSel.innerHTML = opts;
   } catch(e) {
-    qcSel.innerHTML = `<option disabled>Lỗi: ${e.message}</option>`;
-    kkSel.innerHTML = qcSel.innerHTML;
+    const msg = `<option disabled>❌ Bot chưa sẵn sàng — nhấn ↻ Tải lại</option>`;
+    qcSel.innerHTML = msg; kkSel.innerHTML = msg;
   }
 }
 
