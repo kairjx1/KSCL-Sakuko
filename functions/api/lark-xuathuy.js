@@ -207,9 +207,31 @@ function aggregate(records){
   return data;
 }
 
+const CACHE_MAX_AGE_MS = 23 * 60 * 60 * 1000; // 23 giờ — GitHub Action cập nhật 2h SA
+
 export async function onRequest(context){
   const {request,env}=context;
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:CORS});
+
+  const url=new URL(request.url);
+  const forceRefresh=url.searchParams.get('refresh')==='1';
+
+  // 1. Thử đọc từ cache tĩnh trước (nhanh, không timeout)
+  if(!forceRefresh){
+    try{
+      const origin=url.origin;
+      const cacheRes=await fetch(`${origin}/xuathuy-cache.json`,{cf:{cacheTtl:300}});
+      if(cacheRes.ok){
+        const cached=await cacheRes.json();
+        // Nếu cache còn mới (< 23h) → trả về ngay
+        if(cached.ts && Date.now()-cached.ts < CACHE_MAX_AGE_MS){
+          return new Response(JSON.stringify(cached),{status:200,headers:{...CORS,'X-Cache':'HIT'}});
+        }
+      }
+    }catch(_){}
+  }
+
+  // 2. Cache cũ hoặc ?refresh=1 → fetch mới từ Lark (chạy background nếu có thể)
   try{
     const APP_ID=env.LARK_APP_ID||'cli_aaa0cdd424b81eed';
     const APP_SECRET=env.LARK_APP_SECRET||'';
@@ -220,8 +242,18 @@ export async function onRequest(context){
     ]);
     const cache={ts:Date.now(),data:aggregate(records),revenue:revs.revenue,
       cvs:aggregateCVS(cvsRecords,optMap),revenueCVS:revs.revenueCVS};
-    return new Response(JSON.stringify(cache),{status:200,headers:CORS});
+    return new Response(JSON.stringify(cache),{status:200,headers:{...CORS,'X-Cache':'MISS'}});
   }catch(e){
+    // 3. Fetch mới thất bại → trả cache cũ dù hết hạn, báo stale
+    try{
+      const origin=new URL(request.url).origin;
+      const cacheRes=await fetch(`${origin}/xuathuy-cache.json`);
+      if(cacheRes.ok){
+        const cached=await cacheRes.json();
+        cached._stale=true; cached._error=e.message;
+        return new Response(JSON.stringify(cached),{status:200,headers:{...CORS,'X-Cache':'STALE'}});
+      }
+    }catch(_){}
     return new Response(JSON.stringify({error:e.message}),{status:500,headers:CORS});
   }
 }
