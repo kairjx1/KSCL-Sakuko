@@ -493,13 +493,14 @@ select.fg-sel:focus{border-color:#d0021b}
           Chỉ gửi DM khi phát hiện vấn đề. Dùng GPT-4o mini (~$1.5/tháng cho 300 records).
         </div>
         <div style="padding:8px 12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:13px;color:#166534;margin-bottom:10px">
-          🕘 <b>Lịch tự động:</b> Bot chạy QC Vision lúc <b>9h30 sáng</b> hàng ngày, gửi kết quả vào nhóm hàng hóa tự động.
+          ⚡ <b>Lịch tự động:</b> <b>GitHub Actions</b> gọi QC Vision lúc <b>9h30 sáng</b> hàng ngày (endpoint <code>/api/trigger/qc-vision</code>), gửi kết quả vào nhóm hàng hóa.
           Nhóm mặc định: <code>oc_97f3ed3ef25d7659ae17a5b51f0a906d</code> (cấu hình qua env <code>QC_VISION_GROUP_ID</code>).
+          <br><span style="color:#15803d">✅ Không còn chạy thread trong bot → tránh OOM crash trên Render free.</span>
         </div>
         <div class="fg" style="margin-bottom:10px">
           <label>Gửi kết quả test đến Open ID (admin nhận báo cáo test)</label>
           <input type="text" id="qcVisionTarget" value="ou_42034a8fa13e49f8884d88e203206a09" placeholder="ou_...">
-          <div class="hint">Chỉ dùng khi bấm nút test thủ công. Lịch tự động 9h30 gửi vào nhóm.</div>
+          <div class="hint">Chỉ dùng khi bấm nút test thủ công. GitHub Actions tự động gọi 9h30 sáng → gửi vào nhóm.</div>
         </div>
         <div style="display:flex;gap:12px;margin-bottom:6px">
           <div class="fg" style="flex:1">
@@ -522,7 +523,7 @@ select.fg-sel:focus{border-color:#d0021b}
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
           <button id="saveQCConfigBtn" class="btn btn-green" onclick="saveQCConfig()" style="font-size:13px;padding:5px 14px">💾 Lưu cài đặt</button>
           <span id="qcConfigBadge" style="font-size:12px;color:#16a34a"></span>
-          <span style="font-size:12px;color:#94a3b8">Lưu để bot 9h30 tự động tag đúng người mỗi ngày</span>
+          <span style="font-size:12px;color:#94a3b8">Lưu để GitHub Actions 9h30 tag đúng người mỗi ngày</span>
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px">
           <span style="font-size:13px;font-weight:600;color:#1e40af">🤖 OpenAI Model:</span>
@@ -1286,12 +1287,15 @@ select.fg-sel:focus{border-color:#d0021b}
 
       <div class="card">
         <div class="card-title">⚙️ Cấu hình bản tin sáng</div>
+        <div style="padding:8px 12px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;font-size:13px;color:#1e40af;margin-bottom:12px">
+          ⚡ <b>GitHub Actions</b> tự động gửi bản tin lúc <b>7h30 sáng</b> hàng ngày qua endpoint <code>/api/panel/morning/run-now</code>. Không cần bật checkbox — chỉ cần điền Open ID và lưu cấu hình.
+        </div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
           <div class="fg" style="margin:0;flex:0 0 auto">
-            <label>Bật tự động</label>
+            <label>Bật tự động (legacy)</label>
             <label style="display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
               <input type="checkbox" id="morning-enabled" style="width:16px;height:16px">
-              <span style="font-size:13px;color:#374151">Gửi mỗi sáng tự động</span>
+              <span style="font-size:13px;color:#94a3b8">Không cần thiết — GitHub Actions đã xử lý</span>
             </label>
           </div>
           <div class="fg" style="margin:0">
