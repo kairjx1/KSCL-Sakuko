@@ -519,10 +519,21 @@ select.fg-sel:focus{border-color:#d0021b}
             </select>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
           <button id="saveQCConfigBtn" class="btn btn-green" onclick="saveQCConfig()" style="font-size:13px;padding:5px 14px">💾 Lưu cài đặt</button>
           <span id="qcConfigBadge" style="font-size:12px;color:#16a34a"></span>
           <span style="font-size:12px;color:#94a3b8">Lưu để bot 9h30 tự động tag đúng người mỗi ngày</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px">
+          <span style="font-size:13px;font-weight:600;color:#1e40af">🤖 OpenAI Model:</span>
+          <select id="qcOpenAIModel" style="padding:6px 10px;border-radius:6px;border:1px solid #93c5fd;font-size:13px;background:#fff;color:#1e3a8a;font-weight:600">
+            <option value="gpt-4o">gpt-4o — Thông minh nhất (free từ OpenAI sharing)</option>
+            <option value="gpt-4o-mini">gpt-4o-mini — Rẻ nhất (~$3/tháng)</option>
+            <option value="gpt-4.1">gpt-4.1 — Mới nhất, nhanh hơn</option>
+            <option value="gpt-4.1-mini">gpt-4.1-mini — Nhanh & rẻ</option>
+          </select>
+          <button class="btn" onclick="saveQCModel()" style="font-size:13px;padding:5px 14px;background:#2563eb;color:#fff;border:none">⚡ Đồng bộ</button>
+          <span id="qcModelBadge" style="font-size:12px;color:#16a34a"></span>
         </div>
         <div class="fg" style="margin-bottom:10px">
           <label>Kiểm tra ngày nào?</label>
@@ -3027,6 +3038,7 @@ async function loadUserList() {
       api('GET', '/api/panel/find-user?q='),
       api('GET', '/api/panel/qc-vision-config').catch(() => ({qc_ids:[], kk_ids:[]})),
     ]);
+    loadQCModel();
     const users = usersRes.users || [];
     if (!users.length) {
       const msg = '<option disabled>— Bot chưa ở trong nhóm hoặc chưa có thành viên —</option>';
@@ -3048,6 +3060,33 @@ async function loadUserList() {
   } catch(e) {
     const msg = `<option disabled>❌ Bot chưa sẵn sàng — nhấn ↻ Tải lại</option>`;
     qcSel.innerHTML = msg; kkSel.innerHTML = msg;
+  }
+}
+
+async function loadQCModel() {
+  try {
+    const res = await api('GET', '/api/panel/qc-vision-model');
+    const sel = document.getElementById('qcOpenAIModel');
+    if (sel && res.model) {
+      sel.value = res.model;
+      const badge = document.getElementById('qcModelBadge');
+      if (badge) badge.textContent = `✅ Đang dùng: ${res.model}`;
+    }
+  } catch(e) { /* ignore */ }
+}
+
+async function saveQCModel() {
+  const sel = document.getElementById('qcOpenAIModel');
+  const badge = document.getElementById('qcModelBadge');
+  if (!sel) return;
+  const model = sel.value;
+  badge.textContent = '⏳ Đang lưu...'; badge.style.color = '#6b7a99';
+  try {
+    await api('POST', '/api/panel/qc-vision-model', { model });
+    badge.textContent = `✅ Đã lưu: ${model}`;
+    badge.style.color = '#16a34a';
+  } catch(e) {
+    badge.textContent = '❌ Lưu thất bại'; badge.style.color = '#dc2626';
   }
 }
 
