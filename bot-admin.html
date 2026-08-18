@@ -4727,7 +4727,7 @@ async function runMorningNow() {
   document.getElementById('morning-preview').textContent = '⏳ Đang gọi Claude AI tạo bản tin... (10-20 giây)';
   showNotify('morningNotify', '⏳ Đang tạo và gửi bản tin sáng...', 'ok');
   try {
-    const d = await api('POST', '/api/panel/morning/run-now', { notify_open_id: openid });
+    const d = await api('POST', '/api/panel/morning/run-now', { notify_open_id: openid, force: true });
     if (d.ok) {
       showNotify('morningNotify', '✅ ' + (d.msg || 'Đã gửi bản tin sáng!'), true);
       if (d.preview) document.getElementById('morning-preview').textContent = d.preview;
