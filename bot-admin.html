@@ -1447,9 +1447,11 @@ select.fg-sel:focus{border-color:#d0021b}
           <div id="attendanceTodayRecords" style="color:#64748b;font-size:13px;margin-bottom:12px">Bấm Làm mới để xem</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-sm" style="background:#1d4ed8;color:#fff" onclick="loadAttendance()">🔄 Làm mới</button>
+            <button class="btn btn-sm" style="background:#7c3aed;color:#fff" onclick="loadBitableAttendance()">📊 Xem Bitable</button>
             <button class="btn btn-sm" style="background:#0369a1;color:#fff" onclick="triggerAttendance('in')">📨 Nhắc chấm vào</button>
             <button class="btn btn-sm" style="background:#16a34a;color:#fff" onclick="triggerAttendance('out')">📨 Nhắc chấm về</button>
           </div>
+          <div id="attendanceBitableRecords" style="margin-top:12px;display:none"></div>
         </div>
 
         <!-- Cài đặt -->
@@ -4813,9 +4815,16 @@ function switchSendTab(tab) {
 }
 
 // ── ATTENDANCE ────────────────────────────────────────────────
+async function _wakeServer() {
+  // Ping để đánh thức Render nếu đang ngủ (timeout 20s)
+  try { await Promise.race([api('GET', '/api/ping'), new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),20000))]); } catch(e){}
+}
+
 async function loadAttendance() {
-  document.getElementById('attendanceTodayRecords').innerHTML = 'Đang tải...';
+  const el = document.getElementById('attendanceTodayRecords');
+  el.innerHTML = '⏳ Đang kết nối server...';
   try {
+    await _wakeServer();
     // Load config
     const r1 = await api('GET', '/api/attendance/config');
     if (r1.ok) {
@@ -4852,6 +4861,37 @@ async function loadAttendance() {
   }
 }
 
+async function loadBitableAttendance() {
+  const el = document.getElementById('attendanceBitableRecords');
+  el.style.display = '';
+  el.innerHTML = '<span style="color:#7c3aed;font-size:13px">⏳ Đang đọc Bitable...</span>';
+  try {
+    await _wakeServer();
+    const r = await api('GET', '/api/attendance/bitable');
+    if (!r.ok) { el.innerHTML = `<span style="color:red">❌ ${r.error}</span>`; return; }
+    const items = r.records || r.all || [];
+    if (!items.length) {
+      el.innerHTML = `<span style="color:#f59e0b">⚠️ Không có dữ liệu hôm nay (${r.today})</span>`;
+      return;
+    }
+    const rows = items.slice(0, 10).map(fields => {
+      // Hiển thị tất cả fields dạng key-value
+      const cols = Object.entries(fields).map(([k, v]) => {
+        let val = v;
+        if (typeof v === 'number' && v > 1000000000000) {
+          const d = new Date(v);
+          val = d.toLocaleString('vi-VN', {timeZone:'Asia/Ho_Chi_Minh'});
+        }
+        return `<span style="color:#64748b;font-size:11px">${k}:</span> <span style="font-size:12px;font-weight:600">${val}</span>`;
+      }).join(' &nbsp;|&nbsp; ');
+      return `<div style="padding:6px 0;border-bottom:1px solid #f1f5f9;line-height:1.6">${cols}</div>`;
+    }).join('');
+    el.innerHTML = `<div style="font-size:11px;color:#7c3aed;font-weight:700;margin-bottom:6px">📊 Bitable — ${r.today}</div>${rows}`;
+  } catch(e) {
+    el.innerHTML = `<span style="color:red">❌ Lỗi: ${e.message}</span>`;
+  }
+}
+
 async function saveAttendance() {
   const timeIn  = document.getElementById('attRemindIn').value.split(':');
   const timeOut = document.getElementById('attRemindOut').value.split(':');
@@ -4864,10 +4904,12 @@ async function saveAttendance() {
     location_name:   document.getElementById('attLocation').value.trim(),
   };
   try {
+    showNotify('attendanceNotify', '⏳ Đang kết nối server (có thể mất 20-30s nếu đang ngủ)...', true);
+    await _wakeServer();
     const r = await api('POST', '/api/attendance/config', body);
-    showNotify('attendanceNotify', r.ok ? '✅ Đã lưu cài đặt!' : '❌ Lỗi lưu', r.ok ? 'success' : 'error');
+    showNotify('attendanceNotify', r.ok ? '✅ Đã lưu cài đặt!' : '❌ Lỗi lưu: ' + (r.error||''), r.ok ? 'success' : 'error');
   } catch(e) {
-    showNotify('attendanceNotify', '❌ Lỗi: ' + e.message, 'error');
+    showNotify('attendanceNotify', '❌ Server chưa phản hồi. Thử lại sau 30 giây.', 'error');
   }
 }
 
