@@ -4868,25 +4868,55 @@ async function loadBitableAttendance() {
   try {
     await _wakeServer();
     const r = await api('GET', '/api/attendance/bitable');
-    if (!r.ok) { el.innerHTML = `<span style="color:red">❌ ${r.error}</span>`; return; }
-    const items = r.records || r.all || [];
-    if (!items.length) {
-      el.innerHTML = `<span style="color:#f59e0b">⚠️ Không có dữ liệu hôm nay (${r.today})</span>`;
+    if (!r.ok || r.raw_code) {
+      el.innerHTML = `<span style="color:red">❌ ${r.raw_error || r.error || 'Lỗi đọc Bitable'}</span><br><small style="color:#94a3b8">Kiểm tra bot app đã được thêm vào Bitable chưa</small>`;
       return;
     }
-    const rows = items.slice(0, 10).map(fields => {
-      // Hiển thị tất cả fields dạng key-value
-      const cols = Object.entries(fields).map(([k, v]) => {
-        let val = v;
-        if (typeof v === 'number' && v > 1000000000000) {
-          const d = new Date(v);
-          val = d.toLocaleString('vi-VN', {timeZone:'Asia/Ho_Chi_Minh'});
-        }
-        return `<span style="color:#64748b;font-size:11px">${k}:</span> <span style="font-size:12px;font-weight:600">${val}</span>`;
-      }).join(' &nbsp;|&nbsp; ');
-      return `<div style="padding:6px 0;border-bottom:1px solid #f1f5f9;line-height:1.6">${cols}</div>`;
+
+    // Header: tổng giờ tháng này
+    const totalH = r.total_hours_month || 0;
+    const todayRec = r.today_record;
+    const todayHours = todayRec ? (todayRec['Tổng số giờ công'] || 0) : null;
+    const todayStatus = todayHours === null
+      ? '<span style="color:#94a3b8">Chưa có dữ liệu hôm nay</span>'
+      : todayHours >= 8
+        ? `<span style="color:#16a34a;font-weight:700">✅ Đủ công — ${todayHours}h</span>`
+        : todayHours === 0
+          ? `<span style="color:#dc2626;font-weight:700">❌ Thiếu công — ${todayHours}h (quên chấm?)</span>`
+          : `<span style="color:#f59e0b;font-weight:700">⚠️ Thiếu giờ — ${todayHours}h</span>`;
+
+    // Bảng records tháng
+    const rows = (r.month_records || []).slice(0, 20).map(rec => {
+      let dateStr = rec.date;
+      if (typeof dateStr === 'number') dateStr = new Date(dateStr).toLocaleDateString('vi-VN', {timeZone:'Asia/Ho_Chi_Minh'});
+      const h = rec.hours || 0;
+      const hColor = h >= 8 ? '#16a34a' : h === 0 ? '#dc2626' : '#f59e0b';
+      return `<tr>
+        <td style="padding:5px 8px;font-size:12px;color:#475569">${dateStr}</td>
+        <td style="padding:5px 8px;font-size:12px">${rec.shift||'—'}</td>
+        <td style="padding:5px 8px;font-size:12px;font-weight:700;color:${hColor};text-align:right">${h}h</td>
+      </tr>`;
     }).join('');
-    el.innerHTML = `<div style="font-size:11px;color:#7c3aed;font-weight:700;margin-bottom:6px">📊 Bitable — ${r.today}</div>${rows}`;
+
+    el.innerHTML = `
+      <div style="display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 14px;flex:1;min-width:140px">
+          <div style="font-size:10px;color:#16a34a;font-weight:700">TỔNG GIỜ THÁNG NÀY</div>
+          <div style="font-size:22px;font-weight:800;color:#15803d">${totalH}h</div>
+        </div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 14px;flex:2;min-width:200px">
+          <div style="font-size:10px;color:#64748b;font-weight:700">HÔM NAY (${r.today})</div>
+          <div style="font-size:15px;margin-top:4px">${todayStatus}</div>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#f1f5f9">
+          <th style="padding:5px 8px;text-align:left;font-size:11px;color:#64748b">Ngày</th>
+          <th style="padding:5px 8px;text-align:left;font-size:11px;color:#64748b">Ca</th>
+          <th style="padding:5px 8px;text-align:right;font-size:11px;color:#64748b">Giờ công</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
   } catch(e) {
     el.innerHTML = `<span style="color:red">❌ Lỗi: ${e.message}</span>`;
   }
