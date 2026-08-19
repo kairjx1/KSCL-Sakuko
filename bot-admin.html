@@ -297,7 +297,6 @@ select.fg-sel:focus{border-color:#d0021b}
     <div class="nav-item" onclick="goPage('perms')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg></span><span>Phân quyền</span></div>
     <div class="nav-item" onclick="goPage('email')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span><span>Email</span></div>
     <div class="nav-item" onclick="goPage('morning')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span><span>Bản tin sáng</span></div>
-    <div class="nav-item" onclick="goPage('attendance')"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><span>Chấm công</span></div>
     <div class="nav-item" onclick="goPage('discover')"><span class="icon">🔍</span><span>Khám phá</span></div>
     <div class="nav-item" onclick="goPage('brain')" style="background:linear-gradient(135deg,#fdf4ff,#ede9fe);color:#7c3aed;font-weight:600"><span class="icon">🧠</span><span>Nâng cao</span></div>
     <div class="nav-item" onclick="goPage('panels')" style="margin-top:auto;border-top:1px solid #f1f5f9"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></span><span>Quản lý Panel</span></div>
@@ -1294,49 +1293,6 @@ select.fg-sel:focus{border-color:#d0021b}
     </div>
 
     <!-- MORNING BAN TIN -->
-    <!-- ATTENDANCE PAGE -->
-    <div class="page" id="page-attendance">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-        <div class="page-title" style="margin-bottom:0">⏰ Chấm công tự động</div>
-        <button class="btn btn-gray btn-sm" onclick="loadAttendance()">🔄 Làm mới</button>
-      </div>
-      <div class="notify" id="attendanceNotify"></div>
-
-      <!-- Trạng thái hôm nay -->
-      <div class="card" style="border:1.5px solid #dbeafe;margin-bottom:16px">
-        <div class="card-title" style="color:#1d4ed8">📋 Hôm nay</div>
-        <div id="attendanceTodayRecords" style="color:#64748b;font-size:14px">Đang tải...</div>
-        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-          <button class="btn btn-sm" style="background:#1d4ed8;color:#fff" onclick="triggerAttendance('in')">📨 Gửi nhắc chấm vào ngay</button>
-          <button class="btn btn-sm" style="background:#16a34a;color:#fff" onclick="triggerAttendance('out')">📨 Gửi nhắc chấm về ngay</button>
-        </div>
-      </div>
-
-      <!-- Cài đặt -->
-      <div class="card">
-        <div class="card-title">⚙️ Cài đặt</div>
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-          <label style="font-weight:600;font-size:14px">Bật nhắc tự động</label>
-          <input type="checkbox" id="attEnabled" style="width:18px;height:18px;cursor:pointer">
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-          <div>
-            <div style="font-size:12px;color:#64748b;font-weight:600;margin-bottom:4px">Giờ nhắc chấm VÀO</div>
-            <input type="time" id="attRemindIn" style="padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;width:100%">
-          </div>
-          <div>
-            <div style="font-size:12px;color:#64748b;font-weight:600;margin-bottom:4px">Giờ nhắc chấm VỀ</div>
-            <input type="time" id="attRemindOut" style="padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;width:100%">
-          </div>
-        </div>
-        <div style="margin-bottom:14px">
-          <div style="font-size:12px;color:#64748b;font-weight:600;margin-bottom:4px">Địa điểm chấm công</div>
-          <input type="text" id="attLocation" style="padding:8px;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;width:100%;box-sizing:border-box">
-        </div>
-        <button class="btn btn-red" onclick="saveAttendance()">💾 Lưu cài đặt</button>
-      </div>
-    </div>
-
     <div class="page" id="page-morning">
       <div class="page-title">🌅 Bản tin sáng</div>
       <div class="notify" id="morningNotify"></div>
@@ -1448,21 +1404,77 @@ select.fg-sel:focus{border-color:#d0021b}
       </div>
     </div>
 
-    <!-- SEND -->
+    <!-- SEND + CHẤM CÔNG (tab layout) -->
     <div class="page" id="page-send">
-      <div class="page-title">Gửi tin nhắn</div>
-      <div class="notify" id="sendNotify"></div>
-      <div class="card">
-        <div class="card-title">💬 Gửi tin text qua Bot</div>
-        <div class="fg">
-          <label>Open ID người nhận / nhóm</label>
-          <input type="text" id="sendTarget" placeholder="ou_... hoặc oc_...">
+      <div class="page-title">Gửi tin &amp; Chấm công</div>
+
+      <!-- Tab bar -->
+      <div style="display:flex;gap:4px;border-bottom:2px solid #e2e8f0;margin-bottom:16px">
+        <button id="tab-send-btn" onclick="switchSendTab('send')"
+          style="padding:8px 18px;font-size:13px;font-weight:600;border:none;border-radius:6px 6px 0 0;cursor:pointer;background:#c0392b;color:#fff;border-bottom:2px solid #c0392b;margin-bottom:-2px">
+          💬 Gửi tin
+        </button>
+        <button id="tab-att-btn" onclick="switchSendTab('att')"
+          style="padding:8px 18px;font-size:13px;font-weight:600;border:none;border-radius:6px 6px 0 0;cursor:pointer;background:#f1f5f9;color:#64748b;border-bottom:2px solid transparent;margin-bottom:-2px">
+          ⏰ Chấm công
+        </button>
+      </div>
+
+      <!-- Tab: Gửi tin -->
+      <div id="tab-send-content">
+        <div class="notify" id="sendNotify"></div>
+        <div class="card">
+          <div class="card-title">💬 Gửi tin text qua Bot</div>
+          <div class="fg">
+            <label>Open ID người nhận / nhóm</label>
+            <input type="text" id="sendTarget" placeholder="ou_... hoặc oc_...">
+          </div>
+          <div class="fg">
+            <label>Nội dung tin nhắn</label>
+            <textarea id="sendText" rows="4" placeholder="Nhập nội dung..."></textarea>
+          </div>
+          <button class="btn btn-red" onclick="doSendMsg()">Gửi tin</button>
         </div>
-        <div class="fg">
-          <label>Nội dung tin nhắn</label>
-          <textarea id="sendText" rows="4" placeholder="Nhập nội dung..."></textarea>
+      </div>
+
+      <!-- Tab: Chấm công -->
+      <div id="tab-att-content" style="display:none">
+        <div class="notify" id="attendanceNotify"></div>
+
+        <!-- Records hôm nay -->
+        <div class="card">
+          <div class="card-title" style="color:#1d4ed8">📋 Chấm công hôm nay</div>
+          <div id="attendanceTodayRecords" style="color:#64748b;font-size:13px;margin-bottom:12px">Bấm Làm mới để xem</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm" style="background:#1d4ed8;color:#fff" onclick="loadAttendance()">🔄 Làm mới</button>
+            <button class="btn btn-sm" style="background:#0369a1;color:#fff" onclick="triggerAttendance('in')">📨 Nhắc chấm vào</button>
+            <button class="btn btn-sm" style="background:#16a34a;color:#fff" onclick="triggerAttendance('out')">📨 Nhắc chấm về</button>
+          </div>
         </div>
-        <button class="btn btn-red" onclick="doSendMsg()">Gửi tin</button>
+
+        <!-- Cài đặt -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-title" style="color:#1d4ed8">⚙️ Cài đặt nhắc tự động</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <input type="checkbox" id="attEnabled" style="width:16px;height:16px;cursor:pointer">
+            <label style="font-size:13px;font-weight:600;cursor:pointer" onclick="document.getElementById('attEnabled').click()">Bật nhắc tự động hàng ngày</label>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <div>
+              <div style="font-size:11px;color:#64748b;font-weight:600;margin-bottom:4px">Giờ nhắc chấm VÀO</div>
+              <input type="time" id="attRemindIn" style="padding:7px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%">
+            </div>
+            <div>
+              <div style="font-size:11px;color:#64748b;font-weight:600;margin-bottom:4px">Giờ nhắc chấm VỀ</div>
+              <input type="time" id="attRemindOut" style="padding:7px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%">
+            </div>
+          </div>
+          <div style="margin-bottom:14px">
+            <div style="font-size:11px;color:#64748b;font-weight:600;margin-bottom:4px">Địa điểm</div>
+            <input type="text" id="attLocation" style="padding:7px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;width:100%;box-sizing:border-box">
+          </div>
+          <button class="btn btn-red" onclick="saveAttendance()">💾 Lưu cài đặt</button>
+        </div>
       </div>
     </div>
   </div>
@@ -4534,7 +4546,6 @@ function goPage(id) {
   if (id === 'email') loadEmailImportant();
   if (id === 'backup') { loadBackupConfig(); loadBackupHistory(); }
   if (id === 'morning') loadMorningConfig();
-  if (id === 'attendance') loadAttendance();
   if (id === 'test') _startSvcAutoRefresh();
   if (id === 'brain') loadBrainStatus();
 }
@@ -4785,12 +4796,28 @@ async function deleteEmailRule(key) {
 // ── Bản tin sáng ─────────────────────────────────────────────────────────────
 const MORNING_PATH = 'bot_morning_config';
 
+// ── SEND PAGE TAB SWITCHER ─────────────────────────────────────
+function switchSendTab(tab) {
+  const isSend = tab === 'send';
+  document.getElementById('tab-send-content').style.display = isSend ? '' : 'none';
+  document.getElementById('tab-att-content').style.display  = isSend ? 'none' : '';
+  const btnSend = document.getElementById('tab-send-btn');
+  const btnAtt  = document.getElementById('tab-att-btn');
+  btnSend.style.background    = isSend ? '#c0392b' : '#f1f5f9';
+  btnSend.style.color         = isSend ? '#fff' : '#64748b';
+  btnSend.style.borderBottom  = isSend ? '2px solid #c0392b' : '2px solid transparent';
+  btnAtt.style.background     = isSend ? '#f1f5f9' : '#c0392b';
+  btnAtt.style.color          = isSend ? '#64748b' : '#fff';
+  btnAtt.style.borderBottom   = isSend ? '2px solid transparent' : '2px solid #c0392b';
+  if (!isSend) loadAttendance();
+}
+
 // ── ATTENDANCE ────────────────────────────────────────────────
 async function loadAttendance() {
   document.getElementById('attendanceTodayRecords').innerHTML = 'Đang tải...';
   try {
     // Load config
-    const r1 = await apiFetch('/api/attendance/config');
+    const r1 = await api('GET', '/api/attendance/config');
     if (r1.ok) {
       const c = r1.config;
       document.getElementById('attEnabled').checked = c.enabled !== false;
@@ -4803,15 +4830,15 @@ async function loadAttendance() {
       document.getElementById('attLocation').value = c.location_name || '';
     }
     // Load today records
-    const r2 = await apiFetch('/api/attendance/today');
+    const r2 = await api('GET', '/api/attendance/today');
     const el = document.getElementById('attendanceTodayRecords');
     if (r2.ok && r2.records && r2.records.length > 0) {
       const rows = r2.records.map(rec => {
         const t = new Date(parseInt(rec.check_time) * 1000);
         const hm = t.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
-        const type = rec.type === 0 ? '🟢 Vào' : '🔴 Về';
+        const typeLabel = rec.type === 0 ? '🟢 Vào' : '🔴 Về';
         return `<div style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px">
-          <span style="font-weight:700;min-width:60px">${type}</span>
+          <span style="font-weight:700;min-width:60px">${typeLabel}</span>
           <span style="color:#1e293b;font-weight:600">${hm}</span>
           <span style="color:#94a3b8">${rec.location_name||''}</span>
         </div>`;
@@ -4837,7 +4864,7 @@ async function saveAttendance() {
     location_name:   document.getElementById('attLocation').value.trim(),
   };
   try {
-    const r = await apiFetch('/api/attendance/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    const r = await api('POST', '/api/attendance/config', body);
     showNotify('attendanceNotify', r.ok ? '✅ Đã lưu cài đặt!' : '❌ Lỗi lưu', r.ok ? 'success' : 'error');
   } catch(e) {
     showNotify('attendanceNotify', '❌ Lỗi: ' + e.message, 'error');
@@ -4846,7 +4873,7 @@ async function saveAttendance() {
 
 async function triggerAttendance(type) {
   try {
-    const r = await apiFetch('/api/attendance/trigger', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({type})});
+    const r = await api('POST', '/api/attendance/trigger', {type});
     showNotify('attendanceNotify', r.ok ? `✅ Đã gửi nhắc ${type==='in'?'vào':'về'}!` : '❌ Lỗi gửi', r.ok ? 'success' : 'error');
   } catch(e) {
     showNotify('attendanceNotify', '❌ Lỗi: ' + e.message, 'error');
