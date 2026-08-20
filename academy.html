@@ -3415,8 +3415,10 @@ function rCvConfig(){
     </div>
   </div>
 
-  <div style="display:flex;gap:10px;align-items:center">
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
     <button class="btn b-ok2" onclick="cvCfgSave()">💾 Lưu cấu hình</button>
+    <button class="btn b-warn" onclick="cvRunAgent(false)" id="cv-run-btn">🚀 Chạy phân tích ngay</button>
+    <button class="btn b-gray" onclick="cvRunAgent(true)" title="Bỏ qua dedup, chạy lại dù đã chạy tháng này">🔄 Force chạy lại</button>
     <span id="cv-cfg-badge" style="font-size:12px;color:var(--ok)"></span>
   </div>
 </div>`;
@@ -3470,9 +3472,9 @@ function cvCfgSave(){
   const grp=document.getElementById('cv-cfg-group').value.trim();
   const badge=document.getElementById('cv-cfg-badge');
 
-  // Lấy danh sách selected
-  const nv_kk=[...kkSel.selectedOptions].map(o=>({uid:o.value,name:o.text.split(' · ')[0]}));
-  const nv_qc=[...qcSel.selectedOptions].map(o=>({uid:o.value,name:o.text.split(' · ')[0]}));
+  // Lấy danh sách selected — value là open_id từ Lark
+  const nv_kk=[...kkSel.selectedOptions].map(o=>({open_id:o.value,name:o.text}));
+  const nv_qc=[...qcSel.selectedOptions].map(o=>({open_id:o.value,name:o.text}));
 
   const cfg={
     nv_kk, nv_qc,
@@ -3487,6 +3489,28 @@ function cvCfgSave(){
     if(badge){badge.textContent=`✅ Đã lưu: ${nv_kk.length} NV KK, ${nv_qc.length} NV QC · ${new Date().toLocaleTimeString('vi-VN')}`;}
     toast('✅ Đã lưu cấu hình Bot Agent','t-ok');
   }).catch(e=>toast('❌ Lỗi: '+e.message,'t-err'));
+}
+
+async function cvRunAgent(force=false){
+  if(!confirm(force?'Force chạy lại phân tích tháng này (bỏ qua dedup)?':'Chạy phân tích AI ngay bây giờ?\n\nBot sẽ đọc dữ liệu KK + QC, phân tích và tạo tasks + gửi kết quả vào nhóm Lark.'))return;
+  const btn=document.getElementById('cv-run-btn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang chạy...';}
+  const badge=document.getElementById('cv-cfg-badge');
+  if(badge) badge.textContent='';
+  try{
+    const r=await fetch('/api/run-agent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({force}),signal:AbortSignal.timeout(35000)});
+    const j=await r.json();
+    if(j.ok){
+      toast('🚀 Bot đang phân tích — kết quả sẽ gửi vào nhóm Lark sau vài phút','t-ok');
+      if(badge) badge.textContent='⏳ Đang chạy trong nền...';
+    } else {
+      toast('❌ Lỗi: '+(j.error||j.msg||'Không rõ'),'t-err');
+    }
+  }catch(e){
+    toast('❌ Timeout hoặc lỗi mạng: '+e.message,'t-err');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='🚀 Chạy phân tích ngay';}
+  }
 }
 
 /* ══════════════════════════════════════════
