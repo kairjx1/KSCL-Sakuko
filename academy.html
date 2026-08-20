@@ -3204,6 +3204,15 @@ const CV_STATUS={chua_lam:{label:'Chưa làm',cls:'b-err',icon:'🔴'},dang_lam:
 function rCongViec(){
   const tab=S.tab||'Tất cả';
   const tabs=['Tất cả','📦 Kiểm kê','🔬 QC','✅ Đã xong'];
+  if(isAdmin()) tabs.push('⚙️ Cấu hình Bot');
+  if(tab==='⚙️ Cấu hình Bot'){
+    requestAnimationFrame(()=>cvCfgLoad());
+    return`
+<div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Công việc › Cấu hình Bot</div>
+<div class="sec-hdr"><h1>${skIcn('congviec',26,26)} Cấu hình Bot Agent</h1></div>
+<div class="tabs">${tabs.map(t=>`<div class="tab${t===tab?' on':''}" onclick="go('congviec','${t}')">${t}</div>`).join('')}</div>
+${rCvConfig()}`;
+  }
   requestAnimationFrame(()=>cvLoad());
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Công việc</div>
@@ -3344,6 +3353,125 @@ function cvAddSave(){
     document.getElementById('cv-add-ov').remove();
     toast('✅ Đã tạo nhiệm vụ','t-ok');cvLoad();
   }).catch(e=>toast('❌ '+e.message,'t-err'));
+}
+
+/* ── CCONFIG BOT AGENT ── */
+function rCvConfig(){
+  return`<div style="display:flex;flex-direction:column;gap:16px;max-width:720px">
+  <div class="alert a-info"><span class="a-ic">🤖</span><div class="a-bd">
+    <strong>Bot Agent tự động phân tích hàng tháng</strong>
+    <p>Bot đọc dữ liệu KK và QC, dùng AI xác định siêu thị có nguy cơ, tạo nhiệm vụ vào tab Công việc và nhắc nhở hàng tuần.</p>
+  </div></div>
+
+  <div class="card">
+    <div style="font-weight:700;font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:8px">📦 Nhân viên Kiểm kê phụ trách
+      <span class="bdg b-info" style="font-weight:400;font-size:11px">Ctrl+click chọn nhiều</span>
+    </div>
+    <select id="cv-cfg-kk" multiple size="5" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:6px;font-size:13px;background:#fff">
+      <option disabled>⏳ Đang tải danh sách nhân sự...</option>
+    </select>
+    <p style="font-size:11px;color:var(--t2);margin-top:6px">Bot sẽ gán nhân viên KK vào nhiệm vụ kiểm kê tự động (luân phiên)</p>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:700;font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:8px">🔬 Nhân viên QC phụ trách
+      <span class="bdg" style="background:#fdf4ff;color:#7c3aed;font-weight:400;font-size:11px">Ctrl+click chọn nhiều</span>
+    </div>
+    <select id="cv-cfg-qc" multiple size="5" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:6px;font-size:13px;background:#fff">
+      <option disabled>⏳ Đang tải danh sách nhân sự...</option>
+    </select>
+    <p style="font-size:11px;color:var(--t2);margin-top:6px">Bot sẽ gán nhân viên QC vào nhiệm vụ QC tự động (luân phiên)</p>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:700;font-size:14px;margin-bottom:12px">💬 Nhóm Lark nhận nhắc nhở hàng tuần</div>
+    <input class="fi" id="cv-cfg-group" placeholder="oc_... hoặc oc_..." style="width:100%">
+    <p style="font-size:11px;color:var(--t2);margin-top:6px">Thứ 2 hàng tuần 9:00 AM — Bot tổng hợp task chưa xong và gửi vào nhóm này</p>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:700;font-size:14px;margin-bottom:12px">📅 Lịch chạy phân tích</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px">
+        <span class="fi-lbl">Chạy vào ngày trong tháng</span>
+        <select class="fi" id="cv-cfg-day">
+          <option value="1">Ngày 1 hàng tháng</option>
+          <option value="2">Ngày 2 hàng tháng</option>
+          <option value="3">Ngày 3 hàng tháng</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:160px">
+        <span class="fi-lbl">Hạn hoàn thành nhiệm vụ</span>
+        <select class="fi" id="cv-cfg-deadline">
+          <option value="7">7 ngày</option>
+          <option value="14" selected>14 ngày</option>
+          <option value="21">21 ngày</option>
+          <option value="30">30 ngày</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;align-items:center">
+    <button class="btn b-ok2" onclick="cvCfgSave()">💾 Lưu cấu hình</button>
+    <span id="cv-cfg-badge" style="font-size:12px;color:var(--ok)"></span>
+  </div>
+</div>`;
+}
+
+function cvCfgLoad(){
+  // Load profiles từ Firebase
+  db.ref('profiles').get().then(snap=>{
+    if(!snap.exists()) return;
+    const users=[];
+    snap.forEach(c=>{const v=c.val();if(v&&v.name)users.push({uid:c.key,name:v.name,role:v.role||'',dept:v.dept||''});});
+    users.sort((a,b)=>a.name.localeCompare(b.name,'vi'));
+
+    // Load cấu hình đã lưu
+    db.ref('bot_config/agent').get().then(cfgSnap=>{
+      const cfg=cfgSnap.exists()?cfgSnap.val():{};
+      const savedKK=(cfg.nv_kk||[]).map(x=>x.uid||x);
+      const savedQC=(cfg.nv_qc||[]).map(x=>x.uid||x);
+
+      const mkOpts=(saved)=>users.map(u=>`<option value="${u.uid}" ${saved.includes(u.uid)?'selected':''}>${u.name}${u.dept?' · '+u.dept:''}</option>`).join('');
+      const kkSel=document.getElementById('cv-cfg-kk');
+      const qcSel=document.getElementById('cv-cfg-qc');
+      if(kkSel) kkSel.innerHTML=mkOpts(savedKK)||'<option disabled>Chưa có nhân sự</option>';
+      if(qcSel) qcSel.innerHTML=mkOpts(savedQC)||'<option disabled>Chưa có nhân sự</option>';
+
+      const grpEl=document.getElementById('cv-cfg-group');
+      if(grpEl) grpEl.value=cfg.notify_chat_id||'';
+      const dayEl=document.getElementById('cv-cfg-day');
+      if(dayEl) dayEl.value=String(cfg.run_day||1);
+      const dlEl=document.getElementById('cv-cfg-deadline');
+      if(dlEl) dlEl.value=String(cfg.deadline_days||14);
+    });
+  }).catch(e=>toast('Lỗi tải danh sách: '+e.message,'t-err'));
+}
+
+function cvCfgSave(){
+  const kkSel=document.getElementById('cv-cfg-kk');
+  const qcSel=document.getElementById('cv-cfg-qc');
+  const grp=document.getElementById('cv-cfg-group').value.trim();
+  const badge=document.getElementById('cv-cfg-badge');
+
+  // Lấy danh sách selected
+  const nv_kk=[...kkSel.selectedOptions].map(o=>({uid:o.value,name:o.text.split(' · ')[0]}));
+  const nv_qc=[...qcSel.selectedOptions].map(o=>({uid:o.value,name:o.text.split(' · ')[0]}));
+
+  const cfg={
+    nv_kk, nv_qc,
+    notify_chat_id: grp,
+    run_day: parseInt(document.getElementById('cv-cfg-day').value)||1,
+    deadline_days: parseInt(document.getElementById('cv-cfg-deadline').value)||14,
+    updated_at: Date.now(),
+    updated_by: S.profile?.name||S.user?.email||'Admin'
+  };
+
+  db.ref('bot_config/agent').set(cfg).then(()=>{
+    if(badge){badge.textContent=`✅ Đã lưu: ${nv_kk.length} NV KK, ${nv_qc.length} NV QC · ${new Date().toLocaleTimeString('vi-VN')}`;}
+    toast('✅ Đã lưu cấu hình Bot Agent','t-ok');
+  }).catch(e=>toast('❌ Lỗi: '+e.message,'t-err'));
 }
 
 /* ══════════════════════════════════════════
