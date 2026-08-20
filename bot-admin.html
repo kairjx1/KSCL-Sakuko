@@ -490,12 +490,12 @@ select.fg-sel:focus{border-color:#d0021b}
         <div class="card-title">🔍 QC Vision — Kiểm tra ảnh hàng hủy bằng AI</div>
         <div style="font-size:13px;color:#64748b;margin-bottom:12px">
           AI đọc ảnh từng record hủy trong Bitable, kiểm tra tên hàng + số lượng có đúng không.
-          Chỉ gửi DM khi phát hiện vấn đề. Dùng GPT-4o mini (~$1.5/tháng cho 300 records).
+          Chỉ gửi vào nhóm khi phát hiện vấn đề. Dùng GPT-4o (auto detail) — miễn phí với OpenAI sharing, ~100K VND/tháng khi có 20 cửa hàng.
         </div>
         <div style="padding:8px 12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:13px;color:#166534;margin-bottom:10px">
-          ⚡ <b>Lịch tự động:</b> <b>GitHub Actions</b> gọi QC Vision lúc <b>9h30 sáng</b> hàng ngày (endpoint <code>/api/trigger/qc-vision</code>), gửi kết quả vào nhóm hàng hóa.
+          ⚡ <b>Lịch tự động:</b> Bot chạy <b>thread nội bộ</b> lúc <b>9h30 sáng VN</b> hàng ngày, gửi kết quả vào nhóm hàng hóa.
           Nhóm mặc định: <code>oc_97f3ed3ef25d7659ae17a5b51f0a906d</code> (cấu hình qua env <code>QC_VISION_GROUP_ID</code>).
-          <br><span style="color:#15803d">✅ Không còn chạy thread trong bot → tránh OOM crash trên Render free.</span>
+          <br><span style="color:#15803d">✅ Có catchup tự động: nếu bot restart sau 9h30, sẽ gửi bù trong vòng 11h30 sáng.</span>
         </div>
         <div class="fg" style="margin-bottom:10px">
           <label>Gửi kết quả test đến Open ID (admin nhận báo cáo test)</label>
