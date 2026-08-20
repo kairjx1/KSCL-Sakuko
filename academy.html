@@ -3395,9 +3395,12 @@ function rCvConfig(){
       <div style="flex:1;min-width:160px">
         <span class="fi-lbl">Chạy vào ngày trong tháng</span>
         <select class="fi" id="cv-cfg-day">
-          <option value="1">Ngày 1 hàng tháng</option>
-          <option value="2">Ngày 2 hàng tháng</option>
-          <option value="3">Ngày 3 hàng tháng</option>
+          <option value="10">Ngày 10 hàng tháng</option>
+          <option value="11">Ngày 11 hàng tháng</option>
+          <option value="12" selected>Ngày 12 hàng tháng</option>
+          <option value="13">Ngày 13 hàng tháng</option>
+          <option value="14">Ngày 14 hàng tháng</option>
+          <option value="15">Ngày 15 hàng tháng</option>
         </select>
       </div>
       <div style="flex:1;min-width:160px">
@@ -3420,33 +3423,45 @@ function rCvConfig(){
 }
 
 function cvCfgLoad(){
-  // Load profiles từ Firebase
-  db.ref('profiles').get().then(snap=>{
-    if(!snap.exists()) return;
-    const users=[];
-    snap.forEach(c=>{const v=c.val();if(v&&v.name)users.push({uid:c.key,name:v.name,role:v.role||'',dept:v.dept||''});});
-    users.sort((a,b)=>a.name.localeCompare(b.name,'vi'));
+  // Load config Firebase trước
+  db.ref('bot_config/agent').get().then(cfgSnap=>{
+    const cfg=cfgSnap.exists()?cfgSnap.val():{};
+    const savedKK=(cfg.nv_kk||[]).map(x=>x.open_id||x.uid||x);
+    const savedQC=(cfg.nv_qc||[]).map(x=>x.open_id||x.uid||x);
+    const chatId=cfg.notify_chat_id||'oc_c21fec79e8cab0945a09763eeb5479ba';
 
-    // Load cấu hình đã lưu
-    db.ref('bot_config/agent').get().then(cfgSnap=>{
-      const cfg=cfgSnap.exists()?cfgSnap.val():{};
-      const savedKK=(cfg.nv_kk||[]).map(x=>x.uid||x);
-      const savedQC=(cfg.nv_qc||[]).map(x=>x.uid||x);
+    const grpEl=document.getElementById('cv-cfg-group');
+    if(grpEl) grpEl.value=chatId;
+    const dayEl=document.getElementById('cv-cfg-day');
+    if(dayEl) dayEl.value=String(cfg.run_day||12);
+    const dlEl=document.getElementById('cv-cfg-deadline');
+    if(dlEl) dlEl.value=String(cfg.deadline_days||14);
 
-      const mkOpts=(saved)=>users.map(u=>`<option value="${u.uid}" ${saved.includes(u.uid)?'selected':''}>${u.name}${u.dept?' · '+u.dept:''}</option>`).join('');
-      const kkSel=document.getElementById('cv-cfg-kk');
-      const qcSel=document.getElementById('cv-cfg-qc');
-      if(kkSel) kkSel.innerHTML=mkOpts(savedKK)||'<option disabled>Chưa có nhân sự</option>';
-      if(qcSel) qcSel.innerHTML=mkOpts(savedQC)||'<option disabled>Chưa có nhân sự</option>';
-
-      const grpEl=document.getElementById('cv-cfg-group');
-      if(grpEl) grpEl.value=cfg.notify_chat_id||'';
-      const dayEl=document.getElementById('cv-cfg-day');
-      if(dayEl) dayEl.value=String(cfg.run_day||1);
-      const dlEl=document.getElementById('cv-cfg-deadline');
-      if(dlEl) dlEl.value=String(cfg.deadline_days||14);
-    });
-  }).catch(e=>toast('Lỗi tải danh sách: '+e.message,'t-err'));
+    // Load thành viên nhóm Lark (có open_id để tag)
+    if(!chatId){
+      const msg='<option disabled>Nhập Group ID trước</option>';
+      document.getElementById('cv-cfg-kk').innerHTML=msg;
+      document.getElementById('cv-cfg-qc').innerHTML=msg;
+      return;
+    }
+    fetch(`/api/lark-chat-members?chat_id=${encodeURIComponent(chatId)}`,{signal:AbortSignal.timeout(15000)})
+      .then(r=>r.json()).then(j=>{
+        if(!j.ok||!j.members?.length){
+          const msg='<option disabled>Không lấy được danh sách (kiểm tra quyền bot)</option>';
+          document.getElementById('cv-cfg-kk').innerHTML=msg;
+          document.getElementById('cv-cfg-qc').innerHTML=msg;
+          return;
+        }
+        const members=j.members.filter(m=>m.name).sort((a,b)=>a.name.localeCompare(b.name,'vi'));
+        const mkOpts=saved=>members.map(m=>`<option value="${m.open_id}" ${saved.includes(m.open_id)?'selected':''}>${m.name}</option>`).join('');
+        document.getElementById('cv-cfg-kk').innerHTML=mkOpts(savedKK)||'<option disabled>Nhóm trống</option>';
+        document.getElementById('cv-cfg-qc').innerHTML=mkOpts(savedQC)||'<option disabled>Nhóm trống</option>';
+      }).catch(e=>{
+        const msg=`<option disabled>Lỗi: ${e.message}</option>`;
+        document.getElementById('cv-cfg-kk').innerHTML=msg;
+        document.getElementById('cv-cfg-qc').innerHTML=msg;
+      });
+  }).catch(e=>toast('Lỗi tải config: '+e.message,'t-err'));
 }
 
 function cvCfgSave(){
