@@ -3197,60 +3197,153 @@ function rQCStd(){return`
 /* ══════════════════════════════════════════
    CÔNG VIỆC
 ══════════════════════════════════════════ */
+/* ═══════════════ CÔNG VIỆC / NHIỆM VỤ BOT ═══════════════ */
+const CV_MUC_DO={khan:{label:'KHẨN',cls:'b-err',color:'#dc2626'},trung_binh:{label:'Trung bình',cls:'b-warn',color:'#f59e0b'},theo_doi:{label:'Theo dõi',cls:'b-gray',color:'#94a3b8'}};
+const CV_STATUS={chua_lam:{label:'Chưa làm',cls:'b-err',icon:'🔴'},dang_lam:{label:'Đang xử lý',cls:'b-warn',icon:'🟡'},hoan_thanh:{label:'Đã xong',cls:'b-ok',icon:'✅'}};
+
 function rCongViec(){
-  const tabs=['Checklist ca','Kiểm kê','QC','Việc hôm nay'];
-  const t=S.tab||'Checklist ca';
-  const adminNote=isAdmin()&&(t==='Kiểm kê'||t==='QC')?`<div class="alert a-info" style="margin-bottom:14px"><span class="a-ic">💡</span><div class="a-bd"><strong>Chế độ Admin – có thể chỉnh sửa cấu trúc</strong><p>Di chuột vào mục → hiện nút ✏️ đổi tên / 🗑 xóa / 📁📄 thêm con.</p></div></div>`:'';
-  const key=t==='Kiểm kê'?'cv_kk':t==='QC'?'cv_qc':null;
+  const tab=S.tab||'Tất cả';
+  const tabs=['Tất cả','📦 Kiểm kê','🔬 QC','✅ Đã xong'];
+  requestAnimationFrame(()=>cvLoad());
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Công việc</div>
-<div class="sec-hdr"><h1>${skIcn('congviec',26,26)} Công việc & Checklist</h1><button class="btn b-pri b-sm">+ Thêm việc</button></div>
-<div class="tabs">${tabs.map(tb=>`<div class="tab${t===tb?' on':''}" onclick="go('congviec','${tb}')">${tb}</div>`).join('')}</div>
-${adminNote}
-${key?`<div class="card">${tSection(key)}</div>`:t==='Checklist ca'?rChecklistCa():rTodayTasks()}`;
+<div class="sec-hdr">
+  <h1>${skIcn('congviec',26,26)} Nhiệm vụ & Theo dõi</h1>
+  ${isAdmin()?`<button class="btn b-pri b-sm" onclick="cvAddModal()">+ Tạo nhiệm vụ</button>`:''}
+</div>
+<div class="tabs">${tabs.map(t=>`<div class="tab${t===tab?' on':''}" onclick="go('congviec','${t}')">${t}</div>`).join('')}</div>
+<div id="cv-list"><div style="text-align:center;padding:48px 20px;color:var(--t2)"><div style="font-size:36px;margin-bottom:12px">⏳</div><p>Đang tải nhiệm vụ...</p></div></div>`;
 }
-function rChecklistCa(){
-  const kkItems=['Điểm danh nhân sự đầu ca','Nhận bàn giao từ ca trước (BM-KSCL-004)','Kiểm tra cân điện tử – reset về 0','Kiểm tra máy quét mã vạch – pin đủ','Xem lịch hàng về trong ca','Kiểm tra khu vực làm việc – sạch sẽ','Xác nhận lịch kiểm kê theo kế hoạch'];
-  const qcItems=['Kiểm tra thiết bị đo lường (cân, nhiệt kế)','Xác nhận tiêu chuẩn QC áp dụng hôm nay','Nhận mẫu kiểm tra lô hàng đầu ca','Kiểm tra tình trạng phòng lạnh','Báo cáo kết quả QC ca trước','Cập nhật phiếu theo dõi vi sinh (nếu có)'];
-  return`<div class="g2">
-    <div class="card">
-      <div style="font-weight:700;font-size:14px;margin-bottom:14px;display:flex;justify-content:space-between">
-        📦 Checklist đầu ca – Kiểm kê
-        <span class="bdg b-info">0/${kkItems.length} hoàn thành</span>
-      </div>
-      ${kkItems.map((t,i)=>`<label class="checklist-item"><input type="checkbox" onchange="updateCL(this,'kk',${i})"> ${t}</label>`).join('')}
-      <button class="btn b-ok2" style="width:100%;margin-top:16px" onclick="completeCa('kk')">✅ Kết thúc ca – Kiểm kê</button>
-    </div>
-    <div class="card">
-      <div style="font-weight:700;font-size:14px;margin-bottom:14px;display:flex;justify-content:space-between">
-        🔬 Checklist đầu ca – QC
-        <span class="bdg b-info">0/${qcItems.length} hoàn thành</span>
-      </div>
-      ${qcItems.map((t,i)=>`<label class="checklist-item"><input type="checkbox" onchange="updateCL(this,'qc',${i})"> ${t}</label>`).join('')}
-      <button class="btn b-ok2" style="width:100%;margin-top:16px" onclick="completeCa('qc')">✅ Kết thúc ca – QC</button>
-    </div>
-  </div>`;}
-function rTodayTasks(){return`
-<div class="card" style="padding:0"><div class="tw"><table>
-<thead><tr><th>Tên công việc</th><th>Bộ phận</th><th>Người phụ trách</th><th>Hạn hoàn thành</th><th>Mức độ</th><th>Trạng thái</th></tr></thead>
-<tbody><tr><td colspan="6"><div class="empty-state"><div class="es-ic">✅</div><p>Không có việc nào hôm nay.</p></div></td></tr></tbody>
-</table></div></div>`;}
 
-function updateCL(cb,dept,idx){
-  const label=cb.closest('.checklist-item');
-  if(cb.checked)label.classList.add('done'); else label.classList.remove('done');
-  const card=cb.closest('.card');
-  const total=card.querySelectorAll('input[type=checkbox]').length;
-  const done=card.querySelectorAll('input[type=checkbox]:checked').length;
-  const bdg=card.querySelector('.bdg');
-  if(bdg)bdg.textContent=`${done}/${total} hoàn thành`;
-  if(done===total)toast(`Checklist ${dept.toUpperCase()} hoàn thành! 🎉`,'t-ok');
+function cvLoad(){
+  const el=document.getElementById('cv-list');if(!el)return;
+  const tab=S.tab||'Tất cả';
+  db.ref('bot_tasks').orderByChild('ngay_tao').get().then(snap=>{
+    if(!snap.exists()){
+      el.innerHTML=`<div class="empty-state"><div class="es-ic">📭</div><p>Chưa có nhiệm vụ nào.<br><small style="color:var(--t3)">Bot sẽ tự tạo nhiệm vụ vào đầu tháng sau khi phân tích KK/QC.</small></p></div>`;
+      return;
+    }
+    let tasks=[];snap.forEach(c=>{tasks.push({id:c.key,...c.val()});});tasks.reverse();
+    if(tab==='📦 Kiểm kê') tasks=tasks.filter(t=>(t.loai||'').includes('KK')&&t.trang_thai!=='hoan_thanh');
+    else if(tab==='🔬 QC') tasks=tasks.filter(t=>(t.loai||'').includes('QC')&&t.trang_thai!=='hoan_thanh');
+    else if(tab==='✅ Đã xong') tasks=tasks.filter(t=>t.trang_thai==='hoan_thanh');
+    else tasks=tasks.filter(t=>t.trang_thai!=='hoan_thanh');
+    if(!tasks.length){
+      const msg={' Kiểm kê':'Không có nhiệm vụ KK nào chưa xử lý.','🔬 QC':'Không có nhiệm vụ QC nào chưa xử lý.','✅ Đã xong':'Chưa có nhiệm vụ nào hoàn thành.'};
+      el.innerHTML=`<div class="empty-state"><div class="es-ic">✅</div><p>${msg[tab]||'Không có nhiệm vụ nào chưa xử lý.'}</p></div>`;
+      return;
+    }
+    el.innerHTML=tasks.map(t=>cvCard(t)).join('');
+  }).catch(e=>{el.innerHTML=`<div class="alert a-err"><span class="a-ic">❌</span><div class="a-bd"><strong>Lỗi tải dữ liệu</strong><p>${e.message}</p></div></div>`;});
 }
-function completeCa(dept){
-  if(!confirm(`Xác nhận kết thúc ca ${dept.toUpperCase()}? Dữ liệu sẽ được lưu.`))return;
-  const ts=new Date().toLocaleString('vi-VN');
-  db.ref(`checklist/${S.user.uid}/${dept}/${Date.now()}`).set({completedAt:ts,by:S.profile?.name||S.user.email});
-  toast(`Đã lưu kết thúc ca ${dept.toUpperCase()} lúc ${ts}`,'t-ok');
+
+function cvCard(t){
+  const md=CV_MUC_DO[t.muc_do]||CV_MUC_DO.theo_doi;
+  const st=CV_STATUS[t.trang_thai]||CV_STATUS.chua_lam;
+  const loaiColor=t.loai==='KK'?'#0369a1':t.loai==='QC'?'#7c3aed':'#b45309';
+  const loaiIcon=t.loai==='KK'?'📦':t.loai==='QC'?'🔬':'📦🔬';
+  const han=t.han?new Date(t.han).toLocaleDateString('vi-VN'):'—';
+  const overdue=t.han&&t.han<Date.now()&&t.trang_thai!=='hoan_thanh';
+  const chiTiet=Array.isArray(t.chi_tiet)&&t.chi_tiet.length?`<ul style="margin:8px 0 0 18px;color:var(--t2);font-size:12.5px;line-height:1.8">${t.chi_tiet.map(c=>`<li>${c}</li>`).join('')}</ul>`:'';
+  const nvRow=(t.nv_kk||t.nv_qc)?`<div style="margin-top:10px;font-size:12.5px;color:var(--t2);display:flex;gap:16px;flex-wrap:wrap">
+    ${t.nv_kk?`<span>👤 KK: <strong style="color:var(--t1)">${t.nv_kk}</strong></span>`:''}
+    ${t.nv_qc?`<span>👁 QC: <strong style="color:var(--t1)">${t.nv_qc}</strong></span>`:''}
+  </div>`:'';
+  const noteRow=t.ghi_chu?`<div style="margin-top:10px;background:#fffbeb;border-left:3px solid #fcd34d;padding:7px 12px;border-radius:0 6px 6px 0;font-size:12.5px;color:#92400e">💬 ${t.ghi_chu}</div>`:'';
+  const doneRow=t.trang_thai==='hoan_thanh'&&t.hoan_thanh_boi?`<div style="margin-top:8px;font-size:12px;color:var(--ok)">✅ Hoàn thành bởi <strong>${t.hoan_thanh_boi}</strong>${t.hoan_thanh_luc?' · '+new Date(t.hoan_thanh_luc).toLocaleString('vi-VN'):''}</div>`:'';
+  const actions=t.trang_thai!=='hoan_thanh'?`
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid #f0f2f7;padding-top:12px">
+      ${t.trang_thai!=='dang_lam'?`<button class="btn b-out b-sm" onclick="cvSetStatus('${t.id}','dang_lam')">🔄 Đang xử lý</button>`:''}
+      <button class="btn b-ok2 b-sm" onclick="cvSetStatus('${t.id}','hoan_thanh')">✅ Đánh dấu xong</button>
+      <button class="btn b-out b-sm" onclick="cvNote('${t.id}')">💬 Ghi chú</button>
+      ${isAdmin()?`<button class="btn b-danger b-sm" onclick="cvDelete('${t.id}')">🗑 Xóa</button>`:''}
+    </div>`:
+    `<div style="margin-top:10px;border-top:1px solid #f0f2f7;padding-top:10px;display:flex;gap:8px">
+      <button class="btn b-out b-sm" onclick="cvSetStatus('${t.id}','chua_lam')">↩ Mở lại</button>
+    </div>`;
+  return`<div class="card" style="margin-bottom:14px;border-left:4px solid ${md.color}">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:7px">
+        <span class="bdg ${md.cls}">${md.label}</span>
+        <span class="bdg" style="background:${loaiColor}18;color:${loaiColor}">${loaiIcon} ${t.loai||'—'}</span>
+        <strong style="font-size:14px">📍 ${t.st||'—'}</strong>
+        <span class="bdg ${st.cls}">${st.icon} ${st.label}</span>
+      </div>
+      <div style="font-size:12px;color:${overdue?'#dc2626':'var(--t2)'}">
+        ${overdue?'⚠️ Quá hạn · ':''}<strong>Hạn:</strong> ${han}
+        <span style="margin-left:8px;color:var(--t3)">· ${t.thang||''} · ${t.tao_boi||'Bot AI'}</span>
+      </div>
+    </div>
+    <div style="font-size:13.5px;font-weight:600;color:var(--t1);margin-bottom:4px">${t.van_de||''}</div>
+    ${chiTiet}${nvRow}${noteRow}${doneRow}${actions}
+  </div>`;
+}
+
+function cvSetStatus(id,status){
+  const upd={trang_thai:status};
+  if(status==='hoan_thanh'){upd.hoan_thanh_luc=Date.now();upd.hoan_thanh_boi=S.profile?.name||S.user?.email||'?';}
+  db.ref('bot_tasks/'+id).update(upd).then(()=>{
+    const msg={hoan_thanh:'✅ Đã hoàn thành!',dang_lam:'🔄 Đang xử lý...',chua_lam:'↩ Đã mở lại'};
+    toast(msg[status]||'✅ Đã cập nhật','t-ok');cvLoad();
+  }).catch(e=>toast('❌ Lỗi: '+e.message,'t-err'));
+}
+
+function cvNote(id){
+  const n=prompt('Thêm ghi chú:');if(n===null)return;
+  db.ref('bot_tasks/'+id).update({ghi_chu:n.trim(),ghi_chu_boi:S.profile?.name||'?',ghi_chu_luc:Date.now()})
+    .then(()=>{toast('💬 Đã lưu ghi chú','t-ok');cvLoad();}).catch(e=>toast('❌ '+e.message,'t-err'));
+}
+
+function cvDelete(id){
+  if(!confirm('Xóa nhiệm vụ này?'))return;
+  db.ref('bot_tasks/'+id).remove().then(()=>{toast('🗑 Đã xóa','t-ok');cvLoad();}).catch(e=>toast('❌ '+e.message,'t-err'));
+}
+
+function cvAddModal(){
+  const han7=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+  const ov=document.createElement('div');ov.className='ov';ov.id='cv-add-ov';
+  ov.innerHTML=`<div class="modal">
+  <div class="mhdr"><h3>➕ Tạo nhiệm vụ</h3><button class="mclose" onclick="document.getElementById('cv-add-ov').remove()">×</button></div>
+  <div class="mbody" style="display:flex;flex-direction:column;gap:12px">
+    <div><span class="fi-lbl">Siêu thị *</span><input class="fi" id="cv-st" placeholder="VD: Nguyễn Du"></div>
+    <div><span class="fi-lbl">Phân loại *</span><select class="fi" id="cv-loai">
+      <option value="KK">📦 Kiểm kê</option>
+      <option value="QC">🔬 QC</option>
+      <option value="KK+QC">📦🔬 Cả KK và QC</option>
+    </select></div>
+    <div><span class="fi-lbl">Mức độ</span><select class="fi" id="cv-muc">
+      <option value="khan">🔴 Khẩn</option>
+      <option value="trung_binh">🟡 Trung bình</option>
+      <option value="theo_doi">⚪ Theo dõi</option>
+    </select></div>
+    <div><span class="fi-lbl">Vấn đề *</span><textarea class="fi" id="cv-van-de" rows="2" placeholder="Mô tả vấn đề phát hiện..."></textarea></div>
+    <div><span class="fi-lbl">NV Kiểm kê phụ trách</span><input class="fi" id="cv-nv-kk" placeholder="Tên nhân viên KK"></div>
+    <div><span class="fi-lbl">NV QC phụ trách</span><input class="fi" id="cv-nv-qc" placeholder="Tên nhân viên QC"></div>
+    <div><span class="fi-lbl">Hạn hoàn thành</span><input class="fi" type="date" id="cv-han" value="${han7}"></div>
+  </div>
+  <div class="mfoot">
+    <button class="btn b-out" onclick="document.getElementById('cv-add-ov').remove()">Hủy</button>
+    <button class="btn b-pri" onclick="cvAddSave()">💾 Tạo nhiệm vụ</button>
+  </div></div>`;
+  document.body.appendChild(ov);
+}
+
+function cvAddSave(){
+  const st=document.getElementById('cv-st').value.trim();
+  const van_de=document.getElementById('cv-van-de').value.trim();
+  if(!st||!van_de){toast('⚠️ Điền Siêu thị và Vấn đề','t-warn');return;}
+  const han_s=document.getElementById('cv-han').value;
+  const now=new Date();
+  const task={st,loai:document.getElementById('cv-loai').value,muc_do:document.getElementById('cv-muc').value,
+    van_de,chi_tiet:[],nv_kk:document.getElementById('cv-nv-kk').value.trim(),
+    nv_qc:document.getElementById('cv-nv-qc').value.trim(),trang_thai:'chua_lam',
+    ngay_tao:Date.now(),han:han_s?new Date(han_s).getTime():null,ghi_chu:'',
+    thang:`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}`,
+    tao_boi:S.profile?.name||S.user?.email||'Admin'};
+  db.ref('bot_tasks').push(task).then(()=>{
+    document.getElementById('cv-add-ov').remove();
+    toast('✅ Đã tạo nhiệm vụ','t-ok');cvLoad();
+  }).catch(e=>toast('❌ '+e.message,'t-err'));
 }
 
 /* ══════════════════════════════════════════
