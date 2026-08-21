@@ -1874,7 +1874,7 @@ async function syncXuatHuy(btn){
   try{
     const {d,src}=await _syncFetch(btn,[
       {src:'Lark API',url:'http://localhost:3002/api/sync-xuathuy',timeout:3000,check:j=>j.data&&!j.error},
-      {src:'Lark API',url:'/api/lark-xuathuy',timeout:60000,check:j=>j.data&&!j.error&&!(j.cvs&&Object.keys(j.cvs).length===0)},
+      {src:'Lark API',url:'/api/lark-xuathuy?refresh=1',timeout:60000,check:j=>j.data&&!j.error&&!(j.cvs&&Object.keys(j.cvs).length===0)},
       {src:'GitHub cache',url:'https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/xuathuy-cache.json?t='+Date.now(),timeout:10000,check:j=>j.data},
     ],j=>j.data&&typeof j.data==='object','Xuất hủy');
     localStorage.setItem('xuathuy_cache',JSON.stringify({...d,ts:d.ts||Date.now()}));
