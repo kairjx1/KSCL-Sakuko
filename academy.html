@@ -3308,13 +3308,28 @@ function cvCard(t){
   </div>`;
 }
 
-function cvSetStatus(id,status){
+async function cvSetStatus(id,status){
   const upd={trang_thai:status};
   if(status==='hoan_thanh'){upd.hoan_thanh_luc=Date.now();upd.hoan_thanh_boi=S.profile?.name||S.user?.email||'?';}
-  db.ref('bot_tasks/'+id).update(upd).then(()=>{
+  if(status==='chua_lam'){upd.hoan_thanh_luc=null;upd.hoan_thanh_boi=null;}
+  try{
+    await db.ref('bot_tasks/'+id).update(upd);
     const msg={hoan_thanh:'✅ Đã hoàn thành!',dang_lam:'🔄 Đang xử lý...',chua_lam:'↩ Đã mở lại'};
-    toast(msg[status]||'✅ Đã cập nhật','t-ok');cvLoad();
-  }).catch(e=>toast('❌ Lỗi: '+e.message,'t-err'));
+    toast(msg[status]||'✅ Đã cập nhật','t-ok');
+
+    // Đồng bộ trạng thái ngược lên Lark nếu có lark_task_id
+    const t=window._cvTasks?.[id];
+    if(t?.lark_task_id && (status==='hoan_thanh'||status==='chua_lam')){
+      fetch('/api/panel/set-lark-task-status',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({lark_task_id:t.lark_task_id, status})
+      }).then(r=>r.json()).then(j=>{
+        if(!j.ok) console.warn('[Lark sync]',j.error);
+      }).catch(()=>{});
+    }
+    cvLoad();
+  }catch(e){toast('❌ Lỗi: '+e.message,'t-err');}
 }
 
 function cvNote(id){
