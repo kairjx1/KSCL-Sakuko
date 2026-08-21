@@ -14,7 +14,7 @@ export async function onRequest({ request, env }) {
   if (request.method !== 'POST') return new Response(JSON.stringify({ ok: false, error: 'Method not allowed' }), { status: 405, headers: CORS });
 
   const SECRET = env.FIREBASE_SECRET || '';
-  const BOT_URL = (env.BOT_SERVER_URL || 'https://lark-bot-server.onrender.com').replace(/\/$/, '');
+  const BOT_URL = (env.BOT_SERVER_URL || 'https://lark-bot-vhi3.onrender.com').replace(/\/$/, '');
 
   if (!SECRET) return new Response(JSON.stringify({ ok: false, error: 'FIREBASE_SECRET chưa cấu hình' }), { status: 500, headers: CORS });
 
