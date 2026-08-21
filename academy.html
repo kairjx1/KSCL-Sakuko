@@ -1873,7 +1873,7 @@ async function syncXuatHuy(btn){
   if(btn){btn.disabled=true;btn.innerHTML='⏳ Kết nối...';}
   try{
     const {d,src}=await _syncFetch(btn,[
-      {src:'Lark API',url:'http://localhost:3002/api/sync-xuathuy',timeout:3000,check:j=>j.data&&!j.error},
+      {src:'Lark API',url:'http://localhost:3002/api/sync-xuathuy',timeout:180000,check:j=>j.data&&!j.error},
       {src:'Lark API',url:'/api/lark-xuathuy?refresh=1',timeout:60000,check:j=>j.data&&!j.error&&!(j.cvs&&Object.keys(j.cvs).length===0)},
       {src:'GitHub cache',url:'https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/xuathuy-cache.json?t='+Date.now(),timeout:10000,check:j=>j.data},
     ],j=>j.data&&typeof j.data==='object','Xuất hủy');
@@ -3623,7 +3623,7 @@ async function syncLarkDate(btn){
   if(btn){btn.disabled=true;btn.innerHTML='⏳ Kết nối...';}
   try{
     const {d,src}=await _syncFetch(btn,[
-      {src:'Lark API',url:'http://localhost:3002/api/sync-date',timeout:3000,check:j=>j.monthly?.length>0&&!j.error},
+      {src:'Lark API',url:'http://localhost:3002/api/sync-date',timeout:60000,check:j=>j.monthly?.length>0&&!j.error},
       {src:'Lark API',url:'/api/lark-date',timeout:25000,check:j=>j.ok&&j.monthly?.length>0},
       {src:'GitHub cache',url:'https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/date-cache.json?t='+Date.now(),timeout:10000,check:j=>j.monthly?.length>0},
     ],j=>j.monthly?.length>0,'Đổi Date');
@@ -3642,7 +3642,7 @@ async function syncTonAm(btn){
   if(btn){btn.disabled=true;btn.innerHTML='⏳ Kết nối...';}
   try{
     const {d,src}=await _syncFetch(btn,[
-      {src:'Lark API',url:'http://localhost:3002/api/sync-tonam',timeout:3000,check:j=>j.months&&!j.error},
+      {src:'Lark API',url:'http://localhost:3002/api/sync-tonam',timeout:90000,check:j=>j.months&&!j.error},
       {src:'Lark API',url:'/api/lark-tonam',timeout:60000,check:j=>j.ok&&j.months},
       {src:'GitHub cache',url:'https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/tonam-cache.json?t='+Date.now(),timeout:10000,check:j=>j.months},
     ],j=>j.months&&typeof j.months==='object','Tồn âm');
@@ -3663,7 +3663,7 @@ async function syncBBKK(btn){
   if(btn){btn.disabled=true;btn.innerHTML='⏳ Kết nối...';}
   try{
     const {d,src}=await _syncFetch(btn,[
-      {src:'Lark API',url:'http://localhost:3002/api/sync-bbkk',timeout:3000,check:j=>Array.isArray(j.t1)&&!j.error},
+      {src:'Lark API',url:'http://localhost:3002/api/sync-bbkk',timeout:60000,check:j=>Array.isArray(j.t1)&&!j.error},
       {src:'Lark API',url:'/api/lark-bbkk',timeout:30000,check:j=>j.ok&&Array.isArray(j.t1)},
       {src:'GitHub cache',url:'https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/bbkk-cache.json?t='+Date.now(),timeout:10000,check:j=>Array.isArray(j.t1)},
     ],j=>Array.isArray(j.t1),'Biên bản KK');
