@@ -101,7 +101,7 @@ function optTxt(v,map){
 async function fetchAllCVS(token){
   const all=[];let pt='',more=true;
   while(more){
-    let url=`${LARK}/open-apis/bitable/v1/apps/${CVS_APP}/tables/${CVS_TABLE}/records?page_size=500&view_id=${CVS_VIEW}`;
+    let url=`${LARK}/open-apis/bitable/v1/apps/${CVS_APP}/tables/${CVS_TABLE}/records?page_size=500`;
     if(pt)url+='&page_token='+encodeURIComponent(pt);
     const r=await fetch(url,{headers:{Authorization:'Bearer '+token}});
     const j=await r.json();
