@@ -3218,7 +3218,10 @@ ${rCvConfig()}`;
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Công việc</div>
 <div class="sec-hdr">
   <h1>${skIcn('congviec',26,26)} Nhiệm vụ & Theo dõi</h1>
-  ${isAdmin()?`<button class="btn b-pri b-sm" onclick="cvAddModal()">+ Tạo nhiệm vụ</button>`:''}
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    ${isAdmin()?`<button class="btn b-out b-sm" id="cv-sync-btn" onclick="cvSyncLark()" title="Đồng bộ trạng thái hoàn thành từ Lark Task vào đây">🔄 Đồng bộ Lark</button>`:''}
+    ${isAdmin()?`<button class="btn b-pri b-sm" onclick="cvAddModal()">+ Tạo nhiệm vụ</button>`:''}
+  </div>
 </div>
 <div class="tabs">${tabs.map(t=>`<div class="tab${t===tab?' on':''}" onclick="go('congviec','${t}')">${t}</div>`).join('')}</div>
 <div id="cv-list"><div style="text-align:center;padding:48px 20px;color:var(--t2)"><div style="font-size:36px;margin-bottom:12px">⏳</div><p>Đang tải nhiệm vụ...</p></div></div>`;
@@ -3468,6 +3471,26 @@ function cvCfgLoad(){
         document.getElementById('cv-cfg-qc').innerHTML=msg;
       });
   }).catch(e=>toast('Lỗi tải config: '+e.message,'t-err'));
+}
+
+async function cvSyncLark(){
+  const btn=document.getElementById('cv-sync-btn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang đồng bộ...';}
+  try{
+    const r=await fetch('/api/sync-lark-tasks',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      signal:AbortSignal.timeout(35000)
+    });
+    const j=await r.json();
+    if(j.ok){
+      toast(`✅ ${j.msg} (bỏ qua: ${j.skipped}, lỗi: ${j.errors})`,'t-ok');
+      if(j.synced>0) cvLoad(); // reload task list nếu có task mới hoàn thành
+    } else {
+      toast('❌ Đồng bộ thất bại: '+(j.error||'unknown'),'t-err');
+    }
+  }catch(e){toast('❌ '+e.message,'t-err');}
+  finally{if(btn){btn.disabled=false;btn.textContent='🔄 Đồng bộ Lark';}}
 }
 
 function cvCfgRefreshMembers(){
