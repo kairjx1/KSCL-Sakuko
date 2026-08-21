@@ -3227,12 +3227,13 @@ ${rCvConfig()}`;
 function cvLoad(){
   const el=document.getElementById('cv-list');if(!el)return;
   const tab=S.tab||'Tất cả';
-  db.ref('bot_tasks').orderByChild('ngay_tao').get().then(snap=>{
+  db.ref('bot_tasks').get().then(snap=>{
     if(!snap.exists()){
       el.innerHTML=`<div class="empty-state"><div class="es-ic">📭</div><p>Chưa có nhiệm vụ nào.<br><small style="color:var(--t3)">Bot sẽ tự tạo nhiệm vụ vào đầu tháng sau khi phân tích KK/QC.</small></p></div>`;
       return;
     }
-    let tasks=[];snap.forEach(c=>{tasks.push({id:c.key,...c.val()});});tasks.reverse();
+    let tasks=[];snap.forEach(c=>{tasks.push({id:c.key,...c.val()});});
+    tasks.sort((a,b)=>(b.ngay_tao||0)-(a.ngay_tao||0));
     if(tab==='📦 Kiểm kê') tasks=tasks.filter(t=>(t.loai||'').includes('KK')&&t.trang_thai!=='hoan_thanh');
     else if(tab==='🔬 QC') tasks=tasks.filter(t=>(t.loai||'').includes('QC')&&t.trang_thai!=='hoan_thanh');
     else if(tab==='✅ Đã xong') tasks=tasks.filter(t=>t.trang_thai==='hoan_thanh');
