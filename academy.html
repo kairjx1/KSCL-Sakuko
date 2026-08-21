@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v2026.08.21-remind -->
 <html lang="vi">
 <head>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>">
@@ -3238,6 +3239,8 @@ function cvLoad(){
       return;
     }
     let tasks=[];snap.forEach(c=>{tasks.push({id:c.key,...c.val()});});
+    // Cache để cvRemindSchedule đọc reminder_interval
+    window._cvTasks=Object.fromEntries(tasks.map(t=>[t.id,t]));
     tasks.sort((a,b)=>(b.ngay_tao||0)-(a.ngay_tao||0));
     if(tab==='📦 Kiểm kê') tasks=tasks.filter(t=>(t.loai||'').includes('KK')&&t.trang_thai!=='hoan_thanh');
     else if(tab==='🔬 QC') tasks=tasks.filter(t=>(t.loai||'').includes('QC')&&t.trang_thai!=='hoan_thanh');
@@ -3272,6 +3275,8 @@ function cvCard(t){
       <button class="btn b-ok2 b-sm" onclick="cvSetStatus('${t.id}','hoan_thanh')">✅ Đánh dấu xong</button>
       <button class="btn b-out b-sm" onclick="cvNote('${t.id}')">💬 Ghi chú</button>
       ${isAdmin()?`<button class="btn b-danger b-sm" onclick="cvDelete('${t.id}')">🗑 Xóa</button>`:''}
+      ${isAdmin()?`<button class="btn b-out b-sm" onclick="cvRemindNow('${t.id}')" title="Gửi nhắc nhở ngay qua Lark DM">🔔 Nhắc</button>`:''}
+      ${isAdmin()?`<button class="btn b-out b-sm" id="cv-remind-sched-${t.id}" onclick="cvRemindSchedule('${t.id}',this)" title="Hẹn nhắc định kỳ đến khi xong" style="${t.reminder_interval?'color:#f59e0b;border-color:#f59e0b;font-weight:600':''}">⏰${t.reminder_interval?' '+(t.reminder_interval==='daily'?'Ngày':'Tuần'):''}</button>`:''}
     </div>`:
     `<div style="margin-top:10px;border-top:1px solid #f0f2f7;padding-top:10px;display:flex;gap:8px">
       <button class="btn b-out b-sm" onclick="cvSetStatus('${t.id}','chua_lam')">↩ Mở lại</button>
@@ -3354,6 +3359,86 @@ async function cvGiaoViec(){
     }
   }catch(e){toast('❌ '+e.message,'t-err');}
   finally{if(btn){btn.disabled=false;cvUpdateGiaoBtn();}}
+}
+
+// ── Remind functions ──────────────────────────────────────────────
+async function cvRemindNow(taskId){
+  if(!isAdmin())return;
+  const btn=event?.target;
+  if(btn){const orig=btn.textContent;btn.disabled=true;btn.textContent='⏳';
+    try{
+      const r=await fetch('/api/panel/remind-task',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({task_id:taskId}),signal:AbortSignal.timeout(15000)});
+      const j=await r.json();
+      if(j.ok) toast(`🔔 Đã nhắc ${j.sent||0} người qua Lark`,'t-ok');
+      else toast('⚠️ Lỗi nhắc: '+(j.error||'?'),'t-warn');
+    }catch(e){toast('⚠️ Lỗi: '+e.message,'t-warn');}
+    finally{btn.disabled=false;btn.textContent='🔔 Nhắc';}
+  }
+}
+
+function cvRemindSchedule(taskId, btn){
+  if(!isAdmin())return;
+  // Popup mini chọn interval
+  const existing=document.getElementById('cv-remind-popup');
+  if(existing)existing.remove();
+
+  // Đọc interval hiện tại từ Firebase task (qua _cvTasks cache hoặc data attribute)
+  const tasks=_cvTasks||{};
+  const task=Object.values(tasks).find(t=>t.id===taskId)||{};
+  const cur=task.reminder_interval||null;
+
+  const rect=btn.getBoundingClientRect();
+  const pop=document.createElement('div');
+  pop.id='cv-remind-popup';
+  pop.style.cssText=`position:fixed;top:${rect.bottom+4}px;left:${rect.left}px;z-index:9999;
+    background:var(--bg);border:1px solid var(--border);border-radius:10px;
+    padding:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);min-width:200px;font-size:14px`;
+  pop.innerHTML=`
+    <div style="font-weight:600;margin-bottom:10px;color:var(--t1)">⏰ Hẹn nhắc định kỳ</div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:10px">Tự nhắc đến khi NV hoàn thành</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <button class="btn b-out b-sm" style="${cur==='daily'?'color:#f59e0b;border-color:#f59e0b;font-weight:700':''}"
+        onclick="cvSetReminder('${taskId}','daily',this.closest('#cv-remind-popup'))">
+        📅 Hàng ngày${cur==='daily'?' ✓':''}
+      </button>
+      <button class="btn b-out b-sm" style="${cur==='weekly'?'color:#f59e0b;border-color:#f59e0b;font-weight:700':''}"
+        onclick="cvSetReminder('${taskId}','weekly',this.closest('#cv-remind-popup'))">
+        📆 Hàng tuần${cur==='weekly'?' ✓':''}
+      </button>
+      ${cur?`<button class="btn b-out b-sm" style="color:#ef4444;border-color:#ef4444"
+        onclick="cvSetReminder('${taskId}',null,this.closest('#cv-remind-popup'))">
+        🔕 Tắt nhắc
+      </button>`:''}
+    </div>`;
+  document.body.appendChild(pop);
+  // Click ngoài để đóng
+  setTimeout(()=>document.addEventListener('click',function h(e){
+    if(!pop.contains(e.target)){pop.remove();document.removeEventListener('click',h);}
+  }),100);
+}
+
+async function cvSetReminder(taskId, interval, pop){
+  if(pop)pop.remove();
+  try{
+    const r=await fetch('/api/panel/remind-task',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({task_id:taskId,interval:interval}),signal:AbortSignal.timeout(15000)});
+    const j=await r.json();
+    if(j.ok){
+      const schedBtn=document.getElementById(`cv-remind-sched-${taskId}`);
+      if(schedBtn){
+        if(interval){
+          schedBtn.style.color='#f59e0b';schedBtn.style.borderColor='#f59e0b';schedBtn.style.fontWeight='600';
+          schedBtn.textContent='⏰ '+(interval==='daily'?'Ngày':'Tuần');
+          toast(`⏰ Đã bật nhắc ${interval==='daily'?'hàng ngày':'hàng tuần'} + nhắc ngay bây giờ (${j.sent||0} người)`,'t-ok');
+        }else{
+          schedBtn.style.color='';schedBtn.style.borderColor='';schedBtn.style.fontWeight='';
+          schedBtn.textContent='⏰';
+          toast('🔕 Đã tắt nhắc định kỳ','t-ok');
+        }
+      }
+    }else toast('⚠️ Lỗi: '+(j.error||'?'),'t-warn');
+  }catch(e){toast('⚠️ Lỗi: '+e.message,'t-warn');}
 }
 
 async function cvDeleteAll(){
