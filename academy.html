@@ -3204,7 +3204,7 @@ const CV_STATUS={chua_lam:{label:'Chưa làm',cls:'b-err',icon:'🔴'},dang_lam:
 
 function rCongViec(){
   const tab=S.tab||'Tất cả';
-  const tabs=['Tất cả','📦 Kiểm kê','🔬 QC','✅ Đã xong'];
+  const tabs=['Tất cả','📦 Kiểm kê','🔬 QC','📋 Đã giao','⬜ Chưa giao','✅ Đã xong'];
   if(isAdmin()) tabs.push('⚙️ Cấu hình Bot');
   if(tab==='⚙️ Cấu hình Bot'){
     requestAnimationFrame(()=>cvCfgLoad());
@@ -3245,10 +3245,12 @@ function cvLoad(){
     tasks.sort((a,b)=>(b.ngay_tao||0)-(a.ngay_tao||0));
     if(tab==='📦 Kiểm kê') tasks=tasks.filter(t=>(t.loai||'').includes('KK')&&t.trang_thai!=='hoan_thanh');
     else if(tab==='🔬 QC') tasks=tasks.filter(t=>(t.loai||'').includes('QC')&&t.trang_thai!=='hoan_thanh');
+    else if(tab==='📋 Đã giao') tasks=tasks.filter(t=>!!t.lark_task_id&&t.trang_thai!=='hoan_thanh');
+    else if(tab==='⬜ Chưa giao') tasks=tasks.filter(t=>!t.lark_task_id&&t.trang_thai!=='hoan_thanh');
     else if(tab==='✅ Đã xong') tasks=tasks.filter(t=>t.trang_thai==='hoan_thanh');
     else tasks=tasks.filter(t=>t.trang_thai!=='hoan_thanh');
     if(!tasks.length){
-      const msg={' Kiểm kê':'Không có nhiệm vụ KK nào chưa xử lý.','🔬 QC':'Không có nhiệm vụ QC nào chưa xử lý.','✅ Đã xong':'Chưa có nhiệm vụ nào hoàn thành.'};
+      const msg={'📦 Kiểm kê':'Không có nhiệm vụ KK nào chưa xử lý.','🔬 QC':'Không có nhiệm vụ QC nào chưa xử lý.','📋 Đã giao':'Chưa có nhiệm vụ nào đã giao lên Lark.','⬜ Chưa giao':'Tất cả nhiệm vụ đã được giao lên Lark.','✅ Đã xong':'Chưa có nhiệm vụ nào hoàn thành.'};
       el.innerHTML=`<div class="empty-state"><div class="es-ic">✅</div><p>${msg[tab]||'Không có nhiệm vụ nào chưa xử lý.'}</p></div>`;
       return;
     }
@@ -3275,12 +3277,14 @@ function cvCard(t){
       ${t.trang_thai!=='dang_lam'?`<button class="btn b-out b-sm" onclick="cvSetStatus('${t.id}','dang_lam')">🔄 Đang xử lý</button>`:''}
       <button class="btn b-ok2 b-sm" onclick="cvSetStatus('${t.id}','hoan_thanh')">✅ Đánh dấu xong</button>
       <button class="btn b-out b-sm" onclick="cvNote('${t.id}')">💬 Ghi chú</button>
+      ${isAdmin()?`<button class="btn b-out b-sm" onclick="cvEditModal('${t.id}')" title="Sửa nhiệm vụ">✏️ Sửa</button>`:''}
       ${isAdmin()?`<button class="btn b-danger b-sm" onclick="cvDelete('${t.id}')">🗑 Xóa</button>`:''}
       ${isAdmin()?`<button class="btn b-out b-sm" onclick="cvRemindNow('${t.id}')" title="Gửi nhắc nhở ngay qua Lark DM">🔔 Nhắc</button>`:''}
       ${isAdmin()?`<button class="btn b-out b-sm" id="cv-remind-sched-${t.id}" onclick="cvRemindSchedule('${t.id}',this)" title="Hẹn nhắc định kỳ đến khi xong" style="${t.reminder_interval?'color:#f59e0b;border-color:#f59e0b;font-weight:600':''}">⏰${t.reminder_interval?' '+(t.reminder_interval==='daily'?'Ngày':'Tuần'):''}</button>`:''}
     </div>`:
     `<div style="margin-top:10px;border-top:1px solid #f0f2f7;padding-top:10px;display:flex;gap:8px">
       <button class="btn b-out b-sm" onclick="cvSetStatus('${t.id}','chua_lam')">↩ Mở lại</button>
+      ${isAdmin()?`<button class="btn b-out b-sm" onclick="cvEditModal('${t.id}')" title="Sửa nhiệm vụ">✏️ Sửa</button>`:''}
       ${isAdmin()?`<button class="btn b-danger b-sm" onclick="cvDelete('${t.id}')">🗑 Xóa</button>`:''}
     </div>`;
   const hasLark=!!t.lark_task_id;
@@ -3317,6 +3321,77 @@ function cvNote(id){
   const n=prompt('Thêm ghi chú:');if(n===null)return;
   db.ref('bot_tasks/'+id).update({ghi_chu:n.trim(),ghi_chu_boi:S.profile?.name||'?',ghi_chu_luc:Date.now()})
     .then(()=>{toast('💬 Đã lưu ghi chú','t-ok');cvLoad();}).catch(e=>toast('❌ '+e.message,'t-err'));
+}
+
+function cvEditModal(id){
+  const t=window._cvTasks?.[id];
+  if(!t){toast('❌ Không tìm thấy task','t-err');return;}
+  const hanVal=t.han?new Date(t.han).toISOString().slice(0,10):'';
+  const ov=document.createElement('div');ov.className='ov';ov.id='cv-edit-ov';
+  ov.innerHTML=`<div class="modal" style="max-width:500px">
+  <div class="mhdr"><h3>✏️ Sửa nhiệm vụ</h3><button class="mclose" onclick="document.getElementById('cv-edit-ov').remove()">×</button></div>
+  <div class="mbody" style="display:flex;flex-direction:column;gap:12px">
+    <div><span class="fi-lbl">Siêu thị / Đối tượng *</span><input class="fi" id="cv-edit-st" value="${(t.st||'').replace(/"/g,'&quot;')}"></div>
+    <div><span class="fi-lbl">Phân loại</span><select class="fi" id="cv-edit-loai">
+      <option value="KK"${t.loai==='KK'?' selected':''}>📦 Kiểm kê</option>
+      <option value="QC"${t.loai==='QC'?' selected':''}>🔬 QC</option>
+      <option value="KK+QC"${t.loai==='KK+QC'?' selected':''}>📦🔬 Cả KK và QC</option>
+      <option value="KHAC"${t.loai==='KHAC'?' selected':''}>📋 Khác</option>
+    </select></div>
+    <div><span class="fi-lbl">Mức độ</span><select class="fi" id="cv-edit-muc">
+      <option value="khan"${t.muc_do==='khan'?' selected':''}>🔴 Khẩn</option>
+      <option value="trung_binh"${t.muc_do==='trung_binh'?' selected':''}>🟡 Trung bình</option>
+      <option value="theo_doi"${t.muc_do==='theo_doi'?' selected':''}>⚪ Theo dõi</option>
+    </select></div>
+    <div><span class="fi-lbl">Nội dung / Yêu cầu *</span><textarea class="fi" id="cv-edit-van-de" rows="4">${(t.van_de||'').replace(/</g,'&lt;')}</textarea></div>
+    <div><span class="fi-lbl">Hạn hoàn thành</span><input class="fi" type="date" id="cv-edit-han" value="${hanVal}"></div>
+    <div><span class="fi-lbl">Ghi chú</span><input class="fi" id="cv-edit-ghi-chu" value="${(t.ghi_chu||'').replace(/"/g,'&quot;')}"></div>
+    ${t.lark_task_id?'<div style="font-size:12px;color:#16a34a;padding:6px 10px;background:#f0fdf4;border-radius:6px">✔ Đã có Lark Task · Lưu xong sẽ cập nhật tên & hạn trên Lark</div>':'<div style="font-size:12px;color:#94a3b8;padding:6px 10px;background:#f8fafc;border-radius:6px">○ Chưa giao lên Lark · Chỉ cập nhật trong hệ thống</div>'}
+  </div>
+  <div class="mfoot">
+    <button class="btn b-out" onclick="document.getElementById('cv-edit-ov').remove()">Hủy</button>
+    <button class="btn b-pri" onclick="cvEditSave('${id}')">💾 Lưu thay đổi</button>
+  </div></div>`;
+  document.body.appendChild(ov);
+}
+
+async function cvEditSave(id){
+  const st=document.getElementById('cv-edit-st')?.value.trim();
+  const van_de=document.getElementById('cv-edit-van-de')?.value.trim();
+  const loai=document.getElementById('cv-edit-loai')?.value;
+  const muc_do=document.getElementById('cv-edit-muc')?.value;
+  const hanS=document.getElementById('cv-edit-han')?.value;
+  const ghi_chu=document.getElementById('cv-edit-ghi-chu')?.value.trim();
+  if(!st||!van_de){toast('❌ Vui lòng nhập siêu thị và nội dung','t-err');return;}
+  const han=hanS?(new Date(hanS+'T17:00:00+07:00').getTime()):null;
+  const upd={st,van_de,loai,muc_do,ghi_chu:ghi_chu||'',sua_luc:Date.now(),sua_boi:S.profile?.name||S.user?.email||'?'};
+  if(han)upd.han=han;
+  const btn=document.querySelector('#cv-edit-ov .btn.b-pri');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang lưu...';}
+  try{
+    await db.ref('bot_tasks/'+id).update(upd);
+    // Cập nhật Lark Task nếu đã giao
+    const t=window._cvTasks?.[id];
+    if(t?.lark_task_id){
+      try{
+        const r=await fetch('/api/panel/update-lark-task',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({firebase_key:id,lark_task_id:t.lark_task_id,van_de,han})
+        });
+        const j=await r.json();
+        if(j.ok) toast('✅ Đã lưu & cập nhật Lark Task','t-ok');
+        else toast(`✅ Đã lưu Firebase · Lark: ${j.error||'lỗi'}','t-warn`);
+      }catch(e){toast('✅ Đã lưu · Lark: lỗi kết nối','t-warn');}
+    }else{
+      toast('✅ Đã lưu thay đổi','t-ok');
+    }
+    document.getElementById('cv-edit-ov')?.remove();
+    cvLoad();
+  }catch(e){
+    toast('❌ Lỗi lưu: '+e.message,'t-err');
+    if(btn){btn.disabled=false;btn.textContent='💾 Lưu thay đổi';}
+  }
 }
 
 function cvDelete(id){
