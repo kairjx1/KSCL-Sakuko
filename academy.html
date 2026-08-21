@@ -3365,8 +3365,10 @@ function rCvConfig(){
   </div></div>
 
   <div class="card">
-    <div style="font-weight:700;font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:8px">📦 Nhân viên Kiểm kê phụ trách
+    <div style="font-weight:700;font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      📦 Nhân viên Kiểm kê phụ trách
       <span class="bdg b-info" style="font-weight:400;font-size:11px">Ctrl+click chọn nhiều</span>
+      <button onclick="cvCfgRefreshMembers()" title="Làm mới danh sách từ nhóm Lark" style="margin-left:auto;padding:3px 10px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;cursor:pointer;color:var(--t2)">🔄 Làm mới</button>
     </div>
     <select id="cv-cfg-kk" multiple size="5" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:6px;font-size:13px;background:#fff">
       <option disabled>⏳ Đang tải danh sách nhân sự...</option>
@@ -3375,7 +3377,8 @@ function rCvConfig(){
   </div>
 
   <div class="card">
-    <div style="font-weight:700;font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:8px">🔬 Nhân viên QC phụ trách
+    <div style="font-weight:700;font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      🔬 Nhân viên QC phụ trách
       <span class="bdg" style="background:#fdf4ff;color:#7c3aed;font-weight:400;font-size:11px">Ctrl+click chọn nhiều</span>
     </div>
     <select id="cv-cfg-qc" multiple size="5" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:6px;font-size:13px;background:#fff">
@@ -3465,6 +3468,36 @@ function cvCfgLoad(){
         document.getElementById('cv-cfg-qc').innerHTML=msg;
       });
   }).catch(e=>toast('Lỗi tải config: '+e.message,'t-err'));
+}
+
+function cvCfgRefreshMembers(){
+  // Lấy Group ID hiện tại (từ input hoặc Firebase default)
+  const chatId=(document.getElementById('cv-cfg-group')?.value||'').trim()
+               ||'oc_c21fec79e8cab0945a09763eeb5479ba';
+  // Giữ lại các NV đang được chọn
+  const kkSel=document.getElementById('cv-cfg-kk');
+  const qcSel=document.getElementById('cv-cfg-qc');
+  const savedKK=[...kkSel.selectedOptions].map(o=>o.value);
+  const savedQC=[...qcSel.selectedOptions].map(o=>o.value);
+  // Hiện trạng thái loading
+  kkSel.innerHTML='<option disabled>⏳ Đang làm mới...</option>';
+  qcSel.innerHTML='<option disabled>⏳ Đang làm mới...</option>';
+  fetch(`/api/lark-chat-members?chat_id=${encodeURIComponent(chatId)}`,{signal:AbortSignal.timeout(15000)})
+    .then(r=>r.json()).then(j=>{
+      if(!j.ok||!j.members?.length){
+        const msg='<option disabled>Không lấy được danh sách (kiểm tra quyền bot)</option>';
+        kkSel.innerHTML=msg; qcSel.innerHTML=msg; return;
+      }
+      const members=j.members.filter(m=>m.name).sort((a,b)=>a.name.localeCompare(b.name,'vi'));
+      const mkOpts=saved=>members.map(m=>`<option value="${m.open_id}" ${saved.includes(m.open_id)?'selected':''}>${m.name}</option>`).join('');
+      kkSel.innerHTML=mkOpts(savedKK)||'<option disabled>Nhóm trống</option>';
+      qcSel.innerHTML=mkOpts(savedQC)||'<option disabled>Nhóm trống</option>';
+      toast(`✅ Đã làm mới: ${members.length} thành viên`,'t-ok');
+    }).catch(e=>{
+      const msg=`<option disabled>Lỗi: ${e.message}</option>`;
+      kkSel.innerHTML=msg; qcSel.innerHTML=msg;
+      toast('❌ Làm mới thất bại: '+e.message,'t-err');
+    });
 }
 
 function cvCfgSave(){
