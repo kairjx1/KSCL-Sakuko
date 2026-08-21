@@ -3374,10 +3374,11 @@ async function cvEditSave(id){
     const t=window._cvTasks?.[id];
     if(t?.lark_task_id){
       try{
+        const chi_tiet=Array.isArray(t.chi_tiet)?t.chi_tiet:[];
         const r=await fetch('/api/panel/update-lark-task',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({firebase_key:id,lark_task_id:t.lark_task_id,van_de,han})
+          body:JSON.stringify({firebase_key:id,lark_task_id:t.lark_task_id,van_de,han,chi_tiet})
         });
         const j=await r.json();
         if(j.ok) toast('✅ Đã lưu & cập nhật Lark Task','t-ok');
