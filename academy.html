@@ -3389,9 +3389,11 @@ function cvRemindSchedule(taskId, btn){
   const cur=task.reminder_interval||null;
 
   const rect=btn.getBoundingClientRect();
+  const popHeight=160; // ước tính chiều cao popup
+  const showAbove=rect.bottom+popHeight>window.innerHeight-20;
   const pop=document.createElement('div');
   pop.id='cv-remind-popup';
-  pop.style.cssText=`position:fixed;top:${rect.bottom+4}px;left:${rect.left}px;z-index:9999;
+  pop.style.cssText=`position:fixed;${showAbove?`bottom:${window.innerHeight-rect.top+4}px`:`top:${rect.bottom+4}px`};left:${Math.min(rect.left,window.innerWidth-220)}px;z-index:9999;
     background:var(--bg);border:1px solid var(--border);border-radius:10px;
     padding:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);min-width:200px;font-size:14px`;
   pop.innerHTML=`
@@ -3453,10 +3455,33 @@ async function cvDeleteAll(){
 
 // State lưu người được chọn trong modal tạo task
 let _cvAssignees = []; // [{open_id, name}]
+let _cvTasklists = []; // [{guid, name}] — cache từ API
 
-function cvAddModal(){
+async function _cvLoadTasklists(){
+  if(_cvTasklists.length)return _cvTasklists;
+  try{
+    const r=await fetch('/api/panel/list-tasklists',{signal:AbortSignal.timeout(8000)});
+    const j=await r.json();
+    if(j.ok&&j.tasklists?.length) _cvTasklists=j.tasklists;
+  }catch(e){}
+  return _cvTasklists;
+}
+
+async function cvAddModal(){
   const han7=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
   _cvAssignees=[];
+  // Load tasklists từ Lark API (đồng bộ thực)
+  const tls=await _cvLoadTasklists();
+  const tlOptions=tls.map(tl=>`<option value="${tl.guid}">${tl.name}</option>`).join('');
+  const tlSelect=tls.length?`
+    <div>
+      <span class="fi-lbl">📋 Thêm vào danh sách tác vụ Lark</span>
+      <select class="fi" id="cv-tasklist">
+        <option value="">(Không thêm vào danh sách nào)</option>
+        ${tlOptions}
+      </select>
+    </div>`:'';
+
   const ov=document.createElement('div');ov.className='ov';ov.id='cv-add-ov';
   ov.innerHTML=`<div class="modal" style="max-width:520px">
   <div class="mhdr"><h3>➕ Tạo nhiệm vụ</h3><button class="mclose" onclick="document.getElementById('cv-add-ov').remove()">×</button></div>
@@ -3487,6 +3512,7 @@ function cvAddModal(){
       <p style="font-size:11px;color:#94a3b8;margin-top:6px">Tìm bất kỳ ai trong Lark · Bot tạo task + tag bạn theo dõi</p>
     </div>
 
+    ${tlSelect}
     <div><span class="fi-lbl">Hạn hoàn thành</span><input class="fi" type="date" id="cv-han" value="${han7}"></div>
   </div>
   <div class="mfoot">
@@ -3548,12 +3574,14 @@ async function cvAddSave(){
   const han_s=document.getElementById('cv-han').value;
   const now=new Date();
   const loai=document.getElementById('cv-loai').value;
+  const tasklist_guid=document.getElementById('cv-tasklist')?.value||'';
   const task={
     st, loai, muc_do:document.getElementById('cv-muc').value,
     van_de, chi_tiet:[], trang_thai:'chua_lam',
     nv_kk: loai==='KK'||loai==='KK+QC' ? (_cvAssignees.map(a=>a.name).join(', ')||'') : '',
     nv_qc: loai==='QC'||loai==='KK+QC' ? (_cvAssignees.map(a=>a.name).join(', ')||'') : '',
     assignee_open_ids: _cvAssignees.map(a=>a.open_id),
+    tasklist_guid,
     ngay_tao:Date.now(), han:han_s?new Date(han_s).getTime():null, ghi_chu:'',
     thang:`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}`,
     tao_boi:S.profile?.name||S.user?.email||'Admin'
@@ -3571,7 +3599,7 @@ async function cvAddSave(){
       fetch('/api/assign-tasks',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({task_ids:[fbKey], override_assignees:_cvAssignees}),
+        body:JSON.stringify({task_ids:[fbKey], override_assignees:_cvAssignees, tasklist_guid}),
         signal:AbortSignal.timeout(20000)
       }).then(r=>r.json()).then(j=>{
         if(j.ok) toast(`✅ Đã giao trên Lark cho ${_cvAssignees.map(a=>a.name).join(', ')}`,'t-ok');
