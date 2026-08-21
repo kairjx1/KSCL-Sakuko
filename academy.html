@@ -3218,9 +3218,11 @@ ${rCvConfig()}`;
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Công việc</div>
 <div class="sec-hdr">
   <h1>${skIcn('congviec',26,26)} Nhiệm vụ & Theo dõi</h1>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
     ${isAdmin()?`<button class="btn b-out b-sm" id="cv-sync-btn" onclick="cvSyncLark()" title="Đồng bộ trạng thái hoàn thành từ Lark Task vào đây">🔄 Đồng bộ Lark</button>`:''}
     ${isAdmin()?`<button class="btn b-pri b-sm" onclick="cvAddModal()">+ Tạo nhiệm vụ</button>`:''}
+    ${isAdmin()?`<button class="btn b-danger b-sm" onclick="cvDeleteAll()" title="Xóa tất cả nhiệm vụ cũ">🗑 Xóa tất cả</button>`:''}
+    <button class="btn b-warn b-sm" id="cv-giao-btn" style="display:none" onclick="cvGiaoViec()">📋 Giao việc (<span id="cv-sel-cnt">0</span>)</button>
   </div>
 </div>
 <div class="tabs">${tabs.map(t=>`<div class="tab${t===tab?' on':''}" onclick="go('congviec','${t}')">${t}</div>`).join('')}</div>
@@ -3274,13 +3276,16 @@ function cvCard(t){
     `<div style="margin-top:10px;border-top:1px solid #f0f2f7;padding-top:10px;display:flex;gap:8px">
       <button class="btn b-out b-sm" onclick="cvSetStatus('${t.id}','chua_lam')">↩ Mở lại</button>
     </div>`;
+  const hasLark=!!t.lark_task_id;
   return`<div class="card" style="margin-bottom:14px;border-left:4px solid ${md.color}">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
       <div style="display:flex;align-items:center;flex-wrap:wrap;gap:7px">
+        ${t.trang_thai!=='hoan_thanh'?`<input type="checkbox" id="cv-chk-${t.id}" onclick="cvToggleSelect('${t.id}',this)" style="width:17px;height:17px;cursor:pointer;flex-shrink:0;accent-color:#ea580c" title="Chọn để giao việc">`:''}
         <span class="bdg ${md.cls}">${md.label}</span>
         <span class="bdg" style="background:${loaiColor}18;color:${loaiColor}">${loaiIcon} ${t.loai||'—'}</span>
         <strong style="font-size:14px">📍 ${t.st||'—'}</strong>
         <span class="bdg ${st.cls}">${st.icon} ${st.label}</span>
+        ${hasLark?`<span title="Đã có Lark Task" style="font-size:11px;color:#16a34a">✔ Lark</span>`:`<span title="Chưa có Lark Task" style="font-size:11px;color:#94a3b8">○ Lark</span>`}
       </div>
       <div style="font-size:12px;color:${overdue?'#dc2626':'var(--t2)'}">
         ${overdue?'⚠️ Quá hạn · ':''}<strong>Hạn:</strong> ${han}
@@ -3309,7 +3314,56 @@ function cvNote(id){
 
 function cvDelete(id){
   if(!confirm('Xóa nhiệm vụ này?'))return;
+  _cvSelected.delete(id);cvUpdateGiaoBtn();
   db.ref('bot_tasks/'+id).remove().then(()=>{toast('🗑 Đã xóa','t-ok');cvLoad();}).catch(e=>toast('❌ '+e.message,'t-err'));
+}
+
+// ── Chọn task & Giao việc ──────────────────────────────────────
+let _cvSelected=new Set();
+
+function cvToggleSelect(id,el){
+  if(el.checked)_cvSelected.add(id); else _cvSelected.delete(id);
+  cvUpdateGiaoBtn();
+}
+
+function cvUpdateGiaoBtn(){
+  const btn=document.getElementById('cv-giao-btn');
+  if(!btn)return;
+  btn.style.display=_cvSelected.size>0?'':'none';
+  const cnt=document.getElementById('cv-sel-cnt');
+  if(cnt)cnt.textContent=_cvSelected.size;
+}
+
+async function cvGiaoViec(){
+  if(!_cvSelected.size)return;
+  const btn=document.getElementById('cv-giao-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang giao...';}
+  try{
+    const r=await fetch('/api/assign-tasks',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({task_ids:[..._cvSelected]}),
+      signal:AbortSignal.timeout(35000)
+    });
+    const j=await r.json();
+    if(j.ok){
+      toast(`✅ Đã tạo ${j.created}/${j.total} Lark task cho NV${j.skipped?` · ${j.skipped} đã có`:''}${j.errors?` · ${j.errors} lỗi`:''}`, 't-ok');
+      _cvSelected.clear();cvUpdateGiaoBtn();cvLoad();
+    } else {
+      toast('❌ Giao việc thất bại: '+(j.error||'unknown'),'t-err');
+    }
+  }catch(e){toast('❌ '+e.message,'t-err');}
+  finally{if(btn){btn.disabled=false;cvUpdateGiaoBtn();}}
+}
+
+async function cvDeleteAll(){
+  if(!isAdmin())return;
+  if(!confirm('Xóa TẤT CẢ nhiệm vụ?\n\nThao tác này không thể hoàn tác!'))return;
+  try{
+    await db.ref('bot_tasks').remove();
+    _cvSelected.clear();cvUpdateGiaoBtn();
+    toast('🗑 Đã xóa tất cả nhiệm vụ','t-ok');cvLoad();
+  }catch(e){toast('❌ '+e.message,'t-err');}
 }
 
 function cvAddModal(){
@@ -3428,6 +3482,12 @@ function rCvConfig(){
     </div>
   </div>
 
+  <div class="card">
+    <div style="font-weight:700;font-size:14px;margin-bottom:12px">👤 Open ID của Admin (để tag vào mọi task)</div>
+    <input class="fi" id="cv-cfg-owner-oid" placeholder="oc_xxxxxxx — open_id của bạn trên Lark" style="width:100%">
+    <p style="font-size:11px;color:var(--t2);margin-top:6px">Bot sẽ tự tag bạn vào mỗi Lark task với vai trò Follower để theo dõi tiến độ</p>
+  </div>
+
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
     <button class="btn b-ok2" onclick="cvCfgSave()">💾 Lưu cấu hình</button>
     <button class="btn b-warn" onclick="cvRunAgent(false)" id="cv-run-btn">🚀 Chạy phân tích ngay</button>
@@ -3453,6 +3513,8 @@ function cvCfgLoad(){
     if(dayEl) dayEl.value=String(cfg.run_day||12);
     const dlEl=document.getElementById('cv-cfg-deadline');
     if(dlEl) dlEl.value=String(cfg.deadline_days||14);
+    const oidEl=document.getElementById('cv-cfg-owner-oid');
+    if(oidEl) oidEl.value=cfg.owner_open_id||'oc_5b7d2006d4e867c516024b13684ea5dd';
 
     // Load thành viên nhóm Lark (có open_id để tag)
     if(!chatId){
@@ -3547,6 +3609,7 @@ function cvCfgSave(){
     lark_tasklist_guid: (document.getElementById('cv-cfg-tasklist')?.value||'').trim()||'cc4e6ca2-6dac-406d-b225-051945836703',
     run_day: parseInt(document.getElementById('cv-cfg-day').value)||1,
     deadline_days: parseInt(document.getElementById('cv-cfg-deadline').value)||14,
+    owner_open_id: (document.getElementById('cv-cfg-owner-oid')?.value||'').trim(),
     updated_at: Date.now(),
     updated_by: S.profile?.name||S.user?.email||'Admin'
   };
