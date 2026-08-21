@@ -3366,51 +3366,141 @@ async function cvDeleteAll(){
   }catch(e){toast('❌ '+e.message,'t-err');}
 }
 
+// State lưu người được chọn trong modal tạo task
+let _cvAssignees = []; // [{open_id, name}]
+
 function cvAddModal(){
   const han7=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+  _cvAssignees=[];
   const ov=document.createElement('div');ov.className='ov';ov.id='cv-add-ov';
-  ov.innerHTML=`<div class="modal">
+  ov.innerHTML=`<div class="modal" style="max-width:520px">
   <div class="mhdr"><h3>➕ Tạo nhiệm vụ</h3><button class="mclose" onclick="document.getElementById('cv-add-ov').remove()">×</button></div>
   <div class="mbody" style="display:flex;flex-direction:column;gap:12px">
-    <div><span class="fi-lbl">Siêu thị *</span><input class="fi" id="cv-st" placeholder="VD: Nguyễn Du"></div>
+    <div><span class="fi-lbl">Siêu thị / Đối tượng *</span><input class="fi" id="cv-st" placeholder="VD: Nguyễn Du, CVS Hà Nội..."></div>
     <div><span class="fi-lbl">Phân loại *</span><select class="fi" id="cv-loai">
       <option value="KK">📦 Kiểm kê</option>
       <option value="QC">🔬 QC</option>
       <option value="KK+QC">📦🔬 Cả KK và QC</option>
+      <option value="KHAC">📋 Khác (ngoài phòng ban)</option>
     </select></div>
     <div><span class="fi-lbl">Mức độ</span><select class="fi" id="cv-muc">
       <option value="khan">🔴 Khẩn</option>
       <option value="trung_binh">🟡 Trung bình</option>
       <option value="theo_doi">⚪ Theo dõi</option>
     </select></div>
-    <div><span class="fi-lbl">Vấn đề *</span><textarea class="fi" id="cv-van-de" rows="2" placeholder="Mô tả vấn đề phát hiện..."></textarea></div>
-    <div><span class="fi-lbl">NV Kiểm kê phụ trách</span><input class="fi" id="cv-nv-kk" placeholder="Tên nhân viên KK"></div>
-    <div><span class="fi-lbl">NV QC phụ trách</span><input class="fi" id="cv-nv-qc" placeholder="Tên nhân viên QC"></div>
+    <div><span class="fi-lbl">Nội dung / Yêu cầu *</span><textarea class="fi" id="cv-van-de" rows="3" placeholder="Mô tả công việc cần làm..."></textarea></div>
+
+    <div style="border:1.5px dashed #e2e8f0;border-radius:10px;padding:12px;background:#f8fafc">
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#475569">👤 Giao cho người thực hiện</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input class="fi" id="cv-search-nv" placeholder="Tìm theo tên..." style="margin:0;flex:1"
+          oninput="cvSearchNV(this.value)" autocomplete="off">
+        <button class="btn b-out b-sm" onclick="cvSearchNV(document.getElementById('cv-search-nv').value,true)">🔍</button>
+      </div>
+      <div id="cv-search-results" style="max-height:130px;overflow-y:auto;border-radius:7px;border:1px solid #e2e8f0;background:#fff;display:none"></div>
+      <div id="cv-assignee-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:0"></div>
+      <p style="font-size:11px;color:#94a3b8;margin-top:6px">Tìm bất kỳ ai trong Lark · Bot tạo task + tag bạn theo dõi</p>
+    </div>
+
     <div><span class="fi-lbl">Hạn hoàn thành</span><input class="fi" type="date" id="cv-han" value="${han7}"></div>
   </div>
   <div class="mfoot">
     <button class="btn b-out" onclick="document.getElementById('cv-add-ov').remove()">Hủy</button>
-    <button class="btn b-pri" onclick="cvAddSave()">💾 Tạo nhiệm vụ</button>
+    <button class="btn b-pri" onclick="cvAddSave()">🚀 Tạo & Giao việc</button>
   </div></div>`;
   document.body.appendChild(ov);
 }
 
-function cvAddSave(){
+let _cvSearchTimer=null;
+function cvSearchNV(q,immediate=false){
+  clearTimeout(_cvSearchTimer);
+  if(!q||q.length<2){document.getElementById('cv-search-results').style.display='none';return;}
+  _cvSearchTimer=setTimeout(async()=>{
+    const el=document.getElementById('cv-search-results');
+    if(!el)return;
+    el.style.display='block';el.innerHTML='<div style="padding:8px 12px;color:#94a3b8;font-size:13px">⏳ Đang tìm...</div>';
+    try{
+      const r=await fetch(`/api/panel/find-user?name=${encodeURIComponent(q)}`,{signal:AbortSignal.timeout(8000)});
+      const j=await r.json();
+      if(!j.ok||!j.users?.length){el.innerHTML='<div style="padding:8px 12px;color:#94a3b8;font-size:13px">Không tìm thấy</div>';return;}
+      el.innerHTML=j.users.map(u=>`
+        <div onclick="cvAddAssignee('${u.open_id}','${u.name.replace(/'/g,'\\\'')}')"
+          style="padding:8px 14px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f1f5f9"
+          onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
+          <span style="width:28px;height:28px;background:#e0e7ff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#4338ca;flex-shrink:0">${u.name[0]||'?'}</span>
+          <span>${u.name}</span>
+        </div>`).join('');
+    }catch(e){el.innerHTML=`<div style="padding:8px 12px;color:#ef4444;font-size:13px">Lỗi: ${e.message}</div>`;}
+  }, immediate?0:400);
+}
+
+function cvAddAssignee(open_id,name){
+  if(_cvAssignees.find(a=>a.open_id===open_id))return;
+  _cvAssignees.push({open_id,name});
+  document.getElementById('cv-search-results').style.display='none';
+  document.getElementById('cv-search-nv').value='';
+  _cvRenderChips();
+}
+
+function cvRemoveAssignee(open_id){
+  _cvAssignees=_cvAssignees.filter(a=>a.open_id!==open_id);
+  _cvRenderChips();
+}
+
+function _cvRenderChips(){
+  const el=document.getElementById('cv-assignee-chips');if(!el)return;
+  el.innerHTML=_cvAssignees.map(a=>`
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#e0f2fe;color:#0369a1;border-radius:20px;padding:4px 10px 4px 8px;font-size:12.5px;font-weight:500">
+      👤 ${a.name}
+      <span onclick="cvRemoveAssignee('${a.open_id}')" style="cursor:pointer;color:#64748b;font-size:15px;line-height:1;margin-left:2px" title="Xóa">×</span>
+    </span>`).join('');
+}
+
+async function cvAddSave(){
   const st=document.getElementById('cv-st').value.trim();
   const van_de=document.getElementById('cv-van-de').value.trim();
-  if(!st||!van_de){toast('⚠️ Điền Siêu thị và Vấn đề','t-warn');return;}
+  if(!st||!van_de){toast('⚠️ Điền tên siêu thị/đối tượng và nội dung','t-warn');return;}
   const han_s=document.getElementById('cv-han').value;
   const now=new Date();
-  const task={st,loai:document.getElementById('cv-loai').value,muc_do:document.getElementById('cv-muc').value,
-    van_de,chi_tiet:[],nv_kk:document.getElementById('cv-nv-kk').value.trim(),
-    nv_qc:document.getElementById('cv-nv-qc').value.trim(),trang_thai:'chua_lam',
-    ngay_tao:Date.now(),han:han_s?new Date(han_s).getTime():null,ghi_chu:'',
+  const loai=document.getElementById('cv-loai').value;
+  const task={
+    st, loai, muc_do:document.getElementById('cv-muc').value,
+    van_de, chi_tiet:[], trang_thai:'chua_lam',
+    nv_kk: loai==='KK'||loai==='KK+QC' ? (_cvAssignees.map(a=>a.name).join(', ')||'') : '',
+    nv_qc: loai==='QC'||loai==='KK+QC' ? (_cvAssignees.map(a=>a.name).join(', ')||'') : '',
+    assignee_open_ids: _cvAssignees.map(a=>a.open_id),
+    ngay_tao:Date.now(), han:han_s?new Date(han_s).getTime():null, ghi_chu:'',
     thang:`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}`,
-    tao_boi:S.profile?.name||S.user?.email||'Admin'};
-  db.ref('bot_tasks').push(task).then(()=>{
+    tao_boi:S.profile?.name||S.user?.email||'Admin'
+  };
+  const saveBtn=document.querySelector('#cv-add-ov .btn.b-pri');
+  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ Đang tạo...';}
+  try{
+    const ref=await db.ref('bot_tasks').push(task);
+    const fbKey=ref.key;
     document.getElementById('cv-add-ov').remove();
-    toast('✅ Đã tạo nhiệm vụ','t-ok');cvLoad();
-  }).catch(e=>toast('❌ '+e.message,'t-err'));
+    toast('✅ Đã tạo nhiệm vụ','t-ok');
+    // Tự đẩy Lark task nếu có assignee
+    if(_cvAssignees.length>0&&fbKey){
+      toast('📤 Đang gửi task lên Lark...','t-info');
+      fetch('/api/assign-tasks',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({task_ids:[fbKey], override_assignees:_cvAssignees}),
+        signal:AbortSignal.timeout(20000)
+      }).then(r=>r.json()).then(j=>{
+        if(j.ok) toast(`✅ Đã giao trên Lark cho ${_cvAssignees.map(a=>a.name).join(', ')}`,'t-ok');
+        else toast('⚠️ Task đã tạo nhưng Lark gửi lỗi: '+(j.error||'?'),'t-warn');
+        cvLoad();
+      }).catch(()=>{toast('⚠️ Task đã tạo, Lark gửi thất bại','t-warn');cvLoad();});
+    } else {
+      cvLoad();
+    }
+    _cvAssignees=[];
+  }catch(e){
+    toast('❌ '+e.message,'t-err');
+    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='🚀 Tạo & Giao việc';}
+  }
 }
 
 /* ── CCONFIG BOT AGENT ── */
