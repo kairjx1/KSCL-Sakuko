@@ -3222,7 +3222,8 @@ ${rCvConfig()}`;
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
     ${isAdmin()?`<button class="btn b-out b-sm" id="cv-sync-btn" onclick="cvSyncLark()" title="Đồng bộ trạng thái hoàn thành từ Lark Task vào đây">🔄 Đồng bộ Lark</button>`:''}
     ${isAdmin()?`<button class="btn b-pri b-sm" onclick="cvAddModal()">+ Tạo nhiệm vụ</button>`:''}
-    ${isAdmin()?`<button class="btn b-danger b-sm" onclick="cvDeleteAll()" title="Xóa tất cả nhiệm vụ cũ">🗑 Xóa tất cả</button>`:''}
+    ${isAdmin()&&tab==='✅ Đã xong'?`<button class="btn b-danger b-sm" onclick="cvDeleteDone()" title="Xóa tất cả nhiệm vụ đã xong">🗑 Xóa đã xong</button>`:''}
+    ${isAdmin()&&tab!=='✅ Đã xong'?`<button class="btn b-danger b-sm" onclick="cvDeleteAll()" title="Xóa tất cả nhiệm vụ cũ">🗑 Xóa tất cả</button>`:''}
     <button class="btn b-warn b-sm" id="cv-giao-btn" style="display:none" onclick="cvGiaoViec()">📋 Giao việc (<span id="cv-sel-cnt">0</span>)</button>
   </div>
 </div>
@@ -3280,6 +3281,7 @@ function cvCard(t){
     </div>`:
     `<div style="margin-top:10px;border-top:1px solid #f0f2f7;padding-top:10px;display:flex;gap:8px">
       <button class="btn b-out b-sm" onclick="cvSetStatus('${t.id}','chua_lam')">↩ Mở lại</button>
+      ${isAdmin()?`<button class="btn b-danger b-sm" onclick="cvDelete('${t.id}')">🗑 Xóa</button>`:''}
     </div>`;
   const hasLark=!!t.lark_task_id;
   return`<div class="card" style="margin-bottom:14px;border-left:4px solid ${md.color}">
@@ -3441,6 +3443,23 @@ async function cvSetReminder(taskId, interval, pop){
       }
     }else toast('⚠️ Lỗi: '+(j.error||'?'),'t-warn');
   }catch(e){toast('⚠️ Lỗi: '+e.message,'t-warn');}
+}
+
+async function cvDeleteDone(){
+  if(!isAdmin())return;
+  if(!confirm('Xóa tất cả nhiệm vụ ĐÃ XONG?\n\nThao tác này không thể hoàn tác!'))return;
+  try{
+    const snap=await db.ref('bot_tasks').get();
+    if(!snap.exists()){toast('Không có nhiệm vụ nào','t-warn');return;}
+    const updates={};
+    snap.forEach(c=>{
+      if(c.val()?.trang_thai==='hoan_thanh') updates[c.key]=null;
+    });
+    if(!Object.keys(updates).length){toast('Không có nhiệm vụ đã xong','t-warn');return;}
+    await db.ref('bot_tasks').update(updates);
+    toast(`🗑 Đã xóa ${Object.keys(updates).length} nhiệm vụ đã xong`,'t-ok');
+    cvLoad();
+  }catch(e){toast('Lỗi: '+e.message,'t-err');}
 }
 
 async function cvDeleteAll(){
