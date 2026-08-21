@@ -2919,7 +2919,7 @@ function applyLogFilter() {
     box.textContent = filter ? `Chưa có log loại "${filter}".` : 'Chưa có log nào trong Firebase.';
     return;
   }
-  const TYPE_ICONS = {ai_reply:'🤖',mute:'🔇',backup:'💾'config_reload:'⚡',startup:'🚀',error:'❌'};
+  const TYPE_ICONS = {ai_reply:'🤖',mute:'🔇',backup:'💾',config_reload:'⚡',startup:'🚀',error:'❌'};
   box.innerHTML = logs.map(l => {
     const icon = TYPE_ICONS[l.type] || '📋';
     const dt = l.ts ? new Date(l.ts).toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'2-digit'}) : '?';
