@@ -5315,6 +5315,7 @@ function rUserList(){return`
 <div class="toolbar">
   <input placeholder="Tìm email, tên..." style="max-width:240px">
   <div class="spacer"></div>
+  <button class="btn b-sec b-sm" onclick="syncRoles(this)" style="margin-right:8px">🔄 Đồng bộ quyền</button>
   <button class="btn b-pri b-sm" onclick="showModal('add-user')">+ Tạo tài khoản mới</button>
 </div>
 <div class="card" style="padding:0"><div class="tw"><table>
@@ -6470,6 +6471,24 @@ async function doAddUser(){
   }catch(e){
     if(errEl)errEl.innerHTML=`<div class="err-box">${e.message}</div>`;
   }
+}
+async function syncRoles(btn){
+  if(btn){btn.disabled=true;btn.textContent='⏳ Đang đồng bộ...';}
+  try{
+    // Cập nhật role session hiện tại từ Firebase
+    if(S.profile?.open_id){
+      const snap=await db.ref(`portal_users/lark_${S.profile.open_id}/role`).get();
+      if(snap.exists()&&ROLES[snap.val()]){S.profile.role=snap.val();}
+    } else if(S.user?.uid){
+      const snap=await db.ref(`profiles/${S.user.uid}/role`).get();
+      if(snap.exists()&&ROLES[snap.val()]){S.profile.role=snap.val();}
+    }
+    await _loadPermCfg();
+    loadUsers();
+    render();
+    toast('✅ Đã đồng bộ quyền','t-ok');
+  }catch(e){toast('❌ Lỗi đồng bộ: '+e.message,'t-err');}
+  finally{if(btn){btn.disabled=false;btn.textContent='🔄 Đồng bộ quyền';}}
 }
 async function setRole(src,uid,role){
   await db.ref(`${src}/${uid}/role`).set(role);
