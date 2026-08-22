@@ -424,6 +424,18 @@ auth.onAuthStateChanged(async u=>{
       const snap=await db.ref(`profiles/${u.uid}`).get();
       if(snap.exists()){
         S.profile=snap.val();
+        // Nếu là Lark user (có larkId), đọc role từ portal_users để lấy đúng quyền admin đã set
+        if(S.profile.larkId){
+          S.profile.open_id = S.profile.larkId;
+          try{
+            const puSnap=await db.ref(`portal_users/lark_${S.profile.larkId}/role`).get();
+            if(puSnap.exists()&&ROLES[puSnap.val()]) S.profile.role=puSnap.val();
+          }catch(_){}
+          // Listener realtime
+          db.ref(`portal_users/lark_${S.profile.larkId}/role`).on('value',snap2=>{
+            const nr=snap2.val();if(nr&&ROLES[nr]&&S.profile&&S.profile.role!==nr){S.profile.role=nr;_loadPermCfg().then(()=>render()).catch(()=>render());toast('🔄 Quyền của bạn vừa được cập nhật','t-info');}
+          });
+        }
         if(!S.profile.role||!ROLES[S.profile.role]){
           S.profile.role=ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer';
           db.ref(`profiles/${u.uid}/role`).set(S.profile.role);
@@ -435,8 +447,15 @@ auth.onAuthStateChanged(async u=>{
         // New user — auto-create from Lark if available, else show form
         const lark=S.pendingLarkUser;
         S.pendingLarkUser=null;
-        if(lark&&lark.email===u.email){
-          S.profile={name:lark.name,email:lark.email,role:ADMIN_EMAILS.includes(lark.email)?'superadmin':'viewer',dept:'',phone:'',createdAt:Date.now(),larkId:lark.open_id};
+        // Lark user đăng nhập lần đầu — đọc role từ portal_users nếu đã tồn tại
+        const ps2=JSON.parse(localStorage.getItem('kscl_portal_session')||'null');
+        const larkOid=lark?.open_id||ps2?.open_id||'';
+        let initRole='viewer';
+        if(ADMIN_EMAILS.includes(u.email)) initRole='superadmin';
+        else if(larkOid){try{const r2=await db.ref(`portal_users/lark_${larkOid}/role`).get();if(r2.exists()&&ROLES[r2.val()])initRole=r2.val();}catch(_){}}
+        if((lark&&lark.email===u.email)||ps2?.email===u.email){
+          const ln=lark?.name||ps2?.name||'';
+          S.profile={name:ln,email:u.email,role:initRole,dept:'',phone:'',createdAt:Date.now(),larkId:larkOid||''};
           await db.ref(`profiles/${u.uid}`).set(S.profile);
           go('dashboard');window.chatShowFab?.(true);
         } else {
@@ -456,6 +475,14 @@ auth.onAuthStateChanged(async u=>{
     try {
       const ps = JSON.parse(localStorage.getItem('kscl_portal_session') || 'null');
       if (ps && ps.type === 'lark' && ps.open_id) {
+        // Đăng nhập Firebase bằng email Lark để có auth token (tránh anonymous bị rules chặn)
+        if (ps.email) {
+          const larkPass = 'LarkSSO_' + ps.open_id;
+          try {
+            await auth.signInWithEmailAndPassword(ps.email, larkPass);
+            return; // onAuthStateChanged sẽ tiếp tục với u != null
+          } catch(e) { console.warn('Academy Lark FB sign-in failed:', e.message); }
+        }
         S.user = { email: ps.email, uid: 'lark_' + ps.open_id };
         // Đọc role thực từ Firebase portal_users, lắng nghe realtime khi admin đổi quyền
         let larkRole = ADMIN_EMAILS.includes(ps.email) ? 'superadmin' : 'viewer';

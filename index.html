@@ -439,7 +439,26 @@ async function handleLarkCallback() {
     if (j.ok && j.user) {
       const session = { type: 'lark', name: j.user.name, email: j.user.email, avatar: j.user.avatar, open_id: j.user.open_id, ts: Date.now() };
       history.replaceState(null, '', location.pathname);
-      try { await auth.signInAnonymously(); } catch (e) { console.warn('Anonymous auth failed:', e.message); }
+      // Tạo/đăng nhập Firebase bằng email Lark (tránh anonymous — bị Firebase rules chặn)
+      if (j.user.email) {
+        const larkPass = 'LarkSSO_' + j.user.open_id; // password tự động từ open_id
+        const fbKey = FB.apiKey;
+        try {
+          await auth.signInWithEmailAndPassword(j.user.email, larkPass);
+        } catch(eLogin) {
+          if (eLogin.code === 'auth/user-not-found' || eLogin.code === 'auth/invalid-credential' || eLogin.code === 'auth/wrong-password') {
+            try {
+              await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${fbKey}`,{
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({email: j.user.email, password: larkPass, returnSecureToken: false})
+              });
+              await auth.signInWithEmailAndPassword(j.user.email, larkPass);
+            } catch(eReg) { console.warn('Firebase Lark register failed:', eReg.message); try { await auth.signInAnonymously(); } catch(_){} }
+          } else { console.warn('Firebase Lark login failed:', eLogin.message); try { await auth.signInAnonymously(); } catch(_){} }
+        }
+      } else {
+        try { await auth.signInAnonymously(); } catch (e) { console.warn('Anonymous auth failed:', e.message); }
+      }
       // Lưu lark_token vào Firebase để bot dùng khi tạo task
       const uKey = 'lark_' + j.user.open_id;
       if (j.user.open_id && j.access_token) {
