@@ -85,6 +85,20 @@ input:focus,select:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(0,102
 .tb-search input{padding:7px 12px 7px 34px;border-radius:18px;background:#f0f2f7;border-color:transparent;width:100%;font-size:13px}
 .tb-search input:focus{background:#fff;border-color:var(--pri)}
 .tb-s-ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--t2);font-size:14px}
+#gs-drop{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.13);z-index:100001;display:none;max-height:420px;overflow-y:auto}
+#gs-drop.open{display:block}
+#gs-drop::-webkit-scrollbar{width:4px}#gs-drop::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:2px}
+.gs-section{padding:6px 0 2px}
+.gs-sec-hdr{padding:4px 14px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
+.gs-item{padding:8px 14px;display:flex;align-items:flex-start;gap:10px;cursor:pointer;transition:.1s}
+.gs-item:hover,.gs-item.active{background:#f1f5f9}
+.gs-item-ic{font-size:16px;flex-shrink:0;margin-top:1px}
+.gs-item-body{flex:1;min-width:0}
+.gs-item-title{font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gs-item-sub{font-size:11px;color:#64748b;margin-top:1px}
+.gs-item-badge{font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;flex-shrink:0;margin-top:2px}
+.gs-empty{padding:20px;text-align:center;color:#94a3b8;font-size:13px}
+.gs-hint{padding:6px 14px 8px;font-size:11px;color:#94a3b8;border-top:1px solid #f1f5f9;text-align:center}
 .tb-acts{margin-left:auto;display:flex;align-items:center;gap:6px}
 .ico-btn{width:36px;height:36px;border-radius:50%;background:transparent;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--t2);cursor:pointer;transition:.15s;position:relative}
 .ico-btn:hover{background:#f0f2f7;color:var(--t1)}
@@ -650,7 +664,7 @@ function rShell(){
     <div class="main">
       <div class="topbar">
         <div class="tb-title">${m.lb||'KSCL System'}</div>
-        <div class="tb-search"><span class="tb-s-ic">🔍</span><input placeholder="Tìm kiếm..."></div>
+        <div class="tb-search"><span class="tb-s-ic">🔍</span><input id="gs-input" placeholder="Tìm kiếm..." autocomplete="off" oninput="gsOnInput(this.value)" onkeydown="gsOnKey(event)" onfocus="gsOnInput(this.value)" onblur="setTimeout(gsClose,200)"><div id="gs-drop"></div></div>
         <div class="tb-acts">
           <div class="ico-btn" id="notif-btn" onclick="toggleNotifPanel()" title="Nhật ký hoạt động">🔔<div id="notif-badge" class="notif-badge" style="display:none">0</div></div>
           <div class="tb-av" onclick="showModal('profile')">${av}</div>
@@ -3327,6 +3341,7 @@ ${rCvConfig()}`;
   </div>
 </div>
 <div class="tabs">${tabs.map(t=>`<div class="tab${t===tab?' on':''}" onclick="go('congviec','${t}')">${t}</div>`).join('')}</div>
+${S.cvQ?`<div style="padding:8px 0;display:flex;align-items:center;gap:8px;font-size:13px;color:#64748b">🔍 Đang lọc: <strong style="color:#1e293b">${S.cvQ}</strong> <button onclick="S.cvQ='';const i=document.getElementById('gs-input');if(i)i.value='';cvLoad()" style="padding:2px 8px;border:1px solid #dc2626;border-radius:5px;font-size:11px;color:#dc2626;background:#fff;cursor:pointer">✕ Xoá lọc</button></div>`:''}
 <div id="cv-list"><div style="text-align:center;padding:48px 20px;color:var(--t2)"><div style="font-size:36px;margin-bottom:12px">⏳</div><p>Đang tải nhiệm vụ...</p></div></div>`;
 }
 
@@ -3348,6 +3363,9 @@ function cvLoad(){
     else if(tab==='⬜ Chưa giao') tasks=tasks.filter(t=>!t.lark_task_id&&t.trang_thai!=='hoan_thanh');
     else if(tab==='✅ Đã xong') tasks=tasks.filter(t=>t.trang_thai==='hoan_thanh');
     else tasks=tasks.filter(t=>t.trang_thai!=='hoan_thanh');
+    // Global search filter
+    const cvQ=(S.cvQ||'').toLowerCase().trim();
+    if(cvQ)tasks=tasks.filter(t=>((t.van_de||'')+(t.st||'')+(t.nv_kk||'')+(t.nv_qc||'')+(t.ghi_chu||'')+(t.loai||'')).toLowerCase().includes(cvQ));
     if(!tasks.length){
       const msg={'📦 Kiểm kê':'Không có nhiệm vụ KK nào chưa xử lý.','🔬 QC':'Không có nhiệm vụ QC nào chưa xử lý.','📋 Đã giao':'Chưa có nhiệm vụ nào đã giao lên Lark.','⬜ Chưa giao':'Tất cả nhiệm vụ đã được giao lên Lark.','✅ Đã xong':'Chưa có nhiệm vụ nào hoàn thành.'};
       el.innerHTML=`<div class="empty-state"><div class="es-ic">✅</div><p>${msg[tab]||'Không có nhiệm vụ nào chưa xử lý.'}</p></div>`;
@@ -8342,6 +8360,182 @@ window.addEventListener('beforeunload',e=>{
     if(fab)fab.style.display=show?'flex':'none';
   };
 })();
+
+// ── Global Search ─────────────────────────────────────────────────
+let _gsIdx=0,_gsResults=[],_gsQ='';
+
+function gsOnInput(v){
+  _gsQ=v.trim();
+  if(!_gsQ){gsClose();gsApplyPage('');return;}
+  clearTimeout(window._gsDeb);
+  window._gsDeb=setTimeout(()=>{
+    _gsResults=gsSearch(_gsQ);
+    gsRender();
+    gsApplyPage(_gsQ);
+  },200);
+}
+
+function gsOnKey(e){
+  const drop=document.getElementById('gs-drop');
+  if(!drop.classList.contains('open'))return;
+  if(e.key==='ArrowDown'){_gsIdx=Math.min(_gsIdx+1,_gsResults.length-1);gsHighlight();e.preventDefault();}
+  else if(e.key==='ArrowUp'){_gsIdx=Math.max(_gsIdx-1,0);gsHighlight();e.preventDefault();}
+  else if(e.key==='Enter'){if(_gsResults[_gsIdx])gsGo(_gsResults[_gsIdx]);e.preventDefault();}
+  else if(e.key==='Escape'){gsClose();document.getElementById('gs-input')?.blur();}
+}
+
+function gsClose(){
+  document.getElementById('gs-drop')?.classList.remove('open');
+}
+
+function gsHighlight(){
+  document.querySelectorAll('.gs-item').forEach((el,i)=>{
+    el.classList.toggle('active',i===_gsIdx);
+    if(i===_gsIdx)el.scrollIntoView({block:'nearest'});
+  });
+}
+
+function gsGo(r){
+  gsClose();
+  const inp=document.getElementById('gs-input');
+  if(inp)inp.value='';
+  gsApplyPage('');
+  // Điều hướng đến trang + tab, rồi filter nếu cần
+  if(r.page==='congviec'){S.cvQ=r.q||_gsQ;go('congviec',r.tab||'');}
+  else if(r.page==='kk'){
+    if(r.tab==='Xuất hủy - lỗi hỏng')S.xhQ=r.q||_gsQ;
+    else if(r.tab==='Tồn âm')S.tonAmFilter.q=r.q||_gsQ;
+    go('kk',r.tab||'Tổng quan');
+  }
+  else if(r.page==='qc'){S.qcQ=r.q||_gsQ;go('qc',r.tab||'');}
+  else if(r.page==='baocao'){go('baocao',r.tab||'');}
+  else if(r.page==='daotao'){S.dtQ=_gsQ;go('daotao',r.tab||'');}
+  else if(r.page){go(r.page,r.tab||'');}
+}
+
+function gsSearch(q){
+  const ql=q.toLowerCase();
+  const results=[];
+
+  // 1. Công việc (bot_tasks)
+  const tasks=Object.values(window._cvTasks||{});
+  const MUC={khan:'🔴 Khẩn',trung_binh:'🟡 TB',theo_doi:'🟢 Theo dõi'};
+  tasks.filter(t=>{
+    const hay=(t.van_de||'')+(t.st||'')+(t.nv_kk||'')+(t.nv_qc||'')+(t.ghi_chu||'');
+    return hay.toLowerCase().includes(ql);
+  }).slice(0,5).forEach(t=>results.push({
+    page:'congviec',tab:'',q:ql,
+    ic:'✅',badge:MUC[t.muc_do]||'',badgeColor:t.muc_do==='khan'?'#ef4444':t.muc_do==='trung_binh'?'#f59e0b':'#22c55e',
+    title:t.van_de||(t.st||'Task'),
+    sub:`${t.st||''}${t.nv_qc?' · QC: '+t.nv_qc:''}${t.nv_kk?' · KK: '+t.nv_kk:''}`,
+    group:'✅ Công việc'
+  }));
+
+  // 2. Kiểm kê – Xuất hủy
+  const XH=S.xhCache;
+  if(XH?.data){
+    const allST=[];
+    Object.values(XH.data).forEach(yObj=>Object.entries(yObj).forEach(([mKey,md])=>{
+      if(!md?.stores)return;
+      md.stores.forEach(s=>{if((s.ten||'').toLowerCase().includes(ql)||(s.ma||'').toLowerCase().includes(ql))
+        allST.push({title:s.ten||s.ma,sub:`Xuất hủy ${mKey} · ${(s.value||0).toLocaleString('vi-VN')}đ`,page:'kk',tab:'Xuất hủy - lỗi hỏng',q:ql,ic:'📦',group:'📦 Kiểm kê – Xuất hủy'});
+      });
+      if(md.items)md.items.forEach(it=>{if((it.ten||'').toLowerCase().includes(ql)||(it.ma||'').toLowerCase().includes(ql))
+        allST.push({title:it.ten||it.ma,sub:`Mã: ${it.ma||'?'} · ${mKey}`,page:'kk',tab:'Xuất hủy - lỗi hỏng',q:ql,ic:'🏷️',group:'📦 Kiểm kê – Xuất hủy'});
+      });
+    }));
+    // dedup by title
+    const seen=new Set();
+    allST.filter(r=>{if(seen.has(r.title))return false;seen.add(r.title);return true;}).slice(0,4).forEach(r=>results.push(r));
+  }
+
+  // 3. Tồn âm
+  const TA=S.tonAmCache;
+  if(TA?.months){
+    const taSeen=new Set();
+    Object.entries(TA.months).forEach(([m,mData])=>{
+      (mData?.stores||[]).forEach(s=>{
+        const hay=(s.ten||'')+(s.ma||'')+(s.bc||'');
+        if(hay.toLowerCase().includes(ql)&&!taSeen.has(s.ten)){
+          taSeen.add(s.ten);
+          results.push({title:s.ten||s.ma,sub:`Tồn âm ${m}`,page:'kk',tab:'Tồn âm',q:ql,ic:'📉',group:'📦 Kiểm kê – Tồn âm'});
+        }
+      });
+    });
+    results.filter(r=>r.group==='📦 Kiểm kê – Tồn âm').splice(4);
+  }
+
+  // 4. QC – Chấm điểm (qcDiemRows)
+  const qcRows=S.qcDiemRows||[];
+  qcRows.filter(r=>{
+    const hay=(r.ten_st||r.st||'')+(r.nv||'');
+    return hay.toLowerCase().includes(ql);
+  }).slice(0,4).forEach(r=>results.push({
+    page:'qc',tab:'Chấm điểm dịch vụ',q:ql,ic:'🔬',
+    title:r.ten_st||r.st||'ST',sub:`Điểm: ${r.thuc||'?'}/${r.max||'?'} · ${S.qcDiemMonth}/${S.qcDiemYear}`,
+    group:'🔬 QC – Chấm điểm'
+  }));
+
+  // 5. Báo cáo – Tổng hợp
+  const th=S.tongHopAllData||{};
+  Object.entries(th).filter(([st])=>st.toLowerCase().includes(ql)).slice(0,3).forEach(([st,d])=>results.push({
+    page:'baocao',tab:'Tổng hợp',q:ql,ic:'📊',
+    title:st,sub:`Điểm QC: ${d?.qc_score||'?'} · Đổi trả: ${d?.doi_tra||'?'}đ`,
+    group:'📊 Báo cáo'
+  }));
+
+  return results;
+}
+
+function gsRender(){
+  const drop=document.getElementById('gs-drop');
+  if(!drop)return;
+  if(!_gsResults.length){
+    drop.innerHTML=`<div class="gs-empty">Không tìm thấy kết quả cho "<strong>${_gsQ}</strong>"</div>`;
+    drop.classList.add('open');return;
+  }
+  // Group
+  const groups={};
+  _gsResults.forEach((r,i)=>{if(!groups[r.group])groups[r.group]=[];groups[r.group].push({...r,_i:i});});
+  let html='';
+  Object.entries(groups).forEach(([g,items])=>{
+    html+=`<div class="gs-section"><div class="gs-sec-hdr">${g}</div>`;
+    items.forEach(r=>{
+      const badge=r.badge?`<span class="gs-item-badge" style="background:${r.badgeColor}22;color:${r.badgeColor}">${r.badge}</span>`:'';
+      html+=`<div class="gs-item" data-i="${r._i}" onmousedown="gsGo(_gsResults[${r._i}])">
+        <div class="gs-item-ic">${r.ic}</div>
+        <div class="gs-item-body">
+          <div class="gs-item-title">${_gsHl(r.title,_gsQ)}</div>
+          ${r.sub?`<div class="gs-item-sub">${r.sub}</div>`:''}
+        </div>${badge}</div>`;
+    });
+    html+='</div>';
+  });
+  html+=`<div class="gs-hint">↑↓ điều hướng · Enter để chọn · Esc để đóng</div>`;
+  drop.innerHTML=html;
+  drop.classList.add('open');
+  _gsIdx=0;gsHighlight();
+}
+
+function _gsHl(text,q){
+  if(!q)return text;
+  const re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+  return (text||'').replace(re,'<mark style="background:#fef08a;border-radius:2px;padding:0 1px">$1</mark>');
+}
+
+// Per-page filter: áp vào trang đang xem
+function gsApplyPage(q){
+  S.gsQ=q;
+  const p=S.page;
+  if(p==='congviec'){S.cvQ=q;cvLoad&&cvLoad();}
+  else if(p==='kk'){
+    const t=S.tab;
+    if(t==='Xuất hủy - lỗi hỏng'){S.xhQ=q;go('kk',t);}
+    else if(t==='Tồn âm'){S.tonAmFilter.q=q;go('kk',t);}
+  }
+  else if(p==='qc'){S.qcQ=q;render&&render();}
+  else if(p==='daotao'){S.dtQ=q;render&&render();}
+}
 
 // ── Activity Log (Nhật ký hoạt động) ─────────────────────────────
 const ACTIVITY_ICONS={
