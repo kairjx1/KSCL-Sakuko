@@ -890,6 +890,7 @@ function rDashboard(){
   return`
 <div class="sec-hdr" style="margin-bottom:10px">
   <div><h1>${skIcn('dashboard',26,26)} Tổng quan EBIT — Phòng KSCL</h1><p style="color:var(--t2);font-size:13px">${now}</p></div>
+  <button class="btn b-out b-sm" onclick="S.tongHopAllData=null;S._thLoading=0;tongHopLoadAll().then(()=>go('dashboard'))" title="Tải lại dữ liệu mới nhất từ QC & Kiểm kê">🔄 Tải lại</button>
 </div>
 
 <!-- Filter bar -->
