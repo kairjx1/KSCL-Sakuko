@@ -352,7 +352,8 @@ async function checkPermission(session) {
       try {
         await db.ref(`portal_users/${key}`).set({
           name: session.name || '', email: session.email || '', type: session.type,
-          avatar: session.avatar || '', status: 'approved', role: 'staff',
+          avatar: session.avatar || '', status: 'approved',
+          role: session.type === 'lark' ? 'viewer' : 'staff',
           apps: ['academy', 'kiemke'], created_at: Date.now()
         });
       } catch (e) { console.warn('DB write failed:', e.message); }
@@ -455,7 +456,7 @@ async function handleLarkCallback() {
           await db.ref(`portal_users/${uKey}`).set({
             name: j.user.name || '', email: j.user.email || '',
             open_id: j.user.open_id, type: 'lark',
-            avatar: j.user.avatar || '', status: 'approved', role: 'staff',
+            avatar: j.user.avatar || '', status: 'approved', role: 'viewer',
             created_at: Date.now()
           });
         } else {

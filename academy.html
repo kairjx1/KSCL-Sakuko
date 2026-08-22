@@ -6470,13 +6470,16 @@ function loadUsers(){
     db.ref('profiles').get()
   ]).then(([puSnap, prSnap])=>{
     const rows = {};
-    // profiles (cũ) — key = uid
-    if(prSnap.exists()) Object.entries(prSnap.val()).forEach(([uid,u])=>{
-      rows['pr_'+uid] = {...u, _src:'profiles', _key:uid, type:'Email'};
-    });
-    // portal_users (mới) — key = fb_{uid} hoặc lark_{open_id}
+    const seenEmails = new Set();
+    // portal_users (ưu tiên — Lark + Email login mới)
     if(puSnap.exists()) Object.entries(puSnap.val()).forEach(([uid,u])=>{
       rows[uid] = {...u, _src:'portal_users', _key:uid, type: u.type==='lark'?'Lark':'Email'};
+      if(u.email) seenEmails.add(u.email.toLowerCase());
+    });
+    // profiles (cũ) — chỉ thêm nếu email chưa có trong portal_users
+    if(prSnap.exists()) Object.entries(prSnap.val()).forEach(([uid,u])=>{
+      if(u.email && seenEmails.has(u.email.toLowerCase())) return; // bỏ qua duplicate
+      rows['pr_'+uid] = {...u, _src:'profiles', _key:uid, type:'Email'};
     });
     const users = Object.entries(rows);
     if(!users.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="es-ic">👥</div><p>Chưa có tài khoản nào</p></div></td></tr>`;return;}
