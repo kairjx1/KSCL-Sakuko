@@ -440,14 +440,29 @@ async function handleLarkCallback() {
       history.replaceState(null, '', location.pathname);
       try { await auth.signInAnonymously(); } catch (e) { console.warn('Anonymous auth failed:', e.message); }
       // Lưu lark_token vào Firebase để bot dùng khi tạo task
+      const uKey = 'lark_' + j.user.open_id;
       if (j.user.open_id && j.access_token) {
-        const uKey = 'lark_' + j.user.open_id;
         try {
           await db.ref(`portal_users/${uKey}/lark_token`).set(j.access_token);
           await db.ref(`portal_users/${uKey}/open_id`).set(j.user.open_id);
           await db.ref(`portal_users/${uKey}/lark_token_ts`).set(Date.now());
         } catch (e) { console.warn('lark_token save failed:', e.message); }
       }
+      // Đảm bảo record user tồn tại trong portal_users (để admin thấy)
+      try {
+        const snap = await db.ref(`portal_users/${uKey}`).get();
+        if (!snap.exists()) {
+          await db.ref(`portal_users/${uKey}`).set({
+            name: j.user.name || '', email: j.user.email || '',
+            open_id: j.user.open_id, type: 'lark',
+            avatar: j.user.avatar || '', status: 'approved', role: 'staff',
+            created_at: Date.now()
+          });
+        } else {
+          // Cập nhật tên/avatar nếu đổi
+          await db.ref(`portal_users/${uKey}`).update({ name: j.user.name || '', avatar: j.user.avatar || '' });
+        }
+      } catch (e) { console.warn('portal_users write failed:', e.message); }
       checkPermission(session);
       return true;
     } else { showErr('Đăng nhập Lark thất bại: ' + (j.error || '')); }

@@ -6452,32 +6452,46 @@ async function doAddUser(){
     if(errEl)errEl.innerHTML=`<div class="err-box">${e.message}</div>`;
   }
 }
-async function setRole(uid,role){
-  await db.ref(`profiles/${uid}/role`).set(role);
+async function setRole(src,uid,role){
+  await db.ref(`${src}/${uid}/role`).set(role);
   toast('Đã cập nhật vai trò','t-ok'); loadUsers();
 }
-async function delUser(uid,name){
+async function delUser(src,uid,name){
   if(!confirm(`Xóa tài khoản "${name}"? Hành động này không thể hoàn tác.`))return;
-  await db.ref(`profiles/${uid}`).remove();
+  await db.ref(`${src}/${uid}`).remove();
   toast(`Đã xóa ${name}`,'t-ok'); loadUsers();
 }
 
 function loadUsers(){
   const tbody=document.getElementById('ul');if(!tbody||!isAdmin())return;
-  db.ref('profiles').get().then(snap=>{
-    if(!snap.exists()){tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="es-ic">👥</div><p>Chưa có tài khoản nào</p></div></td></tr>`;return;}
-    const users=Object.entries(snap.val());
+  // Đọc cả portal_users (Lark + Email login mới) lẫn profiles (cũ)
+  Promise.all([
+    db.ref('portal_users').get(),
+    db.ref('profiles').get()
+  ]).then(([puSnap, prSnap])=>{
+    const rows = {};
+    // profiles (cũ) — key = uid
+    if(prSnap.exists()) Object.entries(prSnap.val()).forEach(([uid,u])=>{
+      rows['pr_'+uid] = {...u, _src:'profiles', _key:uid, type:'Email'};
+    });
+    // portal_users (mới) — key = fb_{uid} hoặc lark_{open_id}
+    if(puSnap.exists()) Object.entries(puSnap.val()).forEach(([uid,u])=>{
+      rows[uid] = {...u, _src:'portal_users', _key:uid, type: u.type==='lark'?'Lark':'Email'};
+    });
+    const users = Object.entries(rows);
+    if(!users.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><div class="es-ic">👥</div><p>Chưa có tài khoản nào</p></div></td></tr>`;return;}
     tbody.innerHTML=users.map(([uid,u])=>{
-      const r=ROLES[u.role]||ROLES.viewer;
+      const src=u._src||'portal_users'; const key=u._key||uid;
+      const typeBdg=u.type==='Lark'?`<span class="bdg" style="background:#0ea5e918;color:#0ea5e9;font-size:10px">Lark</span>`:`<span class="bdg" style="background:#64748b18;color:#64748b;font-size:10px">Email</span>`;
       return`<tr>
-        <td><strong>${u.name||'—'}</strong></td>
+        <td><strong>${u.name||'—'}</strong> ${typeBdg}</td>
         <td style="color:var(--t2);font-size:12px">${u.email||''}</td>
-        <td>${u.dept||'—'}</td>
-        <td><select onchange="setRole('${uid}',this.value)" style="padding:4px 8px;font-size:12px;border-radius:6px">
+        <td>${u.dept||u.phong_ban||'—'}</td>
+        <td><select onchange="setRole('${src}','${key}',this.value)" style="padding:4px 8px;font-size:12px;border-radius:6px">
           ${Object.entries(ROLES).map(([k,r])=>`<option value="${k}"${u.role===k?' selected':''}>${r.label}</option>`).join('')}
         </select></td>
-        <td style="color:var(--t2);font-size:12px">${u.createdAt?new Date(u.createdAt).toLocaleDateString('vi-VN'):'—'}</td>
-        <td><button class="btn b-danger b-sm" onclick="delUser('${uid}','${(u.name||u.email||'').replace(/'/g,'').replace(/"/g,'')}')">🗑 Xóa</button></td>
+        <td style="color:var(--t2);font-size:12px">${(u.createdAt||u.created_at)?new Date(u.createdAt||u.created_at).toLocaleDateString('vi-VN'):'—'}</td>
+        <td><button class="btn b-danger b-sm" onclick="delUser('${src}','${key}','${(u.name||u.email||'').replace(/'/g,'').replace(/"/g,'')}')">🗑 Xóa</button></td>
       </tr>`;
     }).join('');
   });
