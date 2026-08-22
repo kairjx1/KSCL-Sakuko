@@ -460,9 +460,13 @@ async function handleLarkCallback() {
       const uKey = 'lark_' + j.user.open_id;
       if (j.user.open_id && j.access_token) {
         try {
-          await db.ref(`portal_users/${uKey}/lark_token`).set(j.access_token);
-          await db.ref(`portal_users/${uKey}/open_id`).set(j.user.open_id);
-          await db.ref(`portal_users/${uKey}/lark_token_ts`).set(Date.now());
+          await db.ref(`portal_users/${uKey}`).update({
+            lark_token: j.access_token,
+            lark_refresh_token: j.refresh_token || '',
+            lark_token_ts: Date.now(),
+            lark_token_exp: Date.now() + (j.expires_in || 7200) * 1000,
+            open_id: j.user.open_id
+          });
         } catch (e) { console.warn('lark_token save failed:', e.message); }
       }
       // Đảm bảo record user tồn tại trong portal_users (để admin thấy)

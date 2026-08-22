@@ -69,6 +69,8 @@ export async function onRequest({ request, env }) {
         if (tokenResp.code !== 0) throw new Error(tokenResp.msg || 'Token exchange failed');
 
         const userToken = tokenResp.data.access_token;
+        const refreshToken = tokenResp.data.refresh_token || '';
+        const expiresIn = tokenResp.data.expires_in || 7200; // seconds
         const infoResp = await getUserInfo(userToken);
         if (infoResp.code !== 0) throw new Error(infoResp.msg || 'User info failed');
 
@@ -76,6 +78,9 @@ export async function onRequest({ request, env }) {
         return new Response(JSON.stringify({
           ok: true,
           access_token: userToken,
+          refresh_token: refreshToken,
+          expires_in: expiresIn,
+          token_ts: Date.now(),
           user: {
             open_id: u.open_id,
             name: u.name,
