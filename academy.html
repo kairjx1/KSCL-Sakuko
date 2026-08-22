@@ -338,13 +338,37 @@ const ADMIN_EMAILS=["kairjx1@gmail.com"];
    ROLES – 6 cấp phân quyền
 ══════════════════════════════════════════ */
 const ROLES={
-  superadmin:{label:'Quản trị viên',color:'#7c3aed',all:true,admin:true},
-  admin:      {label:'Admin',color:'#0066cc',all:true,admin:true},
-  manager:    {label:'Quản lý',color:'#059669',mods:['dashboard','kk','qc','congviec','baocao','daotao','nhansu','appkscl']},
-  staff_kk:   {label:'NV Kiểm kê',color:'#2563eb',mods:['dashboard','kk','congviec','daotao','appkscl']},
-  staff_qc:   {label:'NV QC',color:'#dc2626',mods:['dashboard','qc','congviec','daotao']},
-  viewer:     {label:'Xem',color:'#64748b',mods:['dashboard','daotao']}
+  superadmin:{label:'Quản trị viên',color:'#7c3aed',all:true,admin:true,
+    cv:{xem:true,xu_ly:true,tao:true,giao:true,cfg:true,nhac:true,xoa:true}},
+  admin:      {label:'Admin',color:'#0066cc',all:true,admin:true,
+    cv:{xem:true,xu_ly:true,tao:true,giao:true,cfg:true,nhac:true,xoa:true}},
+  manager:    {label:'Quản lý',color:'#059669',mods:['dashboard','kk','qc','congviec','baocao','daotao','nhansu','appkscl'],
+    cv:{xem:true,xu_ly:true,tao:true,giao:false,cfg:false,nhac:true,xoa:false}},
+  staff_kk:   {label:'NV Kiểm kê',color:'#2563eb',mods:['dashboard','kk','congviec','daotao','appkscl'],
+    cv:{xem:true,xu_ly:true,tao:false,giao:false,cfg:false,nhac:false,xoa:false}},
+  staff_qc:   {label:'NV QC',color:'#dc2626',mods:['dashboard','qc','congviec','daotao'],
+    cv:{xem:true,xu_ly:true,tao:false,giao:false,cfg:false,nhac:false,xoa:false}},
+  viewer:     {label:'Xem',color:'#64748b',mods:['dashboard','daotao'],
+    cv:{xem:false,xu_ly:false,tao:false,giao:false,cfg:false,nhac:false,xoa:false}}
 };
+// Helpers phân quyền công việc — đọc từ _permCfg (Firebase) nếu có, fallback ROLES
+function cvCan(perm){
+  const role=S.profile?.role;
+  if(!role)return false;
+  if(ROLES[role]?.all)return true; // superadmin/admin luôn được
+  if(_permCfg?.[role]) return !!_permCfg[role]['cv_'+perm];
+  const r=ROLES[role];
+  return!!(r?.cv?.[perm]);
+}
+function canAccess(id){
+  if(!S.profile)return false;
+  const role=S.profile.role;
+  const r=ROLES[role];
+  if(!r)return false;
+  if(r.all)return true;
+  if(_permCfg?.[role]) return !!_permCfg[role][id];
+  return(r.mods||[]).includes(id);
+}
 
 /* ══════════════════════════════════════════
    MODULES
@@ -404,6 +428,8 @@ auth.onAuthStateChanged(async u=>{
           S.profile.role=ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer';
           db.ref(`profiles/${u.uid}/role`).set(S.profile.role);
         }
+        // Load permission config từ Firebase (async, không block)
+        _loadPermCfg().catch(()=>{});
         go('dashboard');window.chatShowFab?.(true);
       } else {
         // New user — auto-create from Lark if available, else show form
@@ -445,15 +471,7 @@ auth.onAuthStateChanged(async u=>{
   }
 });
 
-/* ══════════════════════════════════════════
-   PERMISSIONS
-══════════════════════════════════════════ */
-function canAccess(id){
-  if(!S.profile)return false;
-  const r=ROLES[S.profile.role];
-  if(!r)return false;
-  return r.all||(r.mods||[]).includes(id);
-}
+/* canAccess & isAdmin defined in ROLES section above */
 function isAdmin(){return!!(S.profile&&ROLES[S.profile.role]?.admin)}
 
 /* ══════════════════════════════════════════
@@ -3205,7 +3223,7 @@ const CV_STATUS={chua_lam:{label:'Chưa làm',cls:'b-err',icon:'🔴'},dang_lam:
 function rCongViec(){
   const tab=S.tab||'Tất cả';
   const tabs=['Tất cả','📦 Kiểm kê','🔬 QC','📋 Đã giao','⬜ Chưa giao','✅ Đã xong'];
-  if(isAdmin()) tabs.push('⚙️ Cấu hình Bot');
+  if(cvCan('cfg')) tabs.push('⚙️ Cấu hình Bot');
   if(tab==='⚙️ Cấu hình Bot'){
     requestAnimationFrame(()=>cvCfgLoad());
     return`
@@ -3220,10 +3238,10 @@ ${rCvConfig()}`;
 <div class="sec-hdr">
   <h1>${skIcn('congviec',26,26)} Nhiệm vụ & Theo dõi</h1>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    ${isAdmin()?`<button class="btn b-out b-sm" id="cv-sync-btn" onclick="cvSyncLark()" title="Đồng bộ trạng thái hoàn thành từ Lark Task vào đây">🔄 Đồng bộ Lark</button>`:''}
-    ${isAdmin()?`<button class="btn b-pri b-sm" onclick="cvAddModal()">+ Tạo nhiệm vụ</button>`:''}
-    ${isAdmin()&&tab==='✅ Đã xong'?`<button class="btn b-danger b-sm" onclick="cvDeleteDone()" title="Xóa tất cả nhiệm vụ đã xong">🗑 Xóa đã xong</button>`:''}
-    ${isAdmin()&&tab!=='✅ Đã xong'?`<button class="btn b-danger b-sm" onclick="cvDeleteAll()" title="Xóa tất cả nhiệm vụ cũ">🗑 Xóa tất cả</button>`:''}
+    ${cvCan('giao')||isAdmin()?`<button class="btn b-out b-sm" id="cv-sync-btn" onclick="cvSyncLark()" title="Đồng bộ trạng thái hoàn thành từ Lark Task vào đây">🔄 Đồng bộ Lark</button>`:''}
+    ${cvCan('tao')?`<button class="btn b-pri b-sm" onclick="cvAddModal()">+ Tạo nhiệm vụ</button>`:''}
+    ${cvCan('xoa')&&tab==='✅ Đã xong'?`<button class="btn b-danger b-sm" onclick="cvDeleteDone()" title="Xóa tất cả nhiệm vụ đã xong">🗑 Xóa đã xong</button>`:''}
+    ${cvCan('xoa')&&tab!=='✅ Đã xong'?`<button class="btn b-danger b-sm" onclick="cvDeleteAll()" title="Xóa tất cả nhiệm vụ cũ">🗑 Xóa tất cả</button>`:''}
     <button class="btn b-warn b-sm" id="cv-giao-btn" style="display:none" onclick="cvGiaoViec()">📋 Giao việc (<span id="cv-sel-cnt">0</span>)</button>
   </div>
 </div>
@@ -3277,21 +3295,21 @@ function cvCard(t){
       ${t.trang_thai!=='dang_lam'?`<button class="btn b-out b-sm" onclick="cvSetStatus('${t.id}','dang_lam')">🔄 Đang xử lý</button>`:''}
       <button class="btn b-ok2 b-sm" onclick="cvSetStatus('${t.id}','hoan_thanh')">✅ Đánh dấu xong</button>
       <button class="btn b-out b-sm" onclick="cvNote('${t.id}')">💬 Ghi chú</button>
-      ${isAdmin()?`<button class="btn b-out b-sm" onclick="cvEditModal('${t.id}')" title="Sửa nhiệm vụ">✏️ Sửa</button>`:''}
-      ${isAdmin()?`<button class="btn b-danger b-sm" onclick="cvDelete('${t.id}')">🗑 Xóa</button>`:''}
-      ${isAdmin()?`<button class="btn b-out b-sm" onclick="cvRemindNow('${t.id}')" title="Gửi nhắc nhở ngay qua Lark DM">🔔 Nhắc</button>`:''}
-      ${isAdmin()?`<button class="btn b-out b-sm" id="cv-remind-sched-${t.id}" onclick="cvRemindSchedule('${t.id}',this)" title="Hẹn nhắc định kỳ đến khi xong" style="${t.reminder_interval?'color:#f59e0b;border-color:#f59e0b;font-weight:600':''}">⏰${t.reminder_interval?' '+(t.reminder_interval==='daily'?'Ngày':'Tuần'):''}</button>`:''}
+      ${cvCan('tao')?`<button class="btn b-out b-sm" onclick="cvEditModal('${t.id}')" title="Sửa nhiệm vụ">✏️ Sửa</button>`:''}
+      ${cvCan('xoa')?`<button class="btn b-danger b-sm" onclick="cvDelete('${t.id}')">🗑 Xóa</button>`:''}
+      ${cvCan('nhac')?`<button class="btn b-out b-sm" onclick="cvRemindNow('${t.id}')" title="Gửi nhắc nhở ngay qua Lark DM">🔔 Nhắc</button>`:''}
+      ${cvCan('nhac')?`<button class="btn b-out b-sm" id="cv-remind-sched-${t.id}" onclick="cvRemindSchedule('${t.id}',this)" title="Hẹn nhắc định kỳ đến khi xong" style="${t.reminder_interval?'color:#f59e0b;border-color:#f59e0b;font-weight:600':''}">⏰${t.reminder_interval?' '+(t.reminder_interval==='daily'?'Ngày':'Tuần'):''}</button>`:''}
     </div>`:
     `<div style="margin-top:10px;border-top:1px solid #f0f2f7;padding-top:10px;display:flex;gap:8px">
-      <button class="btn b-out b-sm" onclick="cvSetStatus('${t.id}','chua_lam')">↩ Mở lại</button>
-      ${isAdmin()?`<button class="btn b-out b-sm" onclick="cvEditModal('${t.id}')" title="Sửa nhiệm vụ">✏️ Sửa</button>`:''}
-      ${isAdmin()?`<button class="btn b-danger b-sm" onclick="cvDelete('${t.id}')">🗑 Xóa</button>`:''}
+      ${cvCan('xu_ly')?`<button class="btn b-out b-sm" onclick="cvSetStatus('${t.id}','chua_lam')">↩ Mở lại</button>`:''}
+      ${cvCan('tao')?`<button class="btn b-out b-sm" onclick="cvEditModal('${t.id}')" title="Sửa nhiệm vụ">✏️ Sửa</button>`:''}
+      ${cvCan('xoa')?`<button class="btn b-danger b-sm" onclick="cvDelete('${t.id}')">🗑 Xóa</button>`:''}
     </div>`;
   const hasLark=!!t.lark_task_id;
   return`<div class="card" style="margin-bottom:14px;border-left:4px solid ${md.color}">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
       <div style="display:flex;align-items:center;flex-wrap:wrap;gap:7px">
-        ${t.trang_thai!=='hoan_thanh'?`<input type="checkbox" id="cv-chk-${t.id}" onclick="cvToggleSelect('${t.id}',this)" style="width:17px;height:17px;cursor:pointer;flex-shrink:0;accent-color:#ea580c" title="Chọn để giao việc">`:''}
+        ${t.trang_thai!=='hoan_thanh'&&cvCan('giao')?`<input type="checkbox" id="cv-chk-${t.id}" onclick="cvToggleSelect('${t.id}',this)" style="width:17px;height:17px;cursor:pointer;flex-shrink:0;accent-color:#ea580c" title="Chọn để giao việc">`:''}
         <span class="bdg ${md.cls}">${md.label}</span>
         <span class="bdg" style="background:${loaiColor}18;color:${loaiColor}">${loaiIcon} ${t.loai||'—'}</span>
         <strong style="font-size:14px">📍 ${t.st||'—'}</strong>
@@ -5284,17 +5302,110 @@ function rUserList(){return`
 <tbody id="ul">
   <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--t2)">Đang tải...</td></tr>
 </tbody></table></div></div>`;}
+// ── Permission matrix: load/save từ Firebase ─────────────────────
+let _permCfg = null; // cache: {role: {perm: bool}}
+
+const PERM_COLS = [
+  {id:'kk',       lb:'Kiểm kê',    group:'Trang'},
+  {id:'qc',       lb:'QC',         group:'Trang'},
+  {id:'congviec', lb:'C.Việc (xem)',group:'Trang'},
+  {id:'baocao',   lb:'Báo cáo',    group:'Trang'},
+  {id:'daotao',   lb:'Đào tạo',    group:'Trang'},
+  {id:'nhansu',   lb:'Nhân sự',    group:'Trang'},
+  {id:'cv_xu_ly', lb:'Xử lý task', group:'Task'},
+  {id:'cv_tao',   lb:'Tạo task',   group:'Task'},
+  {id:'cv_giao',  lb:'Giao Lark',  group:'Task'},
+  {id:'cv_nhac',  lb:'Nhắc nhở',   group:'Task'},
+  {id:'cv_xoa',   lb:'Xóa task',   group:'Task'},
+  {id:'cv_cfg',   lb:'Bot Config', group:'Task'},
+];
+const PERM_LOCKED = ['superadmin','admin']; // luôn full, không cho sửa
+
+async function _loadPermCfg(){
+  const snap = await db.ref('bot_config/role_permissions').get();
+  const saved = snap.exists() ? snap.val() : {};
+  // Merge defaults từ ROLES
+  const cfg = {};
+  for(const [k,r] of Object.entries(ROLES)){
+    cfg[k] = {};
+    for(const col of PERM_COLS){
+      const id = col.id;
+      if(id.startsWith('cv_')){
+        const key = id.replace('cv_','');
+        const def = !!(r.all || r.cv?.[key]);
+        cfg[k][id] = saved[k]?.[id] ?? def;
+      } else {
+        const def = !!(r.all || (r.mods||[]).includes(id));
+        cfg[k][id] = saved[k]?.[id] ?? def;
+      }
+    }
+  }
+  _permCfg = cfg;
+  return cfg;
+}
+
+async function permToggle(role, perm){
+  if(PERM_LOCKED.includes(role)) return;
+  if(!_permCfg) return;
+  const cur = _permCfg[role]?.[perm] ?? false;
+  const newVal = !cur;
+  if(!_permCfg[role]) _permCfg[role] = {};
+  _permCfg[role][perm] = newVal;
+  await db.ref(`bot_config/role_permissions/${role}/${perm}`).set(newVal);
+  // Cập nhật ô trực tiếp (không re-render cả trang)
+  const cell = document.getElementById(`pm-${role}-${perm}`);
+  if(cell) cell.innerHTML = newVal
+    ? '<span style="color:#16a34a;font-size:20px;font-weight:700">✓</span>'
+    : '<span style="color:#cbd5e1;font-size:18px">—</span>';
+  toast(`${newVal?'✅ Bật':'🚫 Tắt'} quyền "${PERM_COLS.find(c=>c.id===perm)?.lb}" cho ${ROLES[role]?.label}`,'t-ok');
+}
+
 function rRoleMatrix(){
-  const perms=['kk','qc','congviec','baocao','daotao','nhansu','admin'];
-  const pLb={'kk':'Kiểm kê','qc':'QC','congviec':'C.việc','baocao':'Báo cáo','daotao':'Đào tạo','nhansu':'Nhân sự','admin':'Quản trị'};
-  return`<div class="card"><div style="font-weight:700;font-size:14px;margin-bottom:16px">Ma trận phân quyền theo vai trò</div>
-<div class="tw"><table>
-<thead><tr><th>Vai trò</th>${perms.map(p=>`<th style="text-align:center">${pLb[p]}</th>`).join('')}</tr></thead>
-<tbody>${Object.entries(ROLES).map(([k,r])=>`<tr>
-  <td><span class="bdg" style="background:${r.color}18;color:${r.color}">${r.label}</span></td>
-  ${perms.map(p=>`<td style="text-align:center">${(r.all||(r.mods||[]).includes(p))?'<span style="color:#16a34a;font-size:18px">✓</span>':'<span style="color:#e2e8f0;font-size:18px">—</span>'}</td>`).join('')}
-</tr>`).join('')}
-</tbody></table></div></div>`;}
+  const groups = [...new Set(PERM_COLS.map(c=>c.group))];
+  // Async load rồi render vào placeholder
+  requestAnimationFrame(async()=>{
+    const cfg = await _loadPermCfg();
+    const tbody = document.getElementById('perm-tbody');
+    if(!tbody) return;
+    tbody.innerHTML = Object.entries(ROLES).map(([k,r])=>{
+      const locked = PERM_LOCKED.includes(k);
+      return`<tr>
+        <td style="white-space:nowrap"><span class="bdg" style="background:${r.color}18;color:${r.color}">${r.label}</span>${locked?'<span style="font-size:10px;color:#94a3b8;margin-left:4px">🔒</span>':''}</td>
+        ${PERM_COLS.map(col=>{
+          const has = locked ? true : (cfg[k]?.[col.id] ?? false);
+          const clickable = !locked;
+          return`<td id="pm-${k}-${col.id}" style="text-align:center;cursor:${clickable?'pointer':'default'};user-select:none;padding:10px 6px"
+            ${clickable?`onclick="permToggle('${k}','${col.id}')" title="Click để bật/tắt"`:''}
+            onmouseover="${clickable?`this.style.background='var(--hover)'`:''}"
+            onmouseout="${clickable?`this.style.background=''`:''}"
+          >${has
+            ?'<span style="color:#16a34a;font-size:20px;font-weight:700">✓</span>'
+            :'<span style="color:#cbd5e1;font-size:18px">—</span>'
+          }</td>`;
+        }).join('')}
+      </tr>`;
+    }).join('');
+  });
+  // Header nhóm
+  const groupHeader = groups.map(g=>{
+    const cols = PERM_COLS.filter(c=>c.group===g);
+    return`<th colspan="${cols.length}" style="text-align:center;background:var(--hover);font-size:11px;color:var(--t2);padding:4px 0;letter-spacing:.5px">${g==='Trang'?'📄 Trang':'📋 Công việc'}</th>`;
+  }).join('');
+  return`<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div style="font-weight:700;font-size:14px">Ma trận phân quyền theo vai trò</div>
+    <span style="font-size:12px;color:var(--t2)">💡 Click vào ô để bật/tắt quyền (trừ 🔒)</span>
+  </div>
+<div class="tw" style="overflow-x:auto"><table>
+<thead>
+  <tr><th rowspan="2">Vai trò</th>${groupHeader}</tr>
+  <tr>${PERM_COLS.map(c=>`<th style="text-align:center;font-size:11.5px;white-space:nowrap;padding:6px 8px">${c.lb}</th>`).join('')}</tr>
+</thead>
+<tbody id="perm-tbody">
+  <tr><td colspan="${PERM_COLS.length+1}" style="text-align:center;padding:24px;color:var(--t2)">⏳ Đang tải...</td></tr>
+</tbody>
+</table></div></div>`;
+}
 function rKPISettings(){return`
 <div class="g2">
   <div class="card"><div style="font-weight:700;font-size:14px;margin-bottom:16px">⚙️ Ngưỡng cảnh báo KPI</div>
