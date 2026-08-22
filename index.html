@@ -448,12 +448,9 @@ async function handleLarkCallback() {
         } catch(eLogin) {
           if (['auth/user-not-found','auth/invalid-credential','auth/wrong-password','auth/invalid-login-credentials'].includes(eLogin.code)) {
             try {
-              await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${fbKey}`,{
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({email: j.user.email, password: larkPass, returnSecureToken: false})
-              });
-              await auth.signInWithEmailAndPassword(j.user.email, larkPass);
-            } catch(eReg) { console.warn('Firebase Lark register failed:', eReg.message); try { await auth.signInAnonymously(); } catch(_){} }
+              await auth.createUserWithEmailAndPassword(j.user.email, larkPass);
+              console.log('[Lark] Firebase account created OK');
+            } catch(eReg) { console.warn('[Lark] createUser failed:', eReg.code, eReg.message); try { await auth.signInAnonymously(); } catch(_){} }
           } else { console.warn('Firebase Lark login failed:', eLogin.message); try { await auth.signInAnonymously(); } catch(_){} }
         }
       } else {

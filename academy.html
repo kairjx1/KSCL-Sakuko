@@ -487,18 +487,10 @@ auth.onAuthStateChanged(async u=>{
             // Tạo account nếu chưa có
             if (['auth/user-not-found','auth/invalid-credential','auth/wrong-password','auth/invalid-login-credentials','auth/invalid-email','auth/internal-error'].includes(eL.code)) {
               try {
-                const regRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FB.apiKey}`, {
-                  method: 'POST', headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({email: ps.email, password: larkPass, returnSecureToken: false})
-                });
-                const regJ = await regRes.json();
-                console.log('[Lark] signUp result:', regJ.error?.message || 'OK');
-                if (!regJ.error) {
-                  await auth.signInWithEmailAndPassword(ps.email, larkPass);
-                  console.log('[Lark] Firebase sign-in after register OK');
-                  return;
-                }
-              } catch(eReg) { console.warn('[Lark] register failed:', eReg.message); }
+                await auth.createUserWithEmailAndPassword(ps.email, larkPass);
+                console.log('[Lark] Firebase account created + signed in OK');
+                return;
+              } catch(eReg) { console.warn('[Lark] createUser failed:', eReg.code, eReg.message); }
             }
           }
         }
