@@ -3474,7 +3474,7 @@ async function cvGiaoViec(){
 
 // ── Remind functions ──────────────────────────────────────────────
 async function cvRemindNow(taskId){
-  if(!isAdmin())return;
+  if(!cvCan('nhac'))return;
   const btn=event?.target;
   if(btn){const orig=btn.textContent;btn.disabled=true;btn.textContent='⏳';
     try{
@@ -3489,7 +3489,7 @@ async function cvRemindNow(taskId){
 }
 
 function cvRemindSchedule(taskId, btn){
-  if(!isAdmin())return;
+  if(!cvCan('nhac'))return;
   // Popup mini chọn interval
   const existing=document.getElementById('cv-remind-popup');
   if(existing)existing.remove();
@@ -3555,7 +3555,7 @@ async function cvSetReminder(taskId, interval, pop){
 }
 
 async function cvDeleteDone(){
-  if(!isAdmin())return;
+  if(!cvCan('xoa'))return;
   if(!confirm('Xóa tất cả nhiệm vụ ĐÃ XONG?\n\nThao tác này không thể hoàn tác!'))return;
   try{
     const snap=await db.ref('bot_tasks').get();
@@ -3572,7 +3572,7 @@ async function cvDeleteDone(){
 }
 
 async function cvDeleteAll(){
-  if(!isAdmin())return;
+  if(!cvCan('xoa'))return;
   if(!confirm('Xóa TẤT CẢ nhiệm vụ?\n\nThao tác này không thể hoàn tác!'))return;
   try{
     await db.ref('bot_tasks').remove();
