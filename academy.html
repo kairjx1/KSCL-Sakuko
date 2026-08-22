@@ -3350,8 +3350,8 @@ function cvCard(t){
   const doneRow=t.trang_thai==='hoan_thanh'&&t.hoan_thanh_boi?`<div style="margin-top:8px;font-size:12px;color:var(--ok)">✅ Hoàn thành bởi <strong>${t.hoan_thanh_boi}</strong>${t.hoan_thanh_luc?' · '+new Date(t.hoan_thanh_luc).toLocaleString('vi-VN'):''}</div>`:'';
   const actions=t.trang_thai!=='hoan_thanh'?`
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid #f0f2f7;padding-top:12px">
-      ${t.trang_thai!=='dang_lam'?`<button class="btn b-out b-sm" onclick="cvSetStatus('${t.id}','dang_lam')">🔄 Đang xử lý</button>`:''}
-      <button class="btn b-ok2 b-sm" onclick="cvSetStatus('${t.id}','hoan_thanh')">✅ Đánh dấu xong</button>
+      ${cvCan('xu_ly')&&t.trang_thai!=='dang_lam'?`<button class="btn b-out b-sm" onclick="cvSetStatus('${t.id}','dang_lam')">🔄 Đang xử lý</button>`:''}
+      ${cvCan('xu_ly')?`<button class="btn b-ok2 b-sm" onclick="cvSetStatus('${t.id}','hoan_thanh')">✅ Đánh dấu xong</button>`:''}
       <button class="btn b-out b-sm" onclick="cvNote('${t.id}')">💬 Ghi chú</button>
       ${cvCan('tao')?`<button class="btn b-out b-sm" onclick="cvEditModal('${t.id}')" title="Sửa nhiệm vụ">✏️ Sửa</button>`:''}
       ${cvCan('xoa')?`<button class="btn b-danger b-sm" onclick="cvDelete('${t.id}')">🗑 Xóa</button>`:''}
