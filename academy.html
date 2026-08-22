@@ -89,6 +89,24 @@ input:focus,select:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(0,102
 .ico-btn{width:36px;height:36px;border-radius:50%;background:transparent;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--t2);cursor:pointer;transition:.15s;position:relative}
 .ico-btn:hover{background:#f0f2f7;color:var(--t1)}
 .notif-dot{position:absolute;top:5px;right:5px;width:7px;height:7px;background:var(--err);border-radius:50%;border:2px solid #fff}
+.notif-badge{position:absolute;top:2px;right:2px;min-width:16px;height:16px;background:var(--err);border-radius:8px;border:2px solid #fff;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
+#notif-panel{position:fixed;top:56px;right:12px;width:360px;max-height:500px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:9999;display:none;flex-direction:column;overflow:hidden}
+#notif-panel.open{display:flex}
+#notif-panel .np-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px}
+#notif-panel .np-list{overflow-y:auto;flex:1;padding:4px 0}
+#notif-panel .np-list::-webkit-scrollbar{width:4px}#notif-panel .np-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+#notif-panel .np-item{padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;display:flex;gap:10px;align-items:flex-start;cursor:default;transition:.1s}
+#notif-panel .np-item:hover{background:var(--hover)}
+#notif-panel .np-item:last-child{border-bottom:none}
+#notif-panel .np-ic{font-size:18px;flex-shrink:0;margin-top:1px}
+#notif-panel .np-body{flex:1;min-width:0}
+#notif-panel .np-who{font-weight:600;color:var(--t1)}
+#notif-panel .np-act{color:var(--t2);margin-top:2px}
+#notif-panel .np-time{color:var(--t3);font-size:11px;margin-top:3px}
+#notif-panel .np-empty{padding:32px;text-align:center;color:var(--t3);font-size:13px}
+#notif-panel .np-foot{padding:10px 16px;border-top:1px solid var(--border);text-align:center}
+#notif-overlay{position:fixed;inset:0;z-index:9998;display:none}
+#notif-overlay.open{display:block}
 .tb-av{width:36px;height:36px;border-radius:50%;background:var(--pri);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;cursor:pointer;font-size:14px}
 .content{flex:1;overflow-y:auto;padding:20px}
 .content::-webkit-scrollbar{width:6px}.content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
@@ -442,6 +460,7 @@ auth.onAuthStateChanged(async u=>{
         }
         // Load permission config từ Firebase (async, không block)
         _loadPermCfg().catch(()=>{});
+        initNotifListener();
         go('dashboard');window.chatShowFab?.(true);
       } else {
         // New user — auto-create from Lark if available, else show form
@@ -457,6 +476,7 @@ auth.onAuthStateChanged(async u=>{
           const ln=lark?.name||ps2?.name||'';
           S.profile={name:ln,email:u.email,role:initRole,dept:'',phone:'',createdAt:Date.now(),larkId:larkOid||''};
           await db.ref(`profiles/${u.uid}`).set(S.profile);
+          initNotifListener();
           go('dashboard');window.chatShowFab?.(true);
         } else {
           S.profile={name:'',email:u.email,role:ADMIN_EMAILS.includes(u.email)?'superadmin':'viewer',dept:'',phone:'',createdAt:Date.now()};
@@ -520,6 +540,7 @@ auth.onAuthStateChanged(async u=>{
             _loadPermCfg().then(()=>{ render(); toast('🔄 Quyền của bạn vừa được cập nhật','t-info'); }).catch(()=>{ render(); });
           }
         });
+        initNotifListener();
         go('dashboard'); window.chatShowFab?.(true);
         return;
       }
@@ -629,7 +650,7 @@ function rShell(){
         <div class="tb-title">${m.lb||'KSCL System'}</div>
         <div class="tb-search"><span class="tb-s-ic">🔍</span><input placeholder="Tìm kiếm..."></div>
         <div class="tb-acts">
-          <div class="ico-btn" onclick="go('baocao')" title="Thông báo">🔔<div class="notif-dot"></div></div>
+          <div class="ico-btn" id="notif-btn" onclick="toggleNotifPanel()" title="Nhật ký hoạt động">🔔<div id="notif-badge" class="notif-badge" style="display:none">0</div></div>
           <div class="tb-av" onclick="showModal('profile')">${av}</div>
         </div>
       </div>
@@ -890,7 +911,7 @@ function rDashboard(){
   return`
 <div class="sec-hdr" style="margin-bottom:10px">
   <div><h1>${skIcn('dashboard',26,26)} Tổng quan EBIT — Phòng KSCL</h1><p style="color:var(--t2);font-size:13px">${now}</p></div>
-  <button class="btn b-out b-sm" onclick="S.tongHopAllData=null;S._thLoading=0;tongHopLoadAll().then(()=>go('dashboard'))" title="Tải lại dữ liệu mới nhất từ QC & Kiểm kê">🔄 Tải lại</button>
+  <button class="btn b-out b-sm" onclick="logActivity('tai_lai','Tải lại dữ liệu Tổng quan');S.tongHopAllData=null;S._thLoading=0;tongHopLoadAll().then(()=>go('dashboard'))" title="Tải lại dữ liệu mới nhất từ QC & Kiểm kê">🔄 Tải lại</button>
 </div>
 
 <!-- Filter bar -->
@@ -3389,9 +3410,11 @@ async function cvSetStatus(id,status){
   if(status==='hoan_thanh'){upd.hoan_thanh_luc=Date.now();upd.hoan_thanh_boi=S.profile?.name||S.user?.email||'?';}
   if(status==='chua_lam'){upd.hoan_thanh_luc=null;upd.hoan_thanh_boi=null;}
   try{
+    const taskTitle=window._cvTasks?.[id]?.van_de||id;
     await db.ref('bot_tasks/'+id).update(upd);
     const msg={hoan_thanh:'✅ Đã hoàn thành!',dang_lam:'🔄 Đang xử lý...',chua_lam:'↩ Đã mở lại'};
     toast(msg[status]||'✅ Đã cập nhật','t-ok');
+    logActivity(status, '', taskTitle);
 
     // Đồng bộ trạng thái ngược lên Lark nếu có lark_task_id
     const t=window._cvTasks?.[id];
@@ -3410,8 +3433,9 @@ async function cvSetStatus(id,status){
 
 function cvNote(id){
   const n=prompt('Thêm ghi chú:');if(n===null)return;
+  const taskTitle=window._cvTasks?.[id]?.van_de||id;
   db.ref('bot_tasks/'+id).update({ghi_chu:n.trim(),ghi_chu_boi:S.profile?.name||'?',ghi_chu_luc:Date.now()})
-    .then(()=>{toast('💬 Đã lưu ghi chú','t-ok');cvLoad();}).catch(e=>toast('❌ '+e.message,'t-err'));
+    .then(()=>{toast('💬 Đã lưu ghi chú','t-ok');logActivity('ghi_chu',n.trim().substring(0,50),taskTitle);cvLoad();}).catch(e=>toast('❌ '+e.message,'t-err'));
 }
 
 function cvEditModal(id){
@@ -3488,8 +3512,9 @@ async function cvEditSave(id){
 
 function cvDelete(id){
   if(!confirm('Xóa nhiệm vụ này?'))return;
+  const taskTitle=window._cvTasks?.[id]?.van_de||id;
   _cvSelected.delete(id);cvUpdateGiaoBtn();
-  db.ref('bot_tasks/'+id).remove().then(()=>{toast('🗑 Đã xóa','t-ok');cvLoad();}).catch(e=>toast('❌ '+e.message,'t-err'));
+  db.ref('bot_tasks/'+id).remove().then(()=>{toast('🗑 Đã xóa','t-ok');logActivity('xoa_task','',taskTitle);cvLoad();}).catch(e=>toast('❌ '+e.message,'t-err'));
 }
 
 // ── Chọn task & Giao việc ──────────────────────────────────────
@@ -3522,6 +3547,7 @@ async function cvGiaoViec(){
     const j=await r.json();
     if(j.ok){
       toast(`✅ Đã tạo ${j.created}/${j.total} Lark task cho NV${j.skipped?` · ${j.skipped} đã có`:''}${j.errors?` · ${j.errors} lỗi`:''}`, 't-ok');
+      logActivity('giao_lark',`Tạo ${j.created}/${j.total} Lark task${j.errors?' · '+j.errors+' lỗi':''}`);
       _cvSelected.clear();cvUpdateGiaoBtn();cvLoad();
     } else {
       toast('❌ Giao việc thất bại: '+(j.error||'unknown'),'t-err');
@@ -3539,7 +3565,7 @@ async function cvRemindNow(taskId){
       const r=await fetch('/api/panel/remind-task',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({task_id:taskId}),signal:AbortSignal.timeout(15000)});
       const j=await r.json();
-      if(j.ok) toast(`🔔 Đã nhắc ${j.sent||0} người qua Lark`,'t-ok');
+      if(j.ok){toast(`🔔 Đã nhắc ${j.sent||0} người qua Lark`,'t-ok');const tTitle=window._cvTasks?.[taskId]?.van_de||'';logActivity('remind',`Nhắc ${j.sent||0} người`,tTitle);}
       else toast('⚠️ Lỗi nhắc: '+(j.error||'?'),'t-warn');
     }catch(e){toast('⚠️ Lỗi: '+e.message,'t-warn');}
     finally{btn.disabled=false;btn.textContent='🔔 Nhắc';}
@@ -3780,6 +3806,7 @@ async function cvAddSave(){
     const fbKey=ref.key;
     document.getElementById('cv-add-ov').remove();
     toast('✅ Đã tạo nhiệm vụ','t-ok');
+    logActivity('tao_task', task.loai||'', task.van_de||task.st||'Nhiệm vụ mới');
     // Tự đẩy Lark task nếu có assignee
     if(_cvAssignees.length>0&&fbKey){
       toast('📤 Đang gửi task lên Lark...','t-info');
@@ -6525,6 +6552,7 @@ async function syncRoles(btn){
     await _loadPermCfg();
     loadUsers();
     render();
+    logActivity('dong_bo','Đồng bộ quyền thành công');
     toast('✅ Đã đồng bộ quyền','t-ok');
   }catch(e){toast('❌ Lỗi đồng bộ: '+e.message,'t-err');}
   finally{if(btn){btn.disabled=false;btn.textContent='🔄 Đồng bộ quyền';}}
@@ -8312,6 +8340,122 @@ window.addEventListener('beforeunload',e=>{
     if(fab)fab.style.display=show?'flex':'none';
   };
 })();
+
+// ── Activity Log (Nhật ký hoạt động) ─────────────────────────────
+const ACTIVITY_ICONS={
+  hoan_thanh:'✅', chua_lam:'↩', dang_lam:'🔄',
+  tao_task:'📝', giao_lark:'📤', xoa_task:'🗑',
+  ghi_chu:'💬', tai_lai:'🔃', dong_bo:'🔄', remind:'🔔', default:'📋'
+};
+
+function logActivity(type, detail, taskTitle){
+  if(!db||!S.profile)return;
+  const name=S.profile.name||S.user?.email||'?';
+  const entry={
+    type, detail,
+    task_title: taskTitle||'',
+    user: name,
+    user_role: S.profile.role||'',
+    ts: Date.now()
+  };
+  db.ref('portal_activity_log').push(entry).catch(()=>{});
+}
+
+let _notifUnread=0;
+let _notifLastRead=parseInt(localStorage.getItem('notif_last_read')||'0');
+let _notifLogs=[];
+
+function initNotifListener(){
+  if(!db)return;
+  db.ref('portal_activity_log').orderByChild('ts').limitToLast(50).on('value',snap=>{
+    _notifLogs=[];
+    if(snap.exists()) snap.forEach(c=>{_notifLogs.unshift({id:c.key,...c.val()});});
+    _notifUnread=_notifLogs.filter(l=>l.ts>_notifLastRead).length;
+    const badge=document.getElementById('notif-badge');
+    if(badge){
+      badge.style.display=_notifUnread>0?'flex':'none';
+      badge.textContent=_notifUnread>9?'9+':_notifUnread;
+    }
+    // cập nhật panel nếu đang mở
+    if(document.getElementById('notif-panel')?.classList.contains('open')) renderNotifPanel();
+  });
+}
+
+function toggleNotifPanel(){
+  const panel=document.getElementById('notif-panel');
+  const overlay=document.getElementById('notif-overlay');
+  if(!panel)return;
+  const isOpen=panel.classList.contains('open');
+  if(isOpen){closeNotifPanel();return;}
+  panel.classList.add('open');
+  overlay.classList.add('open');
+  // đánh dấu đã đọc
+  _notifLastRead=Date.now();
+  localStorage.setItem('notif_last_read',_notifLastRead);
+  _notifUnread=0;
+  const badge=document.getElementById('notif-badge');
+  if(badge)badge.style.display='none';
+  renderNotifPanel();
+}
+
+function closeNotifPanel(){
+  document.getElementById('notif-panel')?.classList.remove('open');
+  document.getElementById('notif-overlay')?.classList.remove('open');
+}
+
+function renderNotifPanel(){
+  const panel=document.getElementById('notif-panel');
+  if(!panel)return;
+  const TYPE_LB={
+    hoan_thanh:'Đánh dấu hoàn thành', chua_lam:'Mở lại task', dang_lam:'Chuyển sang đang xử lý',
+    tao_task:'Tạo task mới', giao_lark:'Giao việc lên Lark', xoa_task:'Xóa task',
+    ghi_chu:'Thêm ghi chú', tai_lai:'Tải lại dữ liệu', dong_bo:'Đồng bộ quyền', remind:'Gửi nhắc nhở'
+  };
+  const items=_notifLogs.length?_notifLogs.map(l=>{
+    const ic=ACTIVITY_ICONS[l.type]||ACTIVITY_ICONS.default;
+    const lb=TYPE_LB[l.type]||l.type;
+    const timeStr=_fmtNotifTime(l.ts);
+    const taskPart=l.task_title?`<div class="np-act" style="font-size:12px;color:var(--t1);margin-top:1px">📋 ${l.task_title}</div>`:'';
+    const detail=l.detail?`<div class="np-act">${l.detail}</div>`:'';
+    return`<div class="np-item">
+      <div class="np-ic">${ic}</div>
+      <div class="np-body">
+        <div><span class="np-who">${l.user}</span> <span style="color:var(--t2);font-weight:400">${lb}</span></div>
+        ${taskPart}${detail}
+        <div class="np-time">${timeStr}</div>
+      </div>
+    </div>`;
+  }).join(''):`<div class="np-empty">Chưa có hoạt động nào</div>`;
+
+  panel.innerHTML=`
+    <div class="np-head">
+      <span>🔔 Nhật ký hoạt động</span>
+      <span onclick="closeNotifPanel()" style="cursor:pointer;color:var(--t2);font-size:18px;line-height:1">×</span>
+    </div>
+    <div class="np-list">${items}</div>
+    <div class="np-foot">
+      <button class="btn b-out b-sm" onclick="clearNotifLog()" style="font-size:12px">🗑 Xóa log</button>
+    </div>`;
+}
+
+function _fmtNotifTime(ts){
+  const d=new Date(ts), now=Date.now(), diff=now-ts;
+  if(diff<60000)return'Vừa xong';
+  if(diff<3600000)return Math.floor(diff/60000)+' phút trước';
+  if(diff<86400000)return Math.floor(diff/3600000)+' giờ trước';
+  return d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+
+async function clearNotifLog(){
+  if(!confirm('Xóa toàn bộ nhật ký hoạt động?'))return;
+  await db.ref('portal_activity_log').remove().catch(()=>{});
+  closeNotifPanel();
+}
 </script>
+
+<!-- Notif Panel -->
+<div id="notif-overlay" onclick="closeNotifPanel()"></div>
+<div id="notif-panel"></div>
+
 </body>
 </html>
