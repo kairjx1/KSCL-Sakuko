@@ -90,7 +90,7 @@ input:focus,select:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(0,102
 .ico-btn:hover{background:#f0f2f7;color:var(--t1)}
 .notif-dot{position:absolute;top:5px;right:5px;width:7px;height:7px;background:var(--err);border-radius:50%;border:2px solid #fff}
 .notif-badge{position:absolute;top:2px;right:2px;min-width:16px;height:16px;background:var(--err);border-radius:8px;border:2px solid #fff;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
-#notif-panel{position:fixed;top:56px;right:12px;width:360px;max-height:500px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:9999;display:none;flex-direction:column;overflow:hidden}
+#notif-panel{position:fixed;top:56px;right:12px;width:360px;max-height:500px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:100000;display:none;flex-direction:column;overflow:hidden}
 #notif-panel.open{display:flex}
 #notif-panel .np-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px}
 #notif-panel .np-list{overflow-y:auto;flex:1;padding:4px 0}
@@ -105,7 +105,7 @@ input:focus,select:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(0,102
 #notif-panel .np-time{color:var(--t3);font-size:11px;margin-top:3px}
 #notif-panel .np-empty{padding:32px;text-align:center;color:var(--t3);font-size:13px}
 #notif-panel .np-foot{padding:10px 16px;border-top:1px solid var(--border);text-align:center}
-#notif-overlay{position:fixed;inset:0;z-index:9998;display:none}
+#notif-overlay{position:fixed;inset:0;z-index:99999;display:none}
 #notif-overlay.open{display:block}
 .tb-av{width:36px;height:36px;border-radius:50%;background:var(--pri);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;cursor:pointer;font-size:14px}
 .content{flex:1;overflow-y:auto;padding:20px}
@@ -1356,7 +1356,7 @@ async function syncKKAll(btn){
   }
   if(btn){btn.disabled=false;btn.innerHTML='🔄 Đồng bộ tất cả';}
   go('kk','Tổng quan');
-  toast('✅ Đã đồng bộ 4 nguồn dữ liệu','t-ok');
+  toast('✅ Đã đồng bộ 4 nguồn dữ liệu','t-ok');logActivity('dong_bo','Đồng bộ 4 nguồn dữ liệu Kiểm kê');
 }
 function rKKChart(){return`
 <div class="g2" style="margin-bottom:16px">
@@ -1980,7 +1980,7 @@ async function syncXuatHuy(btn){
     go(S.page,S.tab);
     const yr=Object.keys(d.data||{}).sort().pop()||'';
     const ms=yr?Object.keys(d.data[yr]).sort():[];
-    toast(`✅ Xuất hủy ${yr}: ${ms[0]||''}→${ms[ms.length-1]||''} (${ms.length} tháng) · ${src}`,'t-ok');
+    toast(`✅ Xuất hủy ${yr}: ${ms[0]||''}→${ms[ms.length-1]||''} (${ms.length} tháng) · ${src}`,'t-ok');logActivity('dong_bo',`Đồng bộ Xuất hủy ${yr}: ${ms.length} tháng`);
   }catch(e){
     toast('❌ Lỗi đồng bộ xuất hủy: '+e.message,'t-err');
   }finally{
@@ -2842,7 +2842,7 @@ async function qcGLSync(btn){
     }
     const db2=getQCDB();
     await Promise.all(Object.values(agg).map(v=>db2.ref(`qc_gianlantctm/${v.y}/${v.m}`).set({...v,syncedAt})));
-    toast(`✅ Đồng bộ: ${Object.keys(agg).length} tháng · ĐK ${counts?.dk||0} · CTKM ${counts?.ctkm||0}`,'t-ok');
+    toast(`✅ Đồng bộ: ${Object.keys(agg).length} tháng · ĐK ${counts?.dk||0} · CTKM ${counts?.ctkm||0}`,'t-ok');logActivity('dong_bo',`Đồng bộ QC Gian lận: ${Object.keys(agg).length} tháng`);
     await qcGLLoad(S.qcGLYear,S.qcGLMonth);
   }catch(e){
     toast('❌ Đồng bộ thất bại: '+(e.message||''),'t-err');
@@ -3496,11 +3496,11 @@ async function cvEditSave(id){
           body:JSON.stringify({firebase_key:id,lark_task_id:t.lark_task_id,van_de,han,chi_tiet})
         });
         const j=await r.json();
-        if(j.ok) toast('✅ Đã lưu & cập nhật Lark Task','t-ok');
+        if(j.ok){toast('✅ Đã lưu & cập nhật Lark Task','t-ok');logActivity('dong_bo','Cập nhật nội dung task lên Lark',van_de);}
         else toast(`✅ Đã lưu Firebase · Lark: ${j.error||'lỗi'}','t-warn`);
       }catch(e){toast('✅ Đã lưu · Lark: lỗi kết nối','t-warn');}
     }else{
-      toast('✅ Đã lưu thay đổi','t-ok');
+      toast('✅ Đã lưu thay đổi','t-ok');logActivity('dong_bo','Chỉnh sửa nhiệm vụ',van_de);
     }
     document.getElementById('cv-edit-ov')?.remove();
     cvLoad();
@@ -4061,7 +4061,7 @@ function cvCfgSave(){
 
   db.ref('bot_config/agent').set(cfg).then(()=>{
     if(badge){badge.textContent=`✅ Đã lưu: ${nv_kk.length} NV KK, ${nv_qc.length} NV QC · ${new Date().toLocaleTimeString('vi-VN')}`;}
-    toast('✅ Đã lưu cấu hình Bot Agent','t-ok');
+    toast('✅ Đã lưu cấu hình Bot Agent','t-ok');logActivity('dong_bo','Cập nhật cấu hình Bot Agent');
   }).catch(e=>toast('❌ Lỗi: '+e.message,'t-err'));
 }
 
@@ -4138,7 +4138,7 @@ async function syncLarkDate(btn){
     const months=d.monthly.map(r=>r.t);
     localStorage.setItem('lark_date_cache',JSON.stringify({...d,ts:Date.now()}));
     S.dateCache={...d,ts:Date.now()};go(S.page,S.tab);
-    toast(`✅ Đổi Date: ${months[0]}→${months[months.length-1]} (${months.length} tháng) · ${src}`,'t-ok');
+    toast(`✅ Đổi Date: ${months[0]}→${months[months.length-1]} (${months.length} tháng) · ${src}`,'t-ok');logActivity('dong_bo',`Đồng bộ Đổi Date: ${months.length} tháng`);
   }catch(e){
     toast('❌ Lỗi đồng bộ đổi date: '+e.message,'t-err');
   }finally{
@@ -4159,7 +4159,7 @@ async function syncTonAm(btn){
     S.tonAmCache={...d,ts:d.ts||Date.now()};
     if(!S.tonAmMonth||!d.months[S.tonAmMonth])S.tonAmMonth=ms[ms.length-1]||'';
     go(S.page,S.tab);
-    toast(`✅ Tồn âm: ${ms.join(', ')} (${ms.length} tháng) · ${src}`,'t-ok');
+    toast(`✅ Tồn âm: ${ms.join(', ')} (${ms.length} tháng) · ${src}`,'t-ok');logActivity('dong_bo',`Đồng bộ Tồn âm: ${ms.length} tháng`);
   }catch(e){
     toast('❌ Lỗi đồng bộ tồn âm: '+e.message,'t-err');
   }finally{
@@ -4178,7 +4178,7 @@ async function syncBBKK(btn){
     localStorage.setItem('bbkk_cache',JSON.stringify({...d,ts:d.ts||Date.now()}));
     S.bbkkCache={...d,ts:d.ts||Date.now()};
     go(S.page,S.tab);
-    toast(`✅ Biên bản KK: ${d.t1.length} biên bản · ${src}`,'t-ok');
+    toast(`✅ Biên bản KK: ${d.t1.length} biên bản · ${src}`,'t-ok');logActivity('dong_bo',`Đồng bộ Biên bản KK: ${d.t1.length} biên bản`);
   }catch(e){
     toast('❌ Lỗi đồng bộ BBKK: '+e.message,'t-err');
   }finally{
