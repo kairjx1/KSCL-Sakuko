@@ -3728,7 +3728,7 @@ async function cvAddSave(){
       fetch('/api/assign-tasks',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({task_ids:[fbKey], override_assignees:_cvAssignees, tasklist_guid}),
+        body:JSON.stringify({task_ids:[fbKey], override_assignees:_cvAssignees, tasklist_guid, creator_open_id:S.profile?.open_id||''}),
         signal:AbortSignal.timeout(20000)
       }).then(r=>r.json()).then(j=>{
         if(j.ok) toast(`✅ Đã giao trên Lark cho ${_cvAssignees.map(a=>a.name).join(', ')}`,'t-ok');

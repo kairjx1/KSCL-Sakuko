@@ -439,6 +439,15 @@ async function handleLarkCallback() {
       const session = { type: 'lark', name: j.user.name, email: j.user.email, avatar: j.user.avatar, open_id: j.user.open_id, ts: Date.now() };
       history.replaceState(null, '', location.pathname);
       try { await auth.signInAnonymously(); } catch (e) { console.warn('Anonymous auth failed:', e.message); }
+      // Lưu lark_token vào Firebase để bot dùng khi tạo task
+      if (j.user.open_id && j.access_token) {
+        const uKey = 'lark_' + j.user.open_id;
+        try {
+          await db.ref(`portal_users/${uKey}/lark_token`).set(j.access_token);
+          await db.ref(`portal_users/${uKey}/open_id`).set(j.user.open_id);
+          await db.ref(`portal_users/${uKey}/lark_token_ts`).set(Date.now());
+        } catch (e) { console.warn('lark_token save failed:', e.message); }
+      }
       checkPermission(session);
       return true;
     } else { showErr('Đăng nhập Lark thất bại: ' + (j.error || '')); }
