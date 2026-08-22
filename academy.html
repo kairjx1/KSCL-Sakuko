@@ -485,7 +485,7 @@ auth.onAuthStateChanged(async u=>{
           } catch(eL) {
             console.warn('[Lark] sign-in failed:', eL.code, eL.message);
             // Tạo account nếu chưa có
-            if (eL.code === 'auth/user-not-found' || eL.code === 'auth/invalid-credential' || eL.code === 'auth/wrong-password' || eL.code === 'auth/invalid-email' || eL.code === 'auth/internal-error') {
+            if (['auth/user-not-found','auth/invalid-credential','auth/wrong-password','auth/invalid-login-credentials','auth/invalid-email','auth/internal-error'].includes(eL.code)) {
               try {
                 const regRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FB.apiKey}`, {
                   method: 'POST', headers: {'Content-Type': 'application/json'},

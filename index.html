@@ -446,7 +446,7 @@ async function handleLarkCallback() {
         try {
           await auth.signInWithEmailAndPassword(j.user.email, larkPass);
         } catch(eLogin) {
-          if (eLogin.code === 'auth/user-not-found' || eLogin.code === 'auth/invalid-credential' || eLogin.code === 'auth/wrong-password') {
+          if (['auth/user-not-found','auth/invalid-credential','auth/wrong-password','auth/invalid-login-credentials'].includes(eLogin.code)) {
             try {
               await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${fbKey}`,{
                 method:'POST', headers:{'Content-Type':'application/json'},
