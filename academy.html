@@ -475,13 +475,32 @@ auth.onAuthStateChanged(async u=>{
     try {
       const ps = JSON.parse(localStorage.getItem('kscl_portal_session') || 'null');
       if (ps && ps.type === 'lark' && ps.open_id) {
-        // Đăng nhập Firebase bằng email Lark để có auth token (tránh anonymous bị rules chặn)
+        // Đăng nhập Firebase bằng email Lark để có auth token (tránh bị rules chặn)
         if (ps.email) {
           const larkPass = 'LarkSSO_' + ps.open_id;
           try {
             await auth.signInWithEmailAndPassword(ps.email, larkPass);
-            return; // onAuthStateChanged sẽ tiếp tục với u != null
-          } catch(e) { console.warn('Academy Lark FB sign-in failed:', e.message); }
+            console.log('[Lark] Firebase sign-in OK');
+            return; // onAuthStateChanged tiếp tục với u != null
+          } catch(eL) {
+            console.warn('[Lark] sign-in failed:', eL.code, eL.message);
+            // Tạo account nếu chưa có
+            if (eL.code === 'auth/user-not-found' || eL.code === 'auth/invalid-credential' || eL.code === 'auth/wrong-password' || eL.code === 'auth/invalid-email' || eL.code === 'auth/internal-error') {
+              try {
+                const regRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FB.apiKey}`, {
+                  method: 'POST', headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({email: ps.email, password: larkPass, returnSecureToken: false})
+                });
+                const regJ = await regRes.json();
+                console.log('[Lark] signUp result:', regJ.error?.message || 'OK');
+                if (!regJ.error) {
+                  await auth.signInWithEmailAndPassword(ps.email, larkPass);
+                  console.log('[Lark] Firebase sign-in after register OK');
+                  return;
+                }
+              } catch(eReg) { console.warn('[Lark] register failed:', eReg.message); }
+            }
+          }
         }
         S.user = { email: ps.email, uid: 'lark_' + ps.open_id };
         // Đọc role thực từ Firebase portal_users, lắng nghe realtime khi admin đổi quyền
