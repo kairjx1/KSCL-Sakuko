@@ -3051,7 +3051,7 @@ async function loadUserList() {
   kkSel.innerHTML = '<option disabled>⏳ Đang tải...</option>';
   try {
     const [usersRes, cfgRes] = await Promise.all([
-      api('GET', '/api/panel/find-user?q='),
+      api('GET', '/api/panel/find-user?chat_id=oc_97f3ed3ef25d7659ae17a5b51f0a906d'),
       api('GET', '/api/panel/qc-vision-config').catch(() => ({qc_ids:[], kk_ids:[]})),
     ]);
     loadQCModel();
