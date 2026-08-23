@@ -16,10 +16,16 @@ export async function onRequest({ request, env }) {
   const BOT_URL = (env.BOT_SERVER_URL || 'https://lark-bot-vhi3.onrender.com').replace(/\/$/, '');
 
   const url = new URL(request.url);
-  const name = url.searchParams.get('name') || '';
+  const name = url.searchParams.get('name') || url.searchParams.get('q') || '';
+  const chatId = url.searchParams.get('chat_id') || '';
+
+  // Build query string — forward all relevant params to bot
+  const qs = new URLSearchParams();
+  if (name) qs.set('name', name);
+  if (chatId) qs.set('chat_id', chatId);
 
   try {
-    const r = await fetch(`${BOT_URL}/api/panel/find-user?name=${encodeURIComponent(name)}`, {
+    const r = await fetch(`${BOT_URL}/api/panel/find-user?${qs.toString()}`, {
       headers: { 'X-Panel-Secret': SECRET },
       signal: AbortSignal.timeout(10000)
     });
