@@ -31,7 +31,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; colo
 
 /* Cards & Panels */
 .panel { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
-.panel-header { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #e2e8f0; display: flex; align-items: center; gap: 8px; }
+.panel-header { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
 
 /* Sandbox / Chat Test */
 .chat-container { display: flex; gap: 20px; height: 500px; }
@@ -52,14 +52,35 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; colo
 .trace-step.active::before { background: #14b8a6; box-shadow: 0 0 8px #14b8a6; }
 .trace-step.active { border-left-color: #14b8a6; color: #e2e8f0; }
 
+/* Config Forms */
+.form-group { margin-bottom: 20px; }
+.form-label { display: block; font-size: 14px; color: #94a3b8; margin-bottom: 8px; font-weight: 500; }
+.form-control { width: 100%; background: #0f172a; border: 1px solid #334155; color: #fff; padding: 12px; border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; }
+.form-control:focus { border-color: #14b8a6; }
+textarea.form-control { height: 250px; resize: vertical; line-height: 1.5; }
+.btn-primary { background: #14b8a6; color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; }
+.btn-primary:hover { background: #0d9488; }
+
+/* Log Table */
+.log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.log-table th { text-align: left; padding: 12px 16px; color: #94a3b8; font-weight: 500; border-bottom: 1px solid #334155; }
+.log-table td { padding: 16px; border-bottom: 1px solid #334155; color: #cbd5e1; vertical-align: top; }
+.log-time { color: #64748b; white-space: nowrap; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.tag.ai_reply { background: #14b8a620; color: #14b8a6; }
+.tag.startup { background: #f59e0b20; color: #f59e0b; }
+.detail-box { background: #0f172a; padding: 12px; border-radius: 6px; border: 1px solid #334155; margin-top: 8px; font-family: monospace; white-space: pre-wrap; color: #a5b4fc; }
+
 .hidden { display: none !important; }
+.toast { position: fixed; bottom: 20px; right: 20px; background: #10b981; color: #000; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform: translateY(100px); opacity: 0; transition: 0.3s; }
+.toast.show { transform: translateY(0); opacity: 1; }
 </style>
 </head>
 <body>
 
 <div class="topbar">
   <div class="topbar-logo">
-    🧠 Agent Quy Trình
+    🧠 Agent Quy Trình Pro
   </div>
   <div class="topbar-right">
     <span id="statusDot"><span class="badge-live"></span>Online</span>
@@ -72,18 +93,21 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; colo
     <div class="nav-item active" onclick="switchTab('sandbox', event)">
       <div class="nav-icon">🔬</div> Agent Sandbox
     </div>
+    <div class="nav-item" onclick="switchTab('config', event)">
+      <div class="nav-icon">⚙️</div> Agent Settings
+    </div>
+    <div class="nav-item" onclick="switchTab('logs', event)">
+      <div class="nav-icon">📜</div> Agent Logs
+    </div>
     <div class="nav-item" onclick="switchTab('analytics', event)">
       <div class="nav-icon">📊</div> Knowledge Analytics
-    </div>
-    <div class="nav-item" onclick="switchTab('tools', event)">
-      <div class="nav-icon">🛠️</div> Tools & API
     </div>
   </div>
 
   <!-- Sandbox Tab -->
   <div class="main-content" id="sandbox-tab">
     <div class="page-title">Agent Sandbox (Live Test)</div>
-    <p style="color: #94a3b8; margin-bottom: 24px;">Gửi thử một câu hỏi để xem quá trình Agent lục lọi Wiki, suy luận và phản hồi theo thời gian thực (Real-time Tracing).</p>
+    <p style="color: #94a3b8; margin-bottom: 24px;">Giao diện giả lập để kiểm tra khả năng tư duy và phản hồi thực tế của Agent.</p>
     
     <div class="chat-container">
       <div class="chat-box">
@@ -105,85 +129,208 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; colo
     </div>
   </div>
 
-  <!-- Analytics Tab -->
-  <div class="main-content hidden" id="analytics-tab">
-    <div class="page-title">Knowledge Analytics (Đang phát triển)</div>
+  <!-- Config Tab -->
+  <div class="main-content hidden" id="config-tab">
+    <div class="page-title">Agent Settings (Cấu hình Não bộ)</div>
     <div class="panel">
-      <div class="panel-header">Báo cáo khoảng trống tri thức (Missing Knowledge)</div>
-      <p style="color: #cbd5e1; font-size: 14px;">Module này sẽ thu thập toàn bộ câu hỏi mà Agent không tìm thấy trên Wiki để báo cáo lại cho bạn. Tính năng đang được kết nối với Firebase.</p>
+      <div class="panel-header">Thiết lập System Prompt (Quy tắc hành xử)</div>
+      <p style="color: #94a3b8; font-size: 13px; margin-bottom: 15px;">Dùng để áp đặt luật lệ cốt lõi cho Agent. Agent sẽ luôn tuân thủ các quy định ở đây trước khi trả lời.</p>
+      
+      <div class="form-group">
+        <textarea id="systemPrompt" class="form-control" placeholder="Đang tải dữ liệu..."></textarea>
+      </div>
+      
+      <div class="form-group" style="display: flex; gap: 20px;">
+        <div style="flex: 1;">
+          <label class="form-label">LLM Engine</label>
+          <select id="llmEngine" class="form-control">
+            <option value="gemini">Google Gemini Flash (Khuyên dùng)</option>
+            <option value="claude">Anthropic Claude 3.5</option>
+            <option value="groq">Groq (Llama 3)</option>
+          </select>
+        </div>
+        <div style="flex: 1;">
+          <label class="form-label">Temperature (Độ sáng tạo)</label>
+          <input type="number" id="llmTemp" class="form-control" value="0.2" step="0.1" min="0" max="1">
+        </div>
+      </div>
+      
+      <button class="btn-primary" onclick="saveConfig()">💾 Lưu Cấu Hình</button>
     </div>
   </div>
 
-  <!-- Tools Tab -->
-  <div class="main-content hidden" id="tools-tab">
-    <div class="page-title">Tools Orchestration (Phân quyền)</div>
+  <!-- Logs Tab -->
+  <div class="main-content hidden" id="logs-tab">
+    <div class="page-title">
+      Agent Activity Logs
+      <button class="tbtn" onclick="loadLogs()" style="background: #1e293b; border: 1px solid #334155;">🔄 Tải mới</button>
+    </div>
     <div class="panel">
-      <p style="color: #cbd5e1; font-size: 14px;">Nơi cấu hình các Plugin cho phép Agent gọi API nội bộ của Sakuko (như Lark Base, ERP). Tính năng đang phát triển.</p>
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th width="150">Thời gian</th>
+            <th width="120">Loại Sự Kiện</th>
+            <th>Nội dung chi tiết</th>
+          </tr>
+        </thead>
+        <tbody id="logBody">
+          <tr><td colspan="3" style="text-align: center;">Đang tải dữ liệu từ Server...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Analytics Tab -->
+  <div class="main-content hidden" id="analytics-tab">
+    <div class="page-title">Knowledge Analytics</div>
+    <div class="panel">
+      <div class="panel-header">Báo cáo khoảng trống tri thức (Missing Knowledge)</div>
+      <p style="color: #cbd5e1; font-size: 14px;">(Tính năng đang được phát triển) Nơi đây sẽ tự động thống kê các quy trình siêu thị hay hỏi nhưng chưa có trên hệ thống Wiki.</p>
     </div>
   </div>
 </div>
 
+<div class="toast" id="toast">Cập nhật thành công!</div>
+
 <script>
+const API_URL = "https://quytrinh-bot.onrender.com/api";
+
 function switchTab(tabId, event) {
   document.querySelectorAll('.main-content').forEach(el => el.classList.add('hidden'));
   document.getElementById(tabId + '-tab').classList.remove('hidden');
   
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   event.currentTarget.classList.add('active');
+  
+  if (tabId === 'config') loadConfig();
+  if (tabId === 'logs') loadLogs();
 }
 
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.innerText = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// --- Sandbox ---
 async function sendTest() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
   if (!text) return;
   
-  // Update UI: User Message
   const history = document.getElementById('chatHistory');
   history.innerHTML += `<div class="msg user">${text}</div>`;
   input.value = '';
   history.scrollTop = history.scrollHeight;
   
-  // Start Tracing Simulation
   const trace = document.getElementById('traceContent');
   trace.style.opacity = '1';
-  trace.innerHTML = `
-    <div class="trace-step active" id="ts1">1. Nhận diện Intent...<br><span style="color:#64748b">Phân tích yêu cầu: "${text}"</span></div>
-  `;
+  trace.innerHTML = `<div class="trace-step active" id="ts1">1. Phân tích ngữ nghĩa Intent...<br><span style="color:#64748b">Query: "${text}"</span></div>`;
   
   setTimeout(() => {
-    document.getElementById('ts1').classList.remove('active');
-    trace.innerHTML += `<div class="trace-step active" id="ts2">2. Truy vấn Vector DB...<br><span style="color:#64748b">Searching in 1,360 chunks...</span></div>`;
+    if (document.getElementById('ts1')) document.getElementById('ts1').classList.remove('active');
+    trace.innerHTML += `<div class="trace-step active" id="ts2">2. Truy vấn RAG Local...<br><span style="color:#64748b">Duyệt qua 1,360 tài liệu Wiki (Lọc bỏ Biên bản/Nháp)...</span></div>`;
   }, 1000);
   
   setTimeout(() => {
-    document.getElementById('ts2').classList.remove('active');
-    trace.innerHTML += `<div class="trace-step active" id="ts3">3. Gọi LLM (Gemini 3.6 Flash)...<br><span style="color:#64748b">Đang tổng hợp câu trả lời...</span></div>`;
+    if (document.getElementById('ts2')) document.getElementById('ts2').classList.remove('active');
+    trace.innerHTML += `<div class="trace-step active" id="ts3">3. Gọi LLM AI Engine...<br><span style="color:#64748b">Đang đọc tài liệu tìm được và tổng hợp câu trả lời...</span></div>`;
   }, 2500);
 
   try {
-    const res = await fetch("https://quytrinh-bot.onrender.com/api/qt/test", {
+    const res = await fetch(`${API_URL}/qt/test`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question: text })
     });
     const data = await res.json();
     
-    // Complete Tracing
-    document.getElementById('ts3').classList.remove('active');
+    if (document.getElementById('ts3')) document.getElementById('ts3').classList.remove('active');
     trace.innerHTML += `<div class="trace-step active" style="color:#10b981; border-color:#10b981;">4. Hoàn tất (${data.elapsed || '?'}s)<br><span style="color:#64748b">Đã trả về kết quả.</span></div>`;
     
-    // Show AI Response
     const replyText = data.ok ? data.reply : "Lỗi: " + data.error;
     history.innerHTML += `<div class="msg ai">${replyText}</div>`;
     history.scrollTop = history.scrollHeight;
     
   } catch(e) {
-    document.getElementById('ts3').classList.remove('active');
+    if (document.getElementById('ts3')) document.getElementById('ts3').classList.remove('active');
     trace.innerHTML += `<div class="trace-step" style="color:#f43f5e;">Lỗi kết nối Server!</div>`;
     history.innerHTML += `<div class="msg ai" style="background:#7f1d1d;color:#fecaca;">Không thể kết nối đến Render Server.</div>`;
     history.scrollTop = history.scrollHeight;
   }
 }
+
+// --- Config ---
+async function loadConfig() {
+  try {
+    const res = await fetch(`${API_URL}/qt/config`);
+    const data = await res.json();
+    if (data.ok && data.config) {
+      document.getElementById('systemPrompt').value = data.config.system_prompt || "";
+      document.getElementById('llmEngine').value = data.config.engine || "gemini";
+      document.getElementById('llmTemp').value = data.config.temperature || 0.2;
+    }
+  } catch(e) {
+    console.error("Config load error:", e);
+  }
+}
+
+async function saveConfig() {
+  const payload = {
+    system_prompt: document.getElementById('systemPrompt').value,
+    engine: document.getElementById('llmEngine').value,
+    temperature: parseFloat(document.getElementById('llmTemp').value) || 0.2
+  };
+  
+  try {
+    const res = await fetch(`${API_URL}/qt/config`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.ok) showToast("Lưu cấu hình thành công!");
+  } catch(e) {
+    alert("Lỗi khi lưu cấu hình!");
+  }
+}
+
+// --- Logs ---
+async function loadLogs() {
+  const tbody = document.getElementById('logBody');
+  tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Đang tải...</td></tr>';
+  
+  try {
+    const res = await fetch(`${API_URL}/panel/logs`);
+    const data = await res.json();
+    if (data.ok && data.logs) {
+      let html = '';
+      data.logs.forEach(l => {
+        const d = new Date(l.ts || 0);
+        const timeStr = `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')} <br><span style="font-size:11px">${d.getDate()}/${d.getMonth()+1}</span>`;
+        const cls = l.event === 'ai_reply' ? 'ai_reply' : 'startup';
+        
+        html += `
+          <tr>
+            <td class="log-time">${timeStr}</td>
+            <td><span class="tag ${cls}">${(l.event||'').toUpperCase()}</span></td>
+            <td>
+              <div class="detail-box">${(l.detail||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html || '<tr><td colspan="3" style="text-align: center;">Chưa có log nào.</td></tr>';
+    }
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="3" style="color:#f87171; text-align:center;">Lỗi kết nối Server!</td></tr>';
+  }
+}
+
+// Init Load Config so it's ready
+loadConfig();
 </script>
 </body>
 </html>
