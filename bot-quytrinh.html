@@ -139,25 +139,25 @@ async function sendTest() {
   
   // Update UI: User Message
   const history = document.getElementById('chatHistory');
-  history.innerHTML += <div class="msg user"></div>;
+  history.innerHTML += `<div class="msg user">${text}</div>`;
   input.value = '';
   history.scrollTop = history.scrollHeight;
   
   // Start Tracing Simulation
   const trace = document.getElementById('traceContent');
   trace.style.opacity = '1';
-  trace.innerHTML = 
-    <div class="trace-step active" id="ts1">1. Nhận diện Intent...<br><span style="color:#64748b">Phân tích yêu cầu: ""</span></div>
-  ;
+  trace.innerHTML = `
+    <div class="trace-step active" id="ts1">1. Nhận diện Intent...<br><span style="color:#64748b">Phân tích yêu cầu: "${text}"</span></div>
+  `;
   
   setTimeout(() => {
     document.getElementById('ts1').classList.remove('active');
-    trace.innerHTML += <div class="trace-step active" id="ts2">2. Truy vấn Vector DB...<br><span style="color:#64748b">Searching in 1,360 chunks...</span></div>;
+    trace.innerHTML += `<div class="trace-step active" id="ts2">2. Truy vấn Vector DB...<br><span style="color:#64748b">Searching in 1,360 chunks...</span></div>`;
   }, 1000);
   
   setTimeout(() => {
     document.getElementById('ts2').classList.remove('active');
-    trace.innerHTML += <div class="trace-step active" id="ts3">3. Gọi LLM (Gemini 3.6 Flash)...<br><span style="color:#64748b">Đang tổng hợp câu trả lời...</span></div>;
+    trace.innerHTML += `<div class="trace-step active" id="ts3">3. Gọi LLM (Gemini 3.6 Flash)...<br><span style="color:#64748b">Đang tổng hợp câu trả lời...</span></div>`;
   }, 2500);
 
   try {
@@ -170,17 +170,17 @@ async function sendTest() {
     
     // Complete Tracing
     document.getElementById('ts3').classList.remove('active');
-    trace.innerHTML += <div class="trace-step active" style="color:#10b981; border-color:#10b981;">4. Hoàn tất (s)<br><span style="color:#64748b">Đã trả về kết quả.</span></div>;
+    trace.innerHTML += `<div class="trace-step active" style="color:#10b981; border-color:#10b981;">4. Hoàn tất (${data.elapsed || '?'}s)<br><span style="color:#64748b">Đã trả về kết quả.</span></div>`;
     
     // Show AI Response
     const replyText = data.ok ? data.reply : "Lỗi: " + data.error;
-    history.innerHTML += <div class="msg ai"></div>;
+    history.innerHTML += `<div class="msg ai">${replyText}</div>`;
     history.scrollTop = history.scrollHeight;
     
   } catch(e) {
     document.getElementById('ts3').classList.remove('active');
-    trace.innerHTML += <div class="trace-step" style="color:#f43f5e;">Lỗi kết nối Server!</div>;
-    history.innerHTML += <div class="msg ai" style="background:#7f1d1d;color:#fecaca;">Không thể kết nối đến Render Server.</div>;
+    trace.innerHTML += `<div class="trace-step" style="color:#f43f5e;">Lỗi kết nối Server!</div>`;
+    history.innerHTML += `<div class="msg ai" style="background:#7f1d1d;color:#fecaca;">Không thể kết nối đến Render Server.</div>`;
     history.scrollTop = history.scrollHeight;
   }
 }
