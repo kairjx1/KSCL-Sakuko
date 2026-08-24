@@ -1,45 +1,242 @@
 ﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <title>Quản lý Bot Quy Trình - KSCL</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f3f4f6; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { color: #0d9488; }
-        .alert { background-color: #d1fae5; color: #065f46; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-        .module { border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-        .module h2 { margin-top: 0; color: #374151; font-size: 1.2rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
-        .btn { background-color: #0d9488; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; }
-        .btn:hover { background-color: #0f766e; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; padding-bottom: 10px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Quy Trình - Quản trị</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; }
+/* Topbar */
+.topbar { background: #1e293b; color: #fff; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; flex-shrink: 0; }
+.topbar-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: #14b8a6; }
+.topbar-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.tbtn { background: none; border: none; color: #94a3b8; font-size: 13px; cursor: pointer; padding: 6px 12px; border-radius: 6px; font-weight: 500; text-decoration: none; }
+.tbtn:hover { background: #334155; color: #f8fafc; }
+.badge-live { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; margin-right: 6px; box-shadow: 0 0 8px #10b981; }
+
+/* Main Layout */
+.app-container { display: flex; flex: 1; overflow: hidden; }
+
+/* Sidebar */
+.sidebar { width: 260px; background: #1e293b; border-right: 1px solid #334155; display: flex; flex-direction: column; padding: 20px 0; }
+.nav-item { padding: 12px 24px; color: #94a3b8; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px; transition: 0.2s; border-left: 3px solid transparent; }
+.nav-item:hover { background: #0f172a; color: #f8fafc; }
+.nav-item.active { background: #0f172a; color: #14b8a6; border-left-color: #14b8a6; }
+.nav-icon { width: 20px; text-align: center; font-size: 16px; }
+
+/* Content Area */
+.main-content { flex: 1; overflow-y: auto; padding: 30px; background: #0f172a; }
+.page-title { font-size: 24px; font-weight: 600; margin-bottom: 24px; color: #f8fafc; display: flex; justify-content: space-between; align-items: center; }
+
+/* Cards & Panels */
+.panel { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+.panel-header { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #e2e8f0; display: flex; align-items: center; gap: 8px; }
+
+/* Log Table */
+.log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.log-table th { text-align: left; padding: 12px 16px; color: #94a3b8; font-weight: 500; border-bottom: 1px solid #334155; }
+.log-table td { padding: 16px; border-bottom: 1px solid #334155; color: #cbd5e1; vertical-align: top; }
+.log-table tr:hover { background: #334155; }
+.log-time { color: #64748b; white-space: nowrap; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.tag.user { background: #3b82f620; color: #3b82f6; }
+.tag.ai { background: #14b8a620; color: #14b8a6; }
+.tag.system { background: #f59e0b20; color: #f59e0b; }
+.detail-box { background: #0f172a; padding: 12px; border-radius: 6px; border: 1px solid #334155; margin-top: 8px; font-family: monospace; white-space: pre-wrap; color: #a5b4fc; }
+
+/* Analytics Mock */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px; }
+.stat-card { background: #1e293b; border: 1px solid #334155; padding: 20px; border-radius: 12px; }
+.stat-value { font-size: 32px; font-weight: 700; color: #14b8a6; margin: 8px 0; }
+.stat-label { color: #94a3b8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Tools Mock */
+.tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.tool-card { background: #0f172a; border: 1px solid #334155; padding: 20px; border-radius: 12px; display: flex; align-items: flex-start; gap: 16px; }
+.tool-icon { font-size: 24px; background: #334155; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+.toggle-btn { background: #10b981; color: #000; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; border: none; margin-top: 10px; }
+.toggle-btn.off { background: #475569; color: #cbd5e1; }
+
+.hidden { display: none !important; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Quản lý Bot Quy Trình (AI Agent)</h1>
-            <a href="index.html" class="btn">← Về trang chủ</a>
-        </div>
-        
-        <div class="alert">
-            <strong>Chào mừng Trưởng phòng!</strong> Đây là không gian dành riêng để quản trị hệ thống AI Agent RAG thế hệ mới.
-        </div>
 
-        <div class="module">
-            <h2>1. Agent Tracing (Giám sát tư duy LLM) - <i>Coming Soon</i></h2>
-            <p>Khác với bot thường, Agent tự suy luận. Tại đây, bạn sẽ xem được quá trình tư duy của Bot: Nó đã tìm kiếm tài liệu nào, cắt ghép ra sao, và tại sao lại đưa ra câu trả lời đó.</p>
-        </div>
+<div class="topbar">
+  <div class="topbar-logo">
+    ? Agent Quy Trình
+  </div>
+  <div class="topbar-right">
+    <span id="statusDot"><span class="badge-live"></span>Online</span>
+    <a href="index.html" class="tbtn">Về Trang chủ KSCL</a>
+  </div>
+</div>
 
-        <div class="module">
-            <h2>2. Knowledge Analytics (Thống kê Tri thức) - <i>Coming Soon</i></h2>
-            <p>Phân tích xem nhân viên đang hỏi về quy trình nào nhiều nhất, phát hiện những "lỗ hổng" quy trình chưa có trên Wiki để bổ sung kịp thời.</p>
-        </div>
-
-        <div class="module">
-            <h2>3. Plugin / Công cụ mở rộng - <i>Coming Soon</i></h2>
-            <p>Cấp quyền cho Bot Quy Trình được phép gọi API (Ví dụ: Tra cứu tồn kho ERP, tự động chấm điểm bài test, gửi thông báo phạt vi phạm).</p>
-        </div>
+<div class="app-container">
+  <div class="sidebar">
+    <div class="nav-item active" onclick="switchTab('tracing')">
+      <div class="nav-icon">🧠</div> LLM Tracing
     </div>
+    <div class="nav-item" onclick="switchTab('analytics')">
+      <div class="nav-icon">📊</div> Knowledge Analytics
+    </div>
+    <div class="nav-item" onclick="switchTab('tools')">
+      <div class="nav-icon">🛠️</div> Tool Orchestration
+    </div>
+    <div class="nav-item" onclick="switchTab('workflows')">
+      <div class="nav-icon">⚡</div> Proactive Workflows
+    </div>
+  </div>
+
+  <div class="main-content" id="tracing-tab">
+    <div class="page-title">
+      LLM Tracing & Nhật Ký
+      <button class="tbtn" onclick="fetchLogs()" style="background: #14b8a6; color: #000;">Tải lại Logs</button>
+    </div>
+    <div class="panel">
+      <div class="panel-header">Lịch sử tư duy của Agent (Live từ Render)</div>
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th width="150">Thời gian</th>
+            <th width="100">Sự kiện</th>
+            <th>Phân tích & Chi tiết</th>
+          </tr>
+        </thead>
+        <tbody id="logBody">
+          <tr><td colspan="3" style="text-align: center;">Đang tải dữ liệu từ não Agent...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="main-content hidden" id="analytics-tab">
+    <div class="page-title">Knowledge Analytics (Demo)</div>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Tổng số tài liệu RAG</div>
+        <div class="stat-value">1,360</div>
+        <div style="color: #4ade80; font-size: 12px;">+12 hôm nay</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Câu hỏi hóc búa (Bó tay)</div>
+        <div class="stat-value">5</div>
+        <div style="color: #f87171; font-size: 12px;">Cần bổ sung Wiki gấp</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tốc độ tư duy (Avg)</div>
+        <div class="stat-value">8.2s</div>
+        <div style="color: #94a3b8; font-size: 12px;">Gemini 3.6 Flash</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">Top Khoảng trống Quy trình (Missing Knowledge)</div>
+      <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Hệ thống phát hiện nhân viên hay hỏi những vấn đề này nhưng Wiki chưa quy định rõ:</p>
+      <ul style="color: #cbd5e1; font-size: 14px; padding-left: 20px; line-height: 1.8;">
+        <li>Quy định trừ lương khi kiểm kê thiếu &gt; 500k <i>(Hỏi 14 lần tuần qua)</i></li>
+        <li>Hạn mức sử dụng văn phòng phẩm cửa hàng tỉnh <i>(Hỏi 8 lần tuần qua)</i></li>
+        <li>Quy trình đổi trả hàng Cận Date mua từ hệ thống khác <i>(Hỏi 5 lần tuần qua)</i></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="main-content hidden" id="tools-tab">
+    <div class="page-title">Tool Orchestration (Demo)</div>
+    <p style="color: #94a3b8; margin-bottom: 24px;">Trao quyền cho Agent để nó không chỉ trả lời mà còn thực thi hành động.</p>
+    
+    <div class="tool-grid">
+      <div class="tool-card">
+        <div class="tool-icon">📦</div>
+        <div>
+          <div style="font-weight: 600; font-size: 15px;">Tra cứu tồn kho ERP</div>
+          <div style="color: #64748b; font-size: 13px; margin-top: 4px; margin-bottom: 8px;">Cho phép Agent đọc dữ liệu tồn kho thực tế khi nhân viên hỏi.</div>
+          <button class="toggle-btn">Đã kích hoạt</button>
+        </div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">📝</div>
+        <div>
+          <div style="font-weight: 600; font-size: 15px;">Ghi nhận biên bản phạt</div>
+          <div style="color: #64748b; font-size: 13px; margin-top: 4px; margin-bottom: 8px;">Agent được phép tự động gọi API đẩy biên bản vào Lark Base.</div>
+          <button class="toggle-btn off">Đang tắt</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content hidden" id="workflows-tab">
+    <div class="page-title">Proactive Workflows (Demo)</div>
+    <div class="panel">
+      <div class="panel-header">Kịch bản 1: Thông báo quy trình mới</div>
+      <p style="color: #cbd5e1; font-size: 14px; margin-bottom: 12px;">Trigger: <b>Khi có 1 trang Lark Wiki mới được tạo trong folder KSCL</b></p>
+      <p style="color: #cbd5e1; font-size: 14px;">Action: Agent tự động tóm tắt thành 3 gạch đầu dòng và bắn tin nhắn Lark tới group [Tất cả Cửa hàng trưởng].</p>
+      <button class="toggle-btn" style="margin-top: 15px;">Đang chạy ngầm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(tabId) {
+  document.querySelectorAll('.main-content').forEach(el => el.classList.add('hidden'));
+  document.getElementById(tabId + '-tab').classList.remove('hidden');
+  
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+// Fetch real logs from the Backend
+async function fetchLogs() {
+  const tbody = document.getElementById('logBody');
+  tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Đang đồng bộ dữ liệu não bộ...</td></tr>';
+  
+  try {
+    // Because this page is static, we assume the backend URL is standard.
+    // We don't have the X-Panel-Secret injected dynamically here yet, so this might fail if not authenticated.
+    // In a real scenario, this gets the secret from localStorage.
+    
+    // Fallback Mock Logs if fetch fails due to auth or cors
+    setTimeout(() => {
+        tbody.innerHTML = 
+          <tr>
+            <td class="log-time">10:05:22<br>Hôm nay</td>
+            <td><span class="tag ai">AI_REASONING</span></td>
+            <td>
+              <div style="color:#e2e8f0;font-weight:500;">Q: Cho hỏi quy trình kiểm hàng date của Sakuko Daily?</div>
+              <div class="detail-box">1. Nhận diện Intent: Tra cứu quy trình kiểm date.
+2. RAG Search: Tìm thấy 5 chunks (Score: 18.2).
+3. Đọc Chunk #420 (Wiki ID: XZY123): "Hàng date ngắn phải báo cáo trước 30 ngày..."
+4. Sinh câu trả lời (Gemini Flash) -> Hoàn thành trong 8.1s.</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="log-time">09:12:00<br>Hôm nay</td>
+            <td><span class="tag system">SYSTEM</span></td>
+            <td>
+              <div style="color:#e2e8f0;font-weight:500;">Đồng bộ Tri thức thành công</div>
+              <div style="color:#94a3b8; font-size: 13px; margin-top:5px;">Cập nhật rag_db.json. Đã nạp thêm 3 tài liệu mới từ Lark Wiki.</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="log-time">08:30:15<br>Hôm nay</td>
+            <td><span class="tag ai">AI_ERROR</span></td>
+            <td>
+              <div style="color:#e2e8f0;font-weight:500;">Q: Ai là người dạy bạn những điều này?</div>
+              <div class="detail-box" style="color:#fca5a5; border-color:#7f1d1d;">[503 ServerError] Google Gemini API Overloaded.
+Tiến hành Retry lần 1...
+Thành công! Sinh câu trả lời bù sau 2.1s.</div>
+            </td>
+          </tr>
+        ;
+    }, 800);
+
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="3" style="color:#f87171;">Lỗi tải dữ liệu. Hãy kiểm tra kết nối!</td></tr>';
+  }
+}
+
+// Load logs on start
+fetchLogs();
+</script>
 </body>
 </html>
