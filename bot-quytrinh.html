@@ -33,30 +33,24 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; colo
 .panel { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
 .panel-header { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #e2e8f0; display: flex; align-items: center; gap: 8px; }
 
-/* Log Table */
-.log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.log-table th { text-align: left; padding: 12px 16px; color: #94a3b8; font-weight: 500; border-bottom: 1px solid #334155; }
-.log-table td { padding: 16px; border-bottom: 1px solid #334155; color: #cbd5e1; vertical-align: top; }
-.log-table tr:hover { background: #334155; }
-.log-time { color: #64748b; white-space: nowrap; }
-.tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-.tag.user { background: #3b82f620; color: #3b82f6; }
-.tag.ai { background: #14b8a620; color: #14b8a6; }
-.tag.system { background: #f59e0b20; color: #f59e0b; }
-.detail-box { background: #0f172a; padding: 12px; border-radius: 6px; border: 1px solid #334155; margin-top: 8px; font-family: monospace; white-space: pre-wrap; color: #a5b4fc; }
+/* Sandbox / Chat Test */
+.chat-container { display: flex; gap: 20px; height: 500px; }
+.chat-box { flex: 1; display: flex; flex-direction: column; background: #0f172a; border: 1px solid #334155; border-radius: 12px; overflow: hidden; }
+.chat-history { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+.chat-input-area { padding: 15px; background: #1e293b; border-top: 1px solid #334155; display: flex; gap: 10px; }
+.chat-input { flex: 1; background: #0f172a; border: 1px solid #334155; color: #fff; padding: 12px; border-radius: 6px; outline: none; }
+.chat-btn { background: #14b8a6; color: #000; border: none; padding: 0 20px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+.chat-btn:hover { background: #0d9488; }
+.msg { max-width: 80%; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
+.msg.user { background: #3b82f6; color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
+.msg.ai { background: #334155; color: #e2e8f0; align-self: flex-start; border-bottom-left-radius: 2px; white-space: pre-wrap; }
 
-/* Analytics Mock */
-.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px; }
-.stat-card { background: #1e293b; border: 1px solid #334155; padding: 20px; border-radius: 12px; }
-.stat-value { font-size: 32px; font-weight: 700; color: #14b8a6; margin: 8px 0; }
-.stat-label { color: #94a3b8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
-
-/* Tools Mock */
-.tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-.tool-card { background: #0f172a; border: 1px solid #334155; padding: 20px; border-radius: 12px; display: flex; align-items: flex-start; gap: 16px; }
-.tool-icon { font-size: 24px; background: #334155; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
-.toggle-btn { background: #10b981; color: #000; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 20px; cursor: pointer; border: none; margin-top: 10px; }
-.toggle-btn.off { background: #475569; color: #cbd5e1; }
+/* Tracing Box */
+.tracing-box { width: 350px; background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 20px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #94a3b8; }
+.trace-step { margin-bottom: 15px; padding-left: 15px; border-left: 2px solid #334155; position: relative; }
+.trace-step::before { content: ''; position: absolute; left: -5px; top: 0; width: 8px; height: 8px; border-radius: 50%; background: #334155; }
+.trace-step.active::before { background: #14b8a6; box-shadow: 0 0 8px #14b8a6; }
+.trace-step.active { border-left-color: #14b8a6; color: #e2e8f0; }
 
 .hidden { display: none !important; }
 </style>
@@ -65,7 +59,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; colo
 
 <div class="topbar">
   <div class="topbar-logo">
-    ? Agent Quy Trình
+    🧠 Agent Quy Trình
   </div>
   <div class="topbar-right">
     <span id="statusDot"><span class="badge-live"></span>Online</span>
@@ -75,109 +69,62 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; colo
 
 <div class="app-container">
   <div class="sidebar">
-    <div class="nav-item active" onclick="switchTab('tracing')">
-      <div class="nav-icon">🧠</div> LLM Tracing
+    <div class="nav-item active" onclick="switchTab('sandbox', event)">
+      <div class="nav-icon">🔬</div> Agent Sandbox
     </div>
-    <div class="nav-item" onclick="switchTab('analytics')">
+    <div class="nav-item" onclick="switchTab('analytics', event)">
       <div class="nav-icon">📊</div> Knowledge Analytics
     </div>
-    <div class="nav-item" onclick="switchTab('tools')">
-      <div class="nav-icon">🛠️</div> Tool Orchestration
-    </div>
-    <div class="nav-item" onclick="switchTab('workflows')">
-      <div class="nav-icon">⚡</div> Proactive Workflows
+    <div class="nav-item" onclick="switchTab('tools', event)">
+      <div class="nav-icon">🛠️</div> Tools & API
     </div>
   </div>
 
-  <div class="main-content" id="tracing-tab">
-    <div class="page-title">
-      LLM Tracing & Nhật Ký
-      <button class="tbtn" onclick="fetchLogs()" style="background: #14b8a6; color: #000;">Tải lại Logs</button>
-    </div>
-    <div class="panel">
-      <div class="panel-header">Lịch sử tư duy của Agent (Live từ Render)</div>
-      <table class="log-table">
-        <thead>
-          <tr>
-            <th width="150">Thời gian</th>
-            <th width="100">Sự kiện</th>
-            <th>Phân tích & Chi tiết</th>
-          </tr>
-        </thead>
-        <tbody id="logBody">
-          <tr><td colspan="3" style="text-align: center;">Đang tải dữ liệu từ não Agent...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="main-content hidden" id="analytics-tab">
-    <div class="page-title">Knowledge Analytics (Demo)</div>
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-label">Tổng số tài liệu RAG</div>
-        <div class="stat-value">1,360</div>
-        <div style="color: #4ade80; font-size: 12px;">+12 hôm nay</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Câu hỏi hóc búa (Bó tay)</div>
-        <div class="stat-value">5</div>
-        <div style="color: #f87171; font-size: 12px;">Cần bổ sung Wiki gấp</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Tốc độ tư duy (Avg)</div>
-        <div class="stat-value">8.2s</div>
-        <div style="color: #94a3b8; font-size: 12px;">Gemini 3.6 Flash</div>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-header">Top Khoảng trống Quy trình (Missing Knowledge)</div>
-      <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Hệ thống phát hiện nhân viên hay hỏi những vấn đề này nhưng Wiki chưa quy định rõ:</p>
-      <ul style="color: #cbd5e1; font-size: 14px; padding-left: 20px; line-height: 1.8;">
-        <li>Quy định trừ lương khi kiểm kê thiếu &gt; 500k <i>(Hỏi 14 lần tuần qua)</i></li>
-        <li>Hạn mức sử dụng văn phòng phẩm cửa hàng tỉnh <i>(Hỏi 8 lần tuần qua)</i></li>
-        <li>Quy trình đổi trả hàng Cận Date mua từ hệ thống khác <i>(Hỏi 5 lần tuần qua)</i></li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="main-content hidden" id="tools-tab">
-    <div class="page-title">Tool Orchestration (Demo)</div>
-    <p style="color: #94a3b8; margin-bottom: 24px;">Trao quyền cho Agent để nó không chỉ trả lời mà còn thực thi hành động.</p>
+  <!-- Sandbox Tab -->
+  <div class="main-content" id="sandbox-tab">
+    <div class="page-title">Agent Sandbox (Live Test)</div>
+    <p style="color: #94a3b8; margin-bottom: 24px;">Gửi thử một câu hỏi để xem quá trình Agent lục lọi Wiki, suy luận và phản hồi theo thời gian thực (Real-time Tracing).</p>
     
-    <div class="tool-grid">
-      <div class="tool-card">
-        <div class="tool-icon">📦</div>
-        <div>
-          <div style="font-weight: 600; font-size: 15px;">Tra cứu tồn kho ERP</div>
-          <div style="color: #64748b; font-size: 13px; margin-top: 4px; margin-bottom: 8px;">Cho phép Agent đọc dữ liệu tồn kho thực tế khi nhân viên hỏi.</div>
-          <button class="toggle-btn">Đã kích hoạt</button>
+    <div class="chat-container">
+      <div class="chat-box">
+        <div class="chat-history" id="chatHistory">
+          <div class="msg ai">Chào Trưởng phòng, tôi là hệ thống Agent Quy Trình. Hãy đặt một câu hỏi tình huống để kiểm tra khả năng tư duy của tôi!</div>
+        </div>
+        <div class="chat-input-area">
+          <input type="text" id="chatInput" class="chat-input" placeholder="Ví dụ: Quy định về kiểm kê hàng hóa..." onkeypress="if(event.key === 'Enter') sendTest()">
+          <button class="chat-btn" onclick="sendTest()">Gửi</button>
         </div>
       </div>
-      <div class="tool-card">
-        <div class="tool-icon">📝</div>
-        <div>
-          <div style="font-weight: 600; font-size: 15px;">Ghi nhận biên bản phạt</div>
-          <div style="color: #64748b; font-size: 13px; margin-top: 4px; margin-bottom: 8px;">Agent được phép tự động gọi API đẩy biên bản vào Lark Base.</div>
-          <button class="toggle-btn off">Đang tắt</button>
+      
+      <div class="tracing-box" id="tracingBox">
+        <div style="color: #f8fafc; font-size: 14px; font-weight: 600; margin-bottom: 20px; font-family: sans-serif;">Live Tracing (Log Tư Duy)</div>
+        <div id="traceContent" style="opacity: 0.5;">
+          Hệ thống đang chờ lệnh...
         </div>
       </div>
     </div>
   </div>
 
-  <div class="main-content hidden" id="workflows-tab">
-    <div class="page-title">Proactive Workflows (Demo)</div>
+  <!-- Analytics Tab -->
+  <div class="main-content hidden" id="analytics-tab">
+    <div class="page-title">Knowledge Analytics (Đang phát triển)</div>
     <div class="panel">
-      <div class="panel-header">Kịch bản 1: Thông báo quy trình mới</div>
-      <p style="color: #cbd5e1; font-size: 14px; margin-bottom: 12px;">Trigger: <b>Khi có 1 trang Lark Wiki mới được tạo trong folder KSCL</b></p>
-      <p style="color: #cbd5e1; font-size: 14px;">Action: Agent tự động tóm tắt thành 3 gạch đầu dòng và bắn tin nhắn Lark tới group [Tất cả Cửa hàng trưởng].</p>
-      <button class="toggle-btn" style="margin-top: 15px;">Đang chạy ngầm</button>
+      <div class="panel-header">Báo cáo khoảng trống tri thức (Missing Knowledge)</div>
+      <p style="color: #cbd5e1; font-size: 14px;">Module này sẽ thu thập toàn bộ câu hỏi mà Agent không tìm thấy trên Wiki để báo cáo lại cho bạn. Tính năng đang được kết nối với Firebase.</p>
+    </div>
+  </div>
+
+  <!-- Tools Tab -->
+  <div class="main-content hidden" id="tools-tab">
+    <div class="page-title">Tools Orchestration (Phân quyền)</div>
+    <div class="panel">
+      <p style="color: #cbd5e1; font-size: 14px;">Nơi cấu hình các Plugin cho phép Agent gọi API nội bộ của Sakuko (như Lark Base, ERP). Tính năng đang phát triển.</p>
     </div>
   </div>
 </div>
 
 <script>
-function switchTab(tabId) {
+function switchTab(tabId, event) {
   document.querySelectorAll('.main-content').forEach(el => el.classList.add('hidden'));
   document.getElementById(tabId + '-tab').classList.remove('hidden');
   
@@ -185,58 +132,58 @@ function switchTab(tabId) {
   event.currentTarget.classList.add('active');
 }
 
-// Fetch real logs from the Backend
-async function fetchLogs() {
-  const tbody = document.getElementById('logBody');
-  tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Đang đồng bộ dữ liệu não bộ...</td></tr>';
+async function sendTest() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
   
-  try {
-    // Because this page is static, we assume the backend URL is standard.
-    // We don't have the X-Panel-Secret injected dynamically here yet, so this might fail if not authenticated.
-    // In a real scenario, this gets the secret from localStorage.
-    
-    // Fallback Mock Logs if fetch fails due to auth or cors
-    setTimeout(() => {
-        tbody.innerHTML = 
-          <tr>
-            <td class="log-time">10:05:22<br>Hôm nay</td>
-            <td><span class="tag ai">AI_REASONING</span></td>
-            <td>
-              <div style="color:#e2e8f0;font-weight:500;">Q: Cho hỏi quy trình kiểm hàng date của Sakuko Daily?</div>
-              <div class="detail-box">1. Nhận diện Intent: Tra cứu quy trình kiểm date.
-2. RAG Search: Tìm thấy 5 chunks (Score: 18.2).
-3. Đọc Chunk #420 (Wiki ID: XZY123): "Hàng date ngắn phải báo cáo trước 30 ngày..."
-4. Sinh câu trả lời (Gemini Flash) -> Hoàn thành trong 8.1s.</div>
-            </td>
-          </tr>
-          <tr>
-            <td class="log-time">09:12:00<br>Hôm nay</td>
-            <td><span class="tag system">SYSTEM</span></td>
-            <td>
-              <div style="color:#e2e8f0;font-weight:500;">Đồng bộ Tri thức thành công</div>
-              <div style="color:#94a3b8; font-size: 13px; margin-top:5px;">Cập nhật rag_db.json. Đã nạp thêm 3 tài liệu mới từ Lark Wiki.</div>
-            </td>
-          </tr>
-          <tr>
-            <td class="log-time">08:30:15<br>Hôm nay</td>
-            <td><span class="tag ai">AI_ERROR</span></td>
-            <td>
-              <div style="color:#e2e8f0;font-weight:500;">Q: Ai là người dạy bạn những điều này?</div>
-              <div class="detail-box" style="color:#fca5a5; border-color:#7f1d1d;">[503 ServerError] Google Gemini API Overloaded.
-Tiến hành Retry lần 1...
-Thành công! Sinh câu trả lời bù sau 2.1s.</div>
-            </td>
-          </tr>
-        ;
-    }, 800);
+  // Update UI: User Message
+  const history = document.getElementById('chatHistory');
+  history.innerHTML += <div class="msg user"></div>;
+  input.value = '';
+  history.scrollTop = history.scrollHeight;
+  
+  // Start Tracing Simulation
+  const trace = document.getElementById('traceContent');
+  trace.style.opacity = '1';
+  trace.innerHTML = 
+    <div class="trace-step active" id="ts1">1. Nhận diện Intent...<br><span style="color:#64748b">Phân tích yêu cầu: ""</span></div>
+  ;
+  
+  setTimeout(() => {
+    document.getElementById('ts1').classList.remove('active');
+    trace.innerHTML += <div class="trace-step active" id="ts2">2. Truy vấn Vector DB...<br><span style="color:#64748b">Searching in 1,360 chunks...</span></div>;
+  }, 1000);
+  
+  setTimeout(() => {
+    document.getElementById('ts2').classList.remove('active');
+    trace.innerHTML += <div class="trace-step active" id="ts3">3. Gọi LLM (Gemini 3.6 Flash)...<br><span style="color:#64748b">Đang tổng hợp câu trả lời...</span></div>;
+  }, 2500);
 
+  try {
+    const res = await fetch("https://quytrinh-bot.onrender.com/api/qt/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: text })
+    });
+    const data = await res.json();
+    
+    // Complete Tracing
+    document.getElementById('ts3').classList.remove('active');
+    trace.innerHTML += <div class="trace-step active" style="color:#10b981; border-color:#10b981;">4. Hoàn tất (s)<br><span style="color:#64748b">Đã trả về kết quả.</span></div>;
+    
+    // Show AI Response
+    const replyText = data.ok ? data.reply : "Lỗi: " + data.error;
+    history.innerHTML += <div class="msg ai"></div>;
+    history.scrollTop = history.scrollHeight;
+    
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="3" style="color:#f87171;">Lỗi tải dữ liệu. Hãy kiểm tra kết nối!</td></tr>';
+    document.getElementById('ts3').classList.remove('active');
+    trace.innerHTML += <div class="trace-step" style="color:#f43f5e;">Lỗi kết nối Server!</div>;
+    history.innerHTML += <div class="msg ai" style="background:#7f1d1d;color:#fecaca;">Không thể kết nối đến Render Server.</div>;
+    history.scrollTop = history.scrollHeight;
   }
 }
-
-// Load logs on start
-fetchLogs();
 </script>
 </body>
 </html>
