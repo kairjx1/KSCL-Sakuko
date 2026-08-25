@@ -89,10 +89,16 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
   </div>
 
   <div class="main-content" id="reports-tab">
-    <div class="page-title">
-        Báo cáo công việc từ Zalo
-        <button class="btn-success" onclick="generateReport()" id="btnGenerateReport">✨ Tạo Báo Cáo Ngay</button>
-    </div>
+    
+      <div class="page-title">
+          Báo cáo công việc từ Zalo
+          <div>
+            <button class="btn-success" onclick="generateReport()" id="btnGenerateReport">🚀 Tạo Báo Cáo Ngay</button>
+            <button class="btn-primary" onclick="copyLarkFormat()" id="btnCopyLark" style="display:none; background:#8b5cf6;">📋 Copy Form Lark</button>
+            <button class="btn-primary" onclick="downloadExcel()" id="btnDownloadExcel" style="display:none; background:#10b981;">📊 Tải Excel</button>
+          </div>
+      </div>
+
     <div class="panel">
       <div class="panel-header">Báo cáo gần nhất</div>
       <div id="report-content" class="md-content" style="color: #e2e8f0; line-height: 1.6;">
@@ -311,13 +317,29 @@ async function generateReport() {
         const msgsText = await fetchRecentMessages();
         out.innerHTML = "Đang phân tích dữ liệu từ " + Object.keys(allZaloSessions).length + " nhóm...";
         
-        const brainPrompt = await getBrainPrompt();
-        const fullPrompt = `${brainPrompt || 'Tóm tắt các công việc quan trọng:'}\n\nĐOẠN CHAT HÔM NAY:\n${msgsText}`;
+        
+        const persona = document.getElementById('aiPersona') ? document.getElementById('aiPersona').value : 'secretary';
+        let brainPrompt = await getBrainPrompt();
+        
+        if (persona === 'cskh') {
+            brainPrompt = "Bạn là Trưởng phòng CSKH và Quản lý Rủi ro. Hãy đọc kỹ lịch sử chat Zalo hôm nay. Mục tiêu duy nhất của bạn là TÌM RA NHỮNG KHÁCH HÀNG/ĐỐI TÁC ĐANG CÁU GẮT, PHÀN NÀN, HOẶC CÁC CÔNG VIỆC BỊ TRỄ HẠN (Urgent). Báo cáo khẩn cấp các rủi ro này kèm theo Nhóm Zalo tương ứng.";
+        } else if (persona === 'accountant') {
+            brainPrompt = "Bạn là Kế toán viên. Hãy đọc kỹ lịch sử chat Zalo hôm nay. Mục tiêu duy nhất của bạn là NHẶT RA TOÀN BỘ CÁC CON SỐ: Báo giá, tiền bạc, doanh thu, số tài khoản, chi phí. Tổng hợp chúng lại theo từng Nhóm Zalo.";
+        }
+        
+        const fullPrompt = `${brainPrompt || 'Tóm tắt các công việc quan trọng:'}
+
+ĐOẠN CHAT HÔM NAY:
+${msgsText}`;
+
         const aiResponse = await callGemini(fullPrompt);
         out.innerHTML = marked.parse(aiResponse);
         
         db.ref('/zaloReports').push({ time: Date.now(), content: aiResponse });
         showToast("Báo cáo đã được tạo!");
+        document.getElementById("btnCopyLark").style.display="inline-block";
+        document.getElementById("btnDownloadExcel").style.display="inline-block";
+        window.lastAiResponse = aiResponse;
     } catch (err) {
         out.innerHTML = `<span style="color: #e74c3c;">Lỗi: ${err.message}</span>`;
     }
@@ -367,7 +389,39 @@ function deleteReport(key) {
         db.ref('/zaloReports/' + key).remove().then(() => showToast("Đã xóa báo cáo!"));
     }
 }
+
+function copyLarkFormat() {
+    if (!window.lastAiResponse) return;
+    const larkText = window.lastAiResponse.replace(/\*\*/g, "").replace(/#/g, "");
+    navigator.clipboard.writeText(larkText);
+    showToast("Đã copy định dạng Lark!");
+}
+function downloadExcel() {
+    if (!window.lastAiResponse) return;
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+    csvContent += "Nhóm,Nội dung công việc\n";
+    const lines = window.lastAiResponse.split('\n');
+    lines.forEach(l => {
+        if (l.includes('- ') || l.includes('1. ')) {
+            let clean = l.replace(/- |\d+\. /, '').replace(/\*\*/g, '');
+            let group = "Chung";
+            if (clean.includes('[NHÓM:')) {
+                const match = clean.match(/\[NHÓM:(.*?)\]/);
+                if(match) { group = match[1].trim(); clean = clean.replace(match[0], '').trim(); }
+            }
+            csvContent += `"${group}","${clean}"\n`;
+        }
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "zalo_tasks.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 function loadHistory() {
+
 
     db.ref('/zaloReports').orderByChild('time').on('value', snap => {
         const data = snap.val();
