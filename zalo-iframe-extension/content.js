@@ -135,7 +135,6 @@ Tiêu chí:
 - Tuyệt đối không dùng văn phong robot, máy móc, sáo rỗng hay "văn mẫu".
 - Dùng từ ngữ gần gũi, thực tế của môi trường công sở/bán hàng Việt Nam (VD: vâng, dạ, ok ạ, anh/chị... tùy ngữ cảnh).
 - Không dùng ký hiệu markdown (như **). Chỉ in ra đúng nội dung câu trả lời cuối cùng, tuyệt đối không giải thích thêm.`;
-            }`;
             }
             
             let replyText = "";
