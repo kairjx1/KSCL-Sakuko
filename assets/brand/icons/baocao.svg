@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <rect x="8" y="6" width="26" height="34" rx="2" fill="#fff" stroke="#1e3460" stroke-width="2.2"/>
+  <text x="21" y="14" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="5" font-weight="800" fill="#1e3460">SAKUKO</text>
+  <path d="M14 20h14M14 25h10" stroke="#1e3460" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="21" cy="33" r="6" fill="none" stroke="#1e3460" stroke-width="1.5"/>
+  <path d="M21 33l0-4A4 4 0 0125 33" fill="#e84393"/>
+  <g transform="translate(36,38) scale(.65)">
+    <circle r="1.8" fill="#e84393"/><ellipse cy="-3.5" rx="2.2" ry="3.5" fill="#e84393" transform="rotate(0)"/>
+    <ellipse cy="-3.5" rx="2.2" ry="3.5" fill="#e84393" transform="rotate(72)"/>
+    <ellipse cy="-3.5" rx="2.2" ry="3.5" fill="#e84393" transform="rotate(144)"/>
+    <ellipse cy="-3.5" rx="2.2" ry="3.5" fill="#e84393" transform="rotate(216)"/>
+    <ellipse cy="-3.5" rx="2.2" ry="3.5" fill="#e84393" transform="rotate(288)"/>
+  </g>
+</svg>

@@ -205,9 +205,18 @@ function saveConfig() {
 
 // 2. Giao tiếp với Chrome Extension
 let currentZaloMessages = [];
+let currentChatName = "";
 window.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'RES_ZALO_MESSAGES') {
-        currentZaloMessages = event.data.payload;
+        if (Array.isArray(event.data.payload)) {
+            // Old format fallback
+            currentZaloMessages = event.data.payload;
+            currentChatName = "Cuộc trò chuyện";
+        } else {
+            // New format
+            currentZaloMessages = event.data.payload.messages;
+            currentChatName = event.data.payload.chatName;
+        }
     }
 });
 

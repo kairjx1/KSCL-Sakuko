@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <g id="sakura-sm">
+      <circle cx="0" cy="0" r="1.8" fill="#e84393"/>
+      <ellipse cx="0" cy="-3.5" rx="2.2" ry="3.5" fill="#e84393" transform="rotate(0)"/>
+      <ellipse cx="0" cy="-3.5" rx="2.2" ry="3.5" fill="#e84393" transform="rotate(72)"/>
+      <ellipse cx="0" cy="-3.5" rx="2.2" ry="3.5" fill="#e84393" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-3.5" rx="2.2" ry="3.5" fill="#e84393" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-3.5" rx="2.2" ry="3.5" fill="#e84393" transform="rotate(288)"/>
+    </g>
+  </defs>
+  <path d="M32 4L54 14v20c0 12-9.5 20.5-22 26C19.5 54.5 10 46 10 34V14L32 4z" fill="#fff" stroke="#1e3460" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M22 32l7 7 15-16" stroke="#e84393" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <use href="#sakura-sm" x="48" y="50" transform="scale(0.85)"/>
+</svg>

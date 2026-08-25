@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 68" fill="none">
+  <defs>
+    <g id="sakura">
+      <circle cx="0" cy="0" r="2.2" fill="#e84393"/>
+      <ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(0)"/>
+      <ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(72)"/>
+      <ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-4.5" rx="2.8" ry="4.2" fill="#e84393" transform="rotate(288)"/>
+    </g>
+  </defs>
+  <text x="0" y="36" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800" fill="#1e3460" letter-spacing="1.5">SAKUK</text>
+  <circle cx="188" cy="26" r="15" fill="none" stroke="#1e3460" stroke-width="3.2"/>
+  <use href="#sakura" x="188" y="26" transform="scale(1.05)"/>
+  <rect x="0" y="46" width="132" height="16" rx="2" fill="#1e3460"/>
+  <text x="66" y="58" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="8.5" font-weight="700" fill="#ffffff" letter-spacing="0.8">H&#192;NG NH&#7852;T N&#7896;I &#272;&#7882;A</text>
+</svg>
