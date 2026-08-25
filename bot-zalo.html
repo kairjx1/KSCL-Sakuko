@@ -58,6 +58,10 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
 
 .toast { position: fixed; bottom: 24px; right: 24px; background: #10b981; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 500; transform: translateY(100px); opacity: 0; transition: 0.3s; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
 .toast.show { transform: translateY(0); opacity: 1; }
+
+.history-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; }
+.history-time { font-size: 13px; color: #10b981; font-weight: 600; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+.history-content { font-size: 14px; line-height: 1.6; color: #e2e8f0; }
 </style>
 </head>
 <body>
@@ -70,8 +74,14 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
 </div>
 
 <div class="app-container">
+  
   <div class="sidebar">
-    <div class="nav-item active" onclick="switchTab('reports', event)">📊 Báo cáo tóm tắt</div>
+    <div class="nav-item active" onclick="switchTab('report', event)">📄 Báo cáo tóm tắt</div>
+    <div class="nav-item" onclick="switchTab('history', event)">🗄️ Lịch sử Báo cáo</div>
+    <div class="nav-item" onclick="switchTab('chat', event)">🤖 Tư duy Bot</div>
+    <div class="nav-item" onclick="switchTab('config', event)">⚙ Cấu hình Bot</div>
+  </div>
+
     <div class="nav-item" onclick="switchTab('chat', event)">🤖 Tư duy Bot</div>
     <div class="nav-item" onclick="switchTab('config', event)">⚙ Cấu hình Bot</div>
   </div>
@@ -91,6 +101,14 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
   </div>
 
   <!-- Tab: Bot Chat -->
+  
+  <div class="main-content hidden" id="history-tab">
+    <div class="page-title">Lịch sử Báo cáo (Lưu trữ vĩnh viễn)</div>
+    <div id="history-list" style="display: flex; flex-direction: column; gap: 20px;">
+        <div style="color: #94a3b8; font-style: italic;">Đang tải lịch sử từ hệ thống...</div>
+    </div>
+  </div>
+
   <div class="main-content hidden" id="chat-tab">
     <div class="page-title">Trò chuyện với Thư ký Zalo</div>
     <div class="chat-container">
@@ -341,7 +359,35 @@ async function sendChatMessage() {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+
+function loadHistory() {
+    db.ref('/zaloReports').orderByChild('time').on('value', snap => {
+        const data = snap.val();
+        const container = document.getElementById('history-list');
+        if (!data) {
+            container.innerHTML = '<div style="color: #94a3b8;">Chưa có báo cáo nào được lưu.</div>';
+            return;
+        }
+        
+        container.innerHTML = '';
+        // Sort descending
+        const records = Object.values(data).sort((a,b) => b.time - a.time);
+        
+        records.forEach(r => {
+            const dt = new Date(r.time).toLocaleString('vi-VN');
+            const card = document.createElement('div');
+            card.className = 'history-card';
+            card.innerHTML = `
+                <div class="history-time">🕒 Báo cáo tạo lúc: ${dt}</div>
+                <div class="history-content md-content">${marked.parse(r.content)}</div>
+            `;
+            container.appendChild(card);
+        });
+    });
+}
+
 checkAuth();
+loadHistory();
 loadConfig();
 </script>
 </body>
