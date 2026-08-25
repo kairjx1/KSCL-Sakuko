@@ -74,19 +74,20 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
 </div>
 
 <div class="app-container">
-  
   <div class="sidebar">
-    <div class="nav-item active" onclick="switchTab('report', event)">📄 Báo cáo tóm tắt</div>
+    <div class="nav-item active" onclick="switchTab('reports', event)">📄 Báo cáo tóm tắt</div>
     <div class="nav-item" onclick="switchTab('history', event)">🗄️ Lịch sử Báo cáo</div>
     <div class="nav-item" onclick="switchTab('chat', event)">🤖 Tư duy Bot</div>
     <div class="nav-item" onclick="switchTab('config', event)">⚙ Cấu hình Bot</div>
   </div>
-
-    <div class="nav-item" onclick="switchTab('chat', event)">🤖 Tư duy Bot</div>
-    <div class="nav-item" onclick="switchTab('config', event)">⚙ Cấu hình Bot</div>
+  
+  <div class="main-content hidden" id="history-tab">
+    <div class="page-title">Lịch sử Báo cáo (Lưu trữ vĩnh viễn)</div>
+    <div id="history-list" style="display: flex; flex-direction: column; gap: 20px;">
+        <div style="color: #94a3b8; font-style: italic;">Đang tải lịch sử từ hệ thống...</div>
+    </div>
   </div>
 
-  <!-- Tab: Reports -->
   <div class="main-content" id="reports-tab">
     <div class="page-title">
         Báo cáo công việc từ Zalo
@@ -360,7 +361,14 @@ async function sendChatMessage() {
 }
 
 
+
+function deleteReport(key) {
+    if(confirm("Bạn có chắc chắn muốn xóa báo cáo này không?")) {
+        db.ref('/zaloReports/' + key).remove().then(() => showToast("Đã xóa báo cáo!"));
+    }
+}
 function loadHistory() {
+
     db.ref('/zaloReports').orderByChild('time').on('value', snap => {
         const data = snap.val();
         const container = document.getElementById('history-list');
@@ -371,14 +379,17 @@ function loadHistory() {
         
         container.innerHTML = '';
         // Sort descending
-        const records = Object.values(data).sort((a,b) => b.time - a.time);
+        const records = Object.entries(data).sort((a,b) => b[1].time - a[1].time);
         
-        records.forEach(r => {
+        records.forEach(([key, r]) => {
             const dt = new Date(r.time).toLocaleString('vi-VN');
             const card = document.createElement('div');
             card.className = 'history-card';
             card.innerHTML = `
-                <div class="history-time">🕒 Báo cáo tạo lúc: ${dt}</div>
+                <div class="history-time" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>🕒 Báo cáo tạo lúc: ${dt}</span>
+                    <button onclick="deleteReport('${key}')" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">🗑 Xóa</button>
+                </div>
                 <div class="history-content md-content">${marked.parse(r.content)}</div>
             `;
             container.appendChild(card);
