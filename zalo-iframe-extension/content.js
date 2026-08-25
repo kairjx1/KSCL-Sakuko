@@ -115,14 +115,27 @@ autoReplyBtn.onclick = async () => {
                 prompt = `ĐOẠN CHAT NGỮ CẢNH:
 ${chatContext}
 
-Ý TƯỞNG TRẢ LỜI CỦA TÔI: "${userDraft}"
+Ý NHÁP CỦA TÔI: "${userDraft}"
 
-YÊU CẦU: Hãy đóng vai một nhân viên chuyên nghiệp, viết lại ý tưởng của tôi thành một câu trả lời hoàn chỉnh, LỊCH SỰ, KHÉO LÉO, TỰ NHIÊN và phù hợp với ngữ cảnh trên. Không dùng ký hiệu in đậm (**). Chỉ trả về nội dung câu trả lời cuối cùng, tuyệt đối không giải thích thêm.`;
+YÊU CẦU: Dựa vào ý nháp của tôi, hãy viết lại thành một câu trả lời hoàn chỉnh để gửi qua Zalo.
+Tiêu chí:
+- Giọng điệu chuyên nghiệp, khéo léo nhưng PHẢI CỰC KỲ TỰ NHIÊN, GIỐNG NGƯỜI THẬT ĐANG CHAT.
+- Tuyệt đối không dùng văn phong robot, máy móc, sáo rỗng hay "văn mẫu".
+- Dùng từ ngữ gần gũi, thực tế của môi trường công sở/bán hàng Việt Nam (VD: vâng, dạ, ok ạ, anh/chị... tùy ngữ cảnh).
+- Trả lời thẳng vào vấn đề, không vòng vo.
+- Không dùng ký hiệu markdown (như **). Chỉ in ra đúng nội dung câu trả lời cuối cùng, tuyệt đối không giải thích thêm.`;
             } else {
-                prompt = `Dựa vào đoạn chat sau, hãy đóng vai một nhân viên chuyên nghiệp và tự động soạn 1 câu trả lời KHÉO LÉO, TỰ NHIÊN, NGẮN GỌN cho tin nhắn cuối cùng. Không dùng ký hiệu in đậm (**). Chỉ trả về đúng nội dung câu trả lời cuối cùng, tuyệt đối không giải thích thêm.
+                prompt = `ĐOẠN CHAT NGỮ CẢNH:
+${chatContext}
 
-ĐOẠN CHAT:
-${chatContext}`;
+YÊU CẦU: Dựa vào đoạn chat trên, hãy tự động nghĩ ra và soạn 1 câu trả lời tiếp theo để gửi qua Zalo.
+Tiêu chí:
+- Giọng điệu chuyên nghiệp, khéo léo nhưng PHẢI CỰC KỲ TỰ NHIÊN, GIỐNG NGƯỜI THẬT ĐANG CHAT.
+- Ngắn gọn, súc tích (1-2 câu).
+- Tuyệt đối không dùng văn phong robot, máy móc, sáo rỗng hay "văn mẫu".
+- Dùng từ ngữ gần gũi, thực tế của môi trường công sở/bán hàng Việt Nam (VD: vâng, dạ, ok ạ, anh/chị... tùy ngữ cảnh).
+- Không dùng ký hiệu markdown (như **). Chỉ in ra đúng nội dung câu trả lời cuối cùng, tuyệt đối không giải thích thêm.`;
+            }`;
             }
             
             let replyText = "";
