@@ -114,6 +114,10 @@ textarea.form-control { height: 250px; resize: vertical; line-height: 1.5; }
     <div class="nav-item" onclick="switchTab('logs', event)">
       <div class="nav-icon">📜</div> Agent Logs
     </div>
+    
+    <div class="nav-item" onclick="switchTab('knowledge', event)">
+      <div class="nav-icon">📚</div> Knowledge Base
+    </div>
     <div class="nav-item" onclick="switchTab('analytics', event)">
       <div class="nav-icon">📊</div> Knowledge Analytics
     </div>
@@ -190,11 +194,30 @@ textarea.form-control { height: 250px; resize: vertical; line-height: 1.5; }
     </div>
   </div>
 
+  
+  <!-- Knowledge Tab -->
+  <div class="main-content hidden" id="knowledge-tab">
+    <div class="page-title">Kho Dữ Liệu (Knowledge Base)</div>
+    <div class="panel">
+      <div class="panel-header">Thêm Tri thức Mới (Fast-Inject)</div>
+      <textarea id="kbInput" class="form-control" style="height: 100px; margin-bottom: 10px;" placeholder="Dán văn bản quy định mới vào đây... Bot sẽ tự động học ngay lập tức!"></textarea>
+      <button class="btn-primary" onclick="addKnowledge()">Thêm Dữ Liệu</button>
+    </div>
+    
+    <div class="panel">
+      <div class="panel-header">Tri thức đang hoạt động</div>
+      <div id="kbList" style="display: flex; flex-direction: column; gap: 10px;">
+         <div style="color: #94a3b8;">Đang tải...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Logs Tab -->
   <div class="main-content hidden" id="logs-tab">
     <div class="page-title">
       Agent Activity Logs
       <button class="tbtn" onclick="loadLogs()" style="background: #1e293b; border: 1px solid #334155;">🔄 Tải mới</button>
+      <label style='font-size:13px; color:#94a3b8; margin-left:10px;'><input type='checkbox' id='autoRefreshLogs' onchange='toggleAutoRefresh(this)'> Tự động tải (3s)</label></button>
     </div>
     <div class="panel">
       <table class="log-table">
@@ -214,10 +237,22 @@ textarea.form-control { height: 250px; resize: vertical; line-height: 1.5; }
 
   <!-- Analytics Tab -->
   <div class="main-content hidden" id="analytics-tab">
-    <div class="page-title">Knowledge Analytics</div>
+    <div class="page-title">
+      Khoảng trống tri thức (Missing Knowledge)
+      <button class="tbtn" onclick="loadMissingKnowledge()" style="background: #1e293b; border: 1px solid #334155;">🔄 Tải lại</button>
+    </div>
     <div class="panel">
-      <div class="panel-header">Báo cáo khoảng trống tri thức (Missing Knowledge)</div>
-      <p style="color: #cbd5e1; font-size: 14px;">(Tính năng đang được phát triển) Nơi đây sẽ tự động thống kê các quy trình siêu thị hay hỏi nhưng chưa có trên hệ thống Wiki.</p>
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th width="150">Thời gian</th>
+            <th>Câu hỏi chưa trả lời được</th>
+          </tr>
+        </thead>
+        <tbody id="missingBody">
+          <tr><td colspan="2" style="text-align: center;">Đang tải...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -236,6 +271,8 @@ function switchTab(tabId, event) {
   
   if (tabId === 'config') loadConfig();
   if (tabId === 'logs') loadLogs();
+  if (tabId === 'analytics') loadMissingKnowledge();
+  if (tabId === 'knowledge') loadKnowledge();
 }
 
 function showToast(msg) {
@@ -347,7 +384,7 @@ async function loadLogs() {
         html += `
           <tr>
             <td class="log-time">${timeStr}</td>
-            <td><span class="tag ${cls}">${(l.event||'').toUpperCase()}</span></td>
+            <td><span class="tag ${cls}">${(l.event||'').toUpperCase()}</span><br><br><button onclick="toggleTakeover('lark_chat_'+'${l.chat_id || ''}', true)" style="background:#ef4444;color:#fff;border:none;padding:4px 8px;border-radius:4px;font-size:10px;cursor:pointer;">Cướp Quyền</button><button onclick="toggleTakeover('lark_chat_'+'${l.chat_id || ''}', false)" style="background:#3b82f6;color:#fff;border:none;padding:4px 8px;border-radius:4px;font-size:10px;cursor:pointer;margin-left:4px;">Trả Quyền</button></td>
             <td>
               <div class="detail-box">${(l.detail||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
             </td>
@@ -360,6 +397,79 @@ async function loadLogs() {
     tbody.innerHTML = '<tr><td colspan="3" style="color:#f87171; text-align:center;">Lỗi kết nối Server!</td></tr>';
   }
 }
+
+
+let refreshInterval;
+function toggleAutoRefresh(cb) {
+  if (cb.checked) {
+    refreshInterval = setInterval(loadLogs, 3000);
+  } else {
+    clearInterval(refreshInterval);
+  }
+}
+
+async function loadMissingKnowledge() {
+  const tbody = document.getElementById('missingBody');
+  try {
+    const res = await fetch(`${API_URL}/qt/missing`);
+    const data = await res.json();
+    if (data.ok && data.data) {
+      let html = '';
+      data.data.forEach(l => {
+        const d = new Date((l.ts || 0) * 1000);
+        html += `<tr>
+          <td class="log-time">${d.toLocaleString('vi-VN')}</td>
+          <td><div class="detail-box">${l.question}</div></td>
+        </tr>`;
+      });
+      tbody.innerHTML = html || '<tr><td colspan="2" style="text-align: center;">Chưa có câu hỏi nào bị lỡ.</td></tr>';
+    }
+  } catch(e) {}
+}
+
+async function loadKnowledge() {
+  const list = document.getElementById('kbList');
+  try {
+    const res = await fetch(`${API_URL}/qt/knowledge`);
+    const data = await res.json();
+    if (data.ok && data.data) {
+      let html = '';
+      data.data.forEach(l => {
+        html += `<div style="background: #0f172a; padding: 15px; border: 1px solid #334155; border-radius: 8px;">
+          <pre style="white-space: pre-wrap; font-family: inherit; font-size: 13px; color: #cbd5e1;">${l.content}</pre>
+        </div>`;
+      });
+      list.innerHTML = html || '<div style="color: #94a3b8;">Chưa có dữ liệu nào.</div>';
+    }
+  } catch(e) {}
+}
+
+async function addKnowledge() {
+  const txt = document.getElementById('kbInput').value.trim();
+  if (!txt) return;
+  try {
+    await fetch(`${API_URL}/qt/knowledge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: txt })
+    });
+    document.getElementById('kbInput').value = '';
+    showToast("Đã nạp tri thức thành công!");
+    loadKnowledge();
+  } catch(e) { alert('Lỗi'); }
+}
+
+async function toggleTakeover(conv_key, state) {
+  try {
+    await fetch(`${API_URL}/qt/takeover`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conv_key, state })
+    });
+    showToast(state ? "Đã cướp quyền Bot!" : "Đã trả quyền cho Bot!");
+  } catch(e) {}
+}
+
 
 // Init Load Config so it's ready
 loadConfig();
