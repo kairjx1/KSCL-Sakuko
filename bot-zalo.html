@@ -187,7 +187,7 @@ function loadConfig() {
       document.getElementById('apiModel').value = data.apiModel || "gemini-3.6-flash";
       document.getElementById('systemPrompt').value = data.systemPrompt || "";
     } else {
-      document.getElementById('systemPrompt').value = "Bạn là thư ký ảo. Hãy phân tích các tin nhắn và trả lời câu hỏi.";
+      document.getElementById('systemPrompt').value = "Bạn là Trợ lý phân tích của KSCL.\nHãy tóm tắt các nội dung chat từ CÁC NHÓM KHÁC NHAU theo cấu trúc chuẩn sau:\n\n# TÓM TẮT TIN NHẮN ZALO\n\n## **SỰ KIỆN QUAN TRỌNG**\n1. [Tên sự kiện] [NHÓM: Tên Nhóm]\n2. ...\n\n## **VIỆC CẦN LÀM HÔM NAY**\n1. [Tên công việc] [NHÓM: Tên Nhóm]\n2. ...\n\nYêu cầu: Phân tách rõ ràng, không để lẫn lộn việc của nhóm này sang nhóm kia. Ở mỗi đầu mục BẮT BUỘC phải ghi rõ [NHÓM: Tên Nhóm] ở cuối để dễ theo dõi.";
       document.getElementById('apiModel').value = "gemini-3.6-flash";
     }
   });
@@ -204,19 +204,10 @@ function saveConfig() {
 }
 
 // 2. Giao tiếp với Chrome Extension
-let currentZaloMessages = [];
-let currentChatName = "";
+let allZaloSessions = {};
 window.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'RES_ZALO_MESSAGES') {
-        if (Array.isArray(event.data.payload)) {
-            // Old format fallback
-            currentZaloMessages = event.data.payload;
-            currentChatName = "Cuộc trò chuyện";
-        } else {
-            // New format
-            currentZaloMessages = event.data.payload.messages;
-            currentChatName = event.data.payload.chatName;
-        }
+        allZaloSessions = event.data.payload || {};
     }
 });
 
@@ -269,7 +260,7 @@ async function generateReport() {
     
     try {
         const msgsText = await fetchRecentMessages();
-        out.innerHTML = "Đang gửi " + currentZaloMessages.length + " tin nhắn cho AI phân tích...";
+        out.innerHTML = "Đang phân tích toàn bộ dữ liệu từ " + Object.keys(allZaloSessions).length + " nhóm cho AI phân tích...";
         
         const fullPrompt = `${botConfig.systemPrompt || 'Tóm tắt các công việc quan trọng:'}
 
@@ -316,7 +307,7 @@ async function sendChatMessage() {
         const msgsText = await fetchRecentMessages();
         const fullPrompt = `Bạn là thư ký của tôi. Dựa vào nội dung chat Zalo dưới đây, hãy trả lời câu hỏi của tôi:
 
-[DỮ LIỆU CHAT ZALO (${currentZaloMessages.length} tin)]:
+[DỮ LIỆU TỪ CÁC NHÓM ZALO ĐÃ LƯU TRỮ]:
 ${msgsText}
 
 [CÂU HỎI CỦA SẾP]:
