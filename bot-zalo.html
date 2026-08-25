@@ -262,7 +262,7 @@ function saveConfig() {
     systemPrompt: document.getElementById('systemPrompt').value.trim()
   };
   botConfig = payload;
-  window.postMessage({ type: 'UPDATE_CONFIG', payload: { apiKey: payload.apiKey } }, '*');
+  window.postMessage({ type: 'UPDATE_CONFIG', payload: payload }, '*');
   db.ref('/zaloBotConfig').set(payload).then(() => showToast("Lưu cấu hình thành công!")).catch(() => alert("Lỗi!"));
 }
 
