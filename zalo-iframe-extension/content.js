@@ -1,0 +1,186 @@
+console.log("🚀 KSCL Zalo Extension: Đã inject thành công vào chat.zalo.me!");
+
+let allGroupData = {};
+
+// Khôi phục session cũ nếu có
+chrome.storage.local.get(['kscl_zalo_sessions'], (res) => {
+    if (res.kscl_zalo_sessions) allGroupData = res.kscl_zalo_sessions;
+});
+
+// UI Overlay
+const statusBox = document.createElement('div');
+statusBox.style.cssText = 'position:fixed; bottom:20px; right:20px; background:#1e293b; color:#10b981; padding:15px; border-radius:12px; z-index:999999; font-size:13px; font-family:sans-serif; box-shadow:0 10px 15px -3px rgba(0,0,0,0.3); border:1px solid #334155; width:220px; transition:0.3s;';
+document.body.appendChild(statusBox);
+
+// Header & Minimize logic
+const header = document.createElement('div');
+header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; cursor:pointer;';
+const title = document.createElement('div');
+title.innerHTML = '🤖 KSCL Bot';
+title.style.fontWeight = 'bold';
+title.style.color = '#fff';
+
+const minBtn = document.createElement('button');
+minBtn.innerHTML = '−';
+minBtn.style.cssText = 'background:transparent; color:#94a3b8; border:none; cursor:pointer; font-size:18px; font-weight:bold; outline:none; padding:0 5px;';
+
+header.appendChild(title);
+header.appendChild(minBtn);
+statusBox.appendChild(header);
+
+const contentBox = document.createElement('div');
+contentBox.style.marginTop = '10px';
+statusBox.appendChild(contentBox);
+
+let isMinimized = false;
+function toggleMinimize() {
+    isMinimized = !isMinimized;
+    if (isMinimized) {
+        contentBox.style.display = 'none';
+        minBtn.innerHTML = '+';
+        statusBox.style.width = '120px';
+        statusBox.style.padding = '10px';
+    } else {
+        contentBox.style.display = 'block';
+        minBtn.innerHTML = '−';
+        statusBox.style.width = '220px';
+        statusBox.style.padding = '15px';
+    }
+}
+header.onclick = toggleMinimize;
+
+const infoText = document.createElement('div');
+infoText.innerHTML = 'Đang khởi động...';
+contentBox.appendChild(infoText);
+
+// Nút Gợi ý trả lời (AI Auto-Draft)
+const autoReplyBtn = document.createElement('button');
+autoReplyBtn.innerHTML = '✨ AI: Hỗ trợ soạn tin';
+autoReplyBtn.style.cssText = 'display:block; margin-top:12px; width:100%; padding:10px; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; transition:0.2s;';
+autoReplyBtn.onmouseover = () => autoReplyBtn.style.background = '#2563eb';
+autoReplyBtn.onmouseout = () => autoReplyBtn.style.background = '#3b82f6';
+contentBox.appendChild(autoReplyBtn);
+
+// Nút Xóa bộ nhớ
+const clearBtn = document.createElement('button');
+clearBtn.innerText = '🗑 Xóa phiên làm việc';
+clearBtn.style.cssText = 'display:block; margin-top:8px; width:100%; padding:6px; background:#ef4444; color:white; border:none; border-radius:6px; cursor:pointer; font-size:11px;';
+contentBox.appendChild(clearBtn);
+
+clearBtn.onclick = () => {
+    allGroupData = {};
+    chrome.storage.local.remove('kscl_zalo_sessions');
+    infoText.innerHTML = `Đã xóa sạch bộ nhớ!`;
+};
+
+autoReplyBtn.onclick = async () => {
+    autoReplyBtn.innerHTML = '⏳ AI Đang nghĩ...';
+    
+    const titleEl = document.querySelector('.header-title, .chat-title, .title');
+    const currentChatName = titleEl ? titleEl.innerText.trim() : 'Cuộc trò chuyện';
+    
+    const msgs = allGroupData[currentChatName] || [];
+    if (msgs.length === 0) {
+        alert("Chưa quét được tin nhắn nào trong nhóm này!");
+        autoReplyBtn.innerHTML = '✨ AI: Hỗ trợ soạn tin';
+        return;
+    }
+    
+    let chatContext = "";
+    msgs.slice(-15).forEach(m => { 
+        chatContext += `${m.sender}: ${m.content}\n`;
+    });
+    
+    chrome.storage.local.get(['kscl_bot_config'], async (res) => {
+        const apiKey = res.kscl_bot_config?.apiKey;
+        const deepseekKey = res.kscl_bot_config?.deepseekKey;
+        const aiProvider = res.kscl_bot_config?.aiProvider || 'gemini';
+        
+        if (!apiKey && !deepseekKey) {
+            alert('Vui lòng mở tab KSCL Dashboard, vào Cấu hình Bot và bấm "Lưu Cấu hình" 1 lần để Bot ghi nhớ API Key!');
+            autoReplyBtn.innerHTML = '✨ AI: Hỗ trợ soạn tin';
+            return;
+        }
+        
+        try {
+            const prompt = `Dựa vào đoạn chat sau, hãy đóng vai một nhân viên chuyên nghiệp và soạn 1 câu trả lời KHÉO LÉO, TỰ NHIÊN, NGẮN GỌN cho tin nhắn cuối cùng. Không dùng ký hiệu in đậm (**). Đừng giải thích gì thêm, chỉ in ra đúng câu trả lời để tôi copy gửi luôn.
+
+ĐOẠN CHAT:
+${chatContext}`;
+            
+            let replyText = "";
+            let primaryFailed = false;
+            
+            const runGemini = async () => {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
+                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7 } }) });
+                const result = await response.json();
+                if (result.error) throw new Error(result.error.message);
+                return result.candidates[0].content.parts[0].text.trim();
+            };
+            
+            const runDeepseek = async () => {
+                const response = await fetch("https://api.deepseek.com/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${deepseekKey}` }, body: JSON.stringify({ model: "deepseek-chat", messages: [{ role: "user", content: prompt }], temperature: 0.7 }) });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error?.message || "Lỗi DeepSeek");
+                return result.choices[0].message.content.trim();
+            };
+
+            if (aiProvider === 'deepseek') {
+                try {
+                    replyText = await runDeepseek();
+                } catch(e) {
+                    if (apiKey) replyText = await runGemini();
+                    else throw e;
+                }
+            } else {
+                try {
+                    replyText = await runGemini();
+                } catch(e) {
+                    if (deepseekKey) replyText = await runDeepseek();
+                    else throw e;
+                }
+            }
+            replyText = replyText.replace(/\*/g, '');
+            
+            if (inputDiv) {
+                inputDiv.focus();
+                document.execCommand('selectAll', false, null);
+                document.execCommand('insertText', false, replyText);
+            } else {
+                navigator.clipboard.writeText(replyText);
+                alert('Đã copy gợi ý vào khay nhớ tạm! Bấm Ctrl+V vào ô chat để dán.');
+            }
+        } catch (e) {
+            alert('Lỗi gọi AI: ' + e.message);
+        }
+        autoReplyBtn.innerHTML = '✨ AI: Hỗ trợ soạn tin';
+    });
+};
+
+function extractZaloMessages() {
+    const titleEl = document.querySelector('.header-title, .chat-title, .title');
+    const currentChatName = titleEl ? titleEl.innerText.trim() : 'Cuộc trò chuyện';
+    
+    const messageElements = document.querySelectorAll('.message-view__msg-item, .chat-message');
+    
+    let currentGroupMessages = [];
+    messageElements.forEach(el => {
+        const sender = el.querySelector('.card-sender-name, .msg-author')?.innerText.trim() || 'Ai đó';
+        const content = el.querySelector('.text, .msg-text, .chat-message-content')?.innerText.trim();
+        const time = el.querySelector('.msg-time, .time')?.innerText.trim() || new Date().toLocaleTimeString();
+
+        if (content && content.length > 0) {
+            currentGroupMessages.push({ sender, time, content });
+        }
+    });
+
+    if (currentGroupMessages.length > 0) {
+        if (currentGroupMessages.length > 150) currentGroupMessages = currentGroupMessages.slice(-150);
+        allGroupData[currentChatName] = currentGroupMessages;
+        chrome.storage.local.set({ kscl_zalo_sessions: allGroupData });
+        
+        infoText.innerHTML = `Đang đọc: <b style="color:#fff">${currentChatName}</b><br/>Đã nhớ: <b style="color:#fff">${Object.keys(allGroupData).length} nhóm</b>`;
+    }
+}
+setInterval(extractZaloMessages, 2000);

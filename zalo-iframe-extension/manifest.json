@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Zalo Iframe Unlocker (KSCL)",
+  "version": "1.0",
+  "description": "Bỏ chặn X-Frame-Options để nhúng Zalo Web vào KSCL Dashboard và chuẩn bị RAG data.",
+  "permissions": [
+    "declarativeNetRequest",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://*.zalo.me/*"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://chat.zalo.me/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "*://kscl-sakuko.pages.dev/*",
+        "*://localhost/*",
+        "*://127.0.0.1/*"
+      ],
+      "js": [
+        "dashboard.js"
+      ],
+      "all_frames": false
+    }
+  ]
+}

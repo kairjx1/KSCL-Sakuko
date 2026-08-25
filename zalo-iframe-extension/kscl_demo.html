@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KSCL System - Zalo Sandbox</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; height: 100vh; margin: 0; background-color: #1a1d21; color: #d1d2d3; }
+        .sidebar { width: 250px; background: #222529; border-right: 1px solid #3f4145; padding: 20px; }
+        .sidebar h2 { color: #fff; font-size: 18px; margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
+        .sidebar ul { list-style: none; padding: 0; }
+        .sidebar li { padding: 10px 15px; margin-bottom: 5px; border-radius: 5px; cursor: pointer; color: #aeb0b4; }
+        .sidebar li.active { background-color: #2c3136; color: #fff; border-left: 3px solid #e74c3c; }
+        
+        .content { flex: 1; display: flex; flex-direction: column; }
+        .header { background: #222529; padding: 15px 20px; font-weight: 500; border-bottom: 1px solid #3f4145; display: flex; justify-content: space-between; }
+        
+        .main-workspace { flex: 1; display: flex; padding: 20px; gap: 20px; background-color: #1a1d21; }
+        
+        /* Cột trái: Zalo Iframe */
+        .zalo-container { flex: 6; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column; }
+        .zalo-container iframe { flex: 1; width: 100%; border: none; }
+        
+        /* Cột phải: Agent Chat / Log */
+        .agent-container { flex: 4; background: #222529; border-radius: 8px; border: 1px solid #3f4145; display: flex; flex-direction: column; }
+        .agent-header { padding: 10px 15px; border-bottom: 1px solid #3f4145; font-weight: bold; color: #3498db; }
+        .agent-chat { flex: 1; padding: 15px; overflow-y: auto; color: #bbb; font-size: 14px; }
+        .agent-input { padding: 15px; border-top: 1px solid #3f4145; display: flex; }
+        .agent-input input { flex: 1; background: #1a1d21; border: 1px solid #3f4145; color: white; padding: 10px; border-radius: 4px; }
+        
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>🧠 Agent Zalo Pro</h2>
+        <ul>
+            <li>Dashboard Tổng quan</li>
+            <li class="active">Agent Sandbox (Live)</li>
+            <li>Cấu hình Báo cáo</li>
+            <li>Knowledge RAG</li>
+        </ul>
+    </div>
+    
+    <div class="content">
+        <div class="header">
+            <span>Module: Thư ký Zalo Cá Nhân</span>
+            <span style="color: #2ecc71;">● Đang online</span>
+        </div>
+        
+        <div class="main-workspace">
+            <!-- NƠI NHÚNG ZALO -->
+            <div class="zalo-container">
+                <div style="background: #0068ff; color: white; padding: 8px 15px; font-size: 13px; font-weight: bold;">
+                    ZALO WEB NỘI BỘ (Đã mở khóa Iframe)
+                </div>
+                <!-- NẾU CHƯA CÀI EXTENSION, KHUNG NÀY SẼ BÁO LỖI -->
+                <iframe src="https://chat.zalo.me/" title="Zalo Web" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+            </div>
+
+            <!-- NƠI CHAT VỚI AI THƯ KÝ -->
+            <div class="agent-container">
+                <div class="agent-header">
+                    Live Tracing (Log Tư Duy AI)
+                </div>
+                <div class="agent-chat">
+                    <p style="color: #2ecc71;">[System] Đang chờ Content Script gửi dữ liệu từ Zalo...</p>
+                    <p>[Bot] Chào sếp, tôi đang trực. Sếp cần tóm tắt việc gì hôm nay không?</p>
+                </div>
+                <div class="agent-input">
+                    <input type="text" placeholder="Nhập câu lệnh cho Thư ký...">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Lắng nghe tín hiệu từ "Máy hút bụi" trong Zalo Iframe
+        const chatBox = document.querySelector('.agent-chat');
+        
+        window.addEventListener('message', function(event) {
+            // Bảo mật: Đảm bảo message đến từ nguồn an toàn (có thể thêm check origin sau)
+            const data = event.data;
+            
+            if (data.type === 'ZALO_IFRAME_LOADED') {
+                chatBox.innerHTML += `<p style="color: #2ecc71;">[System] Máy hút bụi dữ liệu đã khởi động thành công!</p>`;
+            }
+            
+            if (data.type === 'ZALO_NEW_DATA') {
+                const msg = data.preview;
+                // Hiển thị log ra màn hình KSCL
+                chatBox.innerHTML += `<p style="color: #f39c12;">[Scraper] 🧹 Hút được tin nhắn: <b>${msg.sender}</b>: ${msg.content}</p>`;
+                // Cuộn xuống cuối
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        });
+    </script>
+</body>
+</html>
