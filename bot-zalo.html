@@ -226,6 +226,7 @@ function loadConfig() {
       botConfig = data;
       document.getElementById('apiKey').value = data.apiKey || "";
       document.getElementById('deepseekKey').value = data.deepseekKey || "";
+      document.getElementById('aiProvider').value = data.aiProvider || "gemini";
       document.getElementById('docsUrl').value = data.docsUrl || "";
       document.getElementById('aiPersona').value = data.aiPersona || "secretary";
       document.getElementById('apiModel').value = data.apiModel || "gemini-3.6-flash";
@@ -241,6 +242,7 @@ function saveConfig() {
   const payload = {
     apiKey: document.getElementById('apiKey').value.trim(),
     deepseekKey: document.getElementById('deepseekKey').value.trim(),
+    aiProvider: document.getElementById('aiProvider').value,
     apiModel: document.getElementById('apiModel').value.trim() || 'gemini-3.6-flash',
     docsUrl: document.getElementById('docsUrl').value.trim(),
     aiPersona: document.getElementById('aiPersona').value,
@@ -341,19 +343,31 @@ async function callDeepSeek(promptText, apiKey) {
     return result.choices[0].message.content;
 }
 
+
 async function getAiResponseWithFallback(fullPrompt) {
-    try {
-        return await callGemini(fullPrompt);
-    } catch (err) {
-        if (botConfig.deepseekKey) {
-            console.warn("Gemini lỗi:", err.message, "-> Chuyển sang DeepSeek...");
-            // Không showToast ở đây vì có thể gọi từ nội bộ, để bên ngoài bắt
+    const provider = botConfig.aiProvider || 'gemini';
+    
+    if (provider === 'deepseek') {
+        try {
             return await callDeepSeek(fullPrompt, botConfig.deepseekKey);
-        } else {
-            throw err;
+        } catch (err) {
+            if (botConfig.apiKey) {
+                console.warn("DeepSeek lỗi:", err.message, "-> Chuyển sang Gemini...");
+                return await callGemini(fullPrompt);
+            } else throw err;
+        }
+    } else {
+        try {
+            return await callGemini(fullPrompt);
+        } catch (err) {
+            if (botConfig.deepseekKey) {
+                console.warn("Gemini lỗi:", err.message, "-> Chuyển sang DeepSeek...");
+                return await callDeepSeek(fullPrompt, botConfig.deepseekKey);
+            } else throw err;
         }
     }
 }
+
 
 async function generateReport() {
     const btn = document.getElementById('btnGenerateReport');
