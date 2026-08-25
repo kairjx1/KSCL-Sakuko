@@ -7,6 +7,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; }
@@ -28,7 +29,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; colo
 .page-title { font-size: 24px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; }
 .hidden { display: none !important; }
 
-/* Config Panel */
+/* Components */
 .panel { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
 .panel-header { font-size: 16px; font-weight: 600; margin-bottom: 20px; color: #e2e8f0; border-bottom: 1px solid #334155; padding-bottom: 12px; }
 .form-group { margin-bottom: 20px; }
@@ -38,8 +39,22 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; colo
 textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
 .btn-primary { background: #3b82f6; color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; }
 .btn-primary:hover { background: #2563eb; }
+.btn-success { background: #10b981; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
 
-/* Toast */
+/* Chat UI */
+.chat-container { display: flex; flex-direction: column; height: 60vh; background: #0f172a; border: 1px solid #334155; border-radius: 12px; }
+.chat-messages { flex: 1; padding: 20px; overflow-y: auto; }
+.msg { margin-bottom: 15px; max-width: 80%; line-height: 1.5; padding: 12px 16px; border-radius: 12px; }
+.msg.user { background: #3b82f6; color: white; margin-left: auto; border-bottom-right-radius: 4px; }
+.msg.bot { background: #1e293b; color: #e2e8f0; margin-right: auto; border-bottom-left-radius: 4px; border: 1px solid #334155; }
+.chat-input-area { display: flex; padding: 15px; background: #1e293b; border-top: 1px solid #334155; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+.chat-input { flex: 1; background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; border-radius: 8px; margin-right: 10px; }
+
+/* Markdown Content */
+.md-content h1, .md-content h2, .md-content h3 { margin-bottom: 10px; margin-top: 15px; }
+.md-content p { margin-bottom: 10px; }
+.md-content ul { margin-left: 20px; margin-bottom: 10px; }
+
 .toast { position: fixed; bottom: 24px; right: 24px; background: #10b981; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 500; transform: translateY(100px); opacity: 0; transition: 0.3s; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
 .toast.show { transform: translateY(0); opacity: 1; }
 </style>
@@ -55,25 +70,64 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
 
 <div class="app-container">
   <div class="sidebar">
-    <div class="nav-item active" onclick="switchTab('config', event)">⚙ Cấu hình Bot</div>
+    <div class="nav-item active" onclick="switchTab('zalo', event)">📱 Zalo Chat</div>
+    <div class="nav-item" onclick="switchTab('reports', event)">📊 Báo cáo tóm tắt</div>
+    <div class="nav-item" onclick="switchTab('chat', event)">🤖 Tư duy Bot</div>
+    <div class="nav-item" onclick="switchTab('config', event)">⚙ Cấu hình Bot</div>
   </div>
 
-  <div class="main-content" id="config-tab">
+  <!-- Tab 1: Zalo Iframe -->
+  <div class="main-content" id="zalo-tab">
+    <div class="page-title">
+        Zalo Web (Đã được mở khóa bởi Extension)
+        <span id="zalo-sync-status" style="font-size: 13px; font-weight: normal; color: #94a3b8;">🔴 Đang chờ kết nối...</span>
+    </div>
+    <div class="panel" style="padding: 0; overflow: hidden; height: 80vh;">
+      <iframe src="https://chat.zalo.me" style="width: 100%; height: 100%; border: none;"></iframe>
+    </div>
+  </div>
+
+  <!-- Tab 2: Reports -->
+  <div class="main-content hidden" id="reports-tab">
+    <div class="page-title">
+        Báo cáo hàng ngày
+        <button class="btn-success" onclick="generateReport()" id="btnGenerateReport">✨ Tạo Báo Cáo Ngay</button>
+    </div>
+    <div class="panel">
+      <div class="panel-header">Báo cáo gần nhất</div>
+      <div id="report-content" class="md-content" style="color: #e2e8f0; line-height: 1.6;">
+        Chưa có báo cáo nào. Bấm "Tạo Báo Cáo Ngay" để AI tổng hợp tin nhắn trong ngày.
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3: Bot Chat -->
+  <div class="main-content hidden" id="chat-tab">
+    <div class="page-title">Trò chuyện với Thư ký Zalo</div>
+    <div class="chat-container">
+      <div class="chat-messages" id="chatBox">
+        <div class="msg bot md-content">Chào sếp! Sếp cần hỏi gì về lịch trình hoặc các cuộc trò chuyện trên Zalo hôm nay ạ?</div>
+      </div>
+      <div class="chat-input-area">
+        <input type="text" id="chatInput" class="chat-input" placeholder="Hỏi thư ký (VD: Khách hàng A nói gì hôm nay?)..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
+        <button class="btn-primary" onclick="sendChatMessage()">Gửi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 4: Config -->
+  <div class="main-content hidden" id="config-tab">
     <div class="page-title">Thiết lập Zalo Bot</div>
-    
     <div class="panel">
       <div class="panel-header">Cấu hình API & Logic</div>
-      
       <div class="form-group">
-        <label class="form-label">Google Gemini API Key (Bắt buộc để chạy)</label>
-        <input type="password" id="apiKey" class="form-control" placeholder="Nhập API Key bắt đầu bằng AQ...">
+        <label class="form-label">Google Gemini API Key</label>
+        <input type="password" id="apiKey" class="form-control" placeholder="Nhập API Key bắt đầu bằng AIza...">
       </div>
-      
       <div class="form-group">
         <label class="form-label">System Prompt (Câu lệnh tóm tắt/trả lời)</label>
         <textarea id="systemPrompt" class="form-control" placeholder="Đang tải dữ liệu..."></textarea>
       </div>
-      
       <button class="btn-primary" onclick="saveConfig()">💾 Lưu Cấu Hình</button>
     </div>
   </div>
@@ -99,6 +153,8 @@ const db = firebase.database();
 let currentRole = 'viewer';
 const PORTAL_KEY = 'kscl_portal_session';
 const session = localStorage.getItem(PORTAL_KEY);
+
+let botConfig = {};
 
 function checkAuth() {
   if (!session) {
@@ -129,14 +185,16 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+// 1. Tải cấu hình
 function loadConfig() {
   db.ref('/zaloBotConfig').once('value').then(snap => {
     const data = snap.val();
     if (data) {
+      botConfig = data;
       document.getElementById('apiKey').value = data.apiKey || "";
-      document.getElementById('systemPrompt').value = data.systemPrompt || "Bạn là trợ lý Zalo...";
+      document.getElementById('systemPrompt').value = data.systemPrompt || "";
     } else {
-      document.getElementById('systemPrompt').value = "Bạn là một trợ lý thông minh trên Zalo của hệ thống KSCL. Nhiệm vụ của bạn là đọc các tin nhắn mà người dùng Zalo vừa nhận được, sau đó tóm tắt ngắn gọn và đưa ra dự thảo câu trả lời.";
+      document.getElementById('systemPrompt').value = "Bạn là thư ký ảo. Hãy phân tích các tin nhắn và trả lời câu hỏi.";
     }
   });
 }
@@ -146,8 +204,8 @@ function saveConfig() {
     apiKey: document.getElementById('apiKey').value.trim(),
     systemPrompt: document.getElementById('systemPrompt').value.trim()
   };
-  
-  db.ref('/zaloBotConfig').set(payload).then(() => window.postMessage({ type: 'ZALO_BOT_CONFIG', payload }, '*'))
+  botConfig = payload;
+  db.ref('/zaloBotConfig').set(payload)
     .then(() => showToast("Lưu cấu hình Zalo Bot thành công!"))
     .catch(err => {
       console.error(err);
@@ -155,6 +213,125 @@ function saveConfig() {
     });
 }
 
+// 2. Lắng nghe tin nhắn từ iframe (Extension hút dữ liệu)
+window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'ZALO_NEW_MESSAGES') {
+        const msgs = event.data.payload;
+        document.getElementById('zalo-sync-status').innerHTML = '🟢 Đang đồng bộ (' + msgs.length + ' tin nhắn mới)';
+        
+        // Push to Firebase /zaloMessages
+        msgs.forEach(msg => {
+            db.ref('/zaloMessages').push(msg);
+        });
+        
+        setTimeout(() => {
+            document.getElementById('zalo-sync-status').innerHTML = '🟢 Đã đồng bộ lên Đám mây';
+        }, 2000);
+    }
+});
+
+// 3. AI: Lấy Data & Gọi Gemini
+async function fetchRecentMessages() {
+    const snap = await db.ref('/zaloMessages').limitToLast(100).once('value');
+    const data = snap.val();
+    if (!data) return "Chưa có tin nhắn nào được đồng bộ.";
+    
+    let text = "";
+    Object.values(data).forEach(m => {
+        text += [] : 
+;
+    });
+    return text;
+}
+
+async function callGemini(promptText) {
+    if (!botConfig.apiKey) throw new Error("Chưa cấu hình API Key!");
+    const response = await fetch(https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: promptText }] }],
+            generationConfig: { temperature: 0.3 }
+        })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error?.message || "Lỗi API");
+    return result.candidates[0].content.parts[0].text;
+}
+
+// Tạo Báo Cáo
+async function generateReport() {
+    const btn = document.getElementById('btnGenerateReport');
+    const out = document.getElementById('report-content');
+    btn.innerText = "⏳ Đang tổng hợp...";
+    btn.disabled = true;
+    out.innerHTML = "Đang lấy dữ liệu và gọi AI phân tích...";
+    
+    try {
+        const msgsText = await fetchRecentMessages();
+        const fullPrompt = ${botConfig.systemPrompt || 'Tóm tắt các công việc quan trọng:'}
+
+ĐOẠN CHAT HÔM NAY:
+;
+        const aiResponse = await callGemini(fullPrompt);
+        out.innerHTML = marked.parse(aiResponse);
+        
+        // Lưu báo cáo
+        db.ref('/zaloReports').push({
+            time: Date.now(),
+            content: aiResponse
+        });
+        showToast("Báo cáo đã được tạo!");
+    } catch (err) {
+        out.innerHTML = <span style="color: #e74c3c;">Lỗi: </span>;
+    }
+    btn.innerText = "✨ Tạo Báo Cáo Ngay";
+    btn.disabled = false;
+}
+
+// Tải báo cáo cũ nhất
+db.ref('/zaloReports').limitToLast(1).once('value').then(snap => {
+    const data = snap.val();
+    if (data) {
+        const rep = Object.values(data)[0];
+        document.getElementById('report-content').innerHTML = marked.parse(rep.content);
+    }
+});
+
+// Tư duy Bot (Chat)
+async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    
+    const chatBox = document.getElementById('chatBox');
+    chatBox.innerHTML += <div class="msg user md-content"></div>;
+    input.value = "";
+    chatBox.scrollTop = chatBox.scrollHeight;
+    
+    const loadingId = 'loading-' + Date.now();
+    chatBox.innerHTML += <div class="msg bot md-content" id="">Đang suy nghĩ...</div>;
+    chatBox.scrollTop = chatBox.scrollHeight;
+    
+    try {
+        const msgsText = await fetchRecentMessages();
+        const fullPrompt = Bạn là thư ký của tôi. Dựa vào nội dung chat Zalo dưới đây, hãy trả lời câu hỏi của tôi:
+
+[DỮ LIỆU CHAT ZALO]:
+
+
+[CÂU HỎI CỦA SẾP]:
+;
+        const aiResponse = await callGemini(fullPrompt);
+        
+        document.getElementById(loadingId).innerHTML = marked.parse(aiResponse);
+    } catch (err) {
+        document.getElementById(loadingId).innerHTML = <span style="color:#e74c3c;">Lỗi: </span>;
+    }
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// Init
 checkAuth();
 loadConfig();
 </script>
