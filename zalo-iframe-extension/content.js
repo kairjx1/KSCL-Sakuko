@@ -88,7 +88,8 @@ autoReplyBtn.onclick = async () => {
     
     let chatContext = "";
     msgs.slice(-15).forEach(m => { 
-        chatContext += `${m.sender}: ${m.content}\n`;
+        chatContext += `${m.sender}: ${m.content}
+`;
     });
     
     chrome.storage.local.get(['kscl_bot_config'], async (res) => {
@@ -103,10 +104,26 @@ autoReplyBtn.onclick = async () => {
         }
         
         try {
-            const prompt = `Dựa vào đoạn chat sau, hãy đóng vai một nhân viên chuyên nghiệp và soạn 1 câu trả lời KHÉO LÉO, TỰ NHIÊN, NGẮN GỌN cho tin nhắn cuối cùng. Không dùng ký hiệu in đậm (**). Đừng giải thích gì thêm, chỉ in ra đúng câu trả lời để tôi copy gửi luôn.
+            const inputDiv = document.querySelector('#richInput') || document.querySelector('.input-box');
+            let userDraft = "";
+            if (inputDiv) {
+                userDraft = inputDiv.innerText.trim();
+            }
+            
+            let prompt = "";
+            if (userDraft.length > 0) {
+                prompt = `ĐOẠN CHAT NGỮ CẢNH:
+${chatContext}
+
+Ý TƯỞNG TRẢ LỜI CỦA TÔI: "${userDraft}"
+
+YÊU CẦU: Hãy đóng vai một nhân viên chuyên nghiệp, viết lại ý tưởng của tôi thành một câu trả lời hoàn chỉnh, LỊCH SỰ, KHÉO LÉO, TỰ NHIÊN và phù hợp với ngữ cảnh trên. Không dùng ký hiệu in đậm (**). Chỉ trả về nội dung câu trả lời cuối cùng, tuyệt đối không giải thích thêm.`;
+            } else {
+                prompt = `Dựa vào đoạn chat sau, hãy đóng vai một nhân viên chuyên nghiệp và tự động soạn 1 câu trả lời KHÉO LÉO, TỰ NHIÊN, NGẮN GỌN cho tin nhắn cuối cùng. Không dùng ký hiệu in đậm (**). Chỉ trả về đúng nội dung câu trả lời cuối cùng, tuyệt đối không giải thích thêm.
 
 ĐOẠN CHAT:
 ${chatContext}`;
+            }
             
             let replyText = "";
             let primaryFailed = false;
@@ -141,6 +158,7 @@ ${chatContext}`;
                     else throw e;
                 }
             }
+            
             replyText = replyText.replace(/\*/g, '');
             
             if (inputDiv) {
