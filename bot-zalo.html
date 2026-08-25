@@ -177,7 +177,6 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// 1. Tải cấu hình Firebase
 function loadConfig() {
   db.ref('/zaloBotConfig').once('value').then(snap => {
     const data = snap.val();
@@ -203,7 +202,6 @@ function saveConfig() {
   db.ref('/zaloBotConfig').set(payload).then(() => showToast("Lưu cấu hình thành công!")).catch(() => alert("Lỗi!"));
 }
 
-// 2. Giao tiếp với Chrome Extension
 let allZaloSessions = {};
 window.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'RES_ZALO_MESSAGES') {
@@ -215,25 +213,27 @@ function askExtensionForMessages() {
     window.postMessage({ type: 'REQ_ZALO_MESSAGES' }, '*');
 }
 
-// Lấy messages từ extension
 async function fetchRecentMessages() {
     askExtensionForMessages();
-    // Đợi 500ms để extension trả lời
     await new Promise(r => setTimeout(r, 500));
     
-    if (currentZaloMessages.length === 0) {
-        throw new Error("Không tìm thấy tin nhắn nào. Đảm bảo bạn đã mở Zalo Web ở thẻ khác và Extension đang bật.");
+    const groupNames = Object.keys(allZaloSessions);
+    if (groupNames.length === 0) {
+        throw new Error("Không tìm thấy dữ liệu. Đảm bảo Zalo Web đang mở, Extension đang chạy và bạn đã bấm vào các nhóm cần báo cáo.");
     }
     
     let text = "";
-    currentZaloMessages.forEach(m => {
-        text += `[${m.time}] ${m.sender}: ${m.content}
-`;
-    });
+    for (const groupName of groupNames) {
+        text += `\n================================\n`;
+        text += `[NHÓM / CHAT CÁ NHÂN]: ${groupName}\n`;
+        text += `================================\n`;
+        allZaloSessions[groupName].forEach(m => {
+            text += `[${m.time}] ${m.sender}: ${m.content}\n`;
+        });
+    }
     return text;
 }
 
-// 3. AI: Gọi Gemini
 async function callGemini(promptText) {
     if (!botConfig.apiKey) throw new Error("Chưa cấu hình API Key!");
     const model = botConfig.apiModel || 'gemini-3.6-flash';
@@ -250,7 +250,6 @@ async function callGemini(promptText) {
     return result.candidates[0].content.parts[0].text;
 }
 
-// Tạo Báo Cáo
 async function generateReport() {
     const btn = document.getElementById('btnGenerateReport');
     const out = document.getElementById('report-content');
@@ -260,16 +259,12 @@ async function generateReport() {
     
     try {
         const msgsText = await fetchRecentMessages();
-        out.innerHTML = "Đang phân tích toàn bộ dữ liệu từ " + Object.keys(allZaloSessions).length + " nhóm cho AI phân tích...";
+        out.innerHTML = "Đang phân tích dữ liệu từ " + Object.keys(allZaloSessions).length + " nhóm...";
         
-        const fullPrompt = `${botConfig.systemPrompt || 'Tóm tắt các công việc quan trọng:'}
-
-ĐOẠN CHAT HÔM NAY:
-${msgsText}`;
+        const fullPrompt = `${botConfig.systemPrompt || 'Tóm tắt các công việc quan trọng:'}\n\nĐOẠN CHAT HÔM NAY:\n${msgsText}`;
         const aiResponse = await callGemini(fullPrompt);
         out.innerHTML = marked.parse(aiResponse);
         
-        // Lưu báo cáo
         db.ref('/zaloReports').push({ time: Date.now(), content: aiResponse });
         showToast("Báo cáo đã được tạo!");
     } catch (err) {
@@ -279,7 +274,6 @@ ${msgsText}`;
     btn.disabled = false;
 }
 
-// Tải báo cáo cũ nhất khi mới vào
 db.ref('/zaloReports').limitToLast(1).once('value').then(snap => {
     const data = snap.val();
     if (data) {
@@ -288,7 +282,6 @@ db.ref('/zaloReports').limitToLast(1).once('value').then(snap => {
     }
 });
 
-// Tư duy Bot (Chat)
 async function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
@@ -305,13 +298,7 @@ async function sendChatMessage() {
     
     try {
         const msgsText = await fetchRecentMessages();
-        const fullPrompt = `Bạn là thư ký của tôi. Dựa vào nội dung chat Zalo dưới đây, hãy trả lời câu hỏi của tôi:
-
-[DỮ LIỆU TỪ CÁC NHÓM ZALO ĐÃ LƯU TRỮ]:
-${msgsText}
-
-[CÂU HỎI CỦA SẾP]:
-${text}`;
+        const fullPrompt = `Bạn là thư ký của tôi. Dựa vào nội dung chat Zalo dưới đây, hãy trả lời câu hỏi của tôi:\n\n[DỮ LIỆU TỪ CÁC NHÓM ZALO ĐÃ LƯU TRỮ]:\n${msgsText}\n\n[CÂU HỎI CỦA SẾP]:\n${text}`;
         const aiResponse = await callGemini(fullPrompt);
         
         document.getElementById(loadingId).innerHTML = marked.parse(aiResponse);
