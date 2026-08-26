@@ -3806,7 +3806,9 @@ async function cvAddSave(){
   const han_s=document.getElementById('cv-han').value;
   const now=new Date();
   const loai=document.getElementById('cv-loai').value;
-  const tasklist_guid=document.getElementById('cv-tasklist')?.value||'';
+  const _tl=document.getElementById('cv-tasklist');
+  // Dùng 'NONE' để báo bot KHÔNG thêm vào tasklist ('' thì bot fallback về default KSCL)
+  const tasklist_guid=_tl?(_tl.value===''?'NONE':_tl.value):'';
   const task={
     st, loai, muc_do:document.getElementById('cv-muc').value,
     van_de, chi_tiet:[], trang_thai:'chua_lam',
