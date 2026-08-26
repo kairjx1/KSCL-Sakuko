@@ -406,7 +406,8 @@ async function generateReport() {
         const fullPrompt = `HÔM NAY LÀ NGÀY: ${new Date().toLocaleDateString('vi-VN')}\n${brainPrompt || 'Tóm tắt các công việc quan trọng:'}
 
 !!! LỆNH BẮT BUỘC !!!
-TUYỆT ĐỐI KHÔNG SAO CHÉP LẠI CÁC VÍ DỤ (TÊN NHÓM AI Daily, SKK, CVS, V.V...) TRONG FORM MẪU VÀO BÁO CÁO KẾT QUẢ. BẠN CHỈ ĐƯỢC PHÉP TÓM TẮT DỮ LIỆU CÓ THẬT TỪ "ĐOẠN CHAT HÔM NAY" DƯỚI ĐÂY. KHÔNG CÓ THÔNG TIN THÌ BỎ TRỐNG, KHÔNG ĐƯỢC BỊA ĐẶT.
+1. TUYỆT ĐỐI KHÔNG SAO CHÉP LẠI CÁC VÍ DỤ TRONG FORM MẪU (như AI Daily, SKK, CVS, 24/08/2026...). BẠN CHỈ ĐƯỢC PHÉP TÓM TẮT DỮ LIỆU CÓ THẬT TỪ "ĐOẠN CHAT HÔM NAY". KHÔNG CÓ THÔNG TIN THÌ BỎ TRỐNG.
+2. QUY TẮC THỜI GIAN: Phải chú ý mốc thời gian [Gờ:Phút Ngày/Tháng] ở đầu mỗi dòng tin nhắn. Mọi từ ngữ chỉ thời gian tương đối (như "ngày mai", "chiều nay", "sáng mai") PHẢI ĐƯỢC TÍNH TOÁN và chuyển đổi thành NGÀY THÁNG TUYỆT ĐỐI (VD: "đến hạn 23/08", "chiều 22/08"). Tuyệt đối KHÔNG giữ nguyên chữ "ngày mai" hoặc "hôm nay" trong báo cáo gây hiểu lầm.
         
 ĐOẠN CHAT HÔM NAY:
 ${msgsText}`;
