@@ -3763,7 +3763,7 @@ function cvSearchNV(q,immediate=false){
     if(!el)return;
     el.style.display='block';el.innerHTML='<div style="padding:8px 12px;color:#94a3b8;font-size:13px">⏳ Đang tìm...</div>';
     try{
-      const r=await fetch(`/api/panel/find-user?name=${encodeURIComponent(q)}`,{signal:AbortSignal.timeout(8000)});
+      const r=await fetch(`/api/panel/find-user?name=${encodeURIComponent(q)}`,{signal:AbortSignal.timeout(20000)});
       const j=await r.json();
       if(!j.ok||!j.users?.length){el.innerHTML='<div style="padding:8px 12px;color:#94a3b8;font-size:13px">Không tìm thấy</div>';return;}
       el.innerHTML=j.users.map(u=>`
