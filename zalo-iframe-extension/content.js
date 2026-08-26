@@ -192,15 +192,32 @@ function extractZaloMessages() {
     const titleEl = document.querySelector('.header-title, .chat-title, .title');
     const currentChatName = titleEl ? titleEl.innerText.trim() : 'Cuộc trò chuyện';
     
-    const messageElements = document.querySelectorAll('.message-view__msg-item, .chat-message');
+    const messageElements = document.querySelectorAll('.chat-date, .date, .time-divider, .message-view__msg-item, .chat-message');
     
     let currentGroupMessages = [];
+    let lastDate = new Date().toLocaleDateString('vi-VN'); // Default to today
+    
     messageElements.forEach(el => {
+        // Try to check if this is a date divider
+        const dateText = el.innerText.trim();
+        // Match standard date formats like "22/08/2026", "22/08", "Hôm qua", "Hôm nay", "Thứ 2"
+        if (el.classList.contains('chat-date') || el.classList.contains('date') || /^(Hôm nay|Hôm qua|Thứ \d|Chủ nhật|\d{1,2}\/\d{1,2}(\/\d{4})?)/i.test(dateText)) {
+            if (dateText.length < 20 && !dateText.includes(':')) {
+                lastDate = dateText;
+            }
+        }
+        
         const sender = el.querySelector('.card-sender-name, .msg-author')?.innerText.trim() || 'Ai đó';
         const content = el.querySelector('.text, .msg-text, .chat-message-content')?.innerText.trim();
-        const time = el.querySelector('.msg-time, .time')?.innerText.trim() || new Date().toLocaleTimeString();
-
-        if (content && content.length > 0) {
+        let time = el.querySelector('.msg-time, .time')?.innerText.trim() || "";
+        
+        if (time && !time.includes(lastDate) && !/^\d{1,2}\/\d{1,2}/.test(time)) {
+            time = `${lastDate} ${time}`;
+        } else if (!time) {
+            time = `${lastDate} ${new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}`;
+        }
+        
+        if (content && content.length > 0 && !el.classList.contains('chat-date') && !el.classList.contains('time-divider')) {
             currentGroupMessages.push({ sender, time, content });
         }
     });
