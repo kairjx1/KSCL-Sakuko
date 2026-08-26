@@ -405,6 +405,9 @@ async function generateReport() {
         
         const fullPrompt = `${brainPrompt || 'Tóm tắt các công việc quan trọng:'}
 
+!!! LỆNH BẮT BUỘC !!!
+TUYỆT ĐỐI KHÔNG SAO CHÉP LẠI CÁC VÍ DỤ (TÊN NHÓM AI Daily, SKK, CVS, V.V...) TRONG FORM MẪU VÀO BÁO CÁO KẾT QUẢ. BẠN CHỈ ĐƯỢC PHÉP TÓM TẮT DỮ LIỆU CÓ THẬT TỪ "ĐOẠN CHAT HÔM NAY" DƯỚI ĐÂY. KHÔNG CÓ THÔNG TIN THÌ BỎ TRỐNG, KHÔNG ĐƯỢC BỊA ĐẶT.
+        
 ĐOẠN CHAT HÔM NAY:
 ${msgsText}`;
 
