@@ -403,7 +403,7 @@ async function generateReport() {
             brainPrompt = "Bạn là Kế toán viên. Hãy đọc kỹ lịch sử chat Zalo hôm nay. Mục tiêu duy nhất của bạn là NHẶT RA TOÀN BỘ CÁC CON SỐ: Báo giá, tiền bạc, doanh thu, số tài khoản, chi phí. Tổng hợp chúng lại theo từng Nhóm Zalo.";
         }
         
-        const fullPrompt = `${brainPrompt || 'Tóm tắt các công việc quan trọng:'}
+        const fullPrompt = `HÔM NAY LÀ NGÀY: ${new Date().toLocaleDateString('vi-VN')}\n${brainPrompt || 'Tóm tắt các công việc quan trọng:'}
 
 !!! LỆNH BẮT BUỘC !!!
 TUYỆT ĐỐI KHÔNG SAO CHÉP LẠI CÁC VÍ DỤ (TÊN NHÓM AI Daily, SKK, CVS, V.V...) TRONG FORM MẪU VÀO BÁO CÁO KẾT QUẢ. BẠN CHỈ ĐƯỢC PHÉP TÓM TẮT DỮ LIỆU CÓ THẬT TỪ "ĐOẠN CHAT HÔM NAY" DƯỚI ĐÂY. KHÔNG CÓ THÔNG TIN THÌ BỎ TRỐNG, KHÔNG ĐƯỢC BỊA ĐẶT.
