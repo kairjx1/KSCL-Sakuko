@@ -396,6 +396,7 @@ async function processScanQueue() {
             }
             
             if (card) {
+                status = 'Có Zalo';
                 break;
             }
             
@@ -404,6 +405,143 @@ async function processScanQueue() {
                 let tt = toast.innerText.toLowerCase();
                 if (tt.includes("chưa đăng ký") || tt.includes("không tồn tại") || tt.includes("không tìm thấy") || tt.includes("không có kết quả") || tt.includes("không tìm thấy kết quả")) {
                     status = 'Không có';
+                    break;
+                }
+            }
+        }
+        
+        if (status === 'Có Zalo' && card) {
+            let lines = card.innerText.split('\n').map(l => l.trim()).filter(l => l !== '');
+            if (lines.length > 0) {
+                name = lines[0];
+                if ((name.includes(phone) || name.toLowerCase().includes('tìm')) && lines.length > 1) {
+                    name = lines[1];
+                }
+            }
+            let img = card.querySelector('img');
+            if (img) avatar = img.src;
+        }
+        
+        let clearBtn2 = document.querySelector('.search-clear, .btn-clear, i.fa-close, [icon="close"], .close-search');
+        if (clearBtn2) { try { clearBtn2.click(); } catch(e){} }
+        setNativeValue(searchInput, '');
+        
+        chrome.storage.local.set({ 
+            kscl_scan_result: { 
+                phone, status, name, uid, avatar, time: new Date().toISOString() 
+            } 
+        });
+    } catch (err) {
+        // Ignored
+    }
+    
+    scanQueue.shift();
+    isScanningPhone = false;
+    
+    if (scanQueue.length > 0) {
+        setTimeout(processScanQueue, 3500);
+    } else {
+        chrome.storage.local.set({ kscl_scan_result: { status: 'DONE' } });
+    }
+}
+
+
+
+
+// --- BULK MESSAGE LOGIC ---
+let bulkMsgQueue = [];
+let currentBulkMsg = '';
+let isBulkMessaging = false;
+
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.kscl_cmd_bulk_msg) {
+        let payload = changes.kscl_cmd_bulk_msg.newValue;
+        if (payload && payload.phones && payload.phones.length > 0) {
+            bulkMsgQueue = [...payload.phones];
+            currentBulkMsg = payload.message;
+            if (!isBulkMessaging) {
+                processBulkMsgQueue();
+            }
+        }
+    }
+});
+
+async function processBulkMsgQueue() {
+    if (bulkMsgQueue.length === 0) {
+        chrome.storage.local.set({ kscl_bulk_msg_result: { status: 'DONE' } });
+        isBulkMessaging = false;
+        return;
+    }
+    
+    if (isBulkMessaging && arguments.length === 0 && bulkMsgQueue.length > 0 && !document.hidden) {
+        // Prevent concurrent loops
+    }
+    isBulkMessaging = true;
+    
+    let searchInput = document.querySelector('#contact-search-input, #global-search-input, .cp-txt-search');
+    if (!searchInput) {
+        let inputs = document.querySelectorAll('input');
+        for (let inp of inputs) {
+            if (inp.placeholder && inp.placeholder.toLowerCase().includes('m ki')) {
+                searchInput = inp;
+                break;
+            }
+        }
+    }
+    
+    if (!searchInput) {
+        alert("KSCL [V2]: Không tìm thấy ô tìm kiếm Zalo.");
+        chrome.storage.local.set({ kscl_bulk_msg_result: { status: 'DONE' } });
+        isBulkMessaging = false;
+        return;
+    }
+    
+    let phone = bulkMsgQueue[0];
+    let msgStatus = 'FAILED';
+    
+    try {
+        let clearBtn = document.querySelector('.search-clear, .btn-clear, i.fa-close, [icon="close"], .close-search');
+        if (clearBtn) { try { clearBtn.click(); } catch(e){} }
+        setNativeValue(searchInput, '');
+        await sleep(300);
+        
+        setNativeValue(searchInput, phone);
+        
+        let targetItem = null;
+        let card = null;
+        
+        for (let wait = 0; wait < 35; wait++) {
+            await sleep(300);
+            
+            let allElements = document.querySelectorAll('div, span');
+            targetItem = null;
+            
+            for (let item of allElements) {
+                let text = item.innerText || '';
+                let rawText = text.replace(/[\s\.\-\+]/g, '');
+                if (rawText.includes(phone)) {
+                    if (!targetItem || text.length < (targetItem.innerText || '').length) {
+                        targetItem = item;
+                    }
+                }
+            }
+            
+            if (targetItem) {
+                card = targetItem;
+                for (let i = 0; i < 6; i++) {
+                    if (card && card.querySelector && card.querySelector('img')) break;
+                    if (card && card.parentElement) card = card.parentElement;
+                }
+                
+                if (card && card.querySelector && card.querySelector('img')) {
+                    break;
+                }
+            }
+            
+            let toast = document.querySelector('.toast, .snackbar, .error-msg, .search-empty');
+            if (toast) {
+                let tt = toast.innerText.toLowerCase();
+                if (tt.includes("chưa đăng ký") || tt.includes("không tồn tại") || tt.includes("không tìm thấy") || tt.includes("không có kết quả") || tt.includes("không tìm thấy kết quả")) {
                     break;
                 }
             }
@@ -547,54 +685,166 @@ async function processInviteQueue() {
         for (let wait = 0; wait < 35; wait++) {
             await sleep(300);
             
+            // Search results in modal usually are radio buttons or div with contact name
+            // Let's find the nearest container of searchInput and search inside it, or just search globally for the phone number
+            let allElements = document.querySelectorAll('.zl-modal div, .ReactModalPortal div, .modal-content div, [data-id="div_AddMember_Item"]');
             targetItem = null;
-            card = null;
             
-            // Primary check: Zalo's contact items
-            let possibleCards = document.querySelectorAll('.contact-item, .search-res-item, .global-search-item, [data-id], .list-item');
-            for (let item of possibleCards) {
+            for (let item of allElements) {
                 let text = item.innerText || '';
                 let rawText = text.replace(/[\s\.\-\+]/g, '');
-                if (rawText.includes(phone) || text.toLowerCase().includes("tìm bạn qua") || text.toLowerCase().includes("tìm liên hệ")) {
-                    if (item.querySelector('img')) {
-                        card = item;
+                if (rawText.includes(phone) || text.includes(phone)) {
+                    // Check if it's a clickable contact item (usually has a checkbox or avatar)
+                    if (item.querySelector('img') || item.classList.contains('contact-item') || item.querySelector('.checkbox') || item.querySelector('input[type="checkbox"]') || item.querySelector('input[type="radio"]')) {
+                        targetItem = item;
                         break;
                     }
                 }
             }
             
-            // Fallback check: any div with image and phone
-            if (!card) {
-                let allDivs = document.querySelectorAll('div');
-                for (let div of allDivs) {
-                    let text = div.innerText || '';
-                    let rawText = text.replace(/[\s\.\-\+]/g, '');
-                    if (rawText.includes(phone)) {
-                        if (div.querySelector('img') && text.length < 200) {
-                            card = div;
-                            // Find the most inner card-like div
-                            let children = div.querySelectorAll('div');
-                            for(let child of children) {
-                                let ctext = child.innerText || '';
-                                if (ctext.replace(/[\s\.\-\+]/g, '').includes(phone) && child.querySelector('img')) {
-                                    card = child;
-                                }
-                            }
-                            break;
-                        }
+            // If we found a direct match, break
+            if (targetItem) break;
+            
+            // Or look for toast / empty state
+            let emptyState = document.querySelector('.zl-modal .empty-search, .ReactModalPortal .search-empty');
+            if (emptyState && emptyState.innerText.toLowerCase().includes("không tìm thấy")) {
+                break;
+            }
+        }
+        
+        if (targetItem) {
+            // Click to select
+            targetItem.click();
+            // If there's a specific checkbox inside, try clicking that too just in case
+            let cb = targetItem.querySelector('input[type="checkbox"], input[type="radio"], .checkbox, .custom-checkbox');
+            if (cb) {
+                try { cb.click(); } catch(e){}
+            }
+            msgStatus = 'SUCCESS';
+            await sleep(500); // Wait for checkbox animation
+        }
+        
+        // Clear input for next number
+        let clearBtn2 = searchInput.parentElement ? searchInput.parentElement.querySelector('i.fa-close, [icon="close"], .btn-clear') : null;
+        if (clearBtn2) { try { clearBtn2.click(); } catch(e){} }
+        setNativeValue(searchInput, '');
+        
+    } catch (err) {
+        // Ignored
+    }
+    
+    chrome.storage.local.set({ 
+        kscl_invite_result: { 
+            phone: phone, 
+            status: msgStatus, 
+            time: new Date().toISOString() 
+        } 
+    });
+    
+    inviteQueue.shift();
+    
+    if (inviteQueue.length > 0) {
+        // Delay 1.5s between selections inside the modal is usually safe enough since it doesn't trigger the global search rate limit as aggressively, but let's use 2.5s to be safe
+        setTimeout(() => processInviteQueue(), 2500);
+    } else {
+        chrome.storage.local.set({ kscl_invite_result: { status: 'DONE' } });
+        isInviting = false;
+    }
+}
+
+
+
+// --- AUTOCARE (ADD FRIEND) LOGIC ---
+let autocareQueue = [];
+let currentAutocareMsg = '';
+let isAutocareRunning = false;
+
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.kscl_cmd_autocare) {
+        let payload = changes.kscl_cmd_autocare.newValue;
+        if (payload && payload.phones && payload.phones.length > 0) {
+            autocareQueue = [...payload.phones];
+            currentAutocareMsg = payload.message;
+            if (!isAutocareRunning) {
+                processAutocareQueue();
+            }
+        }
+    }
+});
+
+async function processAutocareQueue() {
+    if (autocareQueue.length === 0) {
+        chrome.storage.local.set({ kscl_autocare_result: { status: 'DONE' } });
+        isAutocareRunning = false;
+        return;
+    }
+    
+    isAutocareRunning = true;
+    
+    let searchInput = document.querySelector('#contact-search-input, #global-search-input, .cp-txt-search');
+    if (!searchInput) {
+        let inputs = document.querySelectorAll('input');
+        for (let inp of inputs) {
+            if (inp.placeholder && inp.placeholder.toLowerCase().includes('m ki')) {
+                searchInput = inp;
+                break;
+            }
+        }
+    }
+    
+    if (!searchInput) {
+        alert("KSCL [V2]: Không tìm thấy ô tìm kiếm Zalo.");
+        chrome.storage.local.set({ kscl_autocare_result: { status: 'DONE' } });
+        isAutocareRunning = false;
+        return;
+    }
+    
+    let phone = autocareQueue[0];
+    let msgStatus = 'FAILED';
+    
+    try {
+        let clearBtn = document.querySelector('.search-clear, .btn-clear, i.fa-close, [icon="close"], .close-search');
+        if (clearBtn) { try { clearBtn.click(); } catch(e){} }
+        setNativeValue(searchInput, '');
+        await sleep(300);
+        
+        setNativeValue(searchInput, phone);
+        
+        let targetItem = null;
+        let card = null;
+        
+        for (let wait = 0; wait < 35; wait++) {
+            await sleep(300);
+            
+            let allElements = document.querySelectorAll('div, span');
+            targetItem = null;
+            
+            for (let item of allElements) {
+                let text = item.innerText || '';
+                let rawText = text.replace(/[\s\.\-\+]/g, '');
+                if (rawText.includes(phone)) {
+                    if (!targetItem || text.length < (targetItem.innerText || '').length) {
+                        targetItem = item;
                     }
                 }
             }
             
-            if (card) {
-                break;
+            if (targetItem) {
+                card = targetItem;
+                for (let i = 0; i < 6; i++) {
+                    if (card && card.querySelector && card.querySelector('img')) break;
+                    if (card && card.parentElement) card = card.parentElement;
+                }
+                
+                if (card && card.querySelector && card.querySelector('img')) {
+                    break;
+                }
             }
             
             let toast = document.querySelector('.toast, .snackbar, .error-msg, .search-empty');
             if (toast) {
                 let tt = toast.innerText.toLowerCase();
                 if (tt.includes("chưa đăng ký") || tt.includes("không tồn tại") || tt.includes("không tìm thấy") || tt.includes("không có kết quả") || tt.includes("không tìm thấy kết quả")) {
-                    status = 'Không có';
                     break;
                 }
             }
