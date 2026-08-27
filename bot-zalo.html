@@ -10,22 +10,77 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; }
-/* Topbar */
-.topbar { background: #1e293b; color: #fff; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; flex-shrink: 0; }
-.topbar-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: #3b82f6; }
-.topbar-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
-.tbtn { background: none; border: none; color: #94a3b8; font-size: 13px; cursor: pointer; padding: 6px 12px; border-radius: 6px; font-weight: 500; text-decoration: none; }
-.tbtn:hover { background: #334155; color: #f8fafc; }
+body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: #0f172a;
+        color: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+    }
+    
+    .topbar {
+        background: #0f172a;
+        border-bottom: 1px solid #1e293b;
+        padding: 15px 25px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        z-index: 10;
+    }
 
-/* Main Layout */
-.app-container { display: flex; flex: 1; overflow: hidden; }
-.sidebar { width: 220px; background: #1e293b; border-right: 1px solid #334155; padding: 20px 0; }
-.nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 24px; color: #94a3b8; font-size: 14px; font-weight: 500; cursor: pointer; transition: 0.2s; border-left: 3px solid transparent; }
-.nav-item:hover { color: #f8fafc; background: rgba(255,255,255,0.03); }
-.nav-item.active { color: #3b82f6; background: rgba(59,130,246,0.1); border-left-color: #3b82f6; }
+    .sidebar {
+        width: 260px;
+        background: #0f172a;
+        border-right: 1px solid #1e293b;
+        padding: 20px 0;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+    }
 
-.main-content { flex: 1; overflow-y: auto; padding: 32px 40px; background: #0f172a; }
+    .nav-item {
+        padding: 12px 24px;
+        color: #94a3b8;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 500;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 4px 12px;
+        border-radius: 8px;
+    }
+
+    .nav-item:hover {
+        background: #1e293b;
+        color: #f8fafc;
+    }
+
+    .nav-item.active {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+        font-weight: 600;
+    }
+    
+    .app-container {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+        background: #0f172a;
+    }
+    
+    .main-content {
+        flex: 1;
+        padding: 30px;
+        overflow-y: auto;
+        background: #0f172a;
+    }
 .page-title { font-size: 24px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; }
 .hidden { display: none !important; }
 
@@ -62,6 +117,201 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
 .history-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; }
 .history-time { font-size: 13px; color: #10b981; font-weight: 600; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
 .history-content { font-size: 14px; line-height: 1.6; color: #e2e8f0; }
+
+    /* --- NEW PREMIUM UI CSS --- */
+    .premium-panel {
+        background: #1e293b;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #334155;
+        margin-bottom: 20px;
+    }
+    .premium-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    .premium-label {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .premium-label.purple { color: #a855f7; }
+    .premium-label.green { color: #10b981; }
+    .premium-label.blue { color: #3b82f6; }
+    .premium-label.yellow { color: #eab308; }
+    
+    .premium-input, .premium-textarea, .premium-select {
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        color: white;
+        padding: 12px 16px;
+        width: 100%;
+        font-size: 14px;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .premium-input:focus, .premium-textarea:focus, .premium-select:focus {
+        border-color: #64748b;
+    }
+    .premium-textarea {
+        resize: vertical;
+        min-height: 100px;
+    }
+    
+    .premium-tabs {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    .premium-tab-btn {
+        background: transparent;
+        border: 1px solid #334155;
+        padding: 10px 20px;
+        border-radius: 8px;
+        color: #94a3b8;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .premium-tab-btn:hover {
+        background: #334155;
+    }
+    .premium-tab-btn.active.purple {
+        background: rgba(139, 92, 246, 0.1);
+        border-color: #8b5cf6;
+        color: #a855f7;
+    }
+    .premium-tab-btn.active.green {
+        background: rgba(16, 185, 129, 0.1);
+        border-color: #10b981;
+        color: #10b981;
+    }
+    
+    .btn-premium-purple {
+        background: linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: opacity 0.2s;
+    }
+    .btn-premium-purple:hover { opacity: 0.9; }
+    
+    .btn-premium-green {
+        background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: opacity 0.2s;
+    }
+    .btn-premium-green:hover { opacity: 0.9; }
+    
+    .btn-premium-outline {
+        background: transparent;
+        color: #94a3b8;
+        border: 1px solid #334155;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-premium-outline:hover { background: #334155; color: white; }
+    
+    .info-box {
+        background: rgba(139, 92, 246, 0.05);
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 12px;
+    }
+    .info-box p { margin: 0 0 8px 0; font-size: 13px; color: #94a3b8; }
+    .info-box p:last-child { margin: 0; }
+    
+    .slider-container {
+        margin: 20px 0;
+    }
+    .slider-track {
+        height: 6px;
+        background: #334155;
+        border-radius: 3px;
+        position: relative;
+    }
+    .slider-fill {
+        position: absolute;
+        left: 0; top: 0; height: 100%;
+        border-radius: 3px;
+    }
+    .slider-fill.purple { background: #8b5cf6; }
+    .slider-fill.green { background: #10b981; }
+    .slider-thumb {
+        width: 16px; height: 16px;
+        background: white;
+        border-radius: 50%;
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    
+    .upload-box {
+        border: 2px dashed #334155;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        text-align: center;
+        color: #94a3b8;
+        cursor: pointer;
+        transition: border-color 0.2s;
+    }
+    .upload-box:hover { border-color: #64748b; }
+    .upload-box i { font-size: 32px; margin-bottom: 12px; color: #64748b; }
+    
+    .premium-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    .premium-header-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+    .premium-header-icon.purple { background: rgba(139, 92, 246, 0.1); color: #a855f7; }
+    .premium-header-icon.green { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .premium-header-icon.blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    
+    .premium-header-texts h2 { margin: 0 0 4px 0; font-size: 24px; color: white; }
+    .premium-header-texts p { margin: 0; font-size: 14px; color: #94a3b8; }
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -81,11 +331,12 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
     <div class="nav-item" onclick="switchTab('chat', event)">🤖 Tư duy Bot</div>
     <div class="nav-item" onclick="switchTab('config', event)">⚙️ Cấu hình Bot</div>
     <div style="margin: 15px 0; border-bottom: 1px solid #334155;"></div>
-    <div class="nav-item" onclick="switchTab('check-phone', event)">📞 Check SĐT có Zalo</div>
-    <div class="nav-item" onclick="switchTab('bulk-message', event)">✉️ Gửi tin hàng loạt</div>
-    <div class="nav-item" onclick="switchTab('invite-member', event)">👥 Mời thành viên</div>
-    <div class="nav-item" onclick="switchTab('auto-care', event)">📅 Chăm sóc tự động</div>
-    <div class="nav-item" onclick="switchTab('manage-accounts', event)">🗂️ Quản lý tài khoản</div>
+    <div class="nav-item" onclick="switchTab('check-phone', event)"> Check SĐT có Zalo</div>
+    <div class="nav-item" onclick="switchTab('bulk-message', event)"> Gửi tin nhắn hàng loạt</div>
+    <div class="nav-item" onclick="switchTab('invite-member', event)"> Mời thành viên</div>
+    <div class="nav-item" onclick="switchTab('add-friend', event)"> Kết bạn từ SĐT</div>
+    <div class="nav-item" onclick="switchTab('auto-care', event)"> Chăm sóc tự động</div>
+    <div class="nav-item" onclick="switchTab('manage-accounts', event)"> Quản lý tài khoản</div>
   </div>
   
   <div class="main-content hidden" id="history-tab">
@@ -190,283 +441,565 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
   </div>
 
 <div id="check-phone-tab" class="main-content hidden">
-<div class="page-title">
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="background: #10b981; color: white; padding: 6px 10px; border-radius: 8px;">📞</span>
-        Check SĐT có Zalo
-        <span style="font-size: 14px; color: #94a3b8; font-weight: normal; margin-left: 10px;">Dán hoặc import file SĐT, hệ thống quét realtime và hiển thị ngay số có Zalo.</span>
-    </div>
-    <div style="display: flex; gap: 10px;">
-        <button class="btn-success" style="background: transparent; border: 1px solid #10b981; color: #10b981;" onclick="copyZaloNumbers()">📋 Sao chép SĐT có Zalo</button>
-        <button class="btn-success" style="background: transparent; border: 1px solid #10b981; color: #10b981;" onclick="exportCSV()">📥 Xuất CSV</button>
-        <button class="btn-success" id="btnStartScan" onclick="startScan()">▶️ Bắt đầu quét</button>
-        <button class="btn-success" style="background: transparent; border: 1px solid #334155; color: #cbd5e1;" onclick="recheckAll()">🔄 Kiểm tra lại</button>
-    </div>
-</div>
-
-<div style="display: grid; grid-template-columns: 300px 1fr; gap: 24px;">
-    <!-- Left Panel -->
-    <div class="panel" style="display: flex; flex-direction: column; gap: 16px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px;">
-            <div style="font-weight: 600; color: #10b981;">📄 Nguồn SĐT</div>
-            <div style="color: #3b82f6; font-size: 14px; font-weight: 600;" id="lblTotalInput">0 SĐT</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <div class="premium-header" style="margin: 0;">
+            <div class="premium-header-icon green"><i class="fa fa-list-check"></i></div>
+            <div class="premium-header-texts">
+                <h2>Check SĐT có Zalo</h2>
+                <p>Dán hoặc import file SĐT, hệ thống quét realtime và hiển thị ngay số có Zalo.</p>
+            </div>
         </div>
-        
-        <button class="btn-success" style="background: transparent; border: 1px dashed #10b981; color: #10b981; padding: 12px; width: 100%;" onclick="document.getElementById('fileImportPhone').click()">📥 Import CSV / Excel / TXT</button>
-        <input type="file" id="fileImportPhone" accept=".csv, .txt, .xlsx, .xls" style="display: none;" onchange="handleFileImport(event)">
-        
-        <textarea id="txtPhoneNumbers" class="form-control" style="flex: 1; min-height: 300px; font-family: monospace; resize: none; background: #0f172a; border: 1px solid #334155;" placeholder="Mỗi dòng một số điện thoại...&#10;&#10;0986762722&#10;0984485027..." oninput="updatePhoneCount()"></textarea>
-        
-        <div style="display: flex; gap: 10px;">
-            <button class="btn-success" style="flex: 1; background: transparent; border: 1px solid #334155; color: #cbd5e1;" onclick="cleanNumbers()">✨ Làm sạch</button>
-            <button class="btn-success" style="flex: 1; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444;" onclick="document.getElementById('txtPhoneNumbers').value = ''; updatePhoneCount()">🗑️ Xóa</button>
+        <div style="display: flex; gap: 12px;">
+            <button class="btn-premium-outline" style="color: #10b981; border-color: #10b981;" onclick="copyZaloNumbers()"><i class="fa fa-copy"></i> Sao chép SĐT có Zalo</button>
+            <button class="btn-premium-outline" onclick="exportToCSV()"><i class="fa fa-download"></i> Xuất CSV</button>
+            <button class="btn-premium-green" id="btnStartScan" onclick="startScan()"><i class="fa fa-play"></i> Bắt đầu quét</button>
+            <button class="btn-premium-outline"><i class="fa fa-redo"></i> Kiểm tra lại</button>
         </div>
-        
-        <div style="font-size: 12px; color: #64748b; line-height: 1.5;">Hỗ trợ file CSV, XLSX, XLS, TXT. Hệ thống tự chuyển +84/84 về 0, loại ký tự thừa và bỏ số trùng.</div>
     </div>
     
-    <!-- Right Panel -->
-    <div style="display: flex; flex-direction: column; gap: 24px;">
-        <!-- Stats Grid -->
-        <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;">
-            <div class="panel" style="padding: 16px; margin: 0; text-align: center;">
-                <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">TỔNG</div>
-                <div style="font-size: 24px; font-weight: bold; color: #f8fafc;" id="statTotal">0</div>
-            </div>
-            <div class="panel" style="padding: 16px; margin: 0; text-align: center; border-bottom: 3px solid #10b981;">
-                <div style="font-size: 12px; color: #10b981; margin-bottom: 8px;">CÓ ZALO</div>
-                <div style="font-size: 24px; font-weight: bold; color: #10b981;" id="statHasZalo">0</div>
-            </div>
-            <div class="panel" style="padding: 16px; margin: 0; text-align: center; border-bottom: 3px solid #ef4444;">
-                <div style="font-size: 12px; color: #ef4444; margin-bottom: 8px;">KHÔNG CÓ</div>
-                <div style="font-size: 24px; font-weight: bold; color: #ef4444;" id="statNoZalo">0</div>
-            </div>
-            <div class="panel" style="padding: 16px; margin: 0; text-align: center; border-bottom: 3px solid #3b82f6;">
-                <div style="font-size: 12px; color: #3b82f6; margin-bottom: 8px;">CHƯA XÁC ĐỊNH</div>
-                <div style="font-size: 24px; font-weight: bold; color: #3b82f6;" id="statUnknown">0</div>
-            </div>
-            <div class="panel" style="padding: 16px; margin: 0; text-align: center; border-bottom: 3px solid #eab308;">
-                <div style="font-size: 12px; color: #eab308; margin-bottom: 8px;">LỖI/TRÙNG</div>
-                <div style="font-size: 24px; font-weight: bold; color: #eab308;" id="statError">0</div>
-            </div>
-            <div class="panel" style="padding: 16px; margin: 0; text-align: center;">
-                <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">ĐÃ QUÉT</div>
-                <div style="font-size: 24px; font-weight: bold; color: #3b82f6;" id="statScanned">0</div>
+    <div style="display: flex; gap: 24px;">
+        <!-- Cột Trái: Nguồn SĐT -->
+        <div style="width: 320px;">
+            <div class="premium-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <div class="premium-label green" style="margin: 0;"><i class="fa fa-file-alt"></i> Nguồn SĐT</div>
+                    <div style="color: #10b981; font-size: 13px; font-weight: 600;">200 SĐT</div>
+                </div>
+                
+                <button class="btn-premium-outline" style="width: 100%; margin-bottom: 16px; border-style: dashed;"><i class="fa fa-file-import"></i> Import CSV / Excel / TXT</button>
+                
+                <textarea id="phoneListInput" class="premium-textarea" style="height: 350px; font-family: monospace; font-size: 13px; margin-bottom: 16px;" placeholder="0986762722
+0984485027
+0986118981
+0967937124
+0356188135
+0913215320
+0968814444"></textarea>
+                
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <button class="btn-premium-outline" style="flex: 1;" onclick="document.getElementById('phoneListInput').value=''"><i class="fa fa-broom"></i> Làm sạch</button>
+                    <button class="btn-premium-outline" style="flex: 1; color: #ef4444; border-color: #ef4444;" onclick="document.getElementById('phoneListInput').value=''"><i class="fa fa-times"></i> Xóa</button>
+                </div>
+                
+                <div style="font-size: 11px; color: #64748b; line-height: 1.5;">Hỗ trợ file CSV, XLSX, XLS, TXT. Hệ thống tự chuyển +84/84 về 0, loại ký tự thừa và bỏ số trùng.</div>
             </div>
         </div>
         
-        <!-- Progress Bar -->
-        <div class="panel" style="padding: 20px; margin: 0;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; font-weight: 500;">
-                <div id="lblProgressText" style="color: #cbd5e1;">Đang chờ dữ liệu...</div>
-                <div id="lblProgressPercent" style="color: #10b981;">0%</div>
-            </div>
-            <div style="width: 100%; height: 6px; background: #334155; border-radius: 4px; overflow: hidden;">
-                <div id="progressBar" style="width: 0%; height: 100%; background: #10b981; transition: 0.3s;"></div>
-            </div>
-        </div>
-        
-        
-        <!-- Debug Console -->
-        <div class="panel" style="margin: 0; padding: 10px; font-family: monospace; font-size: 11px; color: #10b981; background: #0f172a; max-height: 100px; overflow-y: auto;" id="debugConsole">
-            [Hệ thống] Đang đợi kết nối Zalo...
-        </div>
-
-        <!-- Table -->
-        <div class="panel" style="margin: 0; padding: 0; flex: 1; display: flex; flex-direction: column;">
-            <div style="display: flex; padding: 16px 20px; border-bottom: 1px solid #334155; gap: 10px;">
-                <button class="btn-success" style="background: #1e293b; border: 1px solid #10b981; color: #10b981; padding: 6px 12px; font-size: 13px;">Tất cả</button>
-                <button class="btn-success" style="background: transparent; border: 1px solid #334155; color: #cbd5e1; padding: 6px 12px; font-size: 13px;">Có Zalo</button>
-                <button class="btn-success" style="background: transparent; border: 1px solid #334155; color: #cbd5e1; padding: 6px 12px; font-size: 13px;">Không có</button>
-                <span style="margin-left: auto; color: #64748b; font-size: 13px; align-self: center;" id="lblResultCount">0 kết quả</span>
+        <!-- Cột Phải: Kết quả -->
+        <div style="flex: 1;">
+            <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+                <div class="premium-panel" style="flex: 1; margin: 0; text-align: center; padding: 16px;">
+                    <div style="font-size: 12px; font-weight: 600; color: #94a3b8; margin-bottom: 8px;">TỔNG</div>
+                    <div style="font-size: 24px; font-weight: 700; color: white;">200</div>
+                </div>
+                <div class="premium-panel" style="flex: 1; margin: 0; text-align: center; padding: 16px; border-color: #10b981; background: rgba(16, 185, 129, 0.05);">
+                    <div style="font-size: 12px; font-weight: 600; color: #10b981; margin-bottom: 8px;">CÓ ZALO</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #10b981;" id="statHasZalo">0</div>
+                </div>
+                <div class="premium-panel" style="flex: 1; margin: 0; text-align: center; padding: 16px; border-color: #ef4444; background: rgba(239, 68, 68, 0.05);">
+                    <div style="font-size: 12px; font-weight: 600; color: #ef4444; margin-bottom: 8px;">KHÔNG CÓ</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #ef4444;" id="statNoZalo">0</div>
+                </div>
+                <div class="premium-panel" style="flex: 1; margin: 0; text-align: center; padding: 16px;">
+                    <div style="font-size: 12px; font-weight: 600; color: #3b82f6; margin-bottom: 8px;">CHƯA XÁC ĐỊNH</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #3b82f6;">0</div>
+                </div>
+                <div class="premium-panel" style="flex: 1; margin: 0; text-align: center; padding: 16px;">
+                    <div style="font-size: 12px; font-weight: 600; color: #eab308; margin-bottom: 8px;">LỖI/TRÙNG</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #eab308;">0</div>
+                </div>
+                <div class="premium-panel" style="flex: 1; margin: 0; text-align: center; padding: 16px; border-color: #3b82f6;">
+                    <div style="font-size: 12px; font-weight: 600; color: #3b82f6; margin-bottom: 8px;">ĐÃ QUÉT</div>
+                    <div style="font-size: 24px; font-weight: 700; color: #3b82f6;" id="statScanned">0</div>
+                </div>
             </div>
             
-            <div style="overflow-y: auto; max-height: 400px;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 14px; text-align: left;">
+            <div class="premium-panel" style="margin-bottom: 24px; padding: 16px;">
+                <div style="display: flex; justify-content: space-between; font-size: 13px; color: #94a3b8; margin-bottom: 8px;">
+                    <span id="lblProgressText">Đã kết thúc, có kết quả cần kiểm tra lại</span>
+                    <span style="color: #10b981;">100%</span>
+                </div>
+                <div class="slider-container" style="margin: 0 0 8px 0;">
+                    <div class="slider-track" style="height: 4px;">
+                        <div class="slider-fill green" id="progressFill" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div style="font-size: 12px; color: #3b82f6;">Đang đo tốc độ</div>
+            </div>
+            
+            <div class="premium-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <div class="premium-tabs" style="margin: 0;">
+                        <button class="premium-tab-btn active green" style="padding: 6px 12px; font-size: 12px;">Tất cả</button>
+                        <button class="premium-tab-btn" style="padding: 6px 12px; font-size: 12px; color: #10b981;">Có Zalo</button>
+                        <button class="premium-tab-btn" style="padding: 6px 12px; font-size: 12px; color: #ef4444;">Không có</button>
+                        <button class="premium-tab-btn" style="padding: 6px 12px; font-size: 12px; color: #3b82f6;">Chưa xác định</button>
+                        <button class="premium-tab-btn" style="padding: 6px 12px; font-size: 12px; color: #eab308; border-color: #eab308;">Lỗi/trùng</button>
+                    </div>
+                    <div style="font-size: 12px; color: #94a3b8;">200 kết quả</div>
+                </div>
+                
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
                     <thead>
-                        <tr style="color: #94a3b8; font-size: 12px; border-bottom: 1px solid #334155;">
-                            <th style="padding: 12px 20px; font-weight: 500;">SĐT</th>
-                            <th style="padding: 12px 20px; font-weight: 500;">TRẠNG THÁI</th>
-                            <th style="padding: 12px 20px; font-weight: 500;">TÊN ZALO</th>
-                            <th style="padding: 12px 20px; font-weight: 500;">UID</th>
-                            <th style="padding: 12px 20px; font-weight: 500;">THỜI ĐIỂM</th>
+                        <tr style="color: #94a3b8; border-bottom: 1px solid #334155;">
+                            <th style="padding: 12px 8px; font-weight: 500;">SĐT</th>
+                            <th style="padding: 12px 8px; font-weight: 500;">TRẠNG THÁI</th>
+                            <th style="padding: 12px 8px; font-weight: 500;">TÊN ZALO</th>
+                            <th style="padding: 12px 8px; font-weight: 500;">UID</th>
+                            <th style="padding: 12px 8px; font-weight: 500;">THỜI ĐIỂM</th>
                         </tr>
                     </thead>
                     <tbody id="tblResults">
-                        <tr>
-                            <td colspan="5" style="padding: 30px; text-align: center; color: #64748b;">Chưa có dữ liệu. Vui lòng nhập SĐT và bấm Bắt đầu quét.</td>
-                        </tr>
+                        <!-- Results injected here -->
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
-
-</div>
 <div id="bulk-message-tab" class="main-content hidden">
-    <div class="page-title"><i class="fa fa-paper-plane" style="color: #10b981; margin-right: 10px;"></i> Gửi Tin Hàng Loạt</div>
-    <div style="display: flex; gap: 20px; align-items: flex-start;">
-        <div class="panel" style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center;"><i class="fa fa-file-alt" style="margin-right: 8px;"></i> Danh sách SĐT & Nội dung</h3>
+    <div class="premium-header">
+        <div class="premium-header-icon purple"><i class="fa fa-comments"></i></div>
+        <div class="premium-header-texts">
+            <h2>Gửi tin nhắn hàng loạt</h2>
+            <p>Gửi tin nhắn cho từng thành viên trong nhóm, theo tag và theo sđt</p>
+        </div>
+    </div>
+    
+    <div class="premium-grid">
+        <!-- Cột Trái -->
+        <div>
+            <div class="premium-panel">
+                <div class="premium-label purple"><i class="fa fa-users"></i> Chọn nhóm gửi</div>
+                
+                <div class="premium-tabs">
+                    <button class="premium-tab-btn active purple"><i class="fa fa-users"></i> Theo nhóm</button>
+                    <button class="premium-tab-btn"><i class="fa fa-tag"></i> Theo tag</button>
+                    <button class="premium-tab-btn"><i class="fa fa-mobile-alt"></i> Theo SĐT</button>
+                </div>
+                
+                <div style="position: relative; margin-bottom: 12px;">
+                    <i class="fa fa-search" style="position: absolute; left: 16px; top: 16px; color: #64748b;"></i>
+                    <input type="text" class="premium-input" placeholder="Tìm nhóm..." style="padding-left: 40px; margin-bottom: 12px;">
+                </div>
+                
+                <select class="premium-select">
+                    <option>-- Chọn nhóm --</option>
+                </select>
+                
+                <div style="margin-top: 15px;">
+                    <textarea id="bulkPhoneList" class="premium-textarea hidden" placeholder="Nhập danh sách SĐT..."></textarea>
+                </div>
             </div>
             
-            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 5px;">Nhập danh sách SĐT (mỗi dòng 1 số):</p>
-            <textarea id="bulkPhoneList" class="textarea-dark" style="height: 120px;" placeholder="Ví dụ:
-0986762722
-0979662862"></textarea>
-            
-            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 5px; margin-top: 15px;">Nội dung tin nhắn:</p>
-            <textarea id="bulkMessageContent" class="textarea-dark" style="height: 120px;" placeholder="Ví dụ:
-Chào bạn, đây là tin nhắn tự động từ KSCL..."></textarea>
-            
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button class="btn btn-outline" onclick="loadFromScanResults()"><i class="fa fa-download"></i> Lấy SĐT từ kết quả quét (Có Zalo)</button>
+            <div class="premium-panel">
+                <div class="premium-label yellow"><i class="fa fa-clock"></i> Cấu hình gửi</div>
+                
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="font-size: 14px; color: white;">Số người gửi tối đa 1 ngày</span>
+                    <span style="font-size: 14px; color: #a855f7; font-weight: bold;" id="bulkLimitVal">40</span>
+                </div>
+                
+                <div class="slider-container">
+                    <div class="slider-track">
+                        <div class="slider-fill purple" style="width: 40%;"></div>
+                        <div class="slider-thumb" style="left: 40%;"></div>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <h4 style="margin: 0 0 10px 0; color: white; font-size: 14px;"><i class="fa fa-info-circle purple"></i> Cách hoạt động:</h4>
+                    <p>Mỗi ngày xử lý tối đa <b style="color:white;">40</b> người</p>
+                    <p>Tự động tiếp tục hôm sau nếu chưa hết</p>
+                    <p>Bỏ qua người đã xử lý trước đó</p>
+                </div>
             </div>
         </div>
         
-        <div class="panel" style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center;"><i class="fa fa-chart-bar" style="margin-right: 8px;"></i> Tiến độ gửi tin</h3>
-            </div>
-            
-            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                <div class="stat-card" style="flex: 1;">
-                    <div class="stat-title">TỔNG SỐ</div>
-                    <div class="stat-value" id="bulkTotal">0</div>
-                </div>
-                <div class="stat-card" style="flex: 1;">
-                    <div class="stat-title" style="color: #10b981;">ĐÃ GỬI</div>
-                    <div class="stat-value" style="color: #10b981;" id="bulkSent">0</div>
-                </div>
-                <div class="stat-card" style="flex: 1;">
-                    <div class="stat-title" style="color: #ef4444;">THẤT BẠI</div>
-                    <div class="stat-value" style="color: #ef4444;" id="bulkFailed">0</div>
+        <!-- Cột Phải -->
+        <div>
+            <div class="premium-panel">
+                <div class="premium-label purple"><i class="fa fa-comment-alt"></i> Nội dung tin nhắn</div>
+                <textarea id="bulkMessageContent" class="premium-textarea" style="height: 150px;" placeholder="Nhập nội dung tin nhắn..."></textarea>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px; color: #64748b; font-size: 12px;">
+                    <div><i class="fa fa-smile" style="margin-right: 8px; color: #eab308; cursor:pointer;"></i> <i class="fa fa-image" style="cursor:pointer;"></i></div>
+                    <span>0 / 2000 ký tự</span>
                 </div>
             </div>
             
-            <div class="progress-bar">
-                <div class="progress-fill" id="bulkProgressFill" style="width: 0%"></div>
+            <div class="premium-panel">
+                <div class="premium-label blue"><i class="fa fa-paperclip"></i> Tệp đính kèm</div>
+                <div class="upload-box">
+                    <i class="fa fa-cloud-upload-alt"></i>
+                    <p style="margin: 0 0 5px 0; font-weight: 500; color: white;">Kéo thả hoặc click để chọn tệp</p>
+                    <p style="margin: 0; font-size: 12px;">Hỗ trợ ảnh, video và tệp phổ biến (tối đa 15MB/tệp)</p>
+                </div>
             </div>
-            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 20px;" id="bulkProgressText">Sẵn sàng gửi...</div>
-            
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-primary" id="btnStartBulk" onclick="startBulkMessage()" style="flex: 1;"><i class="fa fa-play"></i> Bắt đầu gửi</button>
-            </div>
+        </div>
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding: 20px; background: #1e293b; border-radius: 12px; border: 1px solid #334155;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 10px; height: 10px; background: #64748b; border-radius: 50%;"></div>
+            <span style="color: #94a3b8; font-size: 14px;" id="bulkProgressText">Chờ cấu hình...</span>
+            <span id="bulkSent" class="hidden">0</span>
+            <span id="bulkFailed" class="hidden">0</span>
+            <span id="bulkTotal" class="hidden">0</span>
+            <div id="bulkProgressFill" class="hidden"></div>
+        </div>
+        <div style="display: flex; gap: 12px;">
+            <button class="btn-premium-outline">Hủy</button>
+            <button class="btn-premium-outline" style="color: #eab308; border-color: #eab308;"><i class="fa fa-history"></i> Lịch sử</button>
+            <button class="btn-premium-purple" id="btnStartBulk" onclick="startBulkMessage()"><i class="fa fa-paper-plane"></i> Gửi tin nhắn</button>
         </div>
     </div>
 </div>
 <div id="invite-member-tab" class="main-content hidden">
-    <div class="page-title"><i class="fa fa-user-plus" style="color: #3b82f6; margin-right: 10px;"></i> Tự Động Mời Thành Viên Vào Nhóm</div>
-    
-    <div class="alert-box" style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
-        <h4 style="margin: 0 0 10px 0; color: #3b82f6;">Hướng dẫn sử dụng:</h4>
-        <ol style="margin: 0; padding-left: 20px; color: #94a3b8; font-size: 13px; line-height: 1.6;">
-            <li>Mở <b>Zalo Web</b> và vào Nhóm bạn muốn thêm thành viên.</li>
-            <li>Bấm vào biểu tượng <b>Thêm thành viên</b> (hình người có dấu cộng) để mở cửa sổ chọn người.</li>
-            <li>Quay lại KSCL Dashboard, nhập danh sách SĐT và bấm <b>Bắt đầu tự động chọn</b>.</li>
-            <li>Bot sẽ tự động tìm và đánh dấu tích vào các SĐT. Khi bot chạy xong, bạn tự bấm nút <b>Xác nhận</b> trên Zalo để hoàn tất.</li>
-        </ol>
+    <div class="premium-header">
+        <div class="premium-header-icon green"><i class="fa fa-user-plus"></i></div>
+        <div class="premium-header-texts">
+            <h2>Mời thành viên</h2>
+            <p>Chọn nguồn thành viên, chọn nhóm cần thêm người, rồi chạy chiến dịch mời</p>
+        </div>
     </div>
-
-    <div style="display: flex; gap: 20px; align-items: flex-start;">
-        <div class="panel" style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center;"><i class="fa fa-list" style="margin-right: 8px;"></i> Danh sách SĐT cần mời</h3>
+    
+    <div class="premium-tabs" style="margin-bottom: 24px;">
+        <button class="premium-tab-btn active green" style="flex: 1; padding: 16px;">
+            <div style="display: flex; gap: 15px; align-items: center; justify-content: center;">
+                <i class="fa fa-users" style="font-size: 20px;"></i>
+                <div style="text-align: left;">
+                    <div style="font-weight: 700; font-size: 15px;">Theo nhóm</div>
+                    <div style="font-size: 12px; font-weight: 400;">Từ nhóm đã đồng bộ</div>
+                </div>
+            </div>
+        </button>
+        <button class="premium-tab-btn" style="flex: 1; padding: 16px;">
+            <div style="display: flex; gap: 15px; align-items: center; justify-content: center;">
+                <i class="fa fa-tag" style="font-size: 20px;"></i>
+                <div style="text-align: left;">
+                    <div style="font-weight: 700; font-size: 15px; color: white;">Theo Tag</div>
+                    <div style="font-size: 12px; font-weight: 400;">Từ tag Zalo</div>
+                </div>
+            </div>
+        </button>
+        <button class="premium-tab-btn" style="flex: 1; padding: 16px;">
+            <div style="display: flex; gap: 15px; align-items: center; justify-content: center;">
+                <i class="fa fa-link" style="font-size: 20px;"></i>
+                <div style="text-align: left;">
+                    <div style="font-weight: 700; font-size: 15px; color: white;">Theo link nhóm</div>
+                    <div style="font-size: 12px; font-weight: 400;">Dán link zalo.me/g</div>
+                </div>
+            </div>
+        </button>
+    </div>
+    
+    <div class="premium-grid">
+        <!-- Cột Trái -->
+        <div>
+            <div class="premium-panel">
+                <div class="premium-label purple"><i class="fa fa-sign-in-alt"></i> Nhóm muốn mời thành viên</div>
+                <div style="position: relative; margin-bottom: 12px;">
+                    <i class="fa fa-search" style="position: absolute; left: 16px; top: 16px; color: #64748b;"></i>
+                    <input type="text" class="premium-input" placeholder="Tìm nhóm muốn mời thành viên..." style="padding-left: 40px; margin-bottom: 12px;">
+                </div>
+                <select class="premium-select">
+                    <option>-- Chọn nhóm muốn mời thành viên --</option>
+                </select>
+                <div style="margin-top: 15px;">
+                    <textarea id="invitePhoneList" class="premium-textarea hidden" placeholder="Nhập danh sách SĐT..."></textarea>
+                </div>
             </div>
             
-            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 5px;">Nhập danh sách SĐT (mỗi dòng 1 số):</p>
-            <textarea id="invitePhoneList" class="textarea-dark" style="height: 200px;" placeholder="Ví dụ:
-0986762722
-0979662862"></textarea>
-            
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button class="btn btn-outline" onclick="loadFromScanResultsInvite()"><i class="fa fa-download"></i> Lấy SĐT từ kết quả quét (Có Zalo)</button>
+            <div class="premium-panel">
+                <div class="premium-label yellow"><i class="fa fa-sliders-h"></i> Cấu hình</div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span style="font-size: 14px; color: white;">Giới hạn hàng ngày</span>
+                    <span style="font-size: 14px; color: #a855f7; font-weight: bold;">30</span>
+                </div>
+                
+                <div class="slider-container">
+                    <div class="slider-track">
+                        <div class="slider-fill purple" style="width: 30%;"></div>
+                        <div class="slider-thumb" style="left: 30%;"></div>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <h4 style="margin: 0 0 10px 0; color: white; font-size: 14px;"><i class="fa fa-info-circle blue"></i> Cách hoạt động:</h4>
+                    <p>Đã là bạn bè → thêm thẳng vào nhóm</p>
+                    <p>Chưa là bạn → gửi tin nhắn kèm link nhóm</p>
+                    <p>Mỗi ngày xử lý tối đa <b style="color:white;">30</b> người</p>
+                    <p>Tự động tiếp tục hôm sau nếu chưa hết</p>
+                </div>
             </div>
         </div>
         
-        <div class="panel" style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center;"><i class="fa fa-chart-pie" style="margin-right: 8px;"></i> Tiến độ chọn thành viên</h3>
+        <!-- Cột Phải -->
+        <div>
+            <div class="premium-panel">
+                <div class="premium-label green"><i class="fa fa-sign-out-alt"></i> Nhóm cần thành viên đó vào</div>
+                <div style="position: relative; margin-bottom: 12px;">
+                    <i class="fa fa-search" style="position: absolute; left: 16px; top: 16px; color: #64748b;"></i>
+                    <input type="text" class="premium-input" placeholder="Tìm nhóm cần thêm thành viên..." style="padding-left: 40px; margin-bottom: 12px;">
+                </div>
+                <select class="premium-select">
+                    <option>-- Chọn nhóm cần thành viên đó vào --</option>
+                </select>
             </div>
             
-            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                <div class="stat-card" style="flex: 1;">
-                    <div class="stat-title">TỔNG SỐ</div>
-                    <div class="stat-value" id="inviteTotal">0</div>
-                </div>
-                <div class="stat-card" style="flex: 1;">
-                    <div class="stat-title" style="color: #3b82f6;">ĐÃ CHỌN</div>
-                    <div class="stat-value" style="color: #3b82f6;" id="inviteSelected">0</div>
-                </div>
-                <div class="stat-card" style="flex: 1;">
-                    <div class="stat-title" style="color: #ef4444;">KHÔNG TÌM THẤY</div>
-                    <div class="stat-value" style="color: #ef4444;" id="inviteFailed">0</div>
-                </div>
+            <div class="premium-panel">
+                <div class="premium-label blue"><i class="fa fa-comment-dots"></i> Nội dung tin nhắn mời</div>
+                <textarea class="premium-textarea" style="height: 250px;" placeholder="Chào bạn, mình mời bạn tham gia nhóm mới về Crypto của mình nhé..."></textarea>
             </div>
-            
-            <div class="progress-bar">
-                <div class="progress-fill" id="inviteProgressFill" style="width: 0%; background: #3b82f6;"></div>
+        </div>
+    </div>
+    
+    <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 10px; padding: 20px; background: #1e293b; border-radius: 12px; border: 1px solid #334155;">
+        <span id="inviteSelected" class="hidden">0</span>
+        <span id="inviteFailed" class="hidden">0</span>
+        <span id="inviteTotal" class="hidden">0</span>
+        <span id="inviteProgressText" class="hidden">Sẵn sàng...</span>
+        <div id="inviteProgressFill" class="hidden"></div>
+        <div style="display: flex; gap: 12px;">
+            <button class="btn-premium-outline">Hủy bỏ</button>
+            <button class="btn-premium-green" id="btnStartInvite" onclick="startInviteProcess()"><i class="fa fa-rocket"></i> Bắt đầu mời ngay</button>
+        </div>
+    </div>
+</div>
+<div id="add-friend-tab" class="main-content hidden">
+    <div class="premium-header">
+        <div class="premium-header-icon green"><i class="fa fa-user-plus"></i></div>
+        <div class="premium-header-texts">
+            <h2>Kết bạn từ SĐT</h2>
+            <p>Tự động gửi lời mời kết bạn theo danh sách số điện thoại</p>
+        </div>
+    </div>
+    
+    <div class="premium-panel" style="padding: 30px;">
+        <div class="premium-label green"><i class="fa fa-tag"></i> Tên chiến dịch</div>
+        <input type="text" class="premium-input" style="margin-bottom: 24px;" placeholder="VD: Kết bạn khách hàng tháng 4">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div class="premium-label green" style="margin: 0;"><i class="fa fa-mobile-alt"></i> Danh sách số điện thoại</div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-premium-outline" style="padding: 6px 12px; font-size: 12px; color: #3b82f6; border-color: #3b82f6;" onclick="loadFromScanResultsAutocare()"><i class="fa fa-download"></i> Lấy SĐT từ KQ quét</button>
+                <button class="btn-premium-outline" style="padding: 6px 12px; font-size: 12px; color: #10b981; border-color: #10b981;"><i class="fa fa-broom"></i> Làm sạch</button>
+                <button class="btn-premium-outline" style="padding: 6px 12px; font-size: 12px; color: #ef4444; border-color: #ef4444;" onclick="document.getElementById('autocarePhoneList').value=''"><i class="fa fa-times"></i> Xoá</button>
             </div>
-            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 20px;" id="inviteProgressText">Sẵn sàng...</div>
+        </div>
+        
+        <textarea id="autocarePhoneList" class="premium-textarea" style="height: 200px; margin-bottom: 10px;" placeholder="Mỗi số 1 dòng hoặc cách nhau bằng dấu phẩy. VD:
+0334.868.868
++84 912 345 678
+0901234567
+
+Hoặc bấm 'Lấy SĐT từ KQ quét' để nhập SĐT đã lọc Zalo."></textarea>
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 24px;"><i class="fa fa-info-circle"></i> Hệ thống tự loại dấu chấm, dấu cách, chuyển +84/84 -> 0, và khử trùng</div>
+        
+        <div class="premium-grid" style="margin-bottom: 24px;">
+            <div>
+                <div class="premium-label yellow"><i class="fa fa-tachometer-alt"></i> Giới hạn / ngày</div>
+                <input type="number" class="premium-input" value="40" style="margin-bottom: 8px;">
+                <div style="font-size: 12px; color: #64748b;">Mặc định 40 SĐT/ngày, có thể tự nhập theo nhu cầu</div>
+            </div>
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
+                <i class="fa fa-clock" style="font-size: 24px; color: #10b981; margin-bottom: 8px;"></i>
+                <div style="color: #10b981; font-weight: 500; text-align: center;">Hệ thống tự chia batch<br>mỗi 24h chạy tiếp</div>
+            </div>
+        </div>
+        
+        <div style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+            <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                <input type="checkbox" checked style="width: 20px; height: 20px; margin-top: 2px; accent-color: #10b981;">
+                <div>
+                    <div style="font-weight: 600; color: white; margin-bottom: 4px;">Nhập lời nhắn trong lời mời kết bạn</div>
+                    <div style="font-size: 13px; color: #94a3b8; margin-bottom: 12px;">Không chọn thì hệ thống dùng lời mời mặc định của Zalo, không gửi tin nhắn riêng.</div>
+                    <textarea id="autocareMessageContent" class="premium-textarea" style="height: 80px;" placeholder="Chào bạn, mình kết bạn để tiện trao đổi công việc nhé!"></textarea>
+                </div>
+            </label>
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; align-items: center;">
+            <span id="autocareSelected" class="hidden">0</span>
+            <span id="autocareFailed" class="hidden">0</span>
+            <span id="autocareTotal" class="hidden">0</span>
+            <span id="autocareSent" class="hidden">0</span>
+            <span id="autocareProgressText" class="hidden">Sẵn sàng...</span>
+            <div id="autocareProgressFill" class="hidden"></div>
             
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-primary" id="btnStartInvite" onclick="startInviteProcess()" style="flex: 1; background: #3b82f6;"><i class="fa fa-magic"></i> Bắt đầu tự động chọn</button>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn-premium-outline" style="color: #3b82f6; border-color: #3b82f6;"><i class="fa fa-history"></i> Lịch sử</button>
+                <button class="btn-premium-green" id="btnStartAutocare" onclick="startAutocareProcess()"><i class="fa fa-rocket"></i> Bắt đầu kết bạn</button>
             </div>
         </div>
     </div>
 </div>
 <div id="auto-care-tab" class="main-content hidden">
-    <div class="page-title"><i class="fa fa-heart" style="color: #f43f5e; margin-right: 10px;"></i> Chăm Sóc Tự Động (Tự Động Kết Bạn)</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <div class="premium-header" style="margin: 0;">
+            <div class="premium-header-icon blue"><i class="fa fa-calendar-alt"></i></div>
+            <div class="premium-header-texts">
+                <h2>Chăm sóc tự động</h2>
+                <p>Lên lịch nhắn tin chăm sóc khách hàng, có AI viết lại nội dung riêng cho từng người nhận.</p>
+            </div>
+        </div>
+        <button class="btn-premium-outline"><i class="fa fa-redo"></i> Làm mới</button>
+    </div>
     
-    <div style="display: flex; gap: 20px; align-items: flex-start;">
-        <div class="panel" style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center;"><i class="fa fa-user-plus" style="margin-right: 8px;"></i> Danh sách SĐT & Lời chào</h3>
+    <div style="display: flex; gap: 24px; align-items: flex-start;">
+        <!-- Cột Trái -->
+        <div style="flex: 1;">
+            <div class="premium-label blue"><i class="fa fa-notes-medical"></i> Tạo lịch chăm sóc</div>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="font-size: 13px; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 8px;">Tên lịch chăm sóc</label>
+                <input type="text" class="premium-input" placeholder="VD: Chăm sóc khách cũ tháng 7">
             </div>
             
-            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 5px;">Nhập danh sách SĐT cần kết bạn (mỗi dòng 1 số):</p>
-            <textarea id="autocarePhoneList" class="textarea-dark" style="height: 120px;" placeholder="Ví dụ:
-0986762722
-0979662862"></textarea>
+            <div style="margin-bottom: 16px;">
+                <label style="font-size: 13px; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 8px;">Nguồn người nhận</label>
+                <div style="display: flex; gap: 8px;">
+                    <div style="flex: 1; background: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                        <i class="fa fa-mobile-alt" style="color: #3b82f6; font-size: 20px;"></i>
+                        <div>
+                            <div style="color: white; font-weight: 600; font-size: 13px;">Danh sách SĐT</div>
+                            <div style="color: #94a3b8; font-size: 11px;">Mỗi dòng một số</div>
+                        </div>
+                    </div>
+                    <div style="flex: 1; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                        <i class="fa fa-id-card" style="color: #64748b; font-size: 20px;"></i>
+                        <div>
+                            <div style="color: white; font-weight: 600; font-size: 13px;">Zalo ID</div>
+                            <div style="color: #64748b; font-size: 11px;">UID có sẵn</div>
+                        </div>
+                    </div>
+                    <div style="flex: 1; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                        <i class="fa fa-tag" style="color: #64748b; font-size: 20px;"></i>
+                        <div>
+                            <div style="color: white; font-weight: 600; font-size: 13px;">Thẻ tag</div>
+                            <div style="color: #64748b; font-size: 11px;">Tag từ tài khoản</div>
+                        </div>
+                    </div>
+                    <div style="flex: 1; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                        <i class="fa fa-users" style="color: #64748b; font-size: 20px;"></i>
+                        <div>
+                            <div style="color: white; font-weight: 600; font-size: 13px;">Nhóm</div>
+                            <div style="color: #64748b; font-size: 11px;">Thành viên nhóm</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
-            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 5px; margin-top: 15px;">Lời chào kết bạn (Tối đa 150 ký tự):</p>
-            <textarea id="autocareMessageContent" class="textarea-dark" style="height: 80px;" placeholder="Ví dụ:
-Chào bạn, mình kết bạn để tiện trao đổi công việc nhé!"></textarea>
+            <div style="margin-bottom: 16px;">
+                <label style="font-size: 13px; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 8px;">Danh sách người nhận</label>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <button class="btn-premium-outline" style="padding: 4px 12px; font-size: 12px;"><i class="fa fa-file-excel"></i> Tải CSV</button>
+                    <span style="font-size: 12px; color: #64748b;">Có thể dán danh sách hoặc tải CSV chứa SĐT/Zalo ID.</span>
+                </div>
+                <textarea class="premium-textarea" style="height: 100px; margin-bottom: 8px;" placeholder="Mỗi dòng một SĐT"></textarea>
+                <div style="font-size: 12px; color: #64748b;">Dán SĐT hoặc tải CSV; hệ thống sẽ tự loại trùng trước khi lên lịch.</div>
+            </div>
             
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button class="btn btn-outline" onclick="loadFromScanResultsAutocare()"><i class="fa fa-download"></i> Lấy SĐT từ kết quả quét (Có Zalo)</button>
+            <div style="margin-bottom: 16px;">
+                <label style="font-size: 13px; font-weight: 600; color: white; display: block; margin-bottom: 8px;">Nội dung tin nhắn gốc</label>
+                <textarea class="premium-textarea" style="height: 100px; margin-bottom: 8px;" placeholder="Nội dung này sẽ được AI viết lại riêng cho từng người nhận trước khi gửi"></textarea>
+                <div style="font-size: 12px; color: #64748b;">AI spin bắt buộc. Nếu AI lỗi, hệ thống giữ người nhận ở hàng chờ và không gửi nội dung gốc hàng loạt.</div>
+            </div>
+            
+            <div style="border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-weight: 600; color: white; font-size: 14px; margin-bottom: 4px;">Ảnh / video gửi kèm</div>
+                    <div style="font-size: 12px; color: #94a3b8;">Có thể đính kèm tối đa 5 ảnh hoặc video ngắn.</div>
+                </div>
+                <button class="btn-premium-outline"><i class="fa fa-image"></i> Chọn tệp</button>
+            </div>
+            
+            <div>
+                <label style="font-size: 13px; font-weight: 600; color: white; display: block; margin-bottom: 8px;">Lịch gửi</label>
+                <div style="display: flex; gap: 16px;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 11px; color: #94a3b8; display: block; margin-bottom: 4px;">Tần suất</label>
+                        <select class="premium-select">
+                            <option>Hàng tháng</option>
+                            <option>Một lần</option>
+                            <option>Hàng tuần</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 11px; color: #94a3b8; display: block; margin-bottom: 4px;">Thời điểm bắt đầu</label>
+                        <div style="position: relative;">
+                            <input type="text" class="premium-input" value="14:32 27/07/2026">
+                            <i class="fa fa-calendar-alt" style="position: absolute; right: 12px; top: 14px; color: #64748b;"></i>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <div class="panel" style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center;"><i class="fa fa-chart-line" style="margin-right: 8px;"></i> Tiến độ kết bạn</h3>
-            </div>
-            
-            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                <div class="stat-card" style="flex: 1;">
-                    <div class="stat-title">TỔNG SỐ</div>
-                    <div class="stat-value" id="autocareTotal">0</div>
-                </div>
-                <div class="stat-card" style="flex: 1;">
-                    <div class="stat-title" style="color: #f43f5e;">ĐÃ GỬI YÊU CẦU</div>
-                    <div class="stat-value" style="color: #f43f5e;" id="autocareSent">0</div>
-                </div>
-                <div class="stat-card" style="flex: 1;">
-                    <div class="stat-title" style="color: #ef4444;">LỖI/ĐÃ LÀ BẠN</div>
-                    <div class="stat-value" style="color: #ef4444;" id="autocareFailed">0</div>
+        <!-- Cột Phải -->
+        <div style="flex: 1;">
+            <div class="premium-panel" style="margin-bottom: 24px; padding: 24px;">
+                <div style="font-size: 16px; font-weight: 600; color: white; margin-bottom: 8px;">Hàng chờ gần nhất</div>
+                <div style="font-size: 13px; color: #64748b; margin-bottom: 24px;">Chưa có lịch chăm sóc</div>
+                <div style="text-align: center; color: #64748b; font-size: 14px; padding: 40px 0;">
+                    Chưa có lịch chăm sóc. Tạo lịch mới để bắt đầu.
                 </div>
             </div>
             
-            <div class="progress-bar">
-                <div class="progress-fill" id="autocareProgressFill" style="width: 0%; background: #f43f5e;"></div>
-            </div>
-            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 20px;" id="autocareProgressText">Sẵn sàng...</div>
-            
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-primary" id="btnStartAutocare" onclick="startAutocareProcess()" style="flex: 1; background: #f43f5e;"><i class="fa fa-rocket"></i> Bắt đầu gửi Yêu cầu Kết Bạn</button>
+            <div class="premium-panel" style="padding: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <div>
+                        <div style="font-size: 16px; font-weight: 600; color: white; margin-bottom: 4px;">Lịch chăm sóc tháng 7/2026</div>
+                        <div style="font-size: 13px; color: #64748b;">Các ngày có lịch sẽ được đánh dấu để dễ theo dõi.</div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-premium-outline" style="padding: 8px 12px;"><i class="fa fa-chevron-left"></i></button>
+                        <button class="btn-premium-outline" style="padding: 8px 12px;"><i class="fa fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                
+                <table style="width: 100%; border-collapse: collapse; text-align: left; color: #94a3b8; font-size: 12px;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 8px; border-bottom: 1px solid #334155;">T2</th>
+                            <th style="padding: 8px; border-bottom: 1px solid #334155;">T3</th>
+                            <th style="padding: 8px; border-bottom: 1px solid #334155;">T4</th>
+                            <th style="padding: 8px; border-bottom: 1px solid #334155;">T5</th>
+                            <th style="padding: 8px; border-bottom: 1px solid #334155;">T6</th>
+                            <th style="padding: 8px; border-bottom: 1px solid #334155;">T7</th>
+                            <th style="padding: 8px; border-bottom: 1px solid #334155;">CN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;"></td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;"></td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">1</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">2</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">3</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">4</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">5</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">6</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">7</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">8</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">9</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">10</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">11</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">12</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">13</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">14</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">15</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">16</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">17</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">18</td>
+                            <td style="padding: 8px; height: 60px; border-bottom: 1px solid #334155; vertical-align: top;">19</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
