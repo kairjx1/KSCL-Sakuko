@@ -352,7 +352,7 @@ async function processScanQueue() {
         let found = false;
         if (targetItem) {
             debugLog("Tìm thấy thẻ Contact, tiến hành click...");
-            try { targetItem.click(); } catch(e) {}
+            try { targetItem.click(); targetItem.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); targetItem.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })); } catch(e) {}
             await sleep(1500);
             
             let profileModal = document.querySelector('.profile-dialog, .modal-content, [data-id="div_Profile_Modal"]');
