@@ -189,10 +189,112 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
   </div>
 
 <div id="check-phone-tab" class="main-content hidden">
-    <div class="page-title">Check SĐT có Zalo</div>
-    <div class="panel">
-        <p style="color: #94a3b8; font-style: italic;">Giao diện đang được phát triển...</p>
+﻿<div class="page-title">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #10b981; color: white; padding: 6px 10px; border-radius: 8px;">📞</span>
+        Check SĐT có Zalo
+        <span style="font-size: 14px; color: #94a3b8; font-weight: normal; margin-left: 10px;">Dán hoặc import file SĐT, hệ thống quét realtime và hiển thị ngay số có Zalo.</span>
     </div>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn-success" style="background: transparent; border: 1px solid #10b981; color: #10b981;" onclick="copyZaloNumbers()">📋 Sao chép SĐT có Zalo</button>
+        <button class="btn-success" style="background: transparent; border: 1px solid #10b981; color: #10b981;" onclick="exportCSV()">📥 Xuất CSV</button>
+        <button class="btn-success" id="btnStartScan" onclick="startScan()">▶️ Bắt đầu quét</button>
+        <button class="btn-success" style="background: transparent; border: 1px solid #334155; color: #cbd5e1;" onclick="recheckAll()">🔄 Kiểm tra lại</button>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 300px 1fr; gap: 24px;">
+    <!-- Left Panel -->
+    <div class="panel" style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 12px;">
+            <div style="font-weight: 600; color: #10b981;">📄 Nguồn SĐT</div>
+            <div style="color: #3b82f6; font-size: 14px; font-weight: 600;" id="lblTotalInput">0 SĐT</div>
+        </div>
+        
+        <button class="btn-success" style="background: transparent; border: 1px dashed #10b981; color: #10b981; padding: 12px; width: 100%;">📥 Import CSV / Excel / TXT</button>
+        
+        <textarea id="txtPhoneNumbers" class="form-control" style="flex: 1; min-height: 300px; font-family: monospace; resize: none; background: #0f172a; border: 1px solid #334155;" placeholder="Mỗi dòng một số điện thoại...&#10;&#10;0986762722&#10;0984485027..." oninput="updatePhoneCount()"></textarea>
+        
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-success" style="flex: 1; background: transparent; border: 1px solid #334155; color: #cbd5e1;" onclick="cleanNumbers()">✨ Làm sạch</button>
+            <button class="btn-success" style="flex: 1; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444;" onclick="document.getElementById('txtPhoneNumbers').value = ''; updatePhoneCount()">🗑️ Xóa</button>
+        </div>
+        
+        <div style="font-size: 12px; color: #64748b; line-height: 1.5;">Hỗ trợ file CSV, XLSX, XLS, TXT. Hệ thống tự chuyển +84/84 về 0, loại ký tự thừa và bỏ số trùng.</div>
+    </div>
+    
+    <!-- Right Panel -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- Stats Grid -->
+        <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;">
+            <div class="panel" style="padding: 16px; margin: 0; text-align: center;">
+                <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">TỔNG</div>
+                <div style="font-size: 24px; font-weight: bold; color: #f8fafc;" id="statTotal">0</div>
+            </div>
+            <div class="panel" style="padding: 16px; margin: 0; text-align: center; border-bottom: 3px solid #10b981;">
+                <div style="font-size: 12px; color: #10b981; margin-bottom: 8px;">CÓ ZALO</div>
+                <div style="font-size: 24px; font-weight: bold; color: #10b981;" id="statHasZalo">0</div>
+            </div>
+            <div class="panel" style="padding: 16px; margin: 0; text-align: center; border-bottom: 3px solid #ef4444;">
+                <div style="font-size: 12px; color: #ef4444; margin-bottom: 8px;">KHÔNG CÓ</div>
+                <div style="font-size: 24px; font-weight: bold; color: #ef4444;" id="statNoZalo">0</div>
+            </div>
+            <div class="panel" style="padding: 16px; margin: 0; text-align: center; border-bottom: 3px solid #3b82f6;">
+                <div style="font-size: 12px; color: #3b82f6; margin-bottom: 8px;">CHƯA XÁC ĐỊNH</div>
+                <div style="font-size: 24px; font-weight: bold; color: #3b82f6;" id="statUnknown">0</div>
+            </div>
+            <div class="panel" style="padding: 16px; margin: 0; text-align: center; border-bottom: 3px solid #eab308;">
+                <div style="font-size: 12px; color: #eab308; margin-bottom: 8px;">LỖI/TRÙNG</div>
+                <div style="font-size: 24px; font-weight: bold; color: #eab308;" id="statError">0</div>
+            </div>
+            <div class="panel" style="padding: 16px; margin: 0; text-align: center;">
+                <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">ĐÃ QUÉT</div>
+                <div style="font-size: 24px; font-weight: bold; color: #3b82f6;" id="statScanned">0</div>
+            </div>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div class="panel" style="padding: 20px; margin: 0;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; font-weight: 500;">
+                <div id="lblProgressText" style="color: #cbd5e1;">Đang chờ dữ liệu...</div>
+                <div id="lblProgressPercent" style="color: #10b981;">0%</div>
+            </div>
+            <div style="width: 100%; height: 6px; background: #334155; border-radius: 4px; overflow: hidden;">
+                <div id="progressBar" style="width: 0%; height: 100%; background: #10b981; transition: 0.3s;"></div>
+            </div>
+        </div>
+        
+        <!-- Table -->
+        <div class="panel" style="margin: 0; padding: 0; flex: 1; display: flex; flex-direction: column;">
+            <div style="display: flex; padding: 16px 20px; border-bottom: 1px solid #334155; gap: 10px;">
+                <button class="btn-success" style="background: #1e293b; border: 1px solid #10b981; color: #10b981; padding: 6px 12px; font-size: 13px;">Tất cả</button>
+                <button class="btn-success" style="background: transparent; border: 1px solid #334155; color: #cbd5e1; padding: 6px 12px; font-size: 13px;">Có Zalo</button>
+                <button class="btn-success" style="background: transparent; border: 1px solid #334155; color: #cbd5e1; padding: 6px 12px; font-size: 13px;">Không có</button>
+                <span style="margin-left: auto; color: #64748b; font-size: 13px; align-self: center;" id="lblResultCount">0 kết quả</span>
+            </div>
+            
+            <div style="overflow-y: auto; max-height: 400px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px; text-align: left;">
+                    <thead>
+                        <tr style="color: #94a3b8; font-size: 12px; border-bottom: 1px solid #334155;">
+                            <th style="padding: 12px 20px; font-weight: 500;">SĐT</th>
+                            <th style="padding: 12px 20px; font-weight: 500;">TRẠNG THÁI</th>
+                            <th style="padding: 12px 20px; font-weight: 500;">TÊN ZALO</th>
+                            <th style="padding: 12px 20px; font-weight: 500;">UID</th>
+                            <th style="padding: 12px 20px; font-weight: 500;">THỜI ĐIỂM</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tblResults">
+                        <tr>
+                            <td colspan="5" style="padding: 30px; text-align: center; color: #64748b;">Chưa có dữ liệu. Vui lòng nhập SĐT và bấm Bắt đầu quét.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 </div>
 <div id="bulk-message-tab" class="main-content hidden">
     <div class="page-title">Gửi tin nhắn hàng loạt</div>
@@ -574,6 +676,149 @@ function loadHistory() {
 checkAuth();
 loadHistory();
 loadConfig();
+﻿// Check SĐT Functions
+let phoneList = [];
+let scanResults = [];
+let isScanning = false;
+
+function updatePhoneCount() {
+    const txt = document.getElementById('txtPhoneNumbers').value;
+    const lines = txt.split('\n').filter(l => l.trim() !== '');
+    document.getElementById('lblTotalInput').innerText = `${lines.length} SĐT`;
+    document.getElementById('statTotal').innerText = lines.length;
+}
+
+function cleanNumbers() {
+    let txt = document.getElementById('txtPhoneNumbers').value;
+    // Extract only digits, replace +84 or 84 at start with 0
+    let lines = txt.split('\n').map(l => l.replace(/\D/g, ''));
+    lines = lines.filter(l => l.length >= 9 && l.length <= 11);
+    lines = lines.map(l => {
+        if (l.startsWith('84') && l.length === 11) return '0' + l.substring(2);
+        if (!l.startsWith('0')) return '0' + l;
+        return l;
+    });
+    // Remove duplicates
+    lines = [...new Set(lines)];
+    document.getElementById('txtPhoneNumbers').value = lines.join('\n');
+    updatePhoneCount();
+    showToast("Đã làm sạch và xóa số trùng!");
+}
+
+async function startScan() {
+    if (isScanning) return;
+    const txt = document.getElementById('txtPhoneNumbers').value;
+    phoneList = txt.split('\n').map(l => l.trim()).filter(l => l !== '');
+    if (phoneList.length === 0) {
+        alert("Vui lòng nhập số điện thoại!");
+        return;
+    }
+    
+    isScanning = true;
+    scanResults = [];
+    document.getElementById('btnStartScan').innerHTML = '⏳ Đang quét...';
+    document.getElementById('btnStartScan').disabled = true;
+    
+    let hasZalo = 0;
+    let noZalo = 0;
+    let unknown = 0;
+    let errorCount = 0;
+    
+    document.getElementById('statHasZalo').innerText = 0;
+    document.getElementById('statNoZalo').innerText = 0;
+    document.getElementById('statScanned').innerText = 0;
+    
+    const tbody = document.getElementById('tblResults');
+    tbody.innerHTML = '';
+    
+    for (let i = 0; i < phoneList.length; i++) {
+        const phone = phoneList[i];
+        
+        // --- TODO: GỌI XUỐNG CONTENT SCRIPT THẬT ---
+        // Tạm thời giả lập kết quả ngẫu nhiên để sếp test UI
+        await new Promise(r => setTimeout(r, 100)); // Simulate delay 100ms
+        
+        let status = '';
+        let statusColor = '';
+        let name = '';
+        let uid = '';
+        
+        const rand = Math.random();
+        if (rand > 0.3) {
+            status = 'Có Zalo'; statusColor = '#10b981';
+            name = 'Người dùng ' + phone.slice(-4);
+            uid = Math.floor(Math.random() * 90000000000) + 10000000000;
+            hasZalo++;
+        } else {
+            status = 'Không có'; statusColor = '#ef4444';
+            name = '-';
+            uid = '-';
+            noZalo++;
+        }
+        
+        scanResults.push({ phone, status, name, uid, time: new Date().toISOString() });
+        
+        // Update stats
+        document.getElementById('statHasZalo').innerText = hasZalo;
+        document.getElementById('statNoZalo').innerText = noZalo;
+        document.getElementById('statScanned').innerText = (i + 1);
+        
+        // Update progress
+        const percent = Math.floor(((i + 1) / phoneList.length) * 100);
+        document.getElementById('lblProgressPercent').innerText = percent + '%';
+        document.getElementById('progressBar').style.width = percent + '%';
+        document.getElementById('lblProgressText').innerText = `Đang quét... (${i+1}/${phoneList.length})`;
+        
+        // Add row
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #334155';
+        tr.innerHTML = `
+            <td style="padding: 12px 20px;">${phone}</td>
+            <td style="padding: 12px 20px; color: ${statusColor}; font-weight: 500;">${status}</td>
+            <td style="padding: 12px 20px; display: flex; align-items: center; gap: 8px;">
+                ${name !== '-' ? `<div style="width:24px;height:24px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;">👤</div>` : ''}
+                ${name}
+            </td>
+            <td style="padding: 12px 20px; color: #94a3b8; font-family: monospace;">${uid}</td>
+            <td style="padding: 12px 20px; color: #64748b; font-size: 12px;">${new Date().toISOString().replace('T',' ').substring(0,23)}</td>
+        `;
+        tbody.prepend(tr); // Add to top
+    }
+    
+    document.getElementById('lblProgressText').innerText = 'Đã kết thúc, có kết quả cần kiểm tra lại';
+    document.getElementById('btnStartScan').innerHTML = '▶️ Bắt đầu quét';
+    document.getElementById('btnStartScan').disabled = false;
+    document.getElementById('lblResultCount').innerText = `${phoneList.length} kết quả`;
+    isScanning = false;
+    showToast("Hoàn thành quét SĐT!");
+}
+
+function copyZaloNumbers() {
+    const zaloNumbers = scanResults.filter(r => r.status === 'Có Zalo').map(r => r.phone);
+    if (zaloNumbers.length === 0) return alert("Không có số Zalo nào để copy!");
+    navigator.clipboard.writeText(zaloNumbers.join('\n'));
+    showToast(`Đã copy ${zaloNumbers.length} số!`);
+}
+
+function exportCSV() {
+    if (scanResults.length === 0) return alert("Chưa có dữ liệu!");
+    let csv = "SĐT,TRẠNG THÁI,TÊN ZALO,UID,THỜI ĐIỂM\n";
+    scanResults.forEach(r => {
+        csv += `${r.phone},${r.status},${r.name},${r.uid},${r.time}\n`;
+    });
+    const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "zalo_scan_results.csv";
+    a.click();
+}
+
+function recheckAll() {
+    if (scanResults.length === 0) return;
+    startScan();
+}
+
 </script>
 </body>
 </html>
