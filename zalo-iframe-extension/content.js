@@ -264,25 +264,23 @@ function setNativeValue(element, value) {
         element.select();
         let success = document.execCommand('insertText', false, value);
         
-        if (!success) {
-            const valueSetter = Object.getOwnPropertyDescriptor(element, 'value');
-            const prototype = Object.getPrototypeOf(element);
-            const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value');
-            
-            if (valueSetter && valueSetter.set && prototypeValueSetter && prototypeValueSetter.set && valueSetter.set !== prototypeValueSetter.set) {
-                prototypeValueSetter.set.call(element, value);
-            } else if (prototypeValueSetter && prototypeValueSetter.set) {
-                prototypeValueSetter.set.call(element, value);
+        if (!success || element.value !== value) {
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+            if (nativeInputValueSetter) {
+                nativeInputValueSetter.call(element, value);
             } else {
                 element.value = value;
             }
             element.dispatchEvent(new Event('input', { bubbles: true }));
             element.dispatchEvent(new Event('change', { bubbles: true }));
-            element.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: value, bubbles: true, cancelable: true }));
+            element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
+        } else {
+            element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
         }
     } catch (e) {
         element.value = value;
         element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
     }
 }
 
