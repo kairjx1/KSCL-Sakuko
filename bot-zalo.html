@@ -843,8 +843,7 @@ function recheckAll() {
             scannedCount++;
             document.getElementById('statScanned').innerText = scannedCount;
             
-            let progress = Math.round((scannedCount / document.getElementById('phoneListInput').value.trim().split('
-').filter(p => p.trim() !== '').length) * 100);
+            let progress = Math.round((scannedCount / document.getElementById('phoneListInput').value.trim().split('\n').filter(p => p.trim() !== '').length) * 100);
             if (progress > 100) progress = 100;
             document.getElementById('lblProgressText').innerText = 'Đang quét... ' + progress + '%';
             document.getElementById('progressFill').style.width = progress + '%';
