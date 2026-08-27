@@ -588,7 +588,7 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
                 </select>
                 
                 <div style="margin-top: 15px;">
-                    <textarea id="bulkPhoneList" class="premium-textarea hidden" placeholder="Nhập danh sách SĐT..."></textarea>
+                    <textarea id="bulkPhoneList" class="premium-textarea" placeholder="Nhập danh sách SĐT..."></textarea>
                 </div>
             </div>
             
@@ -642,10 +642,10 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
         <div style="display: flex; align-items: center; gap: 10px;">
             <div style="width: 10px; height: 10px; background: #64748b; border-radius: 50%;"></div>
             <span style="color: #94a3b8; font-size: 14px;" id="bulkProgressText">Chờ cấu hình...</span>
-            <span id="bulkSent" class="hidden">0</span>
-            <span id="bulkFailed" class="hidden">0</span>
-            <span id="bulkTotal" class="hidden">0</span>
-            <div id="bulkProgressFill" class="hidden"></div>
+            <span id="bulkSent" style="display:none;">0</span>
+            <span id="bulkFailed" style="display:none;">0</span>
+            <span id="bulkTotal" style="display:none;">0</span>
+            <div id="bulkProgressFill" style="display:none;"></div>
         </div>
         <div style="display: flex; gap: 12px;">
             <button class="btn-premium-outline">Hủy</button>
@@ -706,7 +706,7 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
                     <option>-- Chọn nhóm muốn mời thành viên --</option>
                 </select>
                 <div style="margin-top: 15px;">
-                    <textarea id="invitePhoneList" class="premium-textarea hidden" placeholder="Nhập danh sách SĐT..."></textarea>
+                    <textarea id="invitePhoneList" class="premium-textarea" placeholder="Nhập danh sách SĐT..."></textarea>
                 </div>
             </div>
             
@@ -755,11 +755,11 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
     </div>
     
     <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 10px; padding: 20px; background: #1e293b; border-radius: 12px; border: 1px solid #334155;">
-        <span id="inviteSelected" class="hidden">0</span>
-        <span id="inviteFailed" class="hidden">0</span>
-        <span id="inviteTotal" class="hidden">0</span>
-        <span id="inviteProgressText" class="hidden">Sẵn sàng...</span>
-        <div id="inviteProgressFill" class="hidden"></div>
+        <span id="inviteSelected" style="display:none;">0</span>
+        <span id="inviteFailed" style="display:none;">0</span>
+        <span id="inviteTotal" style="display:none;">0</span>
+        <span id="inviteProgressText">Sẵn sàng...</span>
+        <div id="inviteProgressFill" style="display:none;"></div>
         <div style="display: flex; gap: 12px;">
             <button class="btn-premium-outline">Hủy bỏ</button>
             <button class="btn-premium-green" id="btnStartInvite" onclick="startInviteProcess()"><i class="fa fa-rocket"></i> Bắt đầu mời ngay</button>
@@ -820,12 +820,12 @@ Hoặc bấm 'Lấy SĐT từ KQ quét' để nhập SĐT đã lọc Zalo."></te
         </div>
         
         <div style="display: flex; justify-content: flex-end; align-items: center;">
-            <span id="autocareSelected" class="hidden">0</span>
-            <span id="autocareFailed" class="hidden">0</span>
-            <span id="autocareTotal" class="hidden">0</span>
-            <span id="autocareSent" class="hidden">0</span>
-            <span id="autocareProgressText" class="hidden">Sẵn sàng...</span>
-            <div id="autocareProgressFill" class="hidden"></div>
+            <span id="autocareSelected" style="display:none;">0</span>
+            <span id="autocareFailed" style="display:none;">0</span>
+            <span id="autocareTotal" style="display:none;">0</span>
+            <span id="autocareSent" style="display:none;">0</span>
+            <span id="autocareProgressText">Sẵn sàng...</span>
+            <div id="autocareProgressFill" style="display:none;"></div>
             
             <div style="display: flex; gap: 12px;">
                 <button class="btn-premium-outline" style="color: #3b82f6; border-color: #3b82f6;"><i class="fa fa-history"></i> Lịch sử</button>
@@ -1554,7 +1554,7 @@ let scanResults = [];
 let isScanning = false;
 
 function updatePhoneCount() {
-    const txt = document.getElementById('txtPhoneNumbers').value;
+    const txt = document.getElementById('phoneListInput').value;
     const lines = txt.split('\n').filter(l => l.trim() !== '');
     document.getElementById('lblTotalInput').innerText = `${lines.length} SĐT`;
     document.getElementById('statTotal').innerText = lines.length;
@@ -1579,7 +1579,7 @@ function cleanNumbers() {
 
 async function startScan() {
     if (isScanning) return;
-    const txt = document.getElementById('txtPhoneNumbers').value;
+    const txt = document.getElementById('phoneListInput').value;
     phoneList = txt.split('\n').map(l => l.trim()).filter(l => l !== '');
     if (phoneList.length === 0) {
         alert("Vui lòng nhập số điện thoại!");
