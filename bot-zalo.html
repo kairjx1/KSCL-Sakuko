@@ -828,7 +828,53 @@ function recheckAll() {
 <script>
     let isExtensionAlive = false;
     window.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'PONG_EXTENSION') {
+        
+        if (event.data && event.data.type === 'RES_SCAN_RESULT') {
+            const data = event.data.payload;
+            if (data.status === 'DONE') {
+                document.getElementById('lblProgressText').innerText = 'Đã quét xong toàn bộ danh sách!';
+                document.getElementById('btnStartScan').innerHTML = '▶ Bắt đầu quét';
+                document.getElementById('btnStartScan').disabled = false;
+                isScanning = false;
+                showToast("Hoàn thành quét SĐT!");
+                return;
+            }
+            
+            scannedCount++;
+            document.getElementById('statScanned').innerText = scannedCount;
+            
+            let progress = Math.round((scannedCount / document.getElementById('phoneListInput').value.trim().split('
+').filter(p => p.trim() !== '').length) * 100);
+            if (progress > 100) progress = 100;
+            document.getElementById('lblProgressText').innerText = 'Đang quét... ' + progress + '%';
+            document.getElementById('progressFill').style.width = progress + '%';
+            
+            if (data.status === 'Có Zalo') {
+                hasZalo++;
+                document.getElementById('statHasZalo').innerText = hasZalo;
+            } else if (data.status === 'Không có') {
+                noZalo++;
+                document.getElementById('statNoZalo').innerText = noZalo;
+            }
+            
+            const tbody = document.getElementById('tblResults');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="color:#60a5fa">${data.phone}</td>
+                <td><span class="status-badge status-${data.status === 'Có Zalo' ? 'zalo' : (data.status === 'Không có' ? 'no-zalo' : 'unknown')}">${data.status}</span></td>
+                <td>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        ${data.avatar ? '<img src="'+data.avatar+'" style="width:24px;height:24px;border-radius:50%;">' : ''}
+                        <span>${data.name}</span>
+                    </div>
+                </td>
+                <td style="color:#94a3b8">${data.uid}</td>
+                <td style="color:#94a3b8">${new Date(data.time).toLocaleTimeString()}</td>
+            `;
+            tbody.insertBefore(tr, tbody.firstChild);
+        }
+
+        if (event.data && event.data.type === \'PONG_EXTENSION\') {
             isExtensionAlive = true;
             const consoleEl = document.getElementById('debugConsole');
             if (consoleEl) {
