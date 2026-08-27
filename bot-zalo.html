@@ -1573,6 +1573,22 @@ function cleanPhoneNumbers(elementId) {
     showToast(`Đã làm sạch và lọc trùng còn ${cleaned.size} số`);
 }
 
+
+function exportToCSV() {
+    if (scanResults.length === 0) return alert("Không có dữ liệu để xuất!");
+    let csv = "SĐT,Trạng thái,Tên Zalo,UID,Thời điểm\n";
+    scanResults.forEach(r => {
+        csv += `${r.phone},${r.status},"${r.name || ''}",${r.uid || ''},${new Date(r.time).toLocaleString()}\n`;
+    });
+    const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "ket_qua_quet_zalo_" + new Date().getTime() + ".csv";
+    a.click();
+    showToast("Đã tải xuống file CSV!");
+}
+
 let isScanning = false;
 
 function updatePhoneCount() {
