@@ -305,9 +305,56 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
 
 </div>
 <div id="bulk-message-tab" class="main-content hidden">
-    <div class="page-title">Gửi tin nhắn hàng loạt</div>
-    <div class="panel">
-        <p style="color: #94a3b8; font-style: italic;">Giao diện đang được phát triển...</p>
+    <div class="page-title"><i class="fa fa-paper-plane" style="color: #10b981; margin-right: 10px;"></i> Gửi Tin Hàng Loạt</div>
+    <div style="display: flex; gap: 20px; align-items: flex-start;">
+        <div class="panel" style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center;"><i class="fa fa-file-alt" style="margin-right: 8px;"></i> Danh sách SĐT & Nội dung</h3>
+            </div>
+            
+            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 5px;">Nhập danh sách SĐT (mỗi dòng 1 số):</p>
+            <textarea id="bulkPhoneList" class="textarea-dark" style="height: 120px;" placeholder="Ví dụ:
+0986762722
+0979662862"></textarea>
+            
+            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 5px; margin-top: 15px;">Nội dung tin nhắn:</p>
+            <textarea id="bulkMessageContent" class="textarea-dark" style="height: 120px;" placeholder="Ví dụ:
+Chào bạn, đây là tin nhắn tự động từ KSCL..."></textarea>
+            
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-outline" onclick="loadFromScanResults()"><i class="fa fa-download"></i> Lấy SĐT từ kết quả quét (Có Zalo)</button>
+            </div>
+        </div>
+        
+        <div class="panel" style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center;"><i class="fa fa-chart-bar" style="margin-right: 8px;"></i> Tiến độ gửi tin</h3>
+            </div>
+            
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                <div class="stat-card" style="flex: 1;">
+                    <div class="stat-title">TỔNG SỐ</div>
+                    <div class="stat-value" id="bulkTotal">0</div>
+                </div>
+                <div class="stat-card" style="flex: 1;">
+                    <div class="stat-title" style="color: #10b981;">ĐÃ GỬI</div>
+                    <div class="stat-value" style="color: #10b981;" id="bulkSent">0</div>
+                </div>
+                <div class="stat-card" style="flex: 1;">
+                    <div class="stat-title" style="color: #ef4444;">THẤT BẠI</div>
+                    <div class="stat-value" style="color: #ef4444;" id="bulkFailed">0</div>
+                </div>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="bulkProgressFill" style="width: 0%"></div>
+            </div>
+            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 20px;" id="bulkProgressText">Sẵn sàng gửi...</div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" id="btnStartBulk" onclick="startBulkMessage()" style="flex: 1;"><i class="fa fa-play"></i> Bắt đầu gửi</button>
+            </div>
+        </div>
     </div>
 </div>
 <div id="invite-member-tab" class="main-content hidden">
@@ -684,6 +731,52 @@ function loadHistory() {
 checkAuth();
 loadHistory();
 loadConfig();
+
+// --- BULK MESSAGE FUNCTIONS ---
+function loadFromScanResults() {
+    if (typeof scanResults === 'undefined' || scanResults.length === 0) {
+        return alert("Chưa có kết quả quét! Vui lòng quét SĐT trước.");
+    }
+    const zaloNumbers = scanResults.filter(r => r.status === 'Có Zalo').map(r => r.phone);
+    if (zaloNumbers.length === 0) {
+        return alert("Không có số nào có Zalo trong kết quả quét.");
+    }
+    document.getElementById('bulkPhoneList').value = zaloNumbers.join('\n');
+    document.getElementById('bulkTotal').innerText = zaloNumbers.length;
+    showToast(`Đã nạp ${zaloNumbers.length} SĐT có Zalo!`);
+}
+
+let isBulkMessaging = false;
+function startBulkMessage() {
+    if (!isExtensionAlive) return alert("Không tìm thấy Extension! Vui lòng tải lại trang và mở tab Zalo.");
+    
+    if (isBulkMessaging) return;
+    
+    const rawPhones = document.getElementById('bulkPhoneList').value.split('\n').map(p => p.trim()).filter(p => p !== '');
+    const message = document.getElementById('bulkMessageContent').value.trim();
+    
+    if (rawPhones.length === 0) return alert("Vui lòng nhập danh sách SĐT!");
+    if (message === '') return alert("Vui lòng nhập nội dung tin nhắn!");
+    
+    isBulkMessaging = true;
+    document.getElementById('btnStartBulk').innerHTML = '<i class="fa fa-spinner fa-spin"></i> Đang gửi...';
+    document.getElementById('btnStartBulk').disabled = true;
+    
+    document.getElementById('bulkTotal').innerText = rawPhones.length;
+    document.getElementById('bulkSent').innerText = '0';
+    document.getElementById('bulkFailed').innerText = '0';
+    document.getElementById('bulkProgressFill').style.width = '0%';
+    document.getElementById('bulkProgressText').innerText = 'Đang khởi động tiến trình gửi tin...';
+    
+    window.postMessage({
+        type: 'CMD_START_BULK_MSG',
+        payload: {
+            phones: rawPhones,
+            message: message
+        }
+    }, '*');
+}
+
 // Check SĐT Functions
 
 function handleFileImport(event) {

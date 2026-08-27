@@ -427,3 +427,168 @@ async function processScanQueue() {
     }
 }
 
+
+
+
+// --- BULK MESSAGE LOGIC ---
+let bulkMsgQueue = [];
+let currentBulkMsg = '';
+let isBulkMessaging = false;
+
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.kscl_cmd_bulk_msg) {
+        let payload = changes.kscl_cmd_bulk_msg.newValue;
+        if (payload && payload.phones && payload.phones.length > 0) {
+            bulkMsgQueue = [...payload.phones];
+            currentBulkMsg = payload.message;
+            if (!isBulkMessaging) {
+                processBulkMsgQueue();
+            }
+        }
+    }
+});
+
+async function processBulkMsgQueue() {
+    if (bulkMsgQueue.length === 0) {
+        chrome.storage.local.set({ kscl_bulk_msg_result: { status: 'DONE' } });
+        isBulkMessaging = false;
+        return;
+    }
+    
+    if (isBulkMessaging && arguments.length === 0 && bulkMsgQueue.length > 0 && !document.hidden) {
+        // Prevent concurrent loops
+    }
+    isBulkMessaging = true;
+    
+    let searchInput = document.querySelector('#contact-search-input, #global-search-input, .cp-txt-search');
+    if (!searchInput) {
+        let inputs = document.querySelectorAll('input');
+        for (let inp of inputs) {
+            if (inp.placeholder && inp.placeholder.toLowerCase().includes('m ki')) {
+                searchInput = inp;
+                break;
+            }
+        }
+    }
+    
+    if (!searchInput) {
+        alert("KSCL [V2]: Không tìm thấy ô tìm kiếm Zalo.");
+        chrome.storage.local.set({ kscl_bulk_msg_result: { status: 'DONE' } });
+        isBulkMessaging = false;
+        return;
+    }
+    
+    let phone = bulkMsgQueue[0];
+    let msgStatus = 'FAILED';
+    
+    try {
+        let clearBtn = document.querySelector('.search-clear, .btn-clear, i.fa-close, [icon="close"], .close-search');
+        if (clearBtn) { try { clearBtn.click(); } catch(e){} }
+        setNativeValue(searchInput, '');
+        await sleep(300);
+        
+        setNativeValue(searchInput, phone);
+        
+        let targetItem = null;
+        let card = null;
+        
+        for (let wait = 0; wait < 35; wait++) {
+            await sleep(300);
+            
+            let allElements = document.querySelectorAll('div, span');
+            targetItem = null;
+            
+            for (let item of allElements) {
+                let text = item.innerText || '';
+                let rawText = text.replace(/[\s\.\-\+]/g, '');
+                if (rawText.includes(phone)) {
+                    if (!targetItem || text.length < (targetItem.innerText || '').length) {
+                        targetItem = item;
+                    }
+                }
+            }
+            
+            if (targetItem) {
+                card = targetItem;
+                for (let i = 0; i < 6; i++) {
+                    if (card && card.querySelector && card.querySelector('img')) break;
+                    if (card && card.parentElement) card = card.parentElement;
+                }
+                
+                if (card && card.querySelector && card.querySelector('img')) {
+                    break;
+                }
+            }
+            
+            let toast = document.querySelector('.toast, .snackbar, .error-msg, .search-empty');
+            if (toast) {
+                let tt = toast.innerText.toLowerCase();
+                if (tt.includes("chưa đăng ký") || tt.includes("không tồn tại") || tt.includes("không tìm thấy") || tt.includes("không có kết quả") || tt.includes("không tìm thấy kết quả")) {
+                    break;
+                }
+            }
+        }
+        
+        if (card) {
+            // Click to open chat
+            card.click();
+            await sleep(1500); // Wait for chat to load
+            
+            let chatInput = document.querySelector('#richInput, .chat-input, [contenteditable="true"]');
+            if (!chatInput) {
+                let allContentEditable = document.querySelectorAll('[contenteditable="true"]');
+                for (let ce of allContentEditable) {
+                    if (ce.offsetHeight > 20) {
+                        chatInput = ce;
+                        break;
+                    }
+                }
+            }
+            
+            if (chatInput) {
+                // Focus and type message
+                chatInput.focus();
+                document.execCommand('insertText', false, currentBulkMsg);
+                
+                // Dispatch input event for React
+                chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+                await sleep(500);
+                
+                // Find send button or press enter
+                let sendBtn = document.querySelector('.btn-send, [icon="send"], i.fa-paper-plane');
+                if (sendBtn) {
+                    sendBtn.click();
+                } else {
+                    chatInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+                }
+                
+                msgStatus = 'SUCCESS';
+                await sleep(1000); // Wait after sending
+            }
+        }
+        
+        let clearBtn2 = document.querySelector('.search-clear, .btn-clear, i.fa-close, [icon="close"], .close-search');
+        if (clearBtn2) { try { clearBtn2.click(); } catch(e){} }
+        setNativeValue(searchInput, '');
+        
+    } catch (err) {
+        // Ignored
+    }
+    
+    chrome.storage.local.set({ 
+        kscl_bulk_msg_result: { 
+            phone: phone, 
+            status: msgStatus, 
+            time: new Date().toISOString() 
+        } 
+    });
+    
+    bulkMsgQueue.shift();
+    
+    if (bulkMsgQueue.length > 0) {
+        setTimeout(() => processBulkMsgQueue(true), 3500);
+    } else {
+        chrome.storage.local.set({ kscl_bulk_msg_result: { status: 'DONE' } });
+        isBulkMessaging = false;
+    }
+}
