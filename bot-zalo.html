@@ -825,5 +825,27 @@ function recheckAll() {
 
 </script>
 
-
+<script>
+    let isExtensionAlive = false;
+    window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'PONG_EXTENSION') {
+            isExtensionAlive = true;
+            const consoleEl = document.getElementById('debugConsole');
+            if (consoleEl) {
+                consoleEl.innerHTML = `<br/>[Hệ thống] Đã kết nối thành công với Extension! Sẵn sàng quét.`;
+            }
+        }
+    });
+    
+    // Ping continually every 1s
+    const pingInterval = setInterval(() => {
+        if (isExtensionAlive) {
+            clearInterval(pingInterval);
+            return;
+        }
+        window.postMessage({ type: 'PING_EXTENSION' }, '*');
+    }, 1000);
+    
+    
+</script>
 </body>
