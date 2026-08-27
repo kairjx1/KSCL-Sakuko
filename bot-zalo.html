@@ -825,35 +825,5 @@ function recheckAll() {
 
 </script>
 
-<script>
-    let isExtensionAlive = false;
-    window.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'PONG_EXTENSION') {
-            isExtensionAlive = true;
-            const consoleEl = document.getElementById('debugConsole');
-            if (consoleEl) {
-                consoleEl.innerHTML = `<br/>[Hệ thống] Đã kết nối thành công với Extension! Sẵn sàng quét.`;
-            }
-        }
-    });
-    
-    // Ping continually every 1s
-    const pingInterval = setInterval(() => {
-        if (isExtensionAlive) {
-            clearInterval(pingInterval);
-            return;
-        }
-        window.postMessage({ type: 'PING_EXTENSION' }, '*');
-    }, 1000);
-    
-    // Show warning only if after 5 seconds it's still dead
-    setTimeout(() => {
-        if (!isExtensionAlive) {
-            const consoleEl = document.getElementById('debugConsole');
-            if (consoleEl) {
-                consoleEl.innerHTML = `<br/><span style="color:#ef4444;">[CẢNH BÁO] Không tìm thấy Extension! Sếp đang dùng Tab Ẩn Danh phải không? Tiện ích mở rộng không hoạt động trong Tab Ẩn Danh! Hãy dùng tab bình thường.</span>`;
-            }
-        }
-    }, 5000);
-</script>
+
 </body>
