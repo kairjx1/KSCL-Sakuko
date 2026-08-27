@@ -241,16 +241,18 @@ function debugLog(msg) {
 }
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && changes.kscl_scan_queue) {
-        scanQueue = changes.kscl_scan_queue.newValue || [];
-        debugLog("Nhận được hàng chờ quét: " + scanQueue.length + " số");
-        if (scanQueue.length > 0 && !isScanningPhone) {
-            processScanQueue().catch(e => {
-                debugLog("Lỗi nghiêm trọng trong quá trình quét: " + e.message);
-                chrome.storage.local.set({ kscl_scan_result: { status: 'DONE' } });
-                isScanningPhone = false;
-            });
-        }
+    if (namespace === 'local' && changes.kscl_scan_trigger) {
+        chrome.storage.local.get(['kscl_scan_queue'], (res) => {
+            scanQueue = res.kscl_scan_queue || [];
+            debugLog("Nhận được hàng chờ quét: " + scanQueue.length + " số");
+            if (scanQueue.length > 0 && !isScanningPhone) {
+                processScanQueue().catch(e => {
+                    debugLog("Lỗi nghiêm trọng trong quá trình quét: " + e.message);
+                    chrome.storage.local.set({ kscl_scan_result: { status: 'DONE' } });
+                    isScanningPhone = false;
+                });
+            }
+        });
     }
 });
 
