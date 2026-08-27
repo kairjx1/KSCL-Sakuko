@@ -325,6 +325,9 @@ async function processScanQueue() {
     let phone = scanQueue[0];
     
     try {
+        setNativeValue(searchInput, '');
+        await sleep(300);
+        
         setNativeValue(searchInput, phone);
         searchInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
         
@@ -336,7 +339,8 @@ async function processScanQueue() {
         let targetItem = null;
         let card = null;
         
-        for (let wait = 0; wait < 15; wait++) {
+        // Tăng thời gian rình (polling) lên 35 vòng * 300ms = ~10.5 giây
+        for (let wait = 0; wait < 35; wait++) {
             await sleep(300);
             
             let allElements = document.querySelectorAll('div, span');
@@ -402,7 +406,8 @@ async function processScanQueue() {
     isScanningPhone = false;
     
     if (scanQueue.length > 0) {
-        setTimeout(processScanQueue, 800);
+        // Tăng độ trễ giữa các lần quét lên 3.5 giây để tránh bị Zalo chặn block spam
+        setTimeout(processScanQueue, 3500);
     } else {
         chrome.storage.local.set({ kscl_scan_result: { status: 'DONE' } });
     }
