@@ -19,6 +19,10 @@
     if (event.data && event.data.type === 'STOP_PHONE_SCAN') {
         chrome.storage.local.set({ kscl_scan_status: 'STOPPED' });
     }
+﻿    if (event.data && event.data.type === 'PING_EXTENSION') {
+        window.postMessage({ type: 'PONG_EXTENSION' }, '*');
+    }
+
 });
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
