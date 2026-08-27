@@ -54,13 +54,7 @@ window.addEventListener('message', (event) => {
                 // Inject script to fix page variables in the main world
                 // Inject script to fix page variables in the main world
                 const s = document.createElement('script');
-                const newDataStr = JSON.stringify(changes.kscl_scan_result.newValue);
-                s.textContent = `const newData = ${newDataStr};
-                    if (typeof isScanning !== 'undefined') isScanning = false;
-                    if (typeof scanResults !== 'undefined' && newData && newData.status !== 'DONE') {
-                        scanResults.push(newData);
-                    }
-                `;
+                s.textContent = "if (typeof isScanning !== 'undefined') isScanning = false;";
                 document.head.appendChild(s);
                 s.remove();
 

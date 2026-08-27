@@ -841,6 +841,7 @@ function recheckAll() {
             }
             
             scannedCount++;
+            scanResults.push(data);
             document.getElementById('statScanned').innerText = scannedCount;
             
             let progress = Math.round((scannedCount / document.getElementById('phoneListInput').value.trim().split('\n').filter(p => p.trim() !== '').length) * 100);
