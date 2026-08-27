@@ -592,3 +592,144 @@ async function processBulkMsgQueue() {
         isBulkMessaging = false;
     }
 }
+
+
+
+// --- INVITE MEMBER LOGIC ---
+let inviteQueue = [];
+let isInviting = false;
+
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.kscl_cmd_invite) {
+        let payload = changes.kscl_cmd_invite.newValue;
+        if (payload && payload.phones && payload.phones.length > 0) {
+            inviteQueue = [...payload.phones];
+            if (!isInviting) {
+                processInviteQueue();
+            }
+        }
+    }
+});
+
+async function processInviteQueue() {
+    if (inviteQueue.length === 0) {
+        chrome.storage.local.set({ kscl_invite_result: { status: 'DONE' } });
+        isInviting = false;
+        return;
+    }
+    
+    isInviting = true;
+    
+    // Find modal search input (usually inside a ReactModalPortal or .zl-modal)
+    // Zalo's add member modal has an input placeholder "Nhập tên, số điện thoại..."
+    let searchInput = null;
+    let allInputs = document.querySelectorAll('input[type="text"], input');
+    for (let inp of allInputs) {
+        if (inp.placeholder && (inp.placeholder.toLowerCase().includes('nhập') || inp.placeholder.toLowerCase().includes('số điện thoại') || inp.placeholder.toLowerCase().includes('tìm')) && (inp.closest('.zl-modal') || inp.closest('.ReactModalPortal') || inp.closest('.modal-content') || inp.closest('[data-id="div_AddMember_SearchInput"]'))) {
+            searchInput = inp;
+            break;
+        }
+    }
+    
+    if (!searchInput) {
+        // Fallback: look for ANY visible input that is NOT the main search input
+        for (let inp of allInputs) {
+            if (inp.offsetWidth > 0 && inp.offsetHeight > 0 && inp.id !== 'contact-search-input' && inp.id !== 'global-search-input') {
+                searchInput = inp;
+                break;
+            }
+        }
+    }
+    
+    if (!searchInput) {
+        alert("KSCL [V2]: Không tìm thấy ô tìm kiếm trong cửa sổ 'Thêm thành viên'. Vui lòng bấm nút 'Thêm thành viên' trên Zalo trước khi chạy!");
+        chrome.storage.local.set({ kscl_invite_result: { status: 'DONE' } });
+        isInviting = false;
+        return;
+    }
+    
+    let phone = inviteQueue[0];
+    let msgStatus = 'FAILED';
+    
+    try {
+        // Clear input first
+        let clearBtn = searchInput.parentElement ? searchInput.parentElement.querySelector('i.fa-close, [icon="close"], .btn-clear') : null;
+        if (clearBtn) { try { clearBtn.click(); } catch(e){} }
+        setNativeValue(searchInput, '');
+        await sleep(300);
+        
+        // Type phone number
+        setNativeValue(searchInput, phone);
+        
+        let targetItem = null;
+        
+        // Wait for search result in modal
+        for (let wait = 0; wait < 35; wait++) {
+            await sleep(300);
+            
+            // Search results in modal usually are radio buttons or div with contact name
+            // Let's find the nearest container of searchInput and search inside it, or just search globally for the phone number
+            let allElements = document.querySelectorAll('.zl-modal div, .ReactModalPortal div, .modal-content div, [data-id="div_AddMember_Item"]');
+            targetItem = null;
+            
+            for (let item of allElements) {
+                let text = item.innerText || '';
+                let rawText = text.replace(/[\s\.\-\+]/g, '');
+                if (rawText.includes(phone) || text.includes(phone)) {
+                    // Check if it's a clickable contact item (usually has a checkbox or avatar)
+                    if (item.querySelector('img') || item.classList.contains('contact-item') || item.querySelector('.checkbox') || item.querySelector('input[type="checkbox"]') || item.querySelector('input[type="radio"]')) {
+                        targetItem = item;
+                        break;
+                    }
+                }
+            }
+            
+            // If we found a direct match, break
+            if (targetItem) break;
+            
+            // Or look for toast / empty state
+            let emptyState = document.querySelector('.zl-modal .empty-search, .ReactModalPortal .search-empty');
+            if (emptyState && emptyState.innerText.toLowerCase().includes("không tìm thấy")) {
+                break;
+            }
+        }
+        
+        if (targetItem) {
+            // Click to select
+            targetItem.click();
+            // If there's a specific checkbox inside, try clicking that too just in case
+            let cb = targetItem.querySelector('input[type="checkbox"], input[type="radio"], .checkbox, .custom-checkbox');
+            if (cb) {
+                try { cb.click(); } catch(e){}
+            }
+            msgStatus = 'SUCCESS';
+            await sleep(500); // Wait for checkbox animation
+        }
+        
+        // Clear input for next number
+        let clearBtn2 = searchInput.parentElement ? searchInput.parentElement.querySelector('i.fa-close, [icon="close"], .btn-clear') : null;
+        if (clearBtn2) { try { clearBtn2.click(); } catch(e){} }
+        setNativeValue(searchInput, '');
+        
+    } catch (err) {
+        // Ignored
+    }
+    
+    chrome.storage.local.set({ 
+        kscl_invite_result: { 
+            phone: phone, 
+            status: msgStatus, 
+            time: new Date().toISOString() 
+        } 
+    });
+    
+    inviteQueue.shift();
+    
+    if (inviteQueue.length > 0) {
+        // Delay 1.5s between selections inside the modal is usually safe enough since it doesn't trigger the global search rate limit as aggressively, but let's use 2.5s to be safe
+        setTimeout(() => processInviteQueue(), 2500);
+    } else {
+        chrome.storage.local.set({ kscl_invite_result: { status: 'DONE' } });
+        isInviting = false;
+    }
+}

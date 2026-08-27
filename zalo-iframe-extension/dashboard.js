@@ -45,6 +45,10 @@ window.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'CMD_START_BULK_MSG') {
             chrome.storage.local.set({ kscl_cmd_bulk_msg: event.data.payload });
         }
+        
+        if (event.data && event.data.type === 'CMD_START_INVITE') {
+            chrome.storage.local.set({ kscl_cmd_invite: event.data.payload });
+        }
     });
     
     chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -132,6 +136,41 @@ window.addEventListener('message', (event) => {
                             
                             document.getElementById('bulkProgressFill').style.width = progress + '%';
                             document.getElementById('bulkProgressText').innerText = 'Đang gửi... ' + progress + '% (${data.phone}: ${data.status})';
+                        }
+                    `;
+                    document.head.appendChild(s);
+                    s.remove();
+                } catch(e) {}
+            }
+            if (changes.kscl_invite_result) {
+                window.postMessage({ type: 'RES_INVITE_RESULT', payload: changes.kscl_invite_result.newValue }, '*');
+                
+                try {
+                    const data = changes.kscl_invite_result.newValue;
+                    const s = document.createElement('script');
+                    s.textContent = `
+                        if ('${data.status}' === 'DONE') {
+                            isInviting = false;
+                            document.getElementById('btnStartInvite').innerHTML = '<i class="fa fa-magic"></i> Bắt đầu tự động chọn';
+                            document.getElementById('btnStartInvite').disabled = false;
+                            document.getElementById('inviteProgressText').innerText = 'Đã hoàn thành! Vui lòng tự bấm nút Xác Nhận trên Zalo.';
+                            showToast("Hoàn thành quá trình chọn!");
+                        } else {
+                            let sent = parseInt(document.getElementById('inviteSelected').innerText || '0');
+                            let failed = parseInt(document.getElementById('inviteFailed').innerText || '0');
+                            let total = parseInt(document.getElementById('inviteTotal').innerText || '1');
+                            
+                            if ('${data.status}' === 'SUCCESS') sent++;
+                            else failed++;
+                            
+                            document.getElementById('inviteSelected').innerText = sent;
+                            document.getElementById('inviteFailed').innerText = failed;
+                            
+                            let progress = Math.round(((sent + failed) / total) * 100);
+                            if (progress > 100) progress = 100;
+                            
+                            document.getElementById('inviteProgressFill').style.width = progress + '%';
+                            document.getElementById('inviteProgressText').innerText = 'Đang chọn... ' + progress + '% (${data.phone}: ${data.status})';
                         }
                     `;
                     document.head.appendChild(s);

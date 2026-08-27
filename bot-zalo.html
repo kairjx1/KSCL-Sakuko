@@ -358,9 +358,63 @@ Chào bạn, đây là tin nhắn tự động từ KSCL..."></textarea>
     </div>
 </div>
 <div id="invite-member-tab" class="main-content hidden">
-    <div class="page-title">Mời thành viên</div>
-    <div class="panel">
-        <p style="color: #94a3b8; font-style: italic;">Giao diện đang được phát triển...</p>
+    <div class="page-title"><i class="fa fa-user-plus" style="color: #3b82f6; margin-right: 10px;"></i> Tự Động Mời Thành Viên Vào Nhóm</div>
+    
+    <div class="alert-box" style="background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+        <h4 style="margin: 0 0 10px 0; color: #3b82f6;">Hướng dẫn sử dụng:</h4>
+        <ol style="margin: 0; padding-left: 20px; color: #94a3b8; font-size: 13px; line-height: 1.6;">
+            <li>Mở <b>Zalo Web</b> và vào Nhóm bạn muốn thêm thành viên.</li>
+            <li>Bấm vào biểu tượng <b>Thêm thành viên</b> (hình người có dấu cộng) để mở cửa sổ chọn người.</li>
+            <li>Quay lại KSCL Dashboard, nhập danh sách SĐT và bấm <b>Bắt đầu tự động chọn</b>.</li>
+            <li>Bot sẽ tự động tìm và đánh dấu tích vào các SĐT. Khi bot chạy xong, bạn tự bấm nút <b>Xác nhận</b> trên Zalo để hoàn tất.</li>
+        </ol>
+    </div>
+
+    <div style="display: flex; gap: 20px; align-items: flex-start;">
+        <div class="panel" style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center;"><i class="fa fa-list" style="margin-right: 8px;"></i> Danh sách SĐT cần mời</h3>
+            </div>
+            
+            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 5px;">Nhập danh sách SĐT (mỗi dòng 1 số):</p>
+            <textarea id="invitePhoneList" class="textarea-dark" style="height: 200px;" placeholder="Ví dụ:
+0986762722
+0979662862"></textarea>
+            
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-outline" onclick="loadFromScanResultsInvite()"><i class="fa fa-download"></i> Lấy SĐT từ kết quả quét (Có Zalo)</button>
+            </div>
+        </div>
+        
+        <div class="panel" style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center;"><i class="fa fa-chart-pie" style="margin-right: 8px;"></i> Tiến độ chọn thành viên</h3>
+            </div>
+            
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                <div class="stat-card" style="flex: 1;">
+                    <div class="stat-title">TỔNG SỐ</div>
+                    <div class="stat-value" id="inviteTotal">0</div>
+                </div>
+                <div class="stat-card" style="flex: 1;">
+                    <div class="stat-title" style="color: #3b82f6;">ĐÃ CHỌN</div>
+                    <div class="stat-value" style="color: #3b82f6;" id="inviteSelected">0</div>
+                </div>
+                <div class="stat-card" style="flex: 1;">
+                    <div class="stat-title" style="color: #ef4444;">KHÔNG TÌM THẤY</div>
+                    <div class="stat-value" style="color: #ef4444;" id="inviteFailed">0</div>
+                </div>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="inviteProgressFill" style="width: 0%; background: #3b82f6;"></div>
+            </div>
+            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 20px;" id="inviteProgressText">Sẵn sàng...</div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" id="btnStartInvite" onclick="startInviteProcess()" style="flex: 1; background: #3b82f6;"><i class="fa fa-magic"></i> Bắt đầu tự động chọn</button>
+            </div>
+        </div>
     </div>
 </div>
 <div id="auto-care-tab" class="main-content hidden">
@@ -731,6 +785,48 @@ function loadHistory() {
 checkAuth();
 loadHistory();
 loadConfig();
+
+
+// --- INVITE MEMBER FUNCTIONS ---
+function loadFromScanResultsInvite() {
+    if (typeof scanResults === 'undefined' || scanResults.length === 0) {
+        return alert("Chưa có kết quả quét! Vui lòng quét SĐT trước.");
+    }
+    const zaloNumbers = scanResults.filter(r => r.status === 'Có Zalo').map(r => r.phone);
+    if (zaloNumbers.length === 0) {
+        return alert("Không có số nào có Zalo trong kết quả quét.");
+    }
+    document.getElementById('invitePhoneList').value = zaloNumbers.join('\n');
+    document.getElementById('inviteTotal').innerText = zaloNumbers.length;
+    showToast(`Đã nạp ${zaloNumbers.length} SĐT có Zalo!`);
+}
+
+let isInviting = false;
+function startInviteProcess() {
+    if (!isExtensionAlive) return alert("Không tìm thấy Extension! Vui lòng tải lại trang và mở tab Zalo.");
+    
+    if (isInviting) return;
+    
+    const rawPhones = document.getElementById('invitePhoneList').value.split('\n').map(p => p.trim()).filter(p => p !== '');
+    if (rawPhones.length === 0) return alert("Vui lòng nhập danh sách SĐT!");
+    
+    isInviting = true;
+    document.getElementById('btnStartInvite').innerHTML = '<i class="fa fa-spinner fa-spin"></i> Đang chọn...';
+    document.getElementById('btnStartInvite').disabled = true;
+    
+    document.getElementById('inviteTotal').innerText = rawPhones.length;
+    document.getElementById('inviteSelected').innerText = '0';
+    document.getElementById('inviteFailed').innerText = '0';
+    document.getElementById('inviteProgressFill').style.width = '0%';
+    document.getElementById('inviteProgressText').innerText = 'Đang khởi động...';
+    
+    window.postMessage({
+        type: 'CMD_START_INVITE',
+        payload: {
+            phones: rawPhones
+        }
+    }, '*');
+}
 
 // --- BULK MESSAGE FUNCTIONS ---
 function loadFromScanResults() {
