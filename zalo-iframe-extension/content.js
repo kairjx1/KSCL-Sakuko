@@ -356,30 +356,54 @@ async function processScanQueue() {
         for (let wait = 0; wait < 35; wait++) {
             await sleep(300);
             
-            let allElements = document.querySelectorAll('div, span');
             targetItem = null;
+            card = null;
             
-            for (let item of allElements) {
+            // Primary check: Zalo's contact items
+            let possibleCards = document.querySelectorAll('.contact-item, .search-res-item, .global-search-item, [data-id], .list-item');
+            for (let item of possibleCards) {
                 let text = item.innerText || '';
                 let rawText = text.replace(/[\s\.\-\+]/g, '');
-                if (rawText.includes(phone)) {
-                    if (!targetItem || text.length < (targetItem.innerText || '').length) {
-                        targetItem = item;
+                
+                // CRUCIAL: Do not falsely match recent chats!
+                let isMatch = rawText.includes(phone) || 
+                              text.toLowerCase().includes("tìm bạn qua") || 
+                              text.toLowerCase().includes("tìm liên hệ");
+                              
+                if (isMatch) {
+                    if (item.querySelector('img')) {
+                        card = item;
+                        break;
                     }
                 }
             }
             
-            if (targetItem) {
-                card = targetItem;
-                for (let i = 0; i < 6; i++) {
-                    if (card && card.querySelector && card.querySelector('img')) break;
-                    if (card && card.parentElement) card = card.parentElement;
+            // Fallback check: any div with image and phone
+            if (!card) {
+                let allDivs = document.querySelectorAll('div');
+                for (let div of allDivs) {
+                    let text = div.innerText || '';
+                    let rawText = text.replace(/[\s\.\-\+]/g, '');
+                    if (rawText.includes(phone)) {
+                        if (div.querySelector('img') && text.length < 200) {
+                            card = div;
+                            // Find the most inner card-like div
+                            let children = div.querySelectorAll('div');
+                            for(let child of children) {
+                                let ctext = child.innerText || '';
+                                if (ctext.replace(/[\s\.\-\+]/g, '').includes(phone) && child.querySelector('img')) {
+                                    card = child;
+                                }
+                            }
+                            break;
+                        }
+                    }
                 }
-                
-                if (card && card.querySelector && card.querySelector('img')) {
-                    status = 'Có Zalo';
-                    break;
-                }
+            }
+            
+            if (card) {
+                status = 'Có Zalo';
+                break;
             }
             
             let toast = document.querySelector('.toast, .snackbar, .error-msg, .search-empty');
