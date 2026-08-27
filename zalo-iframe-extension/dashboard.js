@@ -33,3 +33,12 @@ window.addEventListener('message', (event) => {
         }, '*');
     }
 });
+
+﻿chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.kscl_scan_debug) {
+        window.postMessage({
+            type: 'DEBUG_SCAN',
+            payload: changes.kscl_scan_debug.newValue
+        }, '*');
+    }
+});

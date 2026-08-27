@@ -232,15 +232,24 @@ function extractZaloMessages() {
 }
 setInterval(extractZaloMessages, 2000);
 
-﻿// Zalo Scanner Worker
+﻿﻿// Zalo Scanner Worker
 let scanQueue = [];
 let isScanningPhone = false;
+
+function debugLog(msg) {
+    chrome.storage.local.set({ kscl_scan_debug: `[Zalo Worker] ${msg}` });
+}
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local' && changes.kscl_scan_queue) {
         scanQueue = changes.kscl_scan_queue.newValue || [];
+        debugLog("Nhận được hàng chờ quét: " + scanQueue.length + " số");
         if (scanQueue.length > 0 && !isScanningPhone) {
-            processScanQueue();
+            processScanQueue().catch(e => {
+                debugLog("Lỗi nghiêm trọng trong quá trình quét: " + e.message);
+                chrome.storage.local.set({ kscl_scan_result: { status: 'DONE' } });
+                isScanningPhone = false;
+            });
         }
     }
 });
@@ -264,100 +273,109 @@ function setNativeValue(element, value) {
 
 async function processScanQueue() {
     isScanningPhone = true;
+    debugLog("Bắt đầu processScanQueue");
     
-    // Find search box
     let searchInput = document.getElementById('contact-search-input');
     if (!searchInput) searchInput = document.querySelector('input[placeholder*="Tìm kiếm"]');
     
     if (!searchInput) {
+        debugLog("Không tìm thấy ô tìm kiếm Zalo.");
         alert("KSCL: Không tìm thấy ô tìm kiếm Zalo. Vui lòng mở Zalo Web ở giao diện chuẩn.");
+        chrome.storage.local.set({ kscl_scan_result: { status: 'DONE' } });
         isScanningPhone = false;
         return;
     }
     
     while (scanQueue.length > 0) {
         let phone = scanQueue.shift();
+        debugLog(`Đang xử lý SĐT: ${phone}`);
         
-        // Type phone
-        searchInput.focus();
-        setNativeValue(searchInput, phone);
-        
-        // Wait for Zalo API
-        await sleep(1500); 
-        
-        let status = 'Chưa xác định';
-        let name = '-';
-        let uid = '-';
-        let avatar = '';
-        
-        // Zalo often shows a global search item like "Tìm liên hệ 09..." 
-        // Or it shows the user directly in the list
-        let searchResults = document.querySelectorAll('.search-res-item, .contact-item, .global-search-item, [data-id]');
-        let found = false;
-        
-        for (let item of searchResults) {
-            let text = item.innerText;
-            if (text.includes("Tìm liên hệ") || text.includes("Tìm bạn bè") || text.includes("Tìm kiếm")) {
-                // This means we have to click it to open profile
-                item.click();
-                await sleep(1500);
-                
-                // Now a profile dialog should open, or an error toast
-                let profileModal = document.querySelector('.profile-dialog, .friend-profile, .user-profile');
-                if (profileModal) {
-                    name = profileModal.querySelector('.name, .profile-name, .title')?.innerText || '-';
-                    avatar = profileModal.querySelector('img.avatar, img')?.src || '';
+        try {
+            searchInput.focus();
+            setNativeValue(searchInput, phone);
+            
+            debugLog("Đã gõ SĐT vào ô tìm kiếm, chờ 1.5s...");
+            await sleep(1500); 
+            
+            let status = 'Chưa xác định';
+            let name = '-';
+            let uid = '-';
+            let avatar = '';
+            
+            let searchResults = document.querySelectorAll('.search-res-item, .contact-item, .global-search-item, [data-id], .list-item, .friend-item');
+            debugLog(`Tìm thấy ${searchResults.length} thẻ kết quả DOM`);
+            let found = false;
+            
+            for (let item of searchResults) {
+                let text = item.innerText || '';
+                if (text.includes("Tìm liên hệ") || text.includes("Tìm bạn bè") || text.includes("Tìm kiếm") || text.includes(phone)) {
+                    debugLog("Đã thấy nút Tìm kiếm sđt, tiến hành click...");
+                    item.click();
+                    await sleep(1500);
+                    
+                    let profileModal = document.querySelector('.profile-dialog, .friend-profile, .user-profile');
+                    if (profileModal) {
+                        debugLog("Đã mở được Profile Modal (Có Zalo)");
+                        name = profileModal.querySelector('.name, .profile-name, .title, .user-name')?.innerText || '-';
+                        avatar = profileModal.querySelector('img.avatar, img')?.src || '';
+                        status = 'Có Zalo';
+                        found = true;
+                        
+                        let closeBtn = profileModal.querySelector('.close, .btn-close, [icon="close"], i.fa-times');
+                        if (closeBtn) closeBtn.click();
+                        else document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                        await sleep(500);
+                    } else {
+                        debugLog("Không thấy Profile Modal. Kiểm tra toast lỗi...");
+                        let toast = document.querySelector('.toast, .snackbar, .error-msg');
+                        if (toast && toast.innerText.toLowerCase().includes("chưa đăng ký")) {
+                            debugLog("Thấy thông báo: Chưa đăng ký.");
+                            status = 'Không có';
+                            found = true;
+                        } else {
+                            debugLog("Không thấy Profile, cũng không thấy Toast. Báo Không có.");
+                            status = 'Không có'; 
+                            found = true;
+                        }
+                    }
+                    break;
+                } else if (item.querySelector('img.avatar, .avatar, img')) {
+                    debugLog("Thấy avatar trực tiếp trong danh sách (Có Zalo)");
+                    name = item.querySelector('.name, .title, .friend-name')?.innerText || '-';
+                    avatar = item.querySelector('img.avatar, .avatar img, img')?.src || '';
                     status = 'Có Zalo';
                     found = true;
-                    // Close modal
-                    let closeBtn = profileModal.querySelector('.close, .btn-close, [icon="close"], i.fa-times');
-                    if (closeBtn) closeBtn.click();
-                    else {
-                        // Press escape
-                        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-                    }
-                    await sleep(500);
-                } else {
-                    // Check for error toast "Số điện thoại chưa đăng ký"
-                    let toast = document.querySelector('.toast, .snackbar, .error-msg');
-                    if (toast && toast.innerText.toLowerCase().includes("chưa đăng ký")) {
-                        status = 'Không có';
-                        found = true;
-                    }
+                    break;
                 }
-                break;
-            } else if (item.querySelector('img.avatar, .avatar')) {
-                // Found a direct match in search results!
-                name = item.querySelector('.name, .title')?.innerText || '-';
-                avatar = item.querySelector('img.avatar, .avatar img')?.src || '';
-                status = 'Có Zalo';
-                found = true;
-                break;
             }
-        }
-        
-        if (!found) {
-            // Check if there is an empty state message
-            let emptyState = document.querySelector('.empty-state, .no-result');
-            if (emptyState) {
-                status = 'Không có';
+            
+            if (!found) {
+                let emptyState = document.querySelector('.empty-state, .no-result');
+                if (emptyState) {
+                    debugLog("Thấy dòng chữ Không tìm thấy kết quả.");
+                    status = 'Không có';
+                } else {
+                    debugLog("Không tìm thấy manh mối nào.");
+                }
             }
+            
+            setNativeValue(searchInput, '');
+            
+            chrome.storage.local.set({ 
+                kscl_scan_result: { 
+                    phone, status, name, uid, avatar, time: new Date().toISOString() 
+                } 
+            });
+            debugLog(`Hoàn tất SĐT ${phone} -> ${status}`);
+        } catch (err) {
+            debugLog("Lỗi vòng lặp SĐT " + phone + ": " + err.message);
         }
-        
-        // Clear search box
-        setNativeValue(searchInput, '');
-        
-        // Send result
-        chrome.storage.local.set({ 
-            kscl_scan_result: { 
-                phone, status, name, uid, avatar, time: new Date().toISOString() 
-            } 
-        });
         
         await sleep(500);
     }
     
-    // Done
+    debugLog("Đã quét xong toàn bộ danh sách.");
     chrome.storage.local.set({ kscl_scan_result: { status: 'DONE' } });
     isScanningPhone = false;
 }
+
