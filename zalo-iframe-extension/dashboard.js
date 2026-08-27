@@ -49,6 +49,10 @@ window.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'CMD_START_INVITE') {
             chrome.storage.local.set({ kscl_cmd_invite: event.data.payload });
         }
+        
+        if (event.data && event.data.type === 'CMD_START_AUTOCARE') {
+            chrome.storage.local.set({ kscl_cmd_autocare: event.data.payload });
+        }
     });
     
     chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -171,6 +175,41 @@ window.addEventListener('message', (event) => {
                             
                             document.getElementById('inviteProgressFill').style.width = progress + '%';
                             document.getElementById('inviteProgressText').innerText = 'Đang chọn... ' + progress + '% (${data.phone}: ${data.status})';
+                        }
+                    `;
+                    document.head.appendChild(s);
+                    s.remove();
+                } catch(e) {}
+            }
+            if (changes.kscl_autocare_result) {
+                window.postMessage({ type: 'RES_AUTOCARE_RESULT', payload: changes.kscl_autocare_result.newValue }, '*');
+                
+                try {
+                    const data = changes.kscl_autocare_result.newValue;
+                    const s = document.createElement('script');
+                    s.textContent = `
+                        if ('${data.status}' === 'DONE') {
+                            isAutocare = false;
+                            document.getElementById('btnStartAutocare').innerHTML = '<i class="fa fa-rocket"></i> Bắt đầu gửi Yêu cầu Kết Bạn';
+                            document.getElementById('btnStartAutocare').disabled = false;
+                            document.getElementById('autocareProgressText').innerText = 'Đã hoàn thành! Mọi yêu cầu kết bạn đã được gửi đi.';
+                            showToast("Hoàn thành tự động kết bạn!");
+                        } else {
+                            let sent = parseInt(document.getElementById('autocareSent').innerText || '0');
+                            let failed = parseInt(document.getElementById('autocareFailed').innerText || '0');
+                            let total = parseInt(document.getElementById('autocareTotal').innerText || '1');
+                            
+                            if ('${data.status}' === 'SUCCESS') sent++;
+                            else failed++;
+                            
+                            document.getElementById('autocareSent').innerText = sent;
+                            document.getElementById('autocareFailed').innerText = failed;
+                            
+                            let progress = Math.round(((sent + failed) / total) * 100);
+                            if (progress > 100) progress = 100;
+                            
+                            document.getElementById('autocareProgressFill').style.width = progress + '%';
+                            document.getElementById('autocareProgressText').innerText = 'Đang chạy... ' + progress + '% (${data.phone}: ${data.status})';
                         }
                     `;
                     document.head.appendChild(s);

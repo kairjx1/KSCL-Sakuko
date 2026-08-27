@@ -733,3 +733,175 @@ async function processInviteQueue() {
         isInviting = false;
     }
 }
+
+
+
+// --- AUTOCARE (ADD FRIEND) LOGIC ---
+let autocareQueue = [];
+let currentAutocareMsg = '';
+let isAutocareRunning = false;
+
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.kscl_cmd_autocare) {
+        let payload = changes.kscl_cmd_autocare.newValue;
+        if (payload && payload.phones && payload.phones.length > 0) {
+            autocareQueue = [...payload.phones];
+            currentAutocareMsg = payload.message;
+            if (!isAutocareRunning) {
+                processAutocareQueue();
+            }
+        }
+    }
+});
+
+async function processAutocareQueue() {
+    if (autocareQueue.length === 0) {
+        chrome.storage.local.set({ kscl_autocare_result: { status: 'DONE' } });
+        isAutocareRunning = false;
+        return;
+    }
+    
+    isAutocareRunning = true;
+    
+    let searchInput = document.querySelector('#contact-search-input, #global-search-input, .cp-txt-search');
+    if (!searchInput) {
+        let inputs = document.querySelectorAll('input');
+        for (let inp of inputs) {
+            if (inp.placeholder && inp.placeholder.toLowerCase().includes('m ki')) {
+                searchInput = inp;
+                break;
+            }
+        }
+    }
+    
+    if (!searchInput) {
+        alert("KSCL [V2]: Không tìm thấy ô tìm kiếm Zalo.");
+        chrome.storage.local.set({ kscl_autocare_result: { status: 'DONE' } });
+        isAutocareRunning = false;
+        return;
+    }
+    
+    let phone = autocareQueue[0];
+    let msgStatus = 'FAILED';
+    
+    try {
+        let clearBtn = document.querySelector('.search-clear, .btn-clear, i.fa-close, [icon="close"], .close-search');
+        if (clearBtn) { try { clearBtn.click(); } catch(e){} }
+        setNativeValue(searchInput, '');
+        await sleep(300);
+        
+        setNativeValue(searchInput, phone);
+        
+        let targetItem = null;
+        let card = null;
+        
+        for (let wait = 0; wait < 35; wait++) {
+            await sleep(300);
+            
+            let allElements = document.querySelectorAll('div, span');
+            targetItem = null;
+            
+            for (let item of allElements) {
+                let text = item.innerText || '';
+                let rawText = text.replace(/[\s\.\-\+]/g, '');
+                if (rawText.includes(phone)) {
+                    if (!targetItem || text.length < (targetItem.innerText || '').length) {
+                        targetItem = item;
+                    }
+                }
+            }
+            
+            if (targetItem) {
+                card = targetItem;
+                for (let i = 0; i < 6; i++) {
+                    if (card && card.querySelector && card.querySelector('img')) break;
+                    if (card && card.parentElement) card = card.parentElement;
+                }
+                
+                if (card && card.querySelector && card.querySelector('img')) {
+                    break;
+                }
+            }
+            
+            let toast = document.querySelector('.toast, .snackbar, .error-msg, .search-empty');
+            if (toast) {
+                let tt = toast.innerText.toLowerCase();
+                if (tt.includes("chưa đăng ký") || tt.includes("không tồn tại") || tt.includes("không tìm thấy") || tt.includes("không có kết quả") || tt.includes("không tìm thấy kết quả")) {
+                    break;
+                }
+            }
+        }
+        
+        if (card) {
+            // Click to open profile or chat
+            card.click();
+            await sleep(1500); // Wait for chat/profile to load
+            
+            // Look for 'Kết bạn' button in the chat header or main view
+            let addFriendBtn = null;
+            let buttons = document.querySelectorAll('div[role="button"], button, div.clickable');
+            for (let b of buttons) {
+                if ((b.innerText && b.innerText.toLowerCase().includes('kết bạn')) || (b.title && b.title.toLowerCase().includes('kết bạn'))) {
+                    // Make sure it's not the "Search" button that says "Tìm bạn bè"
+                    if (b.innerText && b.innerText.length < 20) {
+                        addFriendBtn = b;
+                        break;
+                    }
+                }
+            }
+            
+            if (addFriendBtn) {
+                addFriendBtn.click();
+                await sleep(1000); // Wait for Add Friend Modal
+                
+                // Find the greeting message textarea inside the modal
+                let modalTextarea = document.querySelector('.zl-modal textarea, .ReactModalPortal textarea, textarea');
+                if (modalTextarea) {
+                    setNativeValue(modalTextarea, ''); // clear default greeting
+                    await sleep(100);
+                    setNativeValue(modalTextarea, currentAutocareMsg);
+                    modalTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    await sleep(300);
+                }
+                
+                // Click "Kết bạn" (Confirm) button in the modal
+                let confirmBtns = document.querySelectorAll('.zl-modal .btn-primary, .ReactModalPortal .btn-primary, .btn.btn-primary');
+                for (let cb of confirmBtns) {
+                    if (cb.innerText && cb.innerText.toLowerCase().includes('kết bạn')) {
+                        cb.click();
+                        msgStatus = 'SUCCESS';
+                        break;
+                    }
+                }
+                await sleep(1500); // wait for request to be sent
+            } else {
+                // Already friends, or button not found
+                msgStatus = 'FAILED_OR_ALREADY_FRIENDS';
+            }
+        }
+        
+        let clearBtn2 = document.querySelector('.search-clear, .btn-clear, i.fa-close, [icon="close"], .close-search');
+        if (clearBtn2) { try { clearBtn2.click(); } catch(e){} }
+        setNativeValue(searchInput, '');
+        
+    } catch (err) {
+        // Ignored
+    }
+    
+    chrome.storage.local.set({ 
+        kscl_autocare_result: { 
+            phone: phone, 
+            status: msgStatus, 
+            time: new Date().toISOString() 
+        } 
+    });
+    
+    autocareQueue.shift();
+    
+    if (autocareQueue.length > 0) {
+        setTimeout(() => processAutocareQueue(), 3500);
+    } else {
+        chrome.storage.local.set({ kscl_autocare_result: { status: 'DONE' } });
+        isAutocareRunning = false;
+    }
+}

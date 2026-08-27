@@ -418,9 +418,57 @@ Chào bạn, đây là tin nhắn tự động từ KSCL..."></textarea>
     </div>
 </div>
 <div id="auto-care-tab" class="main-content hidden">
-    <div class="page-title">Chăm sóc tự động</div>
-    <div class="panel">
-        <p style="color: #94a3b8; font-style: italic;">Giao diện đang được phát triển...</p>
+    <div class="page-title"><i class="fa fa-heart" style="color: #f43f5e; margin-right: 10px;"></i> Chăm Sóc Tự Động (Tự Động Kết Bạn)</div>
+    
+    <div style="display: flex; gap: 20px; align-items: flex-start;">
+        <div class="panel" style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center;"><i class="fa fa-user-plus" style="margin-right: 8px;"></i> Danh sách SĐT & Lời chào</h3>
+            </div>
+            
+            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 5px;">Nhập danh sách SĐT cần kết bạn (mỗi dòng 1 số):</p>
+            <textarea id="autocarePhoneList" class="textarea-dark" style="height: 120px;" placeholder="Ví dụ:
+0986762722
+0979662862"></textarea>
+            
+            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 5px; margin-top: 15px;">Lời chào kết bạn (Tối đa 150 ký tự):</p>
+            <textarea id="autocareMessageContent" class="textarea-dark" style="height: 80px;" placeholder="Ví dụ:
+Chào bạn, mình kết bạn để tiện trao đổi công việc nhé!"></textarea>
+            
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-outline" onclick="loadFromScanResultsAutocare()"><i class="fa fa-download"></i> Lấy SĐT từ kết quả quét (Có Zalo)</button>
+            </div>
+        </div>
+        
+        <div class="panel" style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center;"><i class="fa fa-chart-line" style="margin-right: 8px;"></i> Tiến độ kết bạn</h3>
+            </div>
+            
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                <div class="stat-card" style="flex: 1;">
+                    <div class="stat-title">TỔNG SỐ</div>
+                    <div class="stat-value" id="autocareTotal">0</div>
+                </div>
+                <div class="stat-card" style="flex: 1;">
+                    <div class="stat-title" style="color: #f43f5e;">ĐÃ GỬI YÊU CẦU</div>
+                    <div class="stat-value" style="color: #f43f5e;" id="autocareSent">0</div>
+                </div>
+                <div class="stat-card" style="flex: 1;">
+                    <div class="stat-title" style="color: #ef4444;">LỖI/ĐÃ LÀ BẠN</div>
+                    <div class="stat-value" style="color: #ef4444;" id="autocareFailed">0</div>
+                </div>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="autocareProgressFill" style="width: 0%; background: #f43f5e;"></div>
+            </div>
+            <div style="font-size: 12px; color: #94a3b8; margin-bottom: 20px;" id="autocareProgressText">Sẵn sàng...</div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" id="btnStartAutocare" onclick="startAutocareProcess()" style="flex: 1; background: #f43f5e;"><i class="fa fa-rocket"></i> Bắt đầu gửi Yêu cầu Kết Bạn</button>
+            </div>
+        </div>
     </div>
 </div>
 <div id="manage-accounts-tab" class="main-content hidden">
@@ -786,6 +834,52 @@ checkAuth();
 loadHistory();
 loadConfig();
 
+
+
+// --- AUTOCARE (ADD FRIEND) FUNCTIONS ---
+function loadFromScanResultsAutocare() {
+    if (typeof scanResults === 'undefined' || scanResults.length === 0) {
+        return alert("Chưa có kết quả quét! Vui lòng quét SĐT trước.");
+    }
+    const zaloNumbers = scanResults.filter(r => r.status === 'Có Zalo').map(r => r.phone);
+    if (zaloNumbers.length === 0) {
+        return alert("Không có số nào có Zalo trong kết quả quét.");
+    }
+    document.getElementById('autocarePhoneList').value = zaloNumbers.join('\n');
+    document.getElementById('autocareTotal').innerText = zaloNumbers.length;
+    showToast(`Đã nạp ${zaloNumbers.length} SĐT có Zalo!`);
+}
+
+let isAutocare = false;
+function startAutocareProcess() {
+    if (!isExtensionAlive) return alert("Không tìm thấy Extension! Vui lòng tải lại trang và mở tab Zalo.");
+    
+    if (isAutocare) return;
+    
+    const rawPhones = document.getElementById('autocarePhoneList').value.split('\n').map(p => p.trim()).filter(p => p !== '');
+    const message = document.getElementById('autocareMessageContent').value.trim();
+    
+    if (rawPhones.length === 0) return alert("Vui lòng nhập danh sách SĐT!");
+    if (message === '') return alert("Vui lòng nhập Lời chào kết bạn!");
+    
+    isAutocare = true;
+    document.getElementById('btnStartAutocare').innerHTML = '<i class="fa fa-spinner fa-spin"></i> Đang chạy...';
+    document.getElementById('btnStartAutocare').disabled = true;
+    
+    document.getElementById('autocareTotal').innerText = rawPhones.length;
+    document.getElementById('autocareSent').innerText = '0';
+    document.getElementById('autocareFailed').innerText = '0';
+    document.getElementById('autocareProgressFill').style.width = '0%';
+    document.getElementById('autocareProgressText').innerText = 'Đang khởi động...';
+    
+    window.postMessage({
+        type: 'CMD_START_AUTOCARE',
+        payload: {
+            phones: rawPhones,
+            message: message
+        }
+    }, '*');
+}
 
 // --- INVITE MEMBER FUNCTIONS ---
 function loadFromScanResultsInvite() {
