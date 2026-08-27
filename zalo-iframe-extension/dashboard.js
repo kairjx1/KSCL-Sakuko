@@ -4,6 +4,7 @@ if (!window.location.hostname.includes('kscl-sakuko.pages.dev') &&
     window.location.hostname !== '127.0.0.1') {
     // Only run on KSCL Dashboard
 } else {
+console.log("%c[KSCL EXTENSION] DASHBOARD SCRIPT IS RUNNING!", "color: lime; font-size: 20px; font-weight: bold;");
 window.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'REQ_ZALO_MESSAGES') {
             chrome.storage.local.get(['kscl_zalo_sessions'], (res) => {
