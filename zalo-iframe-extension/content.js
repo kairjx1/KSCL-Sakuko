@@ -326,46 +326,65 @@ async function processScanQueue() {
     
     try {
         setNativeValue(searchInput, phone);
-        await sleep(1500); 
+        searchInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
         
         let status = 'Không có';
         let name = '-';
         let uid = '-';
         let avatar = '';
         
-        let searchResults = document.querySelectorAll('div');
         let targetItem = null;
+        let card = null;
         
-        // Find the smallest div containing both phone number and "điện thoại"
-        for (let item of searchResults) {
-            let text = item.innerText || '';
-            if (text.includes(phone) && (text.includes('điện thoại') || text.toLowerCase().includes('phone'))) {
-                if (!targetItem || item.innerText.length < targetItem.innerText.length) {
-                    targetItem = item;
+        for (let wait = 0; wait < 15; wait++) {
+            await sleep(300);
+            
+            let allElements = document.querySelectorAll('div, span');
+            targetItem = null;
+            
+            for (let item of allElements) {
+                let text = item.innerText || '';
+                let rawText = text.replace(/[\s\.\-\+]/g, '');
+                if (rawText.includes(phone)) {
+                    if (!targetItem || text.length < (targetItem.innerText || '').length) {
+                        targetItem = item;
+                    }
+                }
+            }
+            
+            if (targetItem) {
+                card = targetItem;
+                for (let i = 0; i < 6; i++) {
+                    if (card && card.querySelector && card.querySelector('img')) break;
+                    if (card && card.parentElement) card = card.parentElement;
+                }
+                
+                if (card && card.querySelector && card.querySelector('img')) {
+                    status = 'Có Zalo';
+                    break;
+                }
+            }
+            
+            let toast = document.querySelector('.toast, .snackbar, .error-msg, .search-empty');
+            if (toast) {
+                let tt = toast.innerText.toLowerCase();
+                if (tt.includes("chưa đăng ký") || tt.includes("không tồn tại") || tt.includes("không tìm thấy") || tt.includes("không có kết quả") || tt.includes("không tìm thấy kết quả")) {
+                    status = 'Không có';
+                    break;
                 }
             }
         }
         
-        if (targetItem) {
-            // WE FOUND THE CONTACT CARD! No need to click it!
-            status = 'Có Zalo';
-            
-            // The name is usually the first line of text in the card
-            let lines = targetItem.innerText.split('\n').map(l => l.trim()).filter(l => l !== '');
+        if (status === 'Có Zalo' && card) {
+            let lines = card.innerText.split('\n').map(l => l.trim()).filter(l => l !== '');
             if (lines.length > 0) {
                 name = lines[0];
-                if (name.includes('điện thoại') || name.includes(phone)) name = 'Thành viên Zalo';
+                if ((name.includes(phone) || name.toLowerCase().includes('tìm')) && lines.length > 1) {
+                    name = lines[1];
+                }
             }
-            
-            let img = targetItem.querySelector('img');
+            let img = card.querySelector('img');
             if (img) avatar = img.src;
-            
-        } else {
-            // Check Toast for explicit "Not found"
-            let toast = document.querySelector('.toast, .snackbar, .error-msg');
-            if (toast && (toast.innerText.toLowerCase().includes("chưa đăng ký") || toast.innerText.toLowerCase().includes("không tồn tại") || toast.innerText.toLowerCase().includes("không tìm thấy"))) {
-                status = 'Không có';
-            }
         }
         
         setNativeValue(searchInput, '');
