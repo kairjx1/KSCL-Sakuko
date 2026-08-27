@@ -294,7 +294,6 @@ async function processScanQueue() {
     
     if (isScanningPhone) return;
     isScanningPhone = true;
-    debugLog("Bắt đầu processScanQueue");
     
     let searchInput = document.querySelector('#contact-search-input, #global-search-input, .cp-txt-search');
     if (!searchInput) {
@@ -317,8 +316,7 @@ async function processScanQueue() {
     }
     
     if (!searchInput) {
-        debugLog("Không tìm thấy ô tìm kiếm Zalo.");
-        alert("KSCL [V2]: Không tìm thấy ô tìm kiếm Zalo. Vui lòng mở Zalo Web ở giao diện chuẩn.");
+        alert("KSCL [V2]: Không tìm thấy ô tìm kiếm Zalo.");
         chrome.storage.local.set({ kscl_scan_result: { status: 'DONE' } });
         isScanningPhone = false;
         return;
@@ -328,11 +326,9 @@ async function processScanQueue() {
     
     try {
         setNativeValue(searchInput, phone);
-        
-        debugLog("Đã gõ SĐT vào ô tìm kiếm, chờ 1.5s...");
         await sleep(1500); 
         
-        let status = 'Chưa xác định';
+        let status = 'Không có';
         let name = '-';
         let uid = '-';
         let avatar = '';
@@ -340,6 +336,7 @@ async function processScanQueue() {
         let searchResults = document.querySelectorAll('div');
         let targetItem = null;
         
+        // Find the smallest div containing both phone number and "điện thoại"
         for (let item of searchResults) {
             let text = item.innerText || '';
             if (text.includes(phone) && (text.includes('điện thoại') || text.toLowerCase().includes('phone'))) {
@@ -349,49 +346,25 @@ async function processScanQueue() {
             }
         }
         
-        let found = false;
         if (targetItem) {
-            debugLog("Tìm thấy thẻ Contact, tiến hành click...");
-            try { targetItem.click(); targetItem.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); targetItem.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })); } catch(e) {}
-            await sleep(1500);
+            // WE FOUND THE CONTACT CARD! No need to click it!
+            status = 'Có Zalo';
             
-            let profileModal = document.querySelector('.profile-dialog, .modal-content, [data-id="div_Profile_Modal"]');
-            if (profileModal) {
-                debugLog("Thấy Profile Modal. Đang trích xuất...");
-                status = 'Có Zalo';
-                found = true;
-                
-                let nameEl = profileModal.querySelector('.pi-name, .name, .truncate');
-                if (nameEl) name = nameEl.innerText.trim();
-                
-                let avatarEl = profileModal.querySelector('img.avatar, img.a-child');
-                if (avatarEl) avatar = avatarEl.src;
-                
-                let closeBtn = profileModal.querySelector('.btn-close, .close, [icon="close"]');
-                if (closeBtn) closeBtn.click();
-                else document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-                await sleep(500);
-            } else {
-                let chatHeader = document.querySelector('.chat-header-info, .header-title');
-                if (chatHeader) {
-                    status = 'Có Zalo';
-                    found = true;
-                    name = chatHeader.innerText.split('\n')[0].trim();
-                }
+            // The name is usually the first line of text in the card
+            let lines = targetItem.innerText.split('\n').map(l => l.trim()).filter(l => l !== '');
+            if (lines.length > 0) {
+                name = lines[0];
+                if (name.includes('điện thoại') || name.includes(phone)) name = 'Thành viên Zalo';
             }
-        }
-        
-        if (!found) {
-            debugLog("Không thấy thẻ Contact. Kiểm tra toast lỗi...");
+            
+            let img = targetItem.querySelector('img');
+            if (img) avatar = img.src;
+            
+        } else {
+            // Check Toast for explicit "Not found"
             let toast = document.querySelector('.toast, .snackbar, .error-msg');
             if (toast && (toast.innerText.toLowerCase().includes("chưa đăng ký") || toast.innerText.toLowerCase().includes("không tồn tại") || toast.innerText.toLowerCase().includes("không tìm thấy"))) {
-                debugLog("Thấy thông báo: Chưa đăng ký.");
                 status = 'Không có';
-                found = true;
-            } else {
-                debugLog("Không thấy Profile, cũng không thấy Toast. Báo Không có.");
-                status = 'Không có'; 
-                found = true;
             }
         }
         
@@ -402,16 +375,15 @@ async function processScanQueue() {
                 phone, status, name, uid, avatar, time: new Date().toISOString() 
             } 
         });
-        debugLog(`Hoàn tất SĐT ${phone} -> ${status}`);
     } catch (err) {
-        debugLog("Lỗi vòng lặp SĐT " + phone + ": " + err.message);
+        // Ignored
     }
     
     scanQueue.shift();
     isScanningPhone = false;
     
     if (scanQueue.length > 0) {
-        setTimeout(processScanQueue, 1000);
+        setTimeout(processScanQueue, 800);
     } else {
         chrome.storage.local.set({ kscl_scan_result: { status: 'DONE' } });
     }
