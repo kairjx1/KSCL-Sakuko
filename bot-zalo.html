@@ -731,66 +731,10 @@ async function startScan() {
     const tbody = document.getElementById('tblResults');
     tbody.innerHTML = '';
     
-    for (let i = 0; i < phoneList.length; i++) {
-        const phone = phoneList[i];
-        
-        // --- TODO: GỌI XUỐNG CONTENT SCRIPT THẬT ---
-        // Tạm thời giả lập kết quả ngẫu nhiên để sếp test UI
-        await new Promise(r => setTimeout(r, 100)); // Simulate delay 100ms
-        
-        let status = '';
-        let statusColor = '';
-        let name = '';
-        let uid = '';
-        
-        const rand = Math.random();
-        if (rand > 0.3) {
-            status = 'Có Zalo'; statusColor = '#10b981';
-            name = 'Người dùng ' + phone.slice(-4);
-            uid = Math.floor(Math.random() * 90000000000) + 10000000000;
-            hasZalo++;
-        } else {
-            status = 'Không có'; statusColor = '#ef4444';
-            name = '-';
-            uid = '-';
-            noZalo++;
-        }
-        
-        scanResults.push({ phone, status, name, uid, time: new Date().toISOString() });
-        
-        // Update stats
-        document.getElementById('statHasZalo').innerText = hasZalo;
-        document.getElementById('statNoZalo').innerText = noZalo;
-        document.getElementById('statScanned').innerText = (i + 1);
-        
-        // Update progress
-        const percent = Math.floor(((i + 1) / phoneList.length) * 100);
-        document.getElementById('lblProgressPercent').innerText = percent + '%';
-        document.getElementById('progressBar').style.width = percent + '%';
-        document.getElementById('lblProgressText').innerText = `Đang quét... (${i+1}/${phoneList.length})`;
-        
-        // Add row
-        const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid #334155';
-        tr.innerHTML = `
-            <td style="padding: 12px 20px;">${phone}</td>
-            <td style="padding: 12px 20px; color: ${statusColor}; font-weight: 500;">${status}</td>
-            <td style="padding: 12px 20px; display: flex; align-items: center; gap: 8px;">
-                ${name !== '-' ? `<div style="width:24px;height:24px;border-radius:50%;background:#3b82f6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;">👤</div>` : ''}
-                ${name}
-            </td>
-            <td style="padding: 12px 20px; color: #94a3b8; font-family: monospace;">${uid}</td>
-            <td style="padding: 12px 20px; color: #64748b; font-size: 12px;">${new Date().toISOString().replace('T',' ').substring(0,23)}</td>
-        `;
-        tbody.prepend(tr); // Add to top
-    }
-    
-    document.getElementById('lblProgressText').innerText = 'Đã kết thúc, có kết quả cần kiểm tra lại';
-    document.getElementById('btnStartScan').innerHTML = '▶️ Bắt đầu quét';
-    document.getElementById('btnStartScan').disabled = false;
-    document.getElementById('lblResultCount').innerText = `${phoneList.length} kết quả`;
-    isScanning = false;
-    showToast("Hoàn thành quét SĐT!");
+    // GUI LENH CHO CONTENT SCRIPT
+    window.postMessage({ type: 'START_PHONE_SCAN', payload: { phones: phoneList } }, '*');
+    // We will listen for RES_SCAN_RESULT to update UI
+
 }
 
 function copyZaloNumbers() {

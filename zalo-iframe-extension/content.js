@@ -231,3 +231,131 @@ function extractZaloMessages() {
     }
 }
 setInterval(extractZaloMessages, 2000);
+
+﻿// Zalo Scanner Worker
+let scanQueue = [];
+let isScanningPhone = false;
+
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.kscl_scan_queue) {
+        scanQueue = changes.kscl_scan_queue.newValue || [];
+        if (scanQueue.length > 0 && !isScanningPhone) {
+            processScanQueue();
+        }
+    }
+});
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function setNativeValue(element, value) {
+    const valueSetter = Object.getOwnPropertyDescriptor(element, 'value').set;
+    const prototype = Object.getPrototypeOf(element);
+    const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value').set;
+    
+    if (valueSetter && valueSetter !== prototypeValueSetter) {
+        prototypeValueSetter.call(element, value);
+    } else {
+        valueSetter.call(element, value);
+    }
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+async function processScanQueue() {
+    isScanningPhone = true;
+    
+    // Find search box
+    let searchInput = document.getElementById('contact-search-input');
+    if (!searchInput) searchInput = document.querySelector('input[placeholder*="Tìm kiếm"]');
+    
+    if (!searchInput) {
+        alert("KSCL: Không tìm thấy ô tìm kiếm Zalo. Vui lòng mở Zalo Web ở giao diện chuẩn.");
+        isScanningPhone = false;
+        return;
+    }
+    
+    while (scanQueue.length > 0) {
+        let phone = scanQueue.shift();
+        
+        // Type phone
+        searchInput.focus();
+        setNativeValue(searchInput, phone);
+        
+        // Wait for Zalo API
+        await sleep(1500); 
+        
+        let status = 'Chưa xác định';
+        let name = '-';
+        let uid = '-';
+        let avatar = '';
+        
+        // Zalo often shows a global search item like "Tìm liên hệ 09..." 
+        // Or it shows the user directly in the list
+        let searchResults = document.querySelectorAll('.search-res-item, .contact-item, .global-search-item, [data-id]');
+        let found = false;
+        
+        for (let item of searchResults) {
+            let text = item.innerText;
+            if (text.includes("Tìm liên hệ") || text.includes("Tìm bạn bè") || text.includes("Tìm kiếm")) {
+                // This means we have to click it to open profile
+                item.click();
+                await sleep(1500);
+                
+                // Now a profile dialog should open, or an error toast
+                let profileModal = document.querySelector('.profile-dialog, .friend-profile, .user-profile');
+                if (profileModal) {
+                    name = profileModal.querySelector('.name, .profile-name, .title')?.innerText || '-';
+                    avatar = profileModal.querySelector('img.avatar, img')?.src || '';
+                    status = 'Có Zalo';
+                    found = true;
+                    // Close modal
+                    let closeBtn = profileModal.querySelector('.close, .btn-close, [icon="close"], i.fa-times');
+                    if (closeBtn) closeBtn.click();
+                    else {
+                        // Press escape
+                        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+                    }
+                    await sleep(500);
+                } else {
+                    // Check for error toast "Số điện thoại chưa đăng ký"
+                    let toast = document.querySelector('.toast, .snackbar, .error-msg');
+                    if (toast && toast.innerText.toLowerCase().includes("chưa đăng ký")) {
+                        status = 'Không có';
+                        found = true;
+                    }
+                }
+                break;
+            } else if (item.querySelector('img.avatar, .avatar')) {
+                // Found a direct match in search results!
+                name = item.querySelector('.name, .title')?.innerText || '-';
+                avatar = item.querySelector('img.avatar, .avatar img')?.src || '';
+                status = 'Có Zalo';
+                found = true;
+                break;
+            }
+        }
+        
+        if (!found) {
+            // Check if there is an empty state message
+            let emptyState = document.querySelector('.empty-state, .no-result');
+            if (emptyState) {
+                status = 'Không có';
+            }
+        }
+        
+        // Clear search box
+        setNativeValue(searchInput, '');
+        
+        // Send result
+        chrome.storage.local.set({ 
+            kscl_scan_result: { 
+                phone, status, name, uid, avatar, time: new Date().toISOString() 
+            } 
+        });
+        
+        await sleep(500);
+    }
+    
+    // Done
+    chrome.storage.local.set({ kscl_scan_result: { status: 'DONE' } });
+    isScanningPhone = false;
+}
