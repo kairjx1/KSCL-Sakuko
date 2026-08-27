@@ -874,7 +874,7 @@ function recheckAll() {
             tbody.insertBefore(tr, tbody.firstChild);
         }
 
-        if (event.data && event.data.type === \'PONG_EXTENSION\') {
+        if (event.data && event.data.type === 'PONG_EXTENSION') {
             isExtensionAlive = true;
             const consoleEl = document.getElementById('debugConsole');
             if (consoleEl) {
