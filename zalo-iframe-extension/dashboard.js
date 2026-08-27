@@ -52,8 +52,15 @@ window.addEventListener('message', (event) => {
                 // FORCE UI UPDATE LOCALLY TO BYPASS CLOUDFLARE
                 try {
                 // Inject script to fix page variables in the main world
+                // Inject script to fix page variables in the main world
                 const s = document.createElement('script');
-                s.textContent = "if (typeof isScanning !== 'undefined') isScanning = false; if (typeof scannedCount !== 'undefined') scannedCount = 1;";
+                const newDataStr = JSON.stringify(changes.kscl_scan_result.newValue);
+                s.textContent = `const newData = ${newDataStr};
+                    if (typeof isScanning !== 'undefined') isScanning = false;
+                    if (typeof scanResults !== 'undefined' && newData && newData.status !== 'DONE') {
+                        scanResults.push(newData);
+                    }
+                `;
                 document.head.appendChild(s);
                 s.remove();
 
