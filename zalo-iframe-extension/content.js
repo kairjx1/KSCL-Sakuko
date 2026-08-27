@@ -258,6 +258,8 @@ function setNativeValue(element, value) {
         valueSetter.call(element, value);
     }
     element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, keyCode: 13 }));
+    element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, keyCode: 13 }));
 }
 
 async function processScanQueue() {

@@ -782,7 +782,21 @@ async function startScan() {
     tbody.innerHTML = '';
     
     // GUI LENH CHO CONTENT SCRIPT
+    
+    // GUI LENH CHO CONTENT SCRIPT
     window.postMessage({ type: 'START_PHONE_SCAN', payload: { phones: phoneList } }, '*');
+    
+    // Safety timeout if extension doesn't respond
+    setTimeout(() => {
+        if (isScanning && scannedCount === 0) {
+            alert("⚠️ Không nhận được phản hồi từ Zalo!\n\n1. Sếp đã mở tab Zalo Web chưa?\n2. Sếp đã Reload Extension và F5 lại tab Zalo chưa?\n\nHãy kiểm tra lại nhé!");
+            document.getElementById('lblProgressText').innerText = 'Đã hủy do lỗi kết nối';
+            document.getElementById('btnStartScan').innerHTML = '▶️ Bắt đầu quét';
+            document.getElementById('btnStartScan').disabled = false;
+            isScanning = false;
+        }
+    }, 5000);
+
     // We will listen for RES_SCAN_RESULT to update UI
 
 }
