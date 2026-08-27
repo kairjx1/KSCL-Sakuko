@@ -259,25 +259,53 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function setNativeValue(element, value) {
-    const valueSetter = Object.getOwnPropertyDescriptor(element, 'value').set;
-    const prototype = Object.getPrototypeOf(element);
-    const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value').set;
-    
-    if (valueSetter && valueSetter !== prototypeValueSetter) {
-        prototypeValueSetter.call(element, value);
-    } else {
-        valueSetter.call(element, value);
+    try {
+        const valueSetter = Object.getOwnPropertyDescriptor(element, 'value');
+        const prototype = Object.getPrototypeOf(element);
+        const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value');
+        
+        if (valueSetter && valueSetter.set && prototypeValueSetter && prototypeValueSetter.set && valueSetter.set !== prototypeValueSetter.set) {
+            prototypeValueSetter.set.call(element, value);
+        } else if (prototypeValueSetter && prototypeValueSetter.set) {
+            prototypeValueSetter.set.call(element, value);
+        } else {
+            element.value = value;
+        }
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, keyCode: 13 }));
+        element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, keyCode: 13 }));
+    } catch (e) {
+        element.value = value;
+        element.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    element.dispatchEvent(new Event('input', { bubbles: true }));
-    element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, keyCode: 13 }));
-    element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, keyCode: 13 }));
 }
 
 async function processScanQueue() {
     isScanningPhone = true;
     debugLog("Bắt đầu processScanQueue");
     
-    let searchInput = document.querySelector('#contact-search-input, #global-search-input, input[placeholder^="T"], input.cp-txt-search');
+    let searchInput = document.querySelector('#contact-search-input, #global-search-input, .cp-txt-search');
+    if (!searchInput) {
+        let inputs = document.querySelectorAll('input');
+        for (let inp of inputs) {
+            if (inp.placeholder && inp.placeholder.toLowerCase().includes('m ki')) {
+                searchInput = inp;
+                break;
+            }
+        }
+    }
+    // Extreme fallback: just grab the very first input on the page that isn't hidden
+    if (!searchInput) {
+        let allInputs = document.querySelectorAll('input[type="text"], input');
+        for (let inp of allInputs) {
+            if (inp.offsetWidth > 0 && inp.offsetHeight > 0) {
+                searchInput = inp;
+                break;
+            }
+        }
+    }
+    
     if (!searchInput) {
         // Fallback: iterate over all inputs and check placeholder
         let inputs = document.querySelectorAll('input');
@@ -291,7 +319,7 @@ async function processScanQueue() {
     
     if (!searchInput) {
         debugLog("Không tìm thấy ô tìm kiếm Zalo.");
-        alert("KSCL: Không tìm thấy ô tìm kiếm Zalo. Vui lòng mở Zalo Web ở giao diện chuẩn.");
+        alert("KSCL [V2]: Không tìm thấy ô tìm kiếm Zalo. Vui lòng mở Zalo Web ở giao diện chuẩn.");
         chrome.storage.local.set({ kscl_scan_result: { status: 'DONE' } });
         isScanningPhone = false;
         return;
@@ -319,7 +347,7 @@ async function processScanQueue() {
             
             for (let item of searchResults) {
                 let text = item.innerText || '';
-                if (text.includes("Tìm liên hệ") || text.includes("Tìm bạn bè") || text.includes("Tìm kiếm") || text.includes(phone)) {
+                if (text.toLowerCase().includes("liên hệ") || text.toLowerCase().includes("bạn bè") || text.toLowerCase().includes("tìm") || text.includes(phone)) {
                     debugLog("Đã thấy nút Tìm kiếm sđt, tiến hành click...");
                     item.click();
                     await sleep(1500);
@@ -339,7 +367,7 @@ async function processScanQueue() {
                     } else {
                         debugLog("Không thấy Profile Modal. Kiểm tra toast lỗi...");
                         let toast = document.querySelector('.toast, .snackbar, .error-msg');
-                        if (toast && toast.innerText.toLowerCase().includes("chưa đăng ký")) {
+                        if (toast && (toast.innerText.toLowerCase().includes("chưa đăng ký") || toast.innerText.toLowerCase().includes("không tồn tại") || toast.innerText.toLowerCase().includes("không tìm thấy"))) {
                             debugLog("Thấy thông báo: Chưa đăng ký.");
                             status = 'Không có';
                             found = true;
