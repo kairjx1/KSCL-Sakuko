@@ -8,7 +8,8 @@
     "storage"
   ],
   "host_permissions": [
-    "*://*.zalo.me/*"
+    "*://*.zalo.me/*",
+    "<all_urls>"
   ],
   "declarative_net_request": {
     "rule_resources": [
@@ -31,9 +32,7 @@
     },
     {
       "matches": [
-        "*://kscl-sakuko.pages.dev/*",
-        "*://localhost/*",
-        "*://127.0.0.1/*"
+        "<all_urls>"
       ],
       "js": [
         "dashboard.js"
