@@ -190,7 +190,7 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
   </div>
 
 <div id="check-phone-tab" class="main-content hidden">
-﻿<div class="page-title">
+<div class="page-title">
     <div style="display: flex; align-items: center; gap: 10px;">
         <span style="background: #10b981; color: white; padding: 6px 10px; border-radius: 8px;">📞</span>
         Check SĐT có Zalo
@@ -684,7 +684,7 @@ function loadHistory() {
 checkAuth();
 loadHistory();
 loadConfig();
-﻿// Check SĐT Functions
+// Check SĐT Functions
 
 function handleFileImport(event) {
     const file = event.target.files[0];
@@ -837,19 +837,23 @@ function recheckAll() {
         }
     });
     
-    // Ping after 1 second
-    setTimeout(() => {
+    // Ping continually every 1s
+    const pingInterval = setInterval(() => {
+        if (isExtensionAlive) {
+            clearInterval(pingInterval);
+            return;
+        }
         window.postMessage({ type: 'PING_EXTENSION' }, '*');
-        setTimeout(() => {
-            if (!isExtensionAlive) {
-                const consoleEl = document.getElementById('debugConsole');
-                if (consoleEl) {
-                    consoleEl.innerHTML = `<br/><span style="color:#ef4444;">[CẢNH BÁO] Không tìm thấy Extension! Sếp đang dùng Tab Ẩn Danh phải không? Tiện ích mở rộng không hoạt động trong Tab Ẩn Danh! Hãy dùng tab bình thường.</span>`;
-                }
-            }
-        }, 1000);
     }, 1000);
+    
+    // Show warning only if after 5 seconds it's still dead
+    setTimeout(() => {
+        if (!isExtensionAlive) {
+            const consoleEl = document.getElementById('debugConsole');
+            if (consoleEl) {
+                consoleEl.innerHTML = `<br/><span style="color:#ef4444;">[CẢNH BÁO] Không tìm thấy Extension! Sếp đang dùng Tab Ẩn Danh phải không? Tiện ích mở rộng không hoạt động trong Tab Ẩn Danh! Hãy dùng tab bình thường.</span>`;
+            }
+        }
+    }, 5000);
 </script>
-
 </body>
-</html>
