@@ -1,3 +1,17 @@
+
+// --- ANTI BACKGROUND THROTTLE ---
+try {
+    let script = document.createElement('script');
+    script.textContent = `
+        Object.defineProperty(document, 'hidden', { get: function() { return false; } });
+        Object.defineProperty(document, 'visibilityState', { get: function() { return 'visible'; } });
+        window.requestAnimationFrame = window.requestAnimationFrame || function(cb) { return setTimeout(cb, 16); };
+    `;
+    document.documentElement.appendChild(script);
+    script.remove();
+} catch(e) {}
+// --------------------------------
+
 console.log("🚀 KSCL Zalo Extension: Đã inject thành công vào chat.zalo.me!");
 
 let allGroupData = {};
@@ -273,14 +287,15 @@ function setNativeValue(element, value) {
             }
             element.dispatchEvent(new Event('input', { bubbles: true }));
             element.dispatchEvent(new Event('change', { bubbles: true }));
+            element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
             element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
         } else {
+            element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
             element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
         }
     } catch (e) {
         element.value = value;
         element.dispatchEvent(new Event('input', { bubbles: true }));
-        element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
     }
 }
 
@@ -323,11 +338,12 @@ async function processScanQueue() {
     let phone = scanQueue[0];
     
     try {
+        let clearBtn = document.querySelector('.search-clear, .btn-clear, i.fa-close, [icon="close"], .close-search');
+        if (clearBtn) { try { clearBtn.click(); } catch(e){} }
         setNativeValue(searchInput, '');
         await sleep(300);
         
         setNativeValue(searchInput, phone);
-        searchInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
         
         let status = 'Không có';
         let name = '-';
@@ -337,7 +353,6 @@ async function processScanQueue() {
         let targetItem = null;
         let card = null;
         
-        // Tăng thời gian rình (polling) lên 35 vòng * 300ms = ~10.5 giây
         for (let wait = 0; wait < 35; wait++) {
             await sleep(300);
             
@@ -389,6 +404,8 @@ async function processScanQueue() {
             if (img) avatar = img.src;
         }
         
+        let clearBtn2 = document.querySelector('.search-clear, .btn-clear, i.fa-close, [icon="close"], .close-search');
+        if (clearBtn2) { try { clearBtn2.click(); } catch(e){} }
         setNativeValue(searchInput, '');
         
         chrome.storage.local.set({ 
@@ -404,7 +421,6 @@ async function processScanQueue() {
     isScanningPhone = false;
     
     if (scanQueue.length > 0) {
-        // Tăng độ trễ giữa các lần quét lên 3.5 giây để tránh bị Zalo chặn block spam
         setTimeout(processScanQueue, 3500);
     } else {
         chrome.storage.local.set({ kscl_scan_result: { status: 'DONE' } });
