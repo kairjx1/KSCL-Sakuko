@@ -463,7 +463,7 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
             <div class="premium-panel">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <div class="premium-label green" style="margin: 0;"><i class="fa fa-file-alt"></i> Nguồn SĐT</div>
-                    <div style="color: #10b981; font-size: 13px; font-weight: 600;">200 SĐT</div>
+                    <div style="color: #10b981; font-size: 13px; font-weight: 600;" id="srcTotal">0 SĐT</div>
                 </div>
                 
                 <button class="btn-premium-outline" style="width: 100%; margin-bottom: 16px; border-style: dashed;"><i class="fa fa-file-import"></i> Import CSV / Excel / TXT</button>
@@ -477,7 +477,7 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
 0968814444"></textarea>
                 
                 <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-                    <button class="btn-premium-outline" style="flex: 1;" onclick="document.getElementById('phoneListInput').value=''"><i class="fa fa-broom"></i> Làm sạch</button>
+                    <button class="btn-premium-outline" style="flex: 1;" onclick="cleanPhoneNumbers('phoneListInput')"><i class="fa fa-broom"></i> Làm sạch</button>
                     <button class="btn-premium-outline" style="flex: 1; color: #ef4444; border-color: #ef4444;" onclick="document.getElementById('phoneListInput').value=''"><i class="fa fa-times"></i> Xóa</button>
                 </div>
                 
@@ -490,7 +490,7 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
             <div style="display: flex; gap: 16px; margin-bottom: 24px;">
                 <div class="premium-panel" style="flex: 1; margin: 0; text-align: center; padding: 16px;">
                     <div style="font-size: 12px; font-weight: 600; color: #94a3b8; margin-bottom: 8px;">TỔNG</div>
-                    <div style="font-size: 24px; font-weight: 700; color: white;">200</div>
+                    <div style="font-size: 24px; font-weight: 700; color: white;" id="statTotal">0</div>
                 </div>
                 <div class="premium-panel" style="flex: 1; margin: 0; text-align: center; padding: 16px; border-color: #10b981; background: rgba(16, 185, 129, 0.05);">
                     <div style="font-size: 12px; font-weight: 600; color: #10b981; margin-bottom: 8px;">CÓ ZALO</div>
@@ -536,7 +536,7 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
                         <button class="premium-tab-btn" style="padding: 6px 12px; font-size: 12px; color: #3b82f6;">Chưa xác định</button>
                         <button class="premium-tab-btn" style="padding: 6px 12px; font-size: 12px; color: #eab308; border-color: #eab308;">Lỗi/trùng</button>
                     </div>
-                    <div style="font-size: 12px; color: #94a3b8;">200 kết quả</div>
+                    <div style="font-size: 12px; color: #94a3b8;" id="resTotal">0 kết quả</div>
                 </div>
                 
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
@@ -1551,6 +1551,28 @@ function extractPhonesFromText(text) {
 
 let phoneList = [];
 let scanResults = [];
+
+function cleanPhoneNumbers(elementId) {
+    let el = document.getElementById(elementId);
+    if (!el || !el.value) return;
+    
+    let raw = el.value.split(/[\n,]+/);
+    let cleaned = new Set();
+    
+    for (let p of raw) {
+        let p_clean = p.replace(/[\s\.\-\+]/g, '').trim();
+        if (p_clean.startsWith('84') && p_clean.length > 9) {
+            p_clean = '0' + p_clean.substring(2);
+        }
+        if (p_clean.length >= 9 && p_clean.length <= 11) {
+            cleaned.add(p_clean);
+        }
+    }
+    
+    el.value = Array.from(cleaned).join('\n');
+    showToast(`Đã làm sạch và lọc trùng còn ${cleaned.size} số`);
+}
+
 let isScanning = false;
 
 function updatePhoneCount() {
@@ -1592,6 +1614,10 @@ async function startScan() {
     
     document.getElementById('btnStartScan').innerHTML = '⏳ Đang quét...';
     document.getElementById('btnStartScan').disabled = true;
+    
+    document.getElementById('statTotal').innerText = phoneList.length;
+    document.getElementById('srcTotal').innerText = phoneList.length + ' SĐT';
+    document.getElementById('resTotal').innerText = phoneList.length + ' kết quả';
     
     document.getElementById('statHasZalo').innerText = 0;
     document.getElementById('statNoZalo').innerText = 0;
