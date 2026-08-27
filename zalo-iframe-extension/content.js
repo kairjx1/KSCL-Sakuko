@@ -260,21 +260,26 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function setNativeValue(element, value) {
     try {
-        const valueSetter = Object.getOwnPropertyDescriptor(element, 'value');
-        const prototype = Object.getPrototypeOf(element);
-        const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value');
+        element.focus();
+        element.select();
+        let success = document.execCommand('insertText', false, value);
         
-        if (valueSetter && valueSetter.set && prototypeValueSetter && prototypeValueSetter.set && valueSetter.set !== prototypeValueSetter.set) {
-            prototypeValueSetter.set.call(element, value);
-        } else if (prototypeValueSetter && prototypeValueSetter.set) {
-            prototypeValueSetter.set.call(element, value);
-        } else {
-            element.value = value;
+        if (!success) {
+            const valueSetter = Object.getOwnPropertyDescriptor(element, 'value');
+            const prototype = Object.getPrototypeOf(element);
+            const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value');
+            
+            if (valueSetter && valueSetter.set && prototypeValueSetter && prototypeValueSetter.set && valueSetter.set !== prototypeValueSetter.set) {
+                prototypeValueSetter.set.call(element, value);
+            } else if (prototypeValueSetter && prototypeValueSetter.set) {
+                prototypeValueSetter.set.call(element, value);
+            } else {
+                element.value = value;
+            }
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+            element.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: value, bubbles: true, cancelable: true }));
         }
-        element.dispatchEvent(new Event('input', { bubbles: true }));
-        element.dispatchEvent(new Event('change', { bubbles: true }));
-        element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, keyCode: 13 }));
-        element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, keyCode: 13 }));
     } catch (e) {
         element.value = value;
         element.dispatchEvent(new Event('input', { bubbles: true }));
