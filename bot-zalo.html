@@ -63,6 +63,7 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
 .history-time { font-size: 13px; color: #10b981; font-weight: 600; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
 .history-content { font-size: 14px; line-height: 1.6; color: #e2e8f0; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -211,7 +212,8 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
             <div style="color: #3b82f6; font-size: 14px; font-weight: 600;" id="lblTotalInput">0 SĐT</div>
         </div>
         
-        <button class="btn-success" style="background: transparent; border: 1px dashed #10b981; color: #10b981; padding: 12px; width: 100%;">📥 Import CSV / Excel / TXT</button>
+        <button class="btn-success" style="background: transparent; border: 1px dashed #10b981; color: #10b981; padding: 12px; width: 100%;" onclick="document.getElementById('fileImportPhone').click()">📥 Import CSV / Excel / TXT</button>
+        <input type="file" id="fileImportPhone" accept=".csv, .txt, .xlsx, .xls" style="display: none;" onchange="handleFileImport(event)">
         
         <textarea id="txtPhoneNumbers" class="form-control" style="flex: 1; min-height: 300px; font-family: monospace; resize: none; background: #0f172a; border: 1px solid #334155;" placeholder="Mỗi dòng một số điện thoại...&#10;&#10;0986762722&#10;0984485027..." oninput="updatePhoneCount()"></textarea>
         
@@ -677,6 +679,54 @@ checkAuth();
 loadHistory();
 loadConfig();
 ﻿// Check SĐT Functions
+
+function handleFileImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const ext = file.name.split('.').pop().toLowerCase();
+    
+    if (ext === 'txt' || ext === 'csv') {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            let text = e.target.result;
+            // For CSV, we might need to extract the first column or just extract all numbers
+            // Let's just find all consecutive digits that look like phone numbers
+            extractPhonesFromText(text);
+        };
+        reader.readAsText(file);
+    } else if (ext === 'xlsx' || ext === 'xls') {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+            
+            let text = json.map(row => row.join(' ')).join('\n');
+            extractPhonesFromText(text);
+        };
+        reader.readAsArrayBuffer(file);
+    }
+    
+    // reset input
+    event.target.value = '';
+}
+
+function extractPhonesFromText(text) {
+    // Basic regex to find phone-like sequences (9-11 digits)
+    const matches = text.match(/\b\d{9,11}\b/g) || [];
+    if (matches.length > 0) {
+        const existing = document.getElementById('txtPhoneNumbers').value;
+        const prefix = existing.trim().length > 0 ? existing + '\n' : '';
+        document.getElementById('txtPhoneNumbers').value = prefix + matches.join('\n');
+        cleanNumbers(); // auto clean and update count
+        showToast(`Đã import ${matches.length} số điện thoại!`);
+    } else {
+        alert("Không tìm thấy số điện thoại hợp lệ trong file!");
+    }
+}
+
 let phoneList = [];
 let scanResults = [];
 let isScanning = false;
