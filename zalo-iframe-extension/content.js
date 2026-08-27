@@ -277,8 +277,17 @@ async function processScanQueue() {
     isScanningPhone = true;
     debugLog("Bắt đầu processScanQueue");
     
-    let searchInput = document.getElementById('contact-search-input');
-    if (!searchInput) searchInput = document.querySelector('input[placeholder*="Tìm kiếm"]');
+    let searchInput = document.querySelector('#contact-search-input, #global-search-input, input[placeholder^="T"], input.cp-txt-search');
+    if (!searchInput) {
+        // Fallback: iterate over all inputs and check placeholder
+        let inputs = document.querySelectorAll('input');
+        for (let inp of inputs) {
+            if (inp.placeholder && inp.placeholder.toLowerCase().includes('m ki')) {
+                searchInput = inp;
+                break;
+            }
+        }
+    }
     
     if (!searchInput) {
         debugLog("Không tìm thấy ô tìm kiếm Zalo.");
