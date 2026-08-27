@@ -376,8 +376,7 @@ async function processScanQueue() {
                 if (chatHeader) {
                     status = 'Có Zalo';
                     found = true;
-                    name = chatHeader.innerText.split('
-')[0].trim();
+                    name = chatHeader.innerText.split('\n')[0].trim();
                 }
             }
         }
