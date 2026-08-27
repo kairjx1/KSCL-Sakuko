@@ -772,13 +772,10 @@ async function startScan() {
     
     isScanning = true;
     scanResults = [];
+    hasZalo = 0; noZalo = 0; scannedCount = 0;
+    
     document.getElementById('btnStartScan').innerHTML = '⏳ Đang quét...';
     document.getElementById('btnStartScan').disabled = true;
-    
-    let hasZalo = 0;
-    let noZalo = 0;
-    let unknown = 0;
-    let errorCount = 0;
     
     document.getElementById('statHasZalo').innerText = 0;
     document.getElementById('statNoZalo').innerText = 0;
@@ -787,12 +784,8 @@ async function startScan() {
     const tbody = document.getElementById('tblResults');
     tbody.innerHTML = '';
     
-    // GUI LENH CHO CONTENT SCRIPT
-    
-    // GUI LENH CHO CONTENT SCRIPT
     window.postMessage({ type: 'START_PHONE_SCAN', payload: { phones: phoneList } }, '*');
     
-    // Safety timeout if extension doesn't respond
     setTimeout(() => {
         if (isScanning && scannedCount === 0) {
             alert("⚠️ Không nhận được phản hồi từ Zalo!\n\n1. Sếp đã mở tab Zalo Web chưa?\n2. Sếp đã Reload Extension và F5 lại tab Zalo chưa?\n\nHãy kiểm tra lại nhé!");
@@ -802,9 +795,6 @@ async function startScan() {
             isScanning = false;
         }
     }, 5000);
-
-    // We will listen for RES_SCAN_RESULT to update UI
-
 }
 
 function copyZaloNumbers() {
