@@ -5,7 +5,8 @@
   "description": "Bỏ chặn X-Frame-Options để nhúng Zalo Web vào KSCL Dashboard và chuẩn bị RAG data.",
   "permissions": [
     "declarativeNetRequest",
-    "storage"
+    "storage",
+    "unlimitedStorage"
   ],
   "host_permissions": [
     "*://*.zalo.me/*",

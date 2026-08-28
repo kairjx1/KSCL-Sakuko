@@ -1524,16 +1524,38 @@ function cancelBulkMessage() {
     document.getElementById('bulkProgressText').innerText = 'Đã hủy gửi tin.';
 }
 
-function startBulkMessage() {
+async function startBulkMessage() {
     if (!isExtensionAlive) return alert("Không tìm thấy Extension! Vui lòng tải lại trang và mở tab Zalo.");
-    
     if (isBulkMessaging) return;
     
     const rawPhones = document.getElementById('bulkPhoneList').value.split('\n').map(p => p.trim()).filter(p => p !== '');
     const message = document.getElementById('bulkMessageContent').value.trim();
     
     if (rawPhones.length === 0) return alert("Vui lòng nhập danh sách SĐT!");
-    if (message === '') return alert("Vui lòng nhập nội dung tin nhắn!");
+    
+    let fileInput = document.getElementById('bulkFileUpload');
+    let attachment = null;
+    
+    if (fileInput.files && fileInput.files.length > 0) {
+        let file = fileInput.files[0];
+        // Check size < 15MB
+        if (file.size > 15 * 1024 * 1024) return alert("File quá lớn! Vui lòng chọn file < 15MB");
+        
+        let base64 = await new Promise((resolve, reject) => {
+            let reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+        
+        attachment = {
+            name: file.name,
+            type: file.type,
+            data: base64
+        };
+    } else {
+        if (message === '') return alert("Vui lòng nhập nội dung tin nhắn hoặc đính kèm ảnh!");
+    }
     
     isBulkMessaging = true;
     document.getElementById('btnStartBulk').innerHTML = '<i class="fa fa-spinner fa-spin"></i> Đang gửi...';
@@ -1549,7 +1571,8 @@ function startBulkMessage() {
         type: 'CMD_START_BULK_MSG',
         payload: {
             phones: rawPhones,
-            message: message
+            message: message,
+            attachment: attachment
         }
     }, '*');
 }

@@ -464,6 +464,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
 let bulkMsgQueue = [];
 let currentBulkMsg = '';
+let currentBulkAttachment = null;
 let isBulkMessaging = false;
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -472,6 +473,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         if (payload && payload.phones && payload.phones.length > 0) {
             bulkMsgQueue = [...payload.phones];
             currentBulkMsg = payload.message;
+            currentBulkAttachment = payload.attachment || null;
             if (!isBulkMessaging) {
                 processBulkMsgQueue();
             }
@@ -598,20 +600,53 @@ async function processBulkMsgQueue(isContinuation = false) {
             }
             
             if (chatInput) {
-                // Focus and type message
                 chatInput.focus();
-                document.execCommand('insertText', false, currentBulkMsg);
                 
-                // Dispatch input event for React
-                chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-                await sleep(500);
+                // If we have an attachment, try to paste it
+                if (currentBulkAttachment) {
+                    try {
+                        let res = await fetch(currentBulkAttachment.data);
+                        let blob = await res.blob();
+                        let file = new File([blob], currentBulkAttachment.name, { type: currentBulkAttachment.type });
+                        
+                        let dt = new DataTransfer();
+                        dt.items.add(file);
+                        
+                        let pasteEvent = new ClipboardEvent('paste', {
+                            clipboardData: dt,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        chatInput.dispatchEvent(pasteEvent);
+                        await sleep(1500); // Wait for Zalo preview modal to appear or attach
+                        
+                        // Wait a bit more if Zalo shows a modal for image
+                        let sendModalBtn = document.querySelector('.modal-content .btn-primary, .ReactModalPortal .btn-primary');
+                        if (sendModalBtn && (sendModalBtn.innerText.toLowerCase().includes('gửi') || sendModalBtn.innerText.toLowerCase().includes('send'))) {
+                            sendModalBtn.click();
+                            await sleep(1000);
+                        }
+                    } catch (e) {
+                        console.error("KSCL: Failed to paste attachment", e);
+                    }
+                }
                 
-                // Find send button or press enter
-                let sendBtn = document.querySelector('.btn-send, [icon="send"], i.fa-paper-plane');
-                if (sendBtn) {
-                    sendBtn.click();
-                } else {
-                    chatInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+                if (currentBulkMsg !== '') {
+                    document.execCommand('insertText', false, currentBulkMsg);
+                    chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    await sleep(500);
+                }
+                
+                // If we pasted an image, Zalo might have already sent it if we pressed the modal button.
+                // But if there was text, we might still need to press Enter.
+                // Let's just press Enter or click Send to be safe.
+                if (currentBulkMsg !== '' || !currentBulkAttachment) {
+                    let sendBtn = document.querySelector('.btn-send, [icon="send"], i.fa-paper-plane');
+                    if (sendBtn) {
+                        sendBtn.click();
+                    } else {
+                        chatInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+                    }
                 }
                 
                 msgStatus = 'SUCCESS';
