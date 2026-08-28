@@ -4,7 +4,39 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Thư Ký Zalo - Quản trị</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'RES_BULK_MSG_RESULT') {
+        let data = event.data.payload;
+        if (data.status === 'DONE') {
+            isBulkMessaging = false;
+            document.getElementById('btnStartBulk').innerHTML = '<i class="fa fa-play"></i> Bắt đầu gửi';
+            document.getElementById('btnStartBulk').disabled = false;
+            document.getElementById('bulkProgressText').innerText = 'Đã hoàn thành gửi tin hàng loạt!';
+            showToast("Hoàn thành gửi tin!");
+        } else if (data.status === 'PROGRESS') {
+            document.getElementById('bulkProgressText').innerText = data.step;
+        } else {
+            let sent = parseInt(document.getElementById('bulkSent').innerText || '0');
+            let failed = parseInt(document.getElementById('bulkFailed').innerText || '0');
+            let total = parseInt(document.getElementById('bulkTotal').innerText || '1');
+            
+            if (data.status === 'SUCCESS') sent++;
+            else failed++;
+            
+            document.getElementById('bulkSent').innerText = sent;
+            document.getElementById('bulkFailed').innerText = failed;
+            
+            let progress = Math.round(((sent + failed) / total) * 100);
+            if (progress > 100) progress = 100;
+            
+            document.getElementById('bulkProgressFill').style.width = progress + '%';
+            document.getElementById('bulkProgressText').innerText = 'Đang gửi... ' + progress + '% (' + data.phone + ': ' + data.status + ')';
+        }
+    }
+});
+</script>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>

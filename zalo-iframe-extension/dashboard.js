@@ -77,48 +77,12 @@ window.addEventListener('message', (event) => {
                     document.head.appendChild(s);
                     s.remove();
                 } catch(e) {}
-
             }
             if (changes.kscl_bulk_msg_result) {
                 window.postMessage({ type: 'RES_BULK_MSG_RESULT', payload: changes.kscl_bulk_msg_result.newValue }, '*');
-                
-                try {
-                    const data = changes.kscl_bulk_msg_result.newValue;
-                    const s = document.createElement('script');
-                    s.textContent = `
-                        if ('${data.status}' === 'DONE') {
-                            isBulkMessaging = false;
-                            document.getElementById('btnStartBulk').innerHTML = '<i class="fa fa-play"></i> Bắt đầu gửi';
-                            document.getElementById('btnStartBulk').disabled = false;
-                            document.getElementById('bulkProgressText').innerText = 'Đã hoàn thành gửi tin hàng loạt!';
-                            showToast("Hoàn thành gửi tin!");
-                        } else if ('${data.status}' === 'PROGRESS') {
-                            document.getElementById('bulkProgressText').innerText = '${data.step}';
-                        } else {
-                            let sent = parseInt(document.getElementById('bulkSent').innerText || '0');
-                            let failed = parseInt(document.getElementById('bulkFailed').innerText || '0');
-                            let total = parseInt(document.getElementById('bulkTotal').innerText || '1');
-                            
-                            if ('${data.status}' === 'SUCCESS') sent++;
-                            else failed++;
-                            
-                            document.getElementById('bulkSent').innerText = sent;
-                            document.getElementById('bulkFailed').innerText = failed;
-                            
-                            let progress = Math.round(((sent + failed) / total) * 100);
-                            if (progress > 100) progress = 100;
-                            
-                            document.getElementById('bulkProgressFill').style.width = progress + '%';
-                            document.getElementById('bulkProgressText').innerText = 'Đang gửi... ' + progress + '% (${data.phone}: ${data.status})';
-                        }
-                    `;
-                    document.body.appendChild(s);
-                    s.remove();
-                } catch(e) {}
             }
             if (changes.kscl_invite_result) {
                 window.postMessage({ type: 'RES_INVITE_RESULT', payload: changes.kscl_invite_result.newValue }, '*');
-                
                 try {
                     const data = changes.kscl_invite_result.newValue;
                     const s = document.createElement('script');
