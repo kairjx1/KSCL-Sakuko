@@ -669,6 +669,12 @@ async function processBulkMsgQueue(isContinuation = false) {
             if (chatInput) {
                 chatInput.focus();
                 
+                if (currentBulkMsg !== '') {
+                    document.execCommand('insertText', false, currentBulkMsg);
+                    chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    await sleep(500);
+                }
+                
                 // If we have an attachment, try to paste it
                 if (currentBulkAttachment) {
                   await reportProgress(phone, 'Đang tải file đính kèm vào bộ nhớ...');
@@ -698,12 +704,6 @@ async function processBulkMsgQueue(isContinuation = false) {
                     } catch (e) {
                         console.error("KSCL: Failed to paste attachment", e);
                     }
-                }
-                
-                if (currentBulkMsg !== '') {
-                    document.execCommand('insertText', false, currentBulkMsg);
-                    chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    await sleep(500);
                 }
                 
                 // If we pasted an image, Zalo might have already sent it if we pressed the modal button.
