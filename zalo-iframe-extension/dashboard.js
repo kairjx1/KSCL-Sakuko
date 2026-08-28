@@ -86,6 +86,8 @@ window.addEventListener('message', (event) => {
                             document.getElementById('btnStartBulk').disabled = false;
                             document.getElementById('bulkProgressText').innerText = 'Đã hoàn thành gửi tin hàng loạt!';
                             showToast("Hoàn thành gửi tin!");
+                        } else if ('${data.status}' === 'PROGRESS') {
+                            document.getElementById('bulkProgressText').innerText = '${data.step}';
                         } else {
                             let sent = parseInt(document.getElementById('bulkSent').innerText || '0');
                             let failed = parseInt(document.getElementById('bulkFailed').innerText || '0');
@@ -104,7 +106,7 @@ window.addEventListener('message', (event) => {
                             document.getElementById('bulkProgressText').innerText = 'Đang gửi... ' + progress + '% (${data.phone}: ${data.status})';
                         }
                     `;
-                    document.head.appendChild(s);
+                    document.body.appendChild(s);
                     s.remove();
                 } catch(e) {}
             }
