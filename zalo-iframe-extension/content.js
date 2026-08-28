@@ -46,22 +46,65 @@ const contentBox = document.createElement('div');
 contentBox.style.marginTop = '10px';
 statusBox.appendChild(contentBox);
 
-let isMinimized = false;
-function toggleMinimize() {
-    isMinimized = !isMinimized;
-    if (isMinimized) {
-        contentBox.style.display = 'none';
-        minBtn.innerHTML = '+';
-        statusBox.style.width = '120px';
-        statusBox.style.padding = '10px';
-    } else {
-        contentBox.style.display = 'block';
-        minBtn.innerHTML = '−';
-        statusBox.style.width = '220px';
-        statusBox.style.padding = '15px';
-    }
-}
-header.onclick = toggleMinimize;
+  let isMinimized = false;
+  function toggleMinimize() {
+      isMinimized = !isMinimized;
+      if (isMinimized) {
+          contentBox.style.display = 'none';
+          minBtn.innerHTML = '+';
+          statusBox.style.width = '120px';
+          statusBox.style.padding = '10px';
+      } else {
+          contentBox.style.display = 'block';
+          minBtn.innerHTML = '−';
+          statusBox.style.width = '220px';
+          statusBox.style.padding = '15px';
+      }
+  }
+  
+  // Make widget draggable
+  let isDragging = false;
+  let dragMove = false;
+  let startX, startY, initialLeft, initialTop;
+  
+  header.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      dragMove = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      let rect = statusBox.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+      
+      // Convert right/bottom to left/top for reliable dragging
+      statusBox.style.right = 'auto';
+      statusBox.style.bottom = 'auto';
+      statusBox.style.left = initialLeft + 'px';
+      statusBox.style.top = initialTop + 'px';
+      
+      e.preventDefault(); // prevent text selection
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      let dx = e.clientX - startX;
+      let dy = e.clientY - startY;
+      
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMove = true;
+      
+      statusBox.style.left = (initialLeft + dx) + 'px';
+      statusBox.style.top = (initialTop + dy) + 'px';
+  });
+  
+  document.addEventListener('mouseup', () => {
+      isDragging = false;
+  });
+  
+  header.addEventListener('click', (e) => {
+      if (!dragMove) {
+          toggleMinimize();
+      }
+  });
 
 const infoText = document.createElement('div');
 infoText.innerHTML = 'Đang khởi động...';
