@@ -583,8 +583,9 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
                         <i class="fa fa-search" style="position: absolute; left: 16px; top: 16px; color: #64748b;"></i>
                         <input type="text" class="premium-input" placeholder="Tìm nhóm..." style="padding-left: 40px; margin-bottom: 12px;">
                     </div>
-                    <select class="premium-select">
+                    <select class="premium-select" onchange="alert('Tính năng lấy danh sách thành viên nhóm đang được hoàn thiện ở bản cập nhật tiếp theo!')">
                         <option>-- Chọn nhóm --</option>
+                        <option>Nhóm Khách Hàng VIP</option>
                     </select>
                 </div>
                 
@@ -593,8 +594,9 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
                         <i class="fa fa-search" style="position: absolute; left: 16px; top: 16px; color: #64748b;"></i>
                         <input type="text" class="premium-input" placeholder="Tìm tag..." style="padding-left: 40px; margin-bottom: 12px;">
                     </div>
-                    <select class="premium-select">
+                    <select class="premium-select" onchange="alert('Tính năng gửi theo Tag phân loại đang được hoàn thiện ở bản cập nhật tiếp theo!')">
                         <option>-- Chọn tag --</option>
+                        <option>Khách Tiềm Năng</option>
                     </select>
                 </div>
                 
@@ -641,7 +643,8 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
             
             <div class="premium-panel">
                 <div class="premium-label blue"><i class="fa fa-paperclip"></i> Tệp đính kèm</div>
-                <div class="upload-box">
+                <div class="upload-box" onclick="document.getElementById(\'bulkFileUpload\').click()" style="cursor: pointer;">
+<input type="file" id="bulkFileUpload" style="display:none" multiple>
                     <i class="fa fa-cloud-upload-alt"></i>
                     <p style="margin: 0 0 5px 0; font-weight: 500; color: white;">Kéo thả hoặc click để chọn tệp</p>
                     <p style="margin: 0; font-size: 12px;">Hỗ trợ ảnh, video và tệp phổ biến (tối đa 15MB/tệp)</p>
@@ -714,7 +717,7 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
                     <i class="fa fa-search" style="position: absolute; left: 16px; top: 16px; color: #64748b;"></i>
                     <input type="text" class="premium-input" placeholder="Tìm nhóm muốn mời thành viên..." style="padding-left: 40px; margin-bottom: 12px;">
                 </div>
-                <select class="premium-select">
+                <select class="premium-select" onchange="alert('Tính năng này đang được phát triển trong giai đoạn tiếp theo (Phase 3)!')">
                     <option>-- Chọn nhóm muốn mời thành viên --</option>
                 </select>
                 <div style="margin-top: 15px;">
@@ -754,7 +757,7 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
                     <i class="fa fa-search" style="position: absolute; left: 16px; top: 16px; color: #64748b;"></i>
                     <input type="text" class="premium-input" placeholder="Tìm nhóm cần thêm thành viên..." style="padding-left: 40px; margin-bottom: 12px;">
                 </div>
-                <select class="premium-select">
+                <select class="premium-select" onchange="alert('Tính năng này đang được phát triển trong giai đoạn tiếp theo (Phase 3)!')">
                     <option>-- Chọn nhóm cần thành viên đó vào --</option>
                 </select>
             </div>
@@ -931,7 +934,7 @@ Hoặc bấm 'Lấy SĐT từ KQ quét' để nhập SĐT đã lọc Zalo."></te
                 <div style="display: flex; gap: 16px;">
                     <div style="flex: 1;">
                         <label style="font-size: 11px; color: #94a3b8; display: block; margin-bottom: 4px;">Tần suất</label>
-                        <select class="premium-select">
+                        <select class="premium-select" onchange="alert('Tính năng này đang được phát triển trong giai đoạn tiếp theo (Phase 3)!')">
                             <option>Hàng tháng</option>
                             <option>Một lần</option>
                             <option>Hàng tuần</option>

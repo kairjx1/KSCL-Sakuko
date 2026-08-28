@@ -479,15 +479,15 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     }
 });
 
-async function processBulkMsgQueue() {
+async function processBulkMsgQueue(isContinuation = false) {
     if (bulkMsgQueue.length === 0) {
         chrome.storage.local.set({ kscl_bulk_msg_result: { status: 'DONE' } });
         isBulkMessaging = false;
         return;
     }
     
-    if (isBulkMessaging && arguments.length === 0 && bulkMsgQueue.length > 0 && !document.hidden) {
-        // Prevent concurrent loops
+    if (isBulkMessaging && !isContinuation && bulkMsgQueue.length > 0 && !document.hidden) {
+        // Prevent concurrent loops if not a continuation
     }
     isBulkMessaging = true;
     
@@ -567,6 +567,9 @@ async function processBulkMsgQueue() {
                     }
                 }
             }
+            
+            if (card) {
+                break;
             }
             
             let toast = document.querySelector('.toast, .snackbar, .error-msg, .search-empty');
@@ -641,8 +644,6 @@ async function processBulkMsgQueue() {
         isBulkMessaging = false;
     }
 }
-
-
 
 // --- INVITE MEMBER LOGIC ---
 let inviteQueue = [];
