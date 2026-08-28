@@ -42,6 +42,9 @@ window.addEventListener('message', (event) => {
             window.postMessage({ type: 'PONG_EXTENSION' }, '*');
         }
         
+                if (event.data && event.data.type === 'CMD_STOP_BULK_MSG') {
+            chrome.storage.local.set({ kscl_cmd_stop_bulk_msg: Date.now() });
+        }
         if (event.data && event.data.type === 'CMD_START_BULK_MSG') {
             chrome.storage.local.set({ kscl_cmd_bulk_msg: event.data.payload });
         }

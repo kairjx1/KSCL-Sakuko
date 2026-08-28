@@ -573,22 +573,37 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
                 <div class="premium-label purple"><i class="fa fa-users"></i> Chọn nhóm gửi</div>
                 
                 <div class="premium-tabs">
-                    <button class="premium-tab-btn active purple"><i class="fa fa-users"></i> Theo nhóm</button>
-                    <button class="premium-tab-btn"><i class="fa fa-tag"></i> Theo tag</button>
-                    <button class="premium-tab-btn"><i class="fa fa-mobile-alt"></i> Theo SĐT</button>
+                    <button class="premium-tab-btn active purple" onclick="switchBulkTab('group', this)"><i class="fa fa-users"></i> Theo nhóm</button>
+                    <button class="premium-tab-btn" onclick="switchBulkTab('tag', this)"><i class="fa fa-tag"></i> Theo tag</button>
+                    <button class="premium-tab-btn" onclick="switchBulkTab('phone', this)"><i class="fa fa-mobile-alt"></i> Theo SĐT</button>
                 </div>
                 
-                <div style="position: relative; margin-bottom: 12px;">
-                    <i class="fa fa-search" style="position: absolute; left: 16px; top: 16px; color: #64748b;"></i>
-                    <input type="text" class="premium-input" placeholder="Tìm nhóm..." style="padding-left: 40px; margin-bottom: 12px;">
+                <div id="bulkGroupSection">
+                    <div style="position: relative; margin-bottom: 12px;">
+                        <i class="fa fa-search" style="position: absolute; left: 16px; top: 16px; color: #64748b;"></i>
+                        <input type="text" class="premium-input" placeholder="Tìm nhóm..." style="padding-left: 40px; margin-bottom: 12px;">
+                    </div>
+                    <select class="premium-select">
+                        <option>-- Chọn nhóm --</option>
+                    </select>
                 </div>
                 
-                <select class="premium-select">
-                    <option>-- Chọn nhóm --</option>
-                </select>
+                <div id="bulkTagSection" class="hidden">
+                    <div style="position: relative; margin-bottom: 12px;">
+                        <i class="fa fa-search" style="position: absolute; left: 16px; top: 16px; color: #64748b;"></i>
+                        <input type="text" class="premium-input" placeholder="Tìm tag..." style="padding-left: 40px; margin-bottom: 12px;">
+                    </div>
+                    <select class="premium-select">
+                        <option>-- Chọn tag --</option>
+                    </select>
+                </div>
                 
-                <div style="margin-top: 15px;">
-                    <textarea id="bulkPhoneList" class="premium-textarea" placeholder="Nhập danh sách SĐT..."></textarea>
+                <div id="bulkPhoneSection" class="hidden" style="margin-top: 15px;">
+                    <textarea id="bulkPhoneList" class="premium-textarea" style="height: 180px; margin-bottom: 16px;" placeholder="Nhập danh sách SĐT..."></textarea>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn-premium-outline" style="flex: 1;" onclick="cleanPhoneNumbers('bulkPhoneList')"><i class="fa fa-broom"></i> Làm sạch</button>
+                        <button class="btn-premium-outline" style="flex: 1; color: #ef4444; border-color: #ef4444;" onclick="document.getElementById('bulkPhoneList').value=''"><i class="fa fa-times"></i> Xóa</button>
+                    </div>
                 </div>
             </div>
             
@@ -600,11 +615,8 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
                     <span style="font-size: 14px; color: #a855f7; font-weight: bold;" id="bulkLimitVal">40</span>
                 </div>
                 
-                <div class="slider-container">
-                    <div class="slider-track">
-                        <div class="slider-fill purple" style="width: 40%;"></div>
-                        <div class="slider-thumb" style="left: 40%;"></div>
-                    </div>
+                <div style="margin-bottom: 20px;">
+                    <input type="range" id="bulkLimitSlider" min="1" max="100" value="40" style="width: 100%; accent-color: #a855f7;" oninput="document.getElementById('bulkLimitVal').innerText = this.value">
                 </div>
                 
                 <div class="info-box">
@@ -648,10 +660,10 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
             <div id="bulkProgressFill" style="display:none;"></div>
         </div>
         <div style="display: flex; gap: 12px;">
-            <button class="btn-premium-outline">Hủy</button>
-            <button class="btn-premium-outline" style="color: #eab308; border-color: #eab308;"><i class="fa fa-history"></i> Lịch sử</button>
-            <button class="btn-premium-purple" id="btnStartBulk" onclick="startBulkMessage()"><i class="fa fa-paper-plane"></i> Gửi tin nhắn</button>
-        </div>
+              <button class="btn-premium-outline" onclick="cancelBulkMessage()">Hủy</button>
+              <button class="btn-premium-outline" style="color: #eab308; border-color: #eab308;" onclick="switchTab('history', event)"><i class="fa fa-history"></i> Lịch sử</button>
+              <button class="btn-premium-purple" id="btnStartBulk" onclick="startBulkMessage()"><i class="fa fa-paper-plane"></i> Gửi tin nhắn</button>
+          </div>
     </div>
 </div>
 <div id="invite-member-tab" class="main-content hidden">
@@ -1470,6 +1482,33 @@ function loadFromScanResults() {
 }
 
 let isBulkMessaging = false;
+
+function switchBulkTab(type, btn) {
+    let btns = btn.parentElement.querySelectorAll('.premium-tab-btn');
+    btns.forEach(b => {
+        b.classList.remove('active');
+        b.classList.remove('purple');
+    });
+    btn.classList.add('active');
+    btn.classList.add('purple');
+    
+    document.getElementById('bulkGroupSection').classList.add('hidden');
+    document.getElementById('bulkTagSection').classList.add('hidden');
+    document.getElementById('bulkPhoneSection').classList.add('hidden');
+    
+    if (type === 'group') document.getElementById('bulkGroupSection').classList.remove('hidden');
+    if (type === 'tag') document.getElementById('bulkTagSection').classList.remove('hidden');
+    if (type === 'phone') document.getElementById('bulkPhoneSection').classList.remove('hidden');
+}
+
+function cancelBulkMessage() {
+    isBulkMessaging = false;
+    window.postMessage({ type: 'CMD_STOP_BULK_MSG' }, '*');
+    document.getElementById('btnStartBulk').innerHTML = '<i class="fa fa-paper-plane"></i> Gửi tin nhắn';
+    document.getElementById('btnStartBulk').disabled = false;
+    document.getElementById('bulkProgressText').innerText = 'Đã hủy gửi tin.';
+}
+
 function startBulkMessage() {
     if (!isExtensionAlive) return alert("Không tìm thấy Extension! Vui lòng tải lại trang và mở tab Zalo.");
     
