@@ -552,98 +552,48 @@ async function processBulkMsgQueue(isContinuation = false) {
     let w = document.getElementById('kscl-bot-widget');
     if (w) w.style.display = 'none';
     
-    if (isBulkMessaging && !isContinuation && bulkMsgQueue.length > 0 && !document.hidden) {
-        // Prevent concurrent loops if not a continuation
-    }
     isBulkMessaging = true;
     
     let searchInput = document.querySelector('#contact-search-input, #global-search-input, .cp-txt-search');
     if (!searchInput) {
         let inputs = document.querySelectorAll('input');
         for (let inp of inputs) {
-            if (inp.placeholder && inp.placeholder.toLowerCase().includes('m ki')) {
+            if (inp.placeholder && (inp.placeholder.includes('Tìm kiếm') || inp.placeholder.includes('Search'))) {
                 searchInput = inp;
                 break;
             }
         }
     }
     
-    if (!searchInput) {
-        alert("KSCL [V2]: Không tìm thấy ô tìm kiếm Zalo.");
-        chrome.storage.local.set({ kscl_bulk_msg_result: { status: 'DONE' } });
-        isBulkMessaging = false;
-        return;
-    }
-    
     let phone = bulkMsgQueue[0];
     let msgStatus = 'FAILED';
-      await reportProgress(phone, 'Đang chuẩn bị tìm kiếm SĐT...');
     
     try {
-        let clearBtn = document.querySelector('.search-clear, .btn-clear, i.fa-close, [icon="close"], .close-search');
-        if (clearBtn) { try { clearBtn.click(); } catch(e){} }
-        setNativeValue(searchInput, '');
-        await sleep(300);
-        
         setNativeValue(searchInput, phone);
-          await reportProgress(phone, 'Đang gõ SĐT vào ô tìm kiếm...');
+        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+        await reportProgress(phone, 'Đang tìm số điện thoại...');
+        await sleep(2500); // Wait for Zalo search results
         
-        let targetItem = null;
+        let contactLists = document.querySelectorAll('.contact-list, [data-id="div_Main_Tab_Search_Result"], .ReactVirtualized__Grid__innerScrollContainer');
         let card = null;
         
-        for (let wait = 0; wait < 35; wait++) {
-            await sleep(300);
-            
-            // Primary check: Zalo's contact items
-            let possibleCards = document.querySelectorAll('.contact-item, .search-res-item, .global-search-item, [data-id], .list-item');
-            for (let item of possibleCards) {
-                let text = item.innerText || '';
-                let rawText = text.replace(/[\s\.\-\+]/g, '');
-                
-                // CRUCIAL: Do not falsely match recent chats!
-                let isMatch = rawText.includes(phone) || 
-                              text.toLowerCase().includes("tìm bạn qua") || 
-                              text.toLowerCase().includes("tìm liên hệ");
-                              
-                if (isMatch) {
-                    if (item.querySelector('img')) {
-                        card = item;
-                        break;
-                    }
+        for (let list of contactLists) {
+            let items = list.querySelectorAll('.contact-item, [data-id="div_Search_Result_Item"], div[role="button"]');
+            for (let item of items) {
+                if (item.innerText && item.innerText.includes(phone)) {
+                    card = item;
+                    break;
                 }
             }
-            
-            // Fallback check: any div with image and phone
-            if (!card) {
-                let allDivs = document.querySelectorAll('div');
-                for (let div of allDivs) {
-                    let text = div.innerText || '';
-                    let rawText = text.replace(/[\s\.\-\+]/g, '');
-                    if (rawText.includes(phone)) {
-                        if (div.querySelector('img') && text.length < 200) {
-                            card = div;
-                            // Find the most inner card-like div
-                            let children = div.querySelectorAll('div');
-                            for(let child of children) {
-                                let ctext = child.innerText || '';
-                                if (ctext.replace(/[\s\.\-\+]/g, '').includes(phone) && child.querySelector('img')) {
-                                    card = child;
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            if (card) {
-                break;
-            }
-            
-            let toast = document.querySelector('.toast, .snackbar, .error-msg, .search-empty');
-            if (toast) {
-                let tt = toast.innerText.toLowerCase();
-                if (tt.includes("chưa đăng ký") || tt.includes("không tồn tại") || tt.includes("không tìm thấy") || tt.includes("không có kết quả") || tt.includes("không tìm thấy kết quả")) {
+            if (card) break;
+        }
+        
+        if (!card) {
+            // Try fallback finding the phone text directly
+            let allDivs = document.querySelectorAll('div');
+            for (let d of allDivs) {
+                if (d.innerText === phone || (d.innerText && d.innerText.includes(phone) && d.classList.contains('truncate'))) {
+                    card = d;
                     break;
                 }
             }
@@ -666,185 +616,111 @@ async function processBulkMsgQueue(isContinuation = false) {
                 }
             }
             
+            async function triggerSend(cInput) {
+                let sBtn = document.querySelector('.btn-send, .send-btn, [icon="send"], [icon="send-2"], [icon="Send_2"], [data-id="btn_Send_Msg"], [data-translate-inner="STR_SEND"]');
+                if (!sBtn || !document.body.contains(sBtn)) {
+                    let allDivs = document.querySelectorAll('div');
+                    for (let d of allDivs) {
+                        if (d.getAttribute('data-id') === 'btn_Send_Msg' || d.getAttribute('icon') === 'send-2') {
+                            sBtn = d; break;
+                        }
+                    }
+                }
+                if (sBtn) {
+                    let targets = [sBtn, sBtn.parentElement, sBtn.parentElement?.parentElement];
+                    for (let t of targets) {
+                        if (!t) continue;
+                        const mInit = { bubbles: true, cancelable: true, view: window };
+                        t.dispatchEvent(new MouseEvent('pointerdown', mInit));
+                        t.dispatchEvent(new MouseEvent('mousedown', mInit));
+                        t.dispatchEvent(new MouseEvent('pointerup', mInit));
+                        t.dispatchEvent(new MouseEvent('mouseup', mInit));
+                        t.dispatchEvent(new MouseEvent('click', mInit));
+                    }
+                }
+                if (cInput) {
+                    try {
+                        let range = document.createRange();
+                        range.selectNodeContents(cInput);
+                        range.collapse(false);
+                        let sel = window.getSelection();
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    } catch(e){}
+                    cInput.focus();
+                    let types = ['keydown', 'keypress', 'keyup'];
+                    for (let type of types) {
+                        cInput.dispatchEvent(new KeyboardEvent(type, { 
+                            key: 'Enter', code: 'Enter', keyCode: 13, which: 13, charCode: 13, bubbles: true, cancelable: true, composed: true
+                        }));
+                    }
+                }
+            }
+
             if (chatInput) {
                 chatInput.focus();
                 
+                // 1. Send TEXT independently
                 if (currentBulkMsg !== '') {
+                    await reportProgress(phone, 'Đang gõ tin nhắn chữ...');
                     document.execCommand('insertText', false, currentBulkMsg);
                     chatInput.dispatchEvent(new Event('input', { bubbles: true }));
                     await sleep(500);
+                    
+                    await reportProgress(phone, 'Đang gửi tin nhắn chữ...');
+                    await triggerSend(chatInput);
+                    await sleep(1500);
                 }
                 
-                // If we have an attachment, try to paste it
-                if (currentBulkAttachment) {
-                  await reportProgress(phone, 'Đang tải file đính kèm vào bộ nhớ...');
+                // 2. Refetch chatInput (React might have re-rendered)
+                chatInput = document.querySelector('#richInput, .chat-input, [contenteditable="true"]');
+                if (!chatInput) {
+                    let allContentEditable = document.querySelectorAll('[contenteditable="true"]');
+                    for (let ce of allContentEditable) {
+                        if (ce.offsetHeight > 20) { chatInput = ce; break; }
+                    }
+                }
+                
+                // 3. Send IMAGE independently
+                if (currentBulkAttachment && chatInput) {
+                    await reportProgress(phone, 'Đang tải file đính kèm vào bộ nhớ...');
                     try {
+                        chatInput.focus();
                         let res = await fetch(currentBulkAttachment.data);
                         let blob = await res.blob();
                         let file = new File([blob], currentBulkAttachment.name, { type: currentBulkAttachment.type });
-                        
                         let dt = new DataTransfer();
                         dt.items.add(file);
-                        
-                        let pasteEvent = new ClipboardEvent('paste', {
-                            clipboardData: dt,
-                            bubbles: true,
-                            cancelable: true
-                        });
+                        let pasteEvent = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true });
                         chatInput.dispatchEvent(pasteEvent);
-                          await reportProgress(phone, 'Đã dán file đính kèm, đang chờ Zalo upload...');
-                        await sleep(3500); // Wait for Zalo preview modal to appear or attach and finish uploading image
                         
-                        // Wait a bit more if Zalo shows a modal for image
-                        let sendModalBtn = document.querySelector('.modal-content .btn-primary, .ReactModalPortal .btn-primary');
-                        if (sendModalBtn && (sendModalBtn.innerText.toLowerCase().includes('gửi') || sendModalBtn.innerText.toLowerCase().includes('send'))) {
-                            sendModalBtn.click();
-                            await sleep(1000);
+                        await reportProgress(phone, 'Đã dán file đính kèm, đang chờ Zalo upload...');
+                        await sleep(3500); // Wait for upload
+                        
+                        // Refetch again before sending image
+                        chatInput = document.querySelector('#richInput, .chat-input, [contenteditable="true"]');
+                        if (!chatInput) {
+                            let allContentEditable = document.querySelectorAll('[contenteditable="true"]');
+                            for (let ce of allContentEditable) {
+                                if (ce.offsetHeight > 20) { chatInput = ce; break; }
+                            }
+                        }
+                        
+                        if (chatInput) {
+                            await reportProgress(phone, 'Đang bấm Gửi ảnh...');
+                            chatInput.focus();
+                            chatInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                            await sleep(300);
+                            await triggerSend(chatInput);
+                            await sleep(1500);
                         }
                     } catch (e) {
                         console.error("KSCL: Failed to paste attachment", e);
                     }
                 }
                 
-                // If we pasted an image, Zalo might have already sent it if we pressed the modal button.
-                // But if there was text, we might still need to press Enter.
-                // Let's just press Enter or click Send to be safe.
-                if (currentBulkMsg !== '' || currentBulkAttachment) {
-                    // Try to find the Send button explicitly
-                    let sendBtn = document.querySelector('.btn-send, .send-btn, [icon="send"], [icon="send-2"], [icon="Send_2"], [data-id="btn_Send_Msg"], [data-translate-inner="STR_SEND"]');
-                    
-                    if (!sendBtn) {
-                        // Fallback: look for a blue button or a button with an icon that looks like send
-                        let icons = document.querySelectorAll('i[icon*="send"], div[icon*="send"], span[icon*="send"]');
-                        for (let ic of icons) {
-                            if (ic.offsetWidth > 0) {
-                                sendBtn = ic;
-                                break;
-                            }
-                        }
-                    }
-                    
-                    // 0. Force a space if empty to wake up React's Send Button state
-                    await reportProgress(phone, 'Đang chuẩn bị bấm Gửi...');
-                      if (currentBulkMsg === '' && currentBulkAttachment) {
-                        document.execCommand('insertText', false, ' ');
-                        chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        await sleep(300);
-                    }
-                    
-                    // 1. Aggressive Button Click
-                    if (!sendBtn) {
-                        // Look for the blue circle button specifically
-                        let allDivs = document.querySelectorAll('div');
-                        for (let d of allDivs) {
-                            if (d.getAttribute('data-id') === 'btn_Send_Msg' || d.getAttribute('icon') === 'send-2') {
-                                sendBtn = d;
-                                break;
-                            }
-                        }
-                    }
-                    
-                    // If still no send button, try to find it near chatInput
-                    if (!sendBtn && chatInput) {
-                        let container = chatInput.closest('[data-id="div_Main_Chat_Input_Container"]') || chatInput.parentElement.parentElement.parentElement;
-                        if (container) {
-                            let svgs = container.querySelectorAll('svg, i');
-                            if (svgs.length > 0) {
-                                // The last SVG is usually the send button
-                                sendBtn = svgs[svgs.length - 1];
-                                if (sendBtn.parentElement) sendBtn = sendBtn.parentElement;
-                            }
-                        }
-                    }
-                    
-                    if (sendBtn) {
-                        let targets = [sendBtn, sendBtn.parentElement, sendBtn.parentElement?.parentElement];
-                        for (let t of targets) {
-                            if (!t) continue;
-                            const mouseEventInit = { bubbles: true, cancelable: true, view: window };
-                            t.dispatchEvent(new MouseEvent('pointerdown', mouseEventInit));
-                            t.dispatchEvent(new MouseEvent('mousedown', mouseEventInit));
-                            t.dispatchEvent(new MouseEvent('pointerup', mouseEventInit));
-                            t.dispatchEvent(new MouseEvent('mouseup', mouseEventInit));
-                            t.dispatchEvent(new MouseEvent('click', mouseEventInit));
-                            try { t.click(); } catch(e){}
-                        }
-                    }
-                    
-                    // RE-FETCH chat input because React might have destroyed and recreated it after pasting!
-                    chatInput = document.querySelector('#richInput, .chat-input, [contenteditable="true"]');
-                    if (!chatInput) {
-                        let allContentEditable = document.querySelectorAll('[contenteditable="true"]');
-                        for (let ce of allContentEditable) {
-                            if (ce.offsetHeight > 20) { chatInput = ce; break; }
-                        }
-                    }
-                    if (chatInput) {
-                        chatInput.focus();
-                        chatInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-                        await sleep(300);
-                    }
-
-                    // 1b. Re-fetch Send button after input event
-                    if (!sendBtn || !document.body.contains(sendBtn)) {
-                        let allDivs = document.querySelectorAll('div');
-                        for (let d of allDivs) {
-                            if (d.getAttribute('data-id') === 'btn_Send_Msg' || d.getAttribute('icon') === 'send-2' || d.getAttribute('data-translate-inner') === 'STR_SEND') {
-                                sendBtn = d;
-                                break;
-                            }
-                        }
-                    }
-                    if (sendBtn) {
-                        let targets = [sendBtn, sendBtn.parentElement, sendBtn.parentElement?.parentElement];
-                        for (let t of targets) {
-                            if (!t) continue;
-                            const mouseEventInit = { bubbles: true, cancelable: true, view: window, clientX: 10, clientY: 10 };
-                            t.dispatchEvent(new MouseEvent('pointerdown', mouseEventInit));
-                            t.dispatchEvent(new MouseEvent('mousedown', mouseEventInit));
-                            t.dispatchEvent(new MouseEvent('pointerup', mouseEventInit));
-                            t.dispatchEvent(new MouseEvent('mouseup', mouseEventInit));
-                            t.dispatchEvent(new MouseEvent('click', mouseEventInit));
-                            try { t.click(); } catch(e){}
-                        }
-                    }
-
-                    // 2. Aggressive Enter Key (with selection focus)
-                    if (chatInput) {
-                        try {
-                            let range = document.createRange();
-                            range.selectNodeContents(chatInput);
-                            range.collapse(false);
-                            let sel = window.getSelection();
-                            sel.removeAllRanges();
-                            sel.addRange(range);
-                        } catch(e){}
-                        chatInput.focus();
-                        
-                        let eventTypes = ['keydown', 'keypress', 'keyup'];
-                        for (let type of eventTypes) {
-                            chatInput.dispatchEvent(new KeyboardEvent(type, { 
-                                key: 'Enter', 
-                                code: 'Enter', 
-                                keyCode: 13, 
-                                which: 13,
-                                charCode: 13,
-                                bubbles: true,
-                                cancelable: true,
-                                composed: true
-                            }));
-                        }
-                    }
-                    
-                    // Tell widget what happened
-                    let wTxt = document.querySelector('#kscl-bot-widget div:nth-child(2) div');
-                    if (wTxt) {
-                        wTxt.innerText = "SendBtn Found: " + !!sendBtn;
-                    }
-                }
-                
                 await reportProgress(phone, 'Đã bấm Gửi xong!');
-                  msgStatus = 'SUCCESS';
+                msgStatus = 'SUCCESS';
                 await sleep(1000); // Wait after sending
             }
         }
@@ -872,6 +748,8 @@ async function processBulkMsgQueue(isContinuation = false) {
     } else {
         chrome.storage.local.set({ kscl_bulk_msg_result: { status: 'DONE' } });
         isBulkMessaging = false;
+        let w = document.getElementById('kscl-bot-widget');
+        if (w) w.style.display = 'block';
     }
 }
 
