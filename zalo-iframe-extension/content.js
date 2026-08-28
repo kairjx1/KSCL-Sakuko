@@ -732,83 +732,114 @@ async function processBulkMsgQueue(isContinuation = false) {
                         await sleep(300);
                     }
                     
+                    // 1. Aggressive Button Click
+                    if (!sendBtn) {
+                        // Look for the blue circle button specifically
+                        let allDivs = document.querySelectorAll('div');
+                        for (let d of allDivs) {
+                            if (d.getAttribute('data-id') === 'btn_Send_Msg' || d.getAttribute('icon') === 'send-2') {
+                                sendBtn = d;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // If still no send button, try to find it near chatInput
+                    if (!sendBtn && chatInput) {
+                        let container = chatInput.closest('[data-id="div_Main_Chat_Input_Container"]') || chatInput.parentElement.parentElement.parentElement;
+                        if (container) {
+                            let svgs = container.querySelectorAll('svg, i');
+                            if (svgs.length > 0) {
+                                // The last SVG is usually the send button
+                                sendBtn = svgs[svgs.length - 1];
+                                if (sendBtn.parentElement) sendBtn = sendBtn.parentElement;
+                            }
+                        }
+                    }
+                    
+                    if (sendBtn) {
+                        let targets = [sendBtn, sendBtn.parentElement, sendBtn.parentElement?.parentElement];
+                        for (let t of targets) {
+                            if (!t) continue;
+                            const mouseEventInit = { bubbles: true, cancelable: true, view: window };
+                            t.dispatchEvent(new MouseEvent('pointerdown', mouseEventInit));
+                            t.dispatchEvent(new MouseEvent('mousedown', mouseEventInit));
+                            t.dispatchEvent(new MouseEvent('pointerup', mouseEventInit));
+                            t.dispatchEvent(new MouseEvent('mouseup', mouseEventInit));
+                            t.dispatchEvent(new MouseEvent('click', mouseEventInit));
+                            try { t.click(); } catch(e){}
+                        }
+                    }
+                    
                     // RE-FETCH chat input because React might have destroyed and recreated it after pasting!
-                      chatInput = document.querySelector('#richInput, .chat-input, [contenteditable="true"]');
-                      if (!chatInput) {
-                          let allContentEditable = document.querySelectorAll('[contenteditable="true"]');
-                          for (let ce of allContentEditable) {
-                              if (ce.offsetHeight > 20) { chatInput = ce; break; }
-                          }
-                      }
-                      
-                      if (chatInput) {
-                          chatInput.focus();
-                          chatInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-                          await sleep(300);
-                      }
+                    chatInput = document.querySelector('#richInput, .chat-input, [contenteditable="true"]');
+                    if (!chatInput) {
+                        let allContentEditable = document.querySelectorAll('[contenteditable="true"]');
+                        for (let ce of allContentEditable) {
+                            if (ce.offsetHeight > 20) { chatInput = ce; break; }
+                        }
+                    }
+                    if (chatInput) {
+                        chatInput.focus();
+                        chatInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                        await sleep(300);
+                    }
 
-                      // 1. Aggressive Button Click
-                      if (!sendBtn) {
-                          let allDivs = document.querySelectorAll('div');
-                          for (let d of allDivs) {
-                              if (d.getAttribute('data-id') === 'btn_Send_Msg' || d.getAttribute('icon') === 'send-2' || d.getAttribute('data-translate-inner') === 'STR_SEND') {
-                                  sendBtn = d;
-                                  break;
-                              }
-                          }
-                      }
-                      
-                      if (!sendBtn && chatInput) {
-                          let container = chatInput.closest('.chat-input-container, [data-id="div_Main_Chat_Input_Container"]') || chatInput.parentElement.parentElement.parentElement;
-                          if (container) {
-                              let svgs = container.querySelectorAll('svg, i, [icon*="send"]');
-                              if (svgs.length > 0) sendBtn = svgs[svgs.length - 1];
-                          }
-                      }
-                      
-                      if (sendBtn) {
-                          let targets = [sendBtn, sendBtn.parentElement, sendBtn.parentElement?.parentElement, sendBtn.parentElement?.parentElement?.parentElement];
-                          for (let t of targets) {
-                              if (!t) continue;
-                              const mouseEventInit = { bubbles: true, cancelable: true, view: window, clientX: 10, clientY: 10 };
-                              t.dispatchEvent(new MouseEvent('pointerdown', mouseEventInit));
-                              t.dispatchEvent(new MouseEvent('mousedown', mouseEventInit));
-                              t.dispatchEvent(new MouseEvent('pointerup', mouseEventInit));
-                              t.dispatchEvent(new MouseEvent('mouseup', mouseEventInit));
-                              t.dispatchEvent(new MouseEvent('click', mouseEventInit));
-                              try { t.click(); } catch(e){}
-                          }
-                      }
-                      
-                      // 2. Aggressive Enter Key
-                      if (chatInput) {
-                          try {
-                              let range = document.createRange();
-                              range.selectNodeContents(chatInput);
-                              range.collapse(false);
-                              let sel = window.getSelection();
-                              sel.removeAllRanges();
-                              sel.addRange(range);
-                          } catch(e){}
-                          
-                          chatInput.focus();
-                          let eventTypes = ['keydown', 'keypress', 'keyup'];
-                          for (let type of eventTypes) {
-                              chatInput.dispatchEvent(new KeyboardEvent(type, { 
-                                  key: 'Enter', 
-                                  code: 'Enter', 
-                                  keyCode: 13, 
-                                  which: 13,
-                                  charCode: 13,
-                                  bubbles: true,
-                                  cancelable: true,
-                                  composed: true
-                              }));
-                          }
-                      }
-                      
-                      let wTxt = document.querySelector('#kscl-bot-widget div:nth-child(2) div');
-                      if (wTxt) wTxt.innerText = "SendBtn Found: " + !!sendBtn;
+                    // 1b. Re-fetch Send button after input event
+                    if (!sendBtn || !document.body.contains(sendBtn)) {
+                        let allDivs = document.querySelectorAll('div');
+                        for (let d of allDivs) {
+                            if (d.getAttribute('data-id') === 'btn_Send_Msg' || d.getAttribute('icon') === 'send-2' || d.getAttribute('data-translate-inner') === 'STR_SEND') {
+                                sendBtn = d;
+                                break;
+                            }
+                        }
+                    }
+                    if (sendBtn) {
+                        let targets = [sendBtn, sendBtn.parentElement, sendBtn.parentElement?.parentElement];
+                        for (let t of targets) {
+                            if (!t) continue;
+                            const mouseEventInit = { bubbles: true, cancelable: true, view: window, clientX: 10, clientY: 10 };
+                            t.dispatchEvent(new MouseEvent('pointerdown', mouseEventInit));
+                            t.dispatchEvent(new MouseEvent('mousedown', mouseEventInit));
+                            t.dispatchEvent(new MouseEvent('pointerup', mouseEventInit));
+                            t.dispatchEvent(new MouseEvent('mouseup', mouseEventInit));
+                            t.dispatchEvent(new MouseEvent('click', mouseEventInit));
+                            try { t.click(); } catch(e){}
+                        }
+                    }
+
+                    // 2. Aggressive Enter Key (with selection focus)
+                    if (chatInput) {
+                        try {
+                            let range = document.createRange();
+                            range.selectNodeContents(chatInput);
+                            range.collapse(false);
+                            let sel = window.getSelection();
+                            sel.removeAllRanges();
+                            sel.addRange(range);
+                        } catch(e){}
+                        chatInput.focus();
+                        
+                        let eventTypes = ['keydown', 'keypress', 'keyup'];
+                        for (let type of eventTypes) {
+                            chatInput.dispatchEvent(new KeyboardEvent(type, { 
+                                key: 'Enter', 
+                                code: 'Enter', 
+                                keyCode: 13, 
+                                which: 13,
+                                charCode: 13,
+                                bubbles: true,
+                                cancelable: true,
+                                composed: true
+                            }));
+                        }
+                    }
+                    
+                    // Tell widget what happened
+                    let wTxt = document.querySelector('#kscl-bot-widget div:nth-child(2) div');
+                    if (wTxt) {
+                        wTxt.innerText = "SendBtn Found: " + !!sendBtn;
                     }
                 }
                 
