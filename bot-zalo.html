@@ -1840,7 +1840,12 @@ window.addEventListener('message', (event) => {
             isBulkMessaging = false;
             document.getElementById('btnStartBulk').innerHTML = '<i class="fa fa-play"></i> Bắt đầu gửi';
             document.getElementById('btnStartBulk').disabled = false;
-            document.getElementById('bulkProgressText').innerText = 'Đã hoàn thành gửi tin hàng loạt!';
+            
+            let sentFinal = document.getElementById('bulkSent').innerText;
+            let failedFinal = document.getElementById('bulkFailed').innerText;
+            let totalFinal = document.getElementById('bulkTotal').innerText;
+            document.getElementById('bulkProgressText').innerText = `Đã hoàn thành! Thành công: ${sentFinal}/${totalFinal} (Thất bại: ${failedFinal}).`;
+
             showToast("Hoàn thành gửi tin!");
         } else if (data.status === 'PROGRESS') {
             document.getElementById('bulkProgressText').innerText = data.step;
