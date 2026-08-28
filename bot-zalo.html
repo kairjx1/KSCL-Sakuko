@@ -644,7 +644,7 @@ textarea.form-control { min-height: 120px; resize: vertical; line-height: 1.5; }
             <div class="premium-panel">
                 <div class="premium-label blue"><i class="fa fa-paperclip"></i> Tệp đính kèm</div>
                 <div class="upload-box" onclick="document.getElementById('bulkFileUpload').click()" style="cursor: pointer;">
-<input type="file" id="bulkFileUpload" style="display:none" multiple>
+<input type="file" id="bulkFileUpload" style="display:none" multiple onchange="handleFileUpload(this)">
                     <i class="fa fa-cloud-upload-alt"></i>
                     <p style="margin: 0 0 5px 0; font-weight: 500; color: white;">Kéo thả hoặc click để chọn tệp</p>
                     <p style="margin: 0; font-size: 12px;">Hỗ trợ ảnh, video và tệp phổ biến (tối đa 15MB/tệp)</p>
@@ -1502,6 +1502,18 @@ function switchBulkTab(type, btn) {
     if (type === 'group') document.getElementById('bulkGroupSection').classList.remove('hidden');
     if (type === 'tag') document.getElementById('bulkTagSection').classList.remove('hidden');
     if (type === 'phone') document.getElementById('bulkPhoneSection').classList.remove('hidden');
+}
+
+
+function handleFileUpload(input) {
+    if (input.files && input.files.length > 0) {
+        let names = Array.from(input.files).map(f => f.name).join(', ');
+        let p = input.parentElement.querySelector('p');
+        if (p) {
+            p.innerText = "Đã chọn: " + names;
+            p.style.color = "#10b981"; // green color
+        }
+    }
 }
 
 function cancelBulkMessage() {
