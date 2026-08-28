@@ -705,25 +705,54 @@ async function processBulkMsgQueue(isContinuation = false) {
                         }
                     }
                     
-                    if (sendBtn) {
-                        // React sometimes ignores .click() on divs/svgs. We must dispatch mouse events.
-                        const mouseEventInit = { bubbles: true, cancelable: true, view: window };
-                        sendBtn.dispatchEvent(new MouseEvent('mousedown', mouseEventInit));
-                        sendBtn.dispatchEvent(new MouseEvent('mouseup', mouseEventInit));
-                        sendBtn.dispatchEvent(new MouseEvent('click', mouseEventInit));
+                    // 1. Aggressive Button Click
+                    if (!sendBtn) {
+                        // Look for the blue circle button specifically
+                        let allDivs = document.querySelectorAll('div');
+                        for (let d of allDivs) {
+                            if (d.getAttribute('data-id') === 'btn_Send_Msg' || d.getAttribute('icon') === 'send-2') {
+                                sendBtn = d;
+                                break;
+                            }
+                        }
                     }
                     
-                    // ALWAYS fire keyboard events as a fallback
+                    if (sendBtn) {
+                        let targets = [sendBtn, sendBtn.parentElement];
+                        for (let t of targets) {
+                            if (!t) continue;
+                            const mouseEventInit = { bubbles: true, cancelable: true, view: window };
+                            t.dispatchEvent(new MouseEvent('pointerdown', mouseEventInit));
+                            t.dispatchEvent(new MouseEvent('mousedown', mouseEventInit));
+                            t.dispatchEvent(new MouseEvent('pointerup', mouseEventInit));
+                            t.dispatchEvent(new MouseEvent('mouseup', mouseEventInit));
+                            t.dispatchEvent(new MouseEvent('click', mouseEventInit));
+                            try { t.click(); } catch(e){}
+                        }
+                    }
+                    
+                    // 2. Aggressive Enter Key (with selection focus)
+                    try {
+                        let range = document.createRange();
+                        range.selectNodeContents(chatInput);
+                        range.collapse(false);
+                        let sel = window.getSelection();
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    } catch(e){}
                     chatInput.focus();
+                    
                     let eventTypes = ['keydown', 'keypress', 'keyup'];
                     for (let type of eventTypes) {
                         chatInput.dispatchEvent(new KeyboardEvent(type, { 
                             key: 'Enter', 
                             code: 'Enter', 
                             keyCode: 13, 
-                            which: 13, 
+                            which: 13,
+                            charCode: 13,
                             bubbles: true,
-                            cancelable: true
+                            cancelable: true,
+                            composed: true
                         }));
                     }
                 }
