@@ -459,6 +459,8 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local' && changes.kscl_cmd_stop_bulk_msg) {
         bulkMsgQueue = [];
         isBulkMessaging = false;
+        let w = document.getElementById('kscl-bot-widget');
+        if (w) w.style.display = 'block';
     }
 });
 
@@ -485,8 +487,13 @@ async function processBulkMsgQueue(isContinuation = false) {
     if (bulkMsgQueue.length === 0) {
         chrome.storage.local.set({ kscl_bulk_msg_result: { status: 'DONE' } });
         isBulkMessaging = false;
+        let w = document.getElementById('kscl-bot-widget');
+        if (w) w.style.display = 'block';
         return;
     }
+    
+    let w = document.getElementById('kscl-bot-widget');
+    if (w) w.style.display = 'none';
     
     if (isBulkMessaging && !isContinuation && bulkMsgQueue.length > 0 && !document.hidden) {
         // Prevent concurrent loops if not a continuation
@@ -656,20 +663,25 @@ async function processBulkMsgQueue(isContinuation = false) {
                     }
                     
                     if (sendBtn) {
-                        sendBtn.click();
-                    } else {
-                        // Very robust Enter key simulation for React
-                        let eventTypes = ['keydown', 'keypress', 'keyup'];
-                        for (let type of eventTypes) {
-                            chatInput.dispatchEvent(new KeyboardEvent(type, { 
-                                key: 'Enter', 
-                                code: 'Enter', 
-                                keyCode: 13, 
-                                which: 13, 
-                                bubbles: true,
-                                cancelable: true
-                            }));
-                        }
+                        // React sometimes ignores .click() on divs/svgs. We must dispatch mouse events.
+                        const mouseEventInit = { bubbles: true, cancelable: true, view: window };
+                        sendBtn.dispatchEvent(new MouseEvent('mousedown', mouseEventInit));
+                        sendBtn.dispatchEvent(new MouseEvent('mouseup', mouseEventInit));
+                        sendBtn.dispatchEvent(new MouseEvent('click', mouseEventInit));
+                    }
+                    
+                    // ALWAYS fire keyboard events as a fallback
+                    chatInput.focus();
+                    let eventTypes = ['keydown', 'keypress', 'keyup'];
+                    for (let type of eventTypes) {
+                        chatInput.dispatchEvent(new KeyboardEvent(type, { 
+                            key: 'Enter', 
+                            code: 'Enter', 
+                            keyCode: 13, 
+                            which: 13, 
+                            bubbles: true,
+                            cancelable: true
+                        }));
                     }
                 }
                 
