@@ -1572,7 +1572,8 @@ async function startBulkMessage() {
         payload: {
             phones: rawPhones,
             message: message,
-            attachment: attachment
+            attachment: attachment,
+            timestamp: Date.now()
         }
     }, '*');
 }
