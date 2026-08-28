@@ -640,12 +640,36 @@ async function processBulkMsgQueue(isContinuation = false) {
                 // If we pasted an image, Zalo might have already sent it if we pressed the modal button.
                 // But if there was text, we might still need to press Enter.
                 // Let's just press Enter or click Send to be safe.
-                if (currentBulkMsg !== '' || !currentBulkAttachment) {
-                    let sendBtn = document.querySelector('.btn-send, [icon="send"], i.fa-paper-plane');
+                if (currentBulkMsg !== '' || currentBulkAttachment) {
+                    // Try to find the Send button explicitly
+                    let sendBtn = document.querySelector('.btn-send, .send-btn, [icon="send"], [icon="send-2"], [icon="Send_2"], [data-id="btn_Send_Msg"], [data-translate-inner="STR_SEND"]');
+                    
+                    if (!sendBtn) {
+                        // Fallback: look for a blue button or a button with an icon that looks like send
+                        let icons = document.querySelectorAll('i[icon*="send"], div[icon*="send"], span[icon*="send"]');
+                        for (let ic of icons) {
+                            if (ic.offsetWidth > 0) {
+                                sendBtn = ic;
+                                break;
+                            }
+                        }
+                    }
+                    
                     if (sendBtn) {
                         sendBtn.click();
                     } else {
-                        chatInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+                        // Very robust Enter key simulation for React
+                        let eventTypes = ['keydown', 'keypress', 'keyup'];
+                        for (let type of eventTypes) {
+                            chatInput.dispatchEvent(new KeyboardEvent(type, { 
+                                key: 'Enter', 
+                                code: 'Enter', 
+                                keyCode: 13, 
+                                which: 13, 
+                                bubbles: true,
+                                cancelable: true
+                            }));
+                        }
                     }
                 }
                 
