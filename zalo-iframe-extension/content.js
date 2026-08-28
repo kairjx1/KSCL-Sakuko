@@ -705,6 +705,13 @@ async function processBulkMsgQueue(isContinuation = false) {
                         }
                     }
                     
+                    // 0. Force a space if empty to wake up React's Send Button state
+                    if (currentBulkMsg === '' && currentBulkAttachment) {
+                        document.execCommand('insertText', false, ' ');
+                        chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        await sleep(300);
+                    }
+                    
                     // 1. Aggressive Button Click
                     if (!sendBtn) {
                         // Look for the blue circle button specifically
@@ -717,8 +724,21 @@ async function processBulkMsgQueue(isContinuation = false) {
                         }
                     }
                     
+                    // If still no send button, try to find it near chatInput
+                    if (!sendBtn && chatInput) {
+                        let container = chatInput.closest('[data-id="div_Main_Chat_Input_Container"]') || chatInput.parentElement.parentElement.parentElement;
+                        if (container) {
+                            let svgs = container.querySelectorAll('svg, i');
+                            if (svgs.length > 0) {
+                                // The last SVG is usually the send button
+                                sendBtn = svgs[svgs.length - 1];
+                                if (sendBtn.parentElement) sendBtn = sendBtn.parentElement;
+                            }
+                        }
+                    }
+                    
                     if (sendBtn) {
-                        let targets = [sendBtn, sendBtn.parentElement];
+                        let targets = [sendBtn, sendBtn.parentElement, sendBtn.parentElement?.parentElement];
                         for (let t of targets) {
                             if (!t) continue;
                             const mouseEventInit = { bubbles: true, cancelable: true, view: window };
@@ -754,6 +774,12 @@ async function processBulkMsgQueue(isContinuation = false) {
                             cancelable: true,
                             composed: true
                         }));
+                    }
+                    
+                    // Tell widget what happened
+                    let wTxt = document.querySelector('#kscl-bot-widget div:nth-child(2) div');
+                    if (wTxt) {
+                        wTxt.innerText = "SendBtn Found: " + !!sendBtn;
                     }
                 }
                 
