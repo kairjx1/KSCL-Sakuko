@@ -23,6 +23,7 @@ chrome.storage.local.get(['kscl_zalo_sessions'], (res) => {
 
 // UI Overlay
 const statusBox = document.createElement('div');
+  statusBox.id = 'kscl-bot-widget';
 statusBox.style.cssText = 'position:fixed; bottom:20px; right:20px; background:#1e293b; color:#10b981; padding:15px; border-radius:12px; z-index:999999; font-size:13px; font-family:sans-serif; box-shadow:0 10px 15px -3px rgba(0,0,0,0.3); border:1px solid #334155; width:220px; transition:0.3s;';
 document.body.appendChild(statusBox);
 
@@ -387,6 +388,7 @@ async function processScanQueue() {
         await sleep(300);
         
         setNativeValue(searchInput, phone);
+          await reportProgress(phone, 'Đang gõ SĐT vào ô tìm kiếm...');
         
         let status = 'Không có';
         let name = '-';
@@ -526,6 +528,18 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     }
 });
 
+async function reportProgress(phone, stepName) {
+    chrome.storage.local.set({ 
+        kscl_bulk_msg_result: { 
+            phone: phone, 
+            status: 'PROGRESS', 
+            step: stepName,
+            time: new Date().toISOString() 
+        } 
+    });
+    await sleep(200);
+}
+
 async function processBulkMsgQueue(isContinuation = false) {
     if (bulkMsgQueue.length === 0) {
         chrome.storage.local.set({ kscl_bulk_msg_result: { status: 'DONE' } });
@@ -563,6 +577,7 @@ async function processBulkMsgQueue(isContinuation = false) {
     
     let phone = bulkMsgQueue[0];
     let msgStatus = 'FAILED';
+      await reportProgress(phone, 'Đang chuẩn bị tìm kiếm SĐT...');
     
     try {
         let clearBtn = document.querySelector('.search-clear, .btn-clear, i.fa-close, [icon="close"], .close-search');
@@ -571,6 +586,7 @@ async function processBulkMsgQueue(isContinuation = false) {
         await sleep(300);
         
         setNativeValue(searchInput, phone);
+          await reportProgress(phone, 'Đang gõ SĐT vào ô tìm kiếm...');
         
         let targetItem = null;
         let card = null;
@@ -636,6 +652,7 @@ async function processBulkMsgQueue(isContinuation = false) {
         if (card) {
             // Click to open chat
             card.click();
+            await reportProgress(phone, 'Đã tìm thấy, đang mở đoạn chat...');
             await sleep(1500); // Wait for chat to load
             
             let chatInput = document.querySelector('#richInput, .chat-input, [contenteditable="true"]');
@@ -654,6 +671,7 @@ async function processBulkMsgQueue(isContinuation = false) {
                 
                 // If we have an attachment, try to paste it
                 if (currentBulkAttachment) {
+                  await reportProgress(phone, 'Đang tải file đính kèm vào bộ nhớ...');
                     try {
                         let res = await fetch(currentBulkAttachment.data);
                         let blob = await res.blob();
@@ -668,7 +686,8 @@ async function processBulkMsgQueue(isContinuation = false) {
                             cancelable: true
                         });
                         chatInput.dispatchEvent(pasteEvent);
-                        await sleep(1500); // Wait for Zalo preview modal to appear or attach
+                          await reportProgress(phone, 'Đã dán file đính kèm, đang chờ Zalo upload...');
+                        await sleep(3500); // Wait for Zalo preview modal to appear or attach and finish uploading image
                         
                         // Wait a bit more if Zalo shows a modal for image
                         let sendModalBtn = document.querySelector('.modal-content .btn-primary, .ReactModalPortal .btn-primary');
@@ -706,7 +725,8 @@ async function processBulkMsgQueue(isContinuation = false) {
                     }
                     
                     // 0. Force a space if empty to wake up React's Send Button state
-                    if (currentBulkMsg === '' && currentBulkAttachment) {
+                    await reportProgress(phone, 'Đang chuẩn bị bấm Gửi...');
+                      if (currentBulkMsg === '' && currentBulkAttachment) {
                         document.execCommand('insertText', false, ' ');
                         chatInput.dispatchEvent(new Event('input', { bubbles: true }));
                         await sleep(300);
@@ -783,7 +803,8 @@ async function processBulkMsgQueue(isContinuation = false) {
                     }
                 }
                 
-                msgStatus = 'SUCCESS';
+                await reportProgress(phone, 'Đã bấm Gửi xong!');
+                  msgStatus = 'SUCCESS';
                 await sleep(1000); // Wait after sending
             }
         }
@@ -869,6 +890,7 @@ async function processInviteQueue() {
     
     let phone = inviteQueue[0];
     let msgStatus = 'FAILED';
+      await reportProgress(phone, 'Đang chuẩn bị tìm kiếm SĐT...');
     
     try {
         // Clear input first
@@ -879,6 +901,7 @@ async function processInviteQueue() {
         
         // Type phone number
         setNativeValue(searchInput, phone);
+          await reportProgress(phone, 'Đang gõ SĐT vào ô tìm kiếm...');
         
         let targetItem = null;
         
@@ -921,7 +944,8 @@ async function processInviteQueue() {
             if (cb) {
                 try { cb.click(); } catch(e){}
             }
-            msgStatus = 'SUCCESS';
+            await reportProgress(phone, 'Đã bấm Gửi xong!');
+                  msgStatus = 'SUCCESS';
             await sleep(500); // Wait for checkbox animation
         }
         
@@ -1002,6 +1026,7 @@ async function processAutocareQueue() {
     
     let phone = autocareQueue[0];
     let msgStatus = 'FAILED';
+      await reportProgress(phone, 'Đang chuẩn bị tìm kiếm SĐT...');
     
     try {
         let clearBtn = document.querySelector('.search-clear, .btn-clear, i.fa-close, [icon="close"], .close-search');
@@ -1010,6 +1035,7 @@ async function processAutocareQueue() {
         await sleep(300);
         
         setNativeValue(searchInput, phone);
+          await reportProgress(phone, 'Đang gõ SĐT vào ô tìm kiếm...');
         
         let targetItem = null;
         let card = null;
@@ -1054,6 +1080,7 @@ async function processAutocareQueue() {
         if (card) {
             // Click to open profile or chat
             card.click();
+            await reportProgress(phone, 'Đã tìm thấy, đang mở đoạn chat...');
             await sleep(1500); // Wait for chat/profile to load
             
             // Look for 'Kết bạn' button in the chat header or main view
@@ -1088,7 +1115,8 @@ async function processAutocareQueue() {
                 for (let cb of confirmBtns) {
                     if (cb.innerText && cb.innerText.toLowerCase().includes('kết bạn')) {
                         cb.click();
-                        msgStatus = 'SUCCESS';
+                        await reportProgress(phone, 'Đã bấm Gửi xong!');
+                  msgStatus = 'SUCCESS';
                         break;
                     }
                 }
