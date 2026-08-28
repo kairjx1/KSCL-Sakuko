@@ -46,15 +46,21 @@ window.addEventListener('message', (event) => {
             chrome.storage.local.set({ kscl_cmd_stop_bulk_msg: Date.now() });
         }
         if (event.data && event.data.type === 'CMD_START_BULK_MSG') {
-            chrome.storage.local.set({ kscl_cmd_bulk_msg: event.data.payload });
+            let p = event.data.payload;
+            p._ts = Date.now(); // Force local change
+            chrome.storage.local.set({ kscl_cmd_bulk_msg: p });
         }
         
         if (event.data && event.data.type === 'CMD_START_INVITE') {
-            chrome.storage.local.set({ kscl_cmd_invite: event.data.payload });
+            let p = event.data.payload;
+            p._ts = Date.now(); // Force local change
+            chrome.storage.local.set({ kscl_cmd_invite: p });
         }
         
         if (event.data && event.data.type === 'CMD_START_AUTOCARE') {
-            chrome.storage.local.set({ kscl_cmd_autocare: event.data.payload });
+            let p = event.data.payload;
+            p._ts = Date.now(); // Force local change
+            chrome.storage.local.set({ kscl_cmd_autocare: p });
         }
     });
     
