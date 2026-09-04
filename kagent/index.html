@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KAgent</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  /* KAgent — deep navy palette (inspired by AGS quality) */
+  --bg:    #0b1020;
+  --bg2:   #0e1628;
+  --bg3:   #141e35;
+  --bg4:   #1c2844;
+  --border: rgba(255,255,255,.1);
+  --border2: rgba(255,255,255,.06);
+  --text:  rgba(255,255,255,.92);
+  --text2: rgba(255,255,255,.45);
+  --text3: rgba(255,255,255,.28);
+  /* Brand accent — KAgent violet */
+  --accent:  #a78bfa;
+  --accent2: #7c3aed;
+  --accent-dim: rgba(167,139,250,.12);
+  --accent-glow: rgba(167,139,250,.25);
+  /* Status colors */
+  --green: #4ade80;
+  --green-bg: rgba(74,222,128,.1);
+  --red:   #ff6b8b;
+  --red-bg: rgba(255,107,139,.1);
+  --yellow:#fbbf24;
+  --cyan:  #57e3ff;
+  /* Layout */
+  --sidebar-w: 260px;
+  --top-h: 46px;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── TOP BAR ── */
+#topbar{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:0 14px;height:var(--top-h);display:flex;align-items:center;gap:10px;flex-shrink:0;
+  user-select:none;
+}
+#topbar .logo{
+  font-weight:800;font-size:15px;
+  background:linear-gradient(135deg,#a78bfa,#60a5fa);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  letter-spacing:.5px;
+}
+#topbar .version{font-size:10px;color:var(--text3);margin-top:1px}
+#topbar .tagline{font-size:11px;color:var(--text2);margin-left:2px;font-style:italic}
+#topbar .spacer{flex:1}
+#topbar .ram-badge{
+  font-size:11px;color:var(--text2);background:var(--bg3);
+  padding:3px 10px;border-radius:12px;border:1px solid var(--border);
+  display:flex;align-items:center;gap:4px;
+}
+#btn-remote{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer}
+#btn-remote:hover{border-color:var(--accent);color:var(--accent)}
+/* Agent mode toggle */
+#agent-mode-toggle{
+  display:flex;align-items:center;gap:0;border-radius:6px;overflow:hidden;
+  border:1px solid var(--border);font-size:11px;cursor:pointer;flex-shrink:0;
+}
+#agent-mode-toggle .mode-opt{
+  padding:4px 10px;background:var(--bg3);color:var(--text2);
+  transition:all .15s;white-space:nowrap;user-select:none;
+}
+#agent-mode-toggle .mode-opt.active-safe{background:#1e3a2f;color:#4ade80;border-right:1px solid var(--border)}
+#agent-mode-toggle .mode-opt.active-auto{background:#3a1e1e;color:#f87171;}
+#agent-mode-toggle .mode-opt:hover:not(.active-safe):not(.active-auto){background:var(--bg4);color:var(--text)}
+/* Auth */
+#user-badge{display:flex;align-items:center;gap:6px;cursor:pointer;padding:3px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);font-size:11px;color:var(--text2);transition:all .15s}
+#user-badge:hover{border-color:var(--accent);color:var(--text)}
+#user-badge .uavatar{width:20px;height:20px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0}
+#user-badge .uavatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+#btn-login{background:var(--accent);color:#fff;border:none;padding:4px 12px;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600}
+#btn-login:hover{background:var(--accent2)}
+
+/* ── LAYOUT ── */
+#main{display:flex;flex:1;overflow:hidden}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:var(--sidebar-w);min-width:var(--sidebar-w);
+  background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+#sidebar-project{
+  padding:10px 10px 6px;border-bottom:1px solid var(--border);
+}
+#sidebar-project select{
+  width:100%;background:var(--bg3);color:var(--text);border:1px solid var(--border);
+  padding:6px 8px;border-radius:7px;font-size:12px;cursor:pointer;
+  font-family:inherit;
+}
+#btn-new-chat{
+  margin:8px 8px 4px;padding:9px 12px;border-radius:8px;
+  border:none;background:linear-gradient(135deg,#7c3aed,#4f46e5);
+  color:#fff;font-size:12px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:all .15s;box-shadow:0 2px 12px rgba(124,58,237,.3);
+  letter-spacing:.2px;
+}
+#btn-new-chat:hover{box-shadow:0 4px 20px rgba(124,58,237,.5);transform:translateY(-1px)}
+#chat-list{flex:1;overflow-y:auto;padding:4px 6px}
+.chat-item{
+  display:flex;align-items:center;gap:8px;padding:8px 8px;border-radius:8px;
+  cursor:pointer;font-size:12px;color:var(--text2);transition:all .12s;margin-bottom:2px;
+  border:1px solid transparent;
+}
+.chat-item:hover{background:var(--bg3);color:var(--text);border-color:var(--border2)}
+.chat-item.active{
+  background:var(--accent-dim);color:var(--text);
+  border-color:rgba(167,139,250,.2);
+}
+.chat-item .dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+  background:var(--bg4);border:1px solid rgba(255,255,255,.2);
+}
+.chat-item .dot.running{
+  background:var(--green);border-color:var(--green);
+  box-shadow:0 0 6px var(--green);animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.chat-item .dot.stopped{background:rgba(255,255,255,.15);border-color:transparent}
+.chat-item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.chat-item.active .name{color:var(--accent);font-weight:500}
+.chat-item .actions{display:none;gap:2px;flex-shrink:0}
+.chat-item:hover .actions{display:flex}
+.chat-item .actions button{
+  background:none;border:none;color:var(--text3);cursor:pointer;
+  padding:2px 5px;border-radius:4px;font-size:11px;transition:all .1s;
+}
+.chat-item .actions button:hover{color:var(--red);background:var(--red-bg)}
+
+#sidebar-bottom{
+  padding:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text2);
+  background:var(--bg2);
+}
+#sidebar-bottom .user-info{display:flex;align-items:center;gap:8px}
+#sidebar-bottom .avatar{
+  width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,#7c3aed,#4f46e5);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:#fff;flex-shrink:0;
+}
+
+/* ── MAIN CONTENT ── */
+#content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* Agent selector bar */
+#agent-bar{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:8px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+#agent-bar .chat-title{
+  font-size:13px;font-weight:600;color:var(--text);flex:1;cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px;
+}
+#agent-bar .chat-title:hover{color:var(--accent)}
+#agent-select{display:none} /* ẩn, dùng pill thay */
+#btn-start{
+  background:linear-gradient(135deg,#16a34a,#059669);
+  color:#fff;border:none;padding:6px 16px;
+  border-radius:7px;font-size:12px;cursor:pointer;font-weight:600;
+  transition:all .15s;white-space:nowrap;
+  box-shadow:0 2px 8px rgba(22,163,74,.3);
+}
+#btn-start:hover{box-shadow:0 4px 14px rgba(22,163,74,.45);transform:translateY(-1px)}
+#btn-start.running{
+  background:linear-gradient(135deg,#be123c,#e11d48);
+  box-shadow:0 2px 8px rgba(225,29,72,.3);
+}
+#btn-start.running:hover{box-shadow:0 4px 14px rgba(225,29,72,.45)}
+.status-badge{
+  font-size:10px;padding:3px 10px;border-radius:12px;border:1px solid;white-space:nowrap;
+}
+.status-badge.running{
+  color:var(--green);border-color:rgba(74,222,128,.3);
+  background:var(--green-bg);
+}
+.status-badge.stopped{color:var(--text2);border-color:var(--border)}
+
+/* ── TERMINAL ── */
+#terminal-wrap{flex:1;overflow:hidden;position:relative;background:#0a0a0a}
+#terminal-out{
+  width:100%;height:100%;overflow-y:auto;overflow-x:hidden;
+  padding:10px 12px;font-family:'Cascadia Code','Fira Code','Consolas',monospace;
+  font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-all;
+  color:#d4d4d4;
+}
+#terminal-out::-webkit-scrollbar{width:5px}
+#terminal-out::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+/* Empty state */
+#empty-state{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:var(--text2);gap:12px;
+}
+#empty-state .big-icon{font-size:48px;opacity:.3}
+#empty-state h3{font-size:16px;font-weight:600;color:var(--text2)}
+#empty-state p{font-size:12px;text-align:center;max-width:280px;line-height:1.6}
+#empty-state .btn-start-big{
+  background:var(--accent);color:#fff;border:none;padding:10px 24px;
+  border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;margin-top:8px;
+}
+#empty-state .btn-start-big:hover{background:var(--accent2)}
+
+/* ── INPUT BAR ── */
+#input-bar{
+  background:var(--bg2);border-top:1px solid var(--border);
+  padding:10px 12px 8px;flex-shrink:0;
+}
+#input-row{display:flex;gap:8px;align-items:flex-end}
+#prompt-input{
+  flex:1;background:var(--bg3);color:var(--text);
+  border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;font-size:13px;font-family:inherit;
+  resize:none;outline:none;min-height:42px;max-height:180px;line-height:1.5;
+  transition:border-color .2s, box-shadow .2s;
+}
+#prompt-input:focus{
+  border-color:rgba(167,139,250,.5);
+  box-shadow:0 0 0 3px rgba(167,139,250,.1);
+}
+#prompt-input::placeholder{color:var(--text3)}
+#btn-send{
+  background:linear-gradient(135deg,#7c3aed,#4f46e5);
+  color:#fff;border:none;padding:10px 16px;
+  border-radius:10px;cursor:pointer;font-size:16px;
+  min-height:42px;transition:all .15s;
+  box-shadow:0 2px 8px rgba(124,58,237,.35);
+}
+#btn-send:hover{box-shadow:0 4px 16px rgba(124,58,237,.5);transform:translateY(-1px)}
+
+/* Keyboard shortcuts — AGS style */
+#kbd-row{
+  display:flex;gap:3px;margin-top:7px;flex-wrap:wrap;align-items:center;
+}
+.kbd{
+  background:rgba(167,139,250,.07);
+  border:1px solid rgba(167,139,250,.2);
+  color:var(--text2);
+  padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;
+  transition:all .12s;font-family:'Cascadia Code','Consolas',monospace;
+  user-select:none;letter-spacing:.2px;
+}
+.kbd:hover{
+  border-color:var(--accent);color:var(--accent);
+  background:var(--accent-dim);
+}
+.kbd.primary{
+  background:var(--accent-dim);border-color:rgba(167,139,250,.4);
+  color:var(--accent);font-weight:600;
+}
+.sep{color:var(--border);padding:0 1px;font-size:10px}
+
+/* ── PROMPT HISTORY PANEL ── */
+#history-panel{
+  display:none;position:absolute;bottom:100%;left:0;right:0;
+  background:var(--bg2);border:1px solid var(--border);border-bottom:none;
+  border-radius:8px 8px 0 0;max-height:220px;overflow-y:auto;z-index:100;
+}
+#history-panel.open{display:block}
+.history-item{
+  padding:7px 12px;font-size:12px;cursor:pointer;color:var(--text2);
+  border-bottom:1px solid var(--border);font-family:'Cascadia Code',monospace;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.history-item:hover{background:var(--bg3);color:var(--text)}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:80px;right:20px;background:var(--bg3);border:1px solid var(--border);
+  color:var(--text);padding:8px 14px;border-radius:6px;font-size:12px;
+  opacity:0;transition:opacity .2s;pointer-events:none;z-index:9999;
+}
+#toast.show{opacity:1}
+
+/* ── NO CHAT SELECTED ── */
+#no-chat{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:10px;color:var(--text2);
+}
+#no-chat .icon{font-size:40px;opacity:.25}
+
+/* scrollbar global */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+
+/* ── MODAL overlay ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);
+  animation:fadeIn .15s ease;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-box{
+  background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+  width:480px;max-width:92vw;overflow:hidden;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+  animation:slideUp .18s ease;
+}
+@keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-header{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.modal-header h3{font-size:14px;font-weight:700;color:var(--text)}
+.modal-header .close-btn{background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;padding:0;line-height:1;transition:color .1s}
+.modal-header .close-btn:hover{color:var(--text)}
+.modal-body{padding:20px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+
+/* ── Agent list trong modal — AGS style ── */
+.agent-grid{display:flex;flex-direction:column;gap:4px;margin-top:10px}
+.agent-card{
+  border:1px solid var(--border);border-radius:9px;padding:10px 14px;
+  cursor:pointer;transition:all .15s;position:relative;
+  background:transparent;display:flex;align-items:center;gap:12px;
+}
+.agent-card:hover:not(.disabled){
+  border-color:rgba(167,139,250,.3);background:var(--accent-dim);
+}
+.agent-card.selected{
+  border-color:rgba(167,139,250,.5);background:var(--accent-dim);
+}
+.agent-card.disabled{opacity:.4;cursor:default}
+.agent-card .ac-icon{
+  font-size:20px;flex-shrink:0;width:36px;height:36px;
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  background:var(--bg3);border:1px solid var(--border);
+}
+.agent-card .ac-info{flex:1;min-width:0}
+.agent-card .ac-name{font-size:12px;font-weight:600;color:var(--text)}
+.agent-card.disabled .ac-name{color:var(--text2)}
+.agent-card .ac-desc{font-size:10px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.agent-card .ac-status{
+  font-size:10px;padding:2px 8px;border-radius:8px;flex-shrink:0;font-weight:500;
+}
+.agent-card:not(.disabled) .ac-status{
+  color:var(--green);background:var(--green-bg);border:1px solid rgba(74,222,128,.2);
+}
+.agent-card.disabled .ac-status{
+  color:var(--text3);background:var(--bg3);border:1px solid var(--border);
+}
+.agent-card .ac-check{display:none}
+
+/* ── Install hint ── */
+.install-hint{
+  background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:8px;
+  padding:10px 12px;margin-top:10px;font-size:11px;color:var(--text2);display:none;
+}
+.install-hint.show{display:block}
+.install-hint code{color:var(--accent);background:var(--bg3);padding:2px 6px;border-radius:4px;font-family:'Cascadia Code',monospace;font-size:10px}
+
+/* ── Section label ── */
+.section-label{font-size:11px;color:var(--text2);font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.section-label span.num{
+  width:18px;height:18px;border-radius:50%;background:var(--accent);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:10px;color:#fff;font-weight:700;flex-shrink:0;
+}
+
+/* Form input trong modal */
+.modal-input{
+  width:100%;background:var(--bg3);color:var(--text);border:1px solid var(--border);
+  border-radius:6px;padding:8px 12px;font-size:13px;font-family:inherit;outline:none;
+  transition:border-color .15s;
+}
+.modal-input:focus{border-color:var(--accent)}
+
+/* Primary button */
+.btn-primary{
+  background:var(--accent);color:#fff;border:none;padding:9px 20px;
+  border-radius:7px;font-size:13px;cursor:pointer;font-weight:600;transition:all .15s;
+}
+.btn-primary:hover{background:var(--accent2)}
+.btn-ghost{
+  background:transparent;color:var(--text2);border:1px solid var(--border);
+  padding:9px 16px;border-radius:7px;font-size:13px;cursor:pointer;transition:all .15s;
+}
+.btn-ghost:hover{border-color:var(--text2);color:var(--text)}
+
+/* Agent badge trong agent-bar */
+.agent-pill{
+  display:flex;align-items:center;gap:6px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:20px;padding:4px 10px 4px 7px;
+  cursor:pointer;font-size:12px;color:var(--text2);transition:all .15s;
+}
+.agent-pill:hover{border-color:var(--accent);color:var(--text)}
+.agent-pill .ap-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<!-- Update banner -->
+<div id="update-banner" style="display:none;background:linear-gradient(90deg,#dc2626,#b91c1c);color:#fff;text-align:center;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.2px;flex-shrink:0;z-index:1000" onclick="doUpdate()">
+  ⬆ Có bản cập nhật KAgent <span id="update-ver"></span> — bấm để cập nhật ngay (trang sẽ tải lại)
+</div>
+
+<div id="topbar">
+  <span class="logo">KAgent</span>
+  <span class="version">v1.0.0</span>
+  <span class="tagline">AI Agent Manager</span>
+  <div class="spacer"></div>
+  <!-- Agent mode toggle -->
+  <div id="agent-mode-toggle" title="Chế độ chạy agent">
+    <div class="mode-opt active-safe" id="mode-safe" onclick="setAgentMode('safe')">🔒 Hỏi lại</div>
+    <div class="mode-opt" id="mode-auto" onclick="setAgentMode('auto')">⚡ Tự động</div>
+  </div>
+  <!-- Working dir (hiện khi auto mode) -->
+  <div id="workdir-wrap" style="display:none;align-items:center;gap:4px;background:var(--bg3);border:1px solid rgba(248,113,113,.3);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text2);cursor:pointer;max-width:160px;overflow:hidden" title="Thư mục làm việc — click để đổi" onclick="pickWorkDir()">
+    <span style="flex-shrink:0">📁</span>
+    <span id="workdir-label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">C:\</span>
+  </div>
+  <span class="ram-badge" id="ram-info">Đang kết nối...</span>
+  <!-- Auth area -->
+  <a id="btn-admin" href="/admin.html" style="display:none;background:var(--bg3);border:1px solid var(--border);color:var(--yellow);padding:4px 10px;border-radius:5px;font-size:11px;text-decoration:none;font-weight:600">⚙️ Admin</a>
+  <button id="btn-login" onclick="loginLark()" style="display:none">🔑 Đăng nhập Lark</button>
+  <div id="user-badge" style="display:none" onclick="showUserMenu()">
+    <div class="uavatar" id="user-avatar">?</div>
+    <span id="user-name">...</span>
+    <span style="font-size:9px;opacity:.5">▾</span>
+  </div>
+</div>
+
+<div id="main" style="display:none">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div id="sidebar-project">
+      <select id="project-select" onchange="loadChats()"></select>
+    </div>
+
+    <button id="btn-new-chat" onclick="openNewChatModal()">
+      <span>＋</span> Thêm cuộc chat
+    </button>
+
+    <div id="chat-list"></div>
+
+    <div id="sidebar-bottom">
+      <div class="user-info" id="sidebar-user-info">
+        <div class="avatar" id="sb-avatar">K</div>
+        <div>
+          <div style="color:var(--text);font-size:12px;font-weight:600" id="sb-name">KAgent Local</div>
+          <div style="font-size:10px;color:var(--text2)" id="sb-role">Local</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+    <!-- No chat selected -->
+    <div id="no-chat" style="display:flex">
+      <div class="icon">🤖</div>
+      <div style="font-size:14px;font-weight:600">Chọn hoặc tạo cuộc chat</div>
+      <div style="font-size:12px">Bấm "Thêm cuộc chat" để bắt đầu</div>
+    </div>
+
+    <!-- Chat view (hidden by default) -->
+    <div id="chat-view" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+      <!-- Agent bar -->
+      <div id="agent-bar">
+        <span class="chat-title" id="chat-title" ondblclick="renameChat()">Cuộc chat mới</span>
+        <!-- Agent pill (thay select) -->
+        <div class="agent-pill" id="agent-pill" onclick="showAgentPicker()" title="Đổi agent">
+          <span class="ap-dot" id="ap-dot" style="background:#7c3aed"></span>
+          <span id="ap-name">Claude Code</span>
+          <span style="font-size:9px;opacity:.5;margin-left:2px">▾</span>
+        </div>
+        <!-- hidden select để backward compat -->
+        <select id="agent-select" style="display:none"></select>
+        <span class="status-badge stopped" id="status-badge">Chưa chạy</span>
+        <button id="btn-start" onclick="toggleAgent()">▶ Khởi động</button>
+      </div>
+
+      <!-- Terminal -->
+      <div id="terminal-wrap">
+        <div id="terminal-out"></div>
+        <div id="empty-state">
+          <div class="big-icon">⚡</div>
+          <h3>Sẵn sàng</h3>
+          <p>Bấm "Khởi động" để chạy agent hoặc gõ prompt và nhấn Enter.</p>
+          <button class="btn-start-big" onclick="toggleAgent()">▶ Khởi động Agent</button>
+        </div>
+      </div>
+
+      <!-- Input bar -->
+      <div id="input-bar" style="position:relative">
+        <div id="history-panel"></div>
+        <div id="input-row">
+          <textarea id="prompt-input" placeholder="Prompt (Enter = gửi, Shift+Enter = xuống dòng)…" rows="1"
+            onkeydown="handleKeydown(event)" oninput="autoResize(this)"></textarea>
+          <button id="btn-send" onclick="sendPrompt()" title="Gửi">↵</button>
+        </div>
+        <div id="kbd-row">
+          <span class="kbd primary" onclick="sendKey('\t')">Tab</span>
+          <span class="kbd" onclick="sendKey('1\r')">1</span>
+          <span class="kbd" onclick="sendKey('2\r')">2</span>
+          <span class="kbd" onclick="sendKey('3\r')">3</span>
+          <span class="sep">|</span>
+          <span class="kbd" onclick="sendKey('y\r')">Y</span>
+          <span class="kbd" onclick="sendKey('n\r')">N</span>
+          <span class="sep">|</span>
+          <span class="kbd" onclick="sendKey('\x1b')">Esc</span>
+          <span class="kbd" onclick="sendKey('\x03')">^C</span>
+          <span class="kbd primary" onclick="sendKey('\r')">↵</span>
+          <span class="sep">|</span>
+          <span class="kbd" onclick="sendKey('\x1b[D')">◀</span>
+          <span class="kbd" onclick="sendKey('\x1b[A')">▲</span>
+          <span class="kbd" onclick="sendKey('\x1b[B')">▼</span>
+          <span class="kbd" onclick="sendKey('\x1b[C')">▶</span>
+          <span class="kbd" onclick="sendKey('\x7f')">⌫</span>
+          <span class="sep">|</span>
+          <span class="kbd" onclick="toggleHistory()">📋 Lịch sử</span>
+          <span class="sep">|</span>
+          <span class="kbd" onclick="toggleKimTiem()" id="btn-kim-tiem" title="Kim Tiêm — Inject module vào chat">💉 Kim Tiêm</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- KIM TIÊM PANEL -->
+<div id="kim-tiem-panel" style="display:none;position:fixed;bottom:80px;right:16px;z-index:500;width:310px;background:#151515;border:1px solid #2a2a2a;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.6);overflow:hidden">
+  <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:12px;font-weight:700;color:#7c3aed">💉 Kim Tiêm</span>
+    <span style="font-size:10px;color:#22c55e;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);padding:2px 8px;border-radius:10px" id="kt-auto-label">● 0/0 modules active</span>
+    <button onclick="toggleKimTiem()" style="background:none;border:none;color:#9a9a9a;cursor:pointer;font-size:14px;padding:0 2px">✕</button>
+  </div>
+  <!-- Giải thích ngắn -->
+  <div style="padding:8px 14px;background:rgba(124,58,237,.06);border-bottom:1px solid #1e1e1e;font-size:10px;color:#9a9a9a;line-height:1.5">
+    ✅ <strong style="color:#a78bfa">Modules đang bật</strong> tự động inject vào mỗi prompt qua <code style="color:#7c3aed">--system</code> — Claude nhận được nhưng không in ra.<br>
+    Dùng checkbox để bật/tắt từng module.
+  </div>
+  <div id="kt-list" style="max-height:320px;overflow-y:auto;padding:8px">
+    <div style="text-align:center;padding:20px;color:#9a9a9a;font-size:12px">Đang tải...</div>
+  </div>
+  <div style="padding:8px 14px;border-top:1px solid #2a2a2a;display:flex;gap:6px">
+    <button onclick="toggleAllModules(true)" style="flex:1;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:#22c55e;padding:5px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600">✅ Bật tất cả</button>
+    <button onclick="toggleAllModules(false)" style="flex:1;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#ef4444;padding:5px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600">⭕ Tắt tất cả</button>
+    <a href="/admin.html" target="_blank" style="flex:0;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);color:#a78bfa;padding:5px 10px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600;text-decoration:none;display:flex;align-items:center">⚙️</a>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;z-index:9000;background:var(--bg);
+  align-items:center;justify-content:center;flex-direction:column;gap:0">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:48px 40px;
+    width:360px;display:flex;flex-direction:column;align-items:center;gap:20px;box-shadow:0 24px 64px rgba(0,0,0,.6)">
+    <!-- Logo -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:4px">
+      <div style="font-size:40px">🤖</div>
+      <div style="font-size:22px;font-weight:800;color:var(--accent);letter-spacing:.5px">KAgent</div>
+      <div style="font-size:12px;color:var(--text2)">AI Agent Manager — KSCL Vietnam</div>
+    </div>
+
+    <!-- Email/pass form -->
+    <div style="width:100%;display:flex;flex-direction:column;gap:10px" id="login-form">
+      <div style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:2px">Đăng nhập tài khoản Admin</div>
+      <input id="login-email" type="email" placeholder="Email (email@sakuko.vn)"
+        style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 12px;
+        border-radius:8px;font-size:13px;outline:none;width:100%;transition:border-color .15s"
+        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
+      <div style="position:relative">
+        <input id="login-password" type="password" placeholder="Mật khẩu"
+          style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 12px;
+          border-radius:8px;font-size:13px;outline:none;width:100%;transition:border-color .15s"
+          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+          onkeydown="if(event.key==='Enter')doEmailLogin()">
+      </div>
+      <div id="login-error" style="color:var(--red);font-size:11px;text-align:center;display:none"></div>
+      <button onclick="doEmailLogin()" id="btn-email-login"
+        style="background:var(--accent);color:#fff;border:none;padding:11px;border-radius:8px;
+        font-size:13px;font-weight:700;cursor:pointer;width:100%;transition:background .15s"
+        onmouseover="this.style.background='var(--accent2)'" onmouseout="this.style.background='var(--accent)'">
+        Vào hệ thống
+      </button>
+    </div>
+
+    <!-- Divider -->
+    <div style="width:100%;display:flex;align-items:center;gap:8px">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="font-size:11px;color:var(--text2)">hoặc</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+
+    <!-- Lark login -->
+    <button onclick="loginLark()" style="width:100%;background:#00d6b2;color:#fff;border:none;
+      padding:11px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s"
+      onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+      <span style="font-size:16px">🐦</span> Đăng nhập bằng Lark
+    </button>
+
+    <div style="font-size:10px;color:var(--text2);text-align:center;margin-top:4px">
+      KSCL Vietnam © 2025
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let ws = null;
+let currentChatId = null;
+let currentStatus = 'stopped';
+let projects = [];
+let chats = [];
+let agents = [];
+let promptHistory = [];
+let hasOutput = false;
+
+// ── WEBSOCKET ──
+function connect() {
+  ws = new WebSocket(`ws://${location.host}`);
+
+  ws.onopen = () => {
+    document.getElementById('ram-info').textContent = 'Đã kết nối';
+    if (currentChatId) joinChat(currentChatId);
+  };
+
+  ws.onclose = () => {
+    document.getElementById('ram-info').textContent = 'Mất kết nối — đang thử lại...';
+    setTimeout(connect, 2000);
+  };
+
+  ws.onmessage = ({ data }) => {
+    const msg = JSON.parse(data);
+    handleWsMessage(msg);
+  };
+}
+
+function send(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+}
+
+// ── Agent mode toggle ────────────────────────────────────────────────────────
+window._agentMode = 'safe';
+window._workDir = null;
+
+function setAgentMode(mode) {
+  window._agentMode = mode;
+  document.getElementById('mode-safe').className = 'mode-opt' + (mode === 'safe' ? ' active-safe' : '');
+  document.getElementById('mode-auto').className = 'mode-opt' + (mode === 'auto' ? ' active-auto' : '');
+  const ww = document.getElementById('workdir-wrap');
+  if (mode === 'auto') {
+    ww.style.display = 'flex';
+    if (!window._workDir) window._workDir = 'C:\\';
+    document.getElementById('workdir-label').textContent = window._workDir;
+    showToast('⚡ Tự động bật — Claude sẽ tự edit file, chạy lệnh trong thư mục đã chọn');
+  } else {
+    ww.style.display = 'none';
+    showToast('🔒 Hỏi lại — chỉ chat, không tự sửa file');
+  }
+}
+
+function pickWorkDir() {
+  const cur = window._workDir || 'C:\\';
+  const input = prompt('Nhập đường dẫn thư mục làm việc:', cur);
+  if (input && input.trim()) {
+    window._workDir = input.trim();
+    document.getElementById('workdir-label').textContent = window._workDir;
+    // Báo server đổi workDir cho session
+    send({ type: 'setWorkDir', path: window._workDir });
+    showToast('📁 Working dir: ' + window._workDir);
+  }
+}
+
+function handleWsMessage(msg) {
+  switch (msg.type) {
+    case 'history':
+      renderHistory(msg.messages);
+      break;
+    case 'output':
+      appendOutput(msg.data);
+      break;
+    case 'status':
+      setStatus(msg.status);
+      break;
+    case 'exit':
+      appendOutput(`\r\n\x1b[33m[KAgent] Agent đã thoát (code: ${msg.exitCode})\x1b[0m\r\n`);
+      setStatus('stopped');
+      break;
+    case 'error':
+      showToast('⚠️ ' + msg.message);
+      break;
+  }
+}
+
+// ── INIT ──
+async function init() {
+  connect();
+  agents = await fetch('/api/agents').then(r => r.json());
+  renderAgentSelect();
+  projects = await fetch('/api/projects').then(r => r.json());
+  renderProjects();
+  await loadChats();
+  promptHistory = await fetch('/api/prompt-history').then(r => r.json());
+}
+
+// ── PROJECTS ──
+function renderProjects() {
+  const sel = document.getElementById('project-select');
+  sel.innerHTML = projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+}
+
+async function loadChats() {
+  const pid = document.getElementById('project-select').value;
+  if (!pid) return;
+  chats = await fetch(`/api/projects/${pid}/chats`).then(r => r.json());
+  renderChatList();
+}
+
+// ── CHATS ──
+function renderChatList() {
+  const el = document.getElementById('chat-list');
+  if (!chats.length) {
+    el.innerHTML = '<div style="padding:12px;font-size:11px;color:var(--text2);text-align:center">Chưa có cuộc chat</div>';
+    return;
+  }
+  el.innerHTML = chats.map(c => `
+    <div class="chat-item ${c.id === currentChatId ? 'active' : ''}" onclick="selectChat('${c.id}')" data-id="${c.id}">
+      <div class="dot ${c.id === currentChatId && currentStatus === 'running' ? 'running' : 'stopped'}"></div>
+      <span class="name">${esc(c.name)}</span>
+      <div class="actions">
+        <button onclick="deleteChat(event,'${c.id}')" title="Xóa">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectChat(chatId) {
+  currentChatId = chatId;
+  const chat = chats.find(c => c.id === chatId);
+  if (!chat) return;
+
+  // Update UI
+  document.getElementById('no-chat').style.display = 'none';
+  document.getElementById('chat-view').style.display = 'flex';
+  document.getElementById('chat-title').textContent = chat.name;
+  document.getElementById('agent-select').value = chat.agent || 'claude';
+  updateAgentPill(chat.agent || 'claude');
+
+  // Clear terminal
+  document.getElementById('terminal-out').innerHTML = '';
+  hasOutput = false;
+  document.getElementById('empty-state').style.display = 'flex';
+
+  renderChatList();
+  joinChat(chatId);
+}
+
+function joinChat(chatId) {
+  send({ type: 'join', chatId });
+}
+
+async function newChat() {
+  const pid = document.getElementById('project-select').value;
+  const name = `Cuộc chat ${chats.length + 1}`;
+  const agent = document.getElementById('agent-select')?.value || 'claude';
+  const res = await fetch(`/api/projects/${pid}/chats`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ name, agent })
+  }).then(r => r.json());
+
+  await loadChats();
+  selectChat(res.id);
+}
+
+async function deleteChat(e, chatId) {
+  e.stopPropagation();
+  if (!confirm('Xóa cuộc chat này?')) return;
+  await fetch(`/api/chats/${chatId}`, { method: 'DELETE' });
+  if (currentChatId === chatId) {
+    currentChatId = null;
+    document.getElementById('no-chat').style.display = 'flex';
+    document.getElementById('chat-view').style.display = 'none';
+  }
+  await loadChats();
+}
+
+async function renameChat() {
+  const name = prompt('Tên mới:', document.getElementById('chat-title').textContent);
+  if (!name || !currentChatId) return;
+  await fetch(`/api/chats/${currentChatId}`, {
+    method: 'PATCH',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ name })
+  });
+  document.getElementById('chat-title').textContent = name;
+  const chat = chats.find(c => c.id === currentChatId);
+  if (chat) chat.name = name;
+  renderChatList();
+}
+
+// ── AGENTS ──
+function renderAgentSelect() {
+  const sel = document.getElementById('agent-select');
+  sel.innerHTML = agents.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+}
+
+function toggleAgent() {
+  if (!currentChatId) return showToast('Chọn cuộc chat trước');
+  if (currentStatus === 'running') {
+    send({ type: 'stop' });
+  } else {
+    const agent = document.getElementById('agent-select').value;
+    send({ type: 'start', agent });
+  }
+}
+
+function setStatus(status) {
+  currentStatus = status;
+  const badge = document.getElementById('status-badge');
+  const btn = document.getElementById('btn-start');
+
+  if (status === 'running') {
+    badge.textContent = 'Đang chạy';
+    badge.className = 'status-badge running';
+    btn.textContent = '■ Dừng';
+    btn.className = 'running';
+  } else {
+    badge.textContent = 'Chưa chạy';
+    badge.className = 'status-badge stopped';
+    btn.textContent = '▶ Khởi động';
+    btn.className = '';
+  }
+
+  // Update dot in sidebar
+  renderChatList();
+}
+
+// ── TERMINAL OUTPUT ──
+// ANSI color parser đơn giản
+function ansiToHtml(str) {
+  return str
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\x1b\[0m/g,'</span>')
+    .replace(/\x1b\[1m/g,'<span style="font-weight:bold">')
+    .replace(/\x1b\[31m/g,'<span style="color:#f87171">')
+    .replace(/\x1b\[32m/g,'<span style="color:#4ade80">')
+    .replace(/\x1b\[33m/g,'<span style="color:#fbbf24">')
+    .replace(/\x1b\[34m/g,'<span style="color:#60a5fa">')
+    .replace(/\x1b\[35m/g,'<span style="color:#c084fc">')
+    .replace(/\x1b\[36m/g,'<span style="color:#22d3ee">')
+    .replace(/\x1b\[37m/g,'<span style="color:#e4e4e4">')
+    .replace(/\x1b\[[0-9;]*m/g,'');
+}
+
+function appendOutput(data) {
+  const out = document.getElementById('terminal-out');
+  const empty = document.getElementById('empty-state');
+
+  if (!hasOutput) {
+    hasOutput = true;
+    empty.style.display = 'none';
+  }
+
+  // Tạo span với HTML parsed
+  const span = document.createElement('span');
+  span.innerHTML = ansiToHtml(data);
+  out.appendChild(span);
+
+  // Auto scroll
+  out.scrollTop = out.scrollHeight;
+}
+
+function renderHistory(messages) {
+  const out = document.getElementById('terminal-out');
+  out.innerHTML = '';
+  hasOutput = messages.length > 0;
+  document.getElementById('empty-state').style.display = hasOutput ? 'none' : 'flex';
+  messages.forEach(m => {
+    if (m.role === 'user') {
+      const span = document.createElement('span');
+      span.innerHTML = `<span style="color:#60a5fa">[Bạn] </span>${esc(m.content)}\r\n`;
+      out.appendChild(span);
+    } else {
+      appendOutput(m.content);
+    }
+  });
+  out.scrollTop = out.scrollHeight;
+}
+
+// ── INPUT ──
+function handleKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendPrompt();
+  }
+  if (e.key === 'ArrowUp' && e.ctrlKey) {
+    showHistory();
+  }
+}
+
+function sendPrompt() {
+  const input = document.getElementById('prompt-input');
+  const text = input.value.trim();
+  if (!text) return;
+  if (!currentChatId) return showToast('Chọn cuộc chat trước');
+
+  send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', workDir: window._workDir || null });
+  appendOutput(`\x1b[34m[Bạn] ${text}\x1b[0m\r\n`);
+  syncMessageToRelay(currentChatId, 'user', text);
+
+  input.value = '';
+  autoResize(input);
+  closeHistory();
+}
+
+function sendKey(key) {
+  if (!currentChatId) return showToast('Chọn cuộc chat trước');
+  send({ type: 'input', data: key });
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+
+// ── PROMPT HISTORY ──
+function toggleHistory() {
+  const panel = document.getElementById('history-panel');
+  if (panel.classList.contains('open')) closeHistory();
+  else showHistory();
+}
+
+function showHistory() {
+  const panel = document.getElementById('history-panel');
+  if (!promptHistory.length) {
+    panel.innerHTML = '<div class="history-item" style="color:var(--text2)">Chưa có lịch sử</div>';
+  } else {
+    panel.innerHTML = promptHistory.map(p =>
+      `<div class="history-item" onclick="useHistory(${JSON.stringify(p.content)})">${esc(p.content)}</div>`
+    ).join('');
+  }
+  panel.classList.add('open');
+}
+
+function closeHistory() {
+  document.getElementById('history-panel').classList.remove('open');
+}
+
+function useHistory(text) {
+  document.getElementById('prompt-input').value = text;
+  closeHistory();
+  document.getElementById('prompt-input').focus();
+}
+
+// ── UTILS ──
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── RELAY AUTH ──
+let RELAY_URL = '';
+let relayUser = null;
+
+async function initRelay() {
+  try {
+    const cfg = await fetch('/api/relay-config').then(r => r.json());
+    RELAY_URL = cfg.relayUrl;
+  } catch { return; }
+
+  // Kiểm tra đã login chưa
+  try {
+    const res = await fetch(`${RELAY_URL}/auth/me`, { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json();
+      relayUser = data.user;
+      showUserLoggedIn(relayUser);
+    } else {
+      showLoginButton();
+    }
+  } catch {
+    showLoginButton();
+  }
+}
+
+function showLoginButton() {
+  document.getElementById('btn-login').style.display = 'none';
+  document.getElementById('user-badge').style.display = 'none';
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function showUserLoggedIn(user) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main').style.display = 'flex';
+  document.getElementById('btn-login').style.display = 'none';
+  document.getElementById('user-badge').style.display = 'flex';
+  if (user.role === 'admin') document.getElementById('btn-admin').style.display = 'inline-flex';
+  document.getElementById('user-name').textContent = user.name || user.email || 'User';
+
+  // Avatar
+  const avatarEl = document.getElementById('user-avatar');
+  if (user.avatar_url) {
+    avatarEl.innerHTML = `<img src="${user.avatar_url}" onerror="this.parentElement.textContent='${(user.name||'U')[0].toUpperCase()}'">`;
+  } else {
+    avatarEl.textContent = (user.name || user.email || 'U')[0].toUpperCase();
+  }
+
+  // Sidebar
+  document.getElementById('sb-name').textContent = user.name || user.email;
+  document.getElementById('sb-role').textContent = user.role === 'admin' ? '👑 Admin' : '🔵 Online';
+  const sbAvatar = document.getElementById('sb-avatar');
+  sbAvatar.textContent = (user.name || 'U')[0].toUpperCase();
+  if (user.role === 'admin') sbAvatar.style.background = '#f59e0b';
+}
+
+async function doEmailLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('btn-email-login');
+
+  if (!email || !password) { errEl.textContent = 'Nhập email và mật khẩu'; errEl.style.display='block'; return; }
+  if (!RELAY_URL) { errEl.textContent = 'Chưa kết nối relay'; errEl.style.display='block'; return; }
+
+  btn.textContent = 'Đang đăng nhập...';
+  btn.disabled = true;
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch(`${RELAY_URL}/auth/login`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Sai email hoặc mật khẩu');
+    relayUser = data.user;
+    showUserLoggedIn(relayUser);
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.textContent = 'Vào hệ thống';
+    btn.disabled = false;
+  }
+}
+
+async function loginLark() {
+  if (!RELAY_URL) return showToast('Chưa kết nối relay');
+  try {
+    const res = await fetch(`${RELAY_URL}/auth/lark/url`).then(r => r.json());
+    window.location.href = res.url;
+  } catch {
+    showToast('Không lấy được URL đăng nhập');
+  }
+}
+
+function showUserMenu() {
+  if (!relayUser) return;
+  const choice = confirm(`Đăng xuất khỏi relay?\n(${relayUser.name || relayUser.email})`);
+  if (choice) logoutRelay();
+}
+
+async function logoutRelay() {
+  if (!RELAY_URL) return;
+  await fetch(`${RELAY_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
+  relayUser = null;
+  showLoginButton();
+  // Reset sidebar
+  document.getElementById('sb-name').textContent = 'KAgent Local';
+  document.getElementById('sb-role').textContent = 'Local';
+  document.getElementById('sb-avatar').textContent = 'K';
+  document.getElementById('sb-avatar').style.background = '';
+  showToast('Đã đăng xuất');
+}
+
+// ── RELAY MESSAGE SYNC ──
+// Gọi sau khi user gửi prompt thành công → sync lên relay
+async function syncMessageToRelay(chatId, role, content) {
+  if (!RELAY_URL || !relayUser) return;
+  // Cần relayChat mapping — dùng chatId local làm name
+  // Lấy hoặc tạo relay chat
+  const key = `relay_chat_${chatId}`;
+  let relayChatId = sessionStorage.getItem(key);
+  if (!relayChatId) {
+    try {
+      // Tạo chat mới trên relay
+      const chat = chats.find(c => c.id === chatId);
+      const res = await fetch(`${RELAY_URL}/api/chats`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: chat?.name || 'KAgent chat', agent: chat?.agent || 'claude' })
+      }).then(r => r.json());
+      if (res.id) {
+        relayChatId = res.id;
+        sessionStorage.setItem(key, relayChatId);
+      }
+    } catch { return; }
+  }
+  // Post message
+  fetch(`${RELAY_URL}/api/chats/${relayChatId}/messages`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role, content })
+  }).catch(() => {});
+}
+
+// ── START ──
+// ── KIM TIÊM PANEL ──────────────────────────────────────────────────────────
+let _ktModules = [];
+let _ktOpen = false;
+
+async function toggleKimTiem() {
+  const panel = document.getElementById('kim-tiem-panel');
+  _ktOpen = !_ktOpen;
+  panel.style.display = _ktOpen ? 'block' : 'none';
+  if (_ktOpen) await loadKimTiemModules();
+}
+
+async function loadKimTiemModules() {
+  const list = document.getElementById('kt-list');
+  // Nếu đã có data trong cache, render ngay không chờ fetch
+  if (_ktModules.length) renderKtList();
+  try {
+    // Thử /api/modules/all (trả về tất cả kể cả tắt), fallback về /api/modules
+    let mods;
+    try {
+      const r = await fetch(`${RELAY_URL}/api/modules/all`, { credentials: 'include' });
+      if (r.ok) mods = await r.json();
+    } catch {}
+    if (!mods) {
+      mods = await fetch(`${RELAY_URL}/api/modules`, { credentials: 'include' }).then(r => r.json());
+    }
+    _ktModules = Array.isArray(mods) ? mods : [];
+    if (!_ktModules.length) {
+      list.innerHTML = '<div style="text-align:center;padding:16px;color:#9a9a9a;font-size:12px">Chưa có module nào<br><a href="/admin.html" style="color:#7c3aed">Vào Admin để thêm</a></div>';
+      return;
+    }
+    renderKtList();
+  } catch (e) {
+    if (!_ktModules.length)
+      list.innerHTML = '<div style="color:#ef4444;font-size:11px;padding:12px">Lỗi tải modules</div>';
+  }
+}
+
+function renderKtList() {
+  const list = document.getElementById('kt-list');
+  list.innerHTML = _ktModules.map(m => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 6px;border-radius:7px;border:1px solid ${m.enabled ? 'rgba(124,58,237,.2)' : 'transparent'};background:${m.enabled ? 'rgba(124,58,237,.06)' : 'none'};margin-bottom:2px;transition:all .15s">
+      <!-- Toggle switch -->
+      <label style="cursor:pointer;flex-shrink:0;position:relative;width:32px;height:18px">
+        <input id="kt-cb-${m.id}" type="checkbox" ${m.enabled ? 'checked' : ''} onchange="toggleModuleKT('${m.id}', this.checked)"
+          style="opacity:0;width:0;height:0;position:absolute">
+        <span style="position:absolute;inset:0;border-radius:9px;background:${m.enabled ? '#7c3aed' : '#333'};transition:.2s;cursor:pointer">
+          <span style="position:absolute;top:2px;left:${m.enabled ? '16px' : '2px'};width:14px;height:14px;border-radius:50%;background:#fff;transition:.2s"></span>
+        </span>
+      </label>
+      <!-- Info — click vào tên cũng toggle (label bọc ngoài để click đúng checkbox) -->
+      <label for="kt-cb-${m.id}" style="flex:1;min-width:0;cursor:pointer;user-select:none">
+        <div style="font-size:11px;font-weight:600;color:${m.enabled ? '#c4b5fd' : '#555'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</div>
+        <div style="font-size:10px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">${m.description || '—'}</div>
+      </label>
+      <!-- Char count badge -->
+      <div style="font-size:9px;color:#444;flex-shrink:0;text-align:right">
+        ${m.system_prompt ? (m.system_prompt.length > 999 ? Math.round(m.system_prompt.length/1000)+'k' : m.system_prompt.length) + 'c' : '—'}
+      </div>
+    </div>
+  `).join('');
+
+  const activeCount = _ktModules.filter(m => m.enabled).length;
+  const label = document.getElementById('kt-auto-label');
+  label.textContent = `● ${activeCount}/${_ktModules.length} active`;
+  label.style.color = activeCount > 0 ? '#22c55e' : '#9a9a9a';
+  label.style.borderColor = activeCount > 0 ? 'rgba(34,197,94,.2)' : 'rgba(100,100,100,.2)';
+  label.style.background = activeCount > 0 ? 'rgba(34,197,94,.1)' : 'rgba(100,100,100,.1)';
+}
+
+async function toggleModuleKT(id, enabled) {
+  // Optimistic update UI ngay
+  const m = _ktModules.find(x => x.id === id);
+  if (!m) return;
+  m.enabled = enabled;
+  renderKtList();
+
+  try {
+    await fetch(`${RELAY_URL}/api/modules/${id}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ enabled })
+    });
+    showToast(enabled ? `✅ ${m.name} — đã bật` : `⭕ ${m.name} — đã tắt`);
+  } catch {
+    // Revert nếu lỗi
+    m.enabled = !enabled;
+    renderKtList();
+    showToast('Lỗi cập nhật', 'err');
+  }
+}
+
+async function toggleAllModules(enabled) {
+  const targets = _ktModules.filter(m => m.enabled !== enabled);
+  if (!targets.length) return showToast(enabled ? 'Tất cả đã bật' : 'Tất cả đã tắt');
+  targets.forEach(m => m.enabled = enabled);
+  renderKtList();
+  await Promise.all(targets.map(m =>
+    fetch(`${RELAY_URL}/api/modules/${m.id}`, {
+      method: 'PATCH', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ enabled })
+    }).catch(() => {})
+  ));
+  showToast(enabled ? `✅ Đã bật ${targets.length} modules` : `⭕ Đã tắt ${targets.length} modules`);
+}
+
+// Đóng panel khi click ngoài
+document.addEventListener('click', (e) => {
+  if (_ktOpen && !e.target.closest('#kim-tiem-panel') && !e.target.closest('#btn-kim-tiem')) {
+    _ktOpen = false;
+    document.getElementById('kim-tiem-panel').style.display = 'none';
+  }
+});
+
+init();
+// Kiểm tra relay auth sau khi page load (và sau khi redirect từ OAuth)
+initRelay();
+</script>
+
+<!-- ── MODAL TẠO CUỘC CHAT MỚI ── -->
+<div id="new-chat-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeNewChatModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>💬 Cuộc chat mới</h3>
+      <button class="close-btn" onclick="closeNewChatModal()">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+      <!-- 1. Tên -->
+      <div>
+        <div class="section-label"><span class="num">1</span> Tên cuộc chat</div>
+        <input id="nc-name" class="modal-input" type="text" placeholder="Cuộc chat mới…">
+      </div>
+      <!-- 2. Chọn agent -->
+      <div>
+        <div class="section-label"><span class="num">2</span> Chọn Agent <a href="/agents.html" target="_blank" style="font-size:10px;color:var(--accent);font-weight:400;margin-left:auto;text-decoration:none">⚙️ Quản lý Agents</a></div>
+        <div class="agent-grid" id="nc-agent-grid">
+          <!-- điền bằng JS -->
+        </div>
+        <!-- Install hint -->
+        <div class="install-hint" id="nc-install-hint">
+          <strong style="color:var(--red)">⚠️ Agent chưa được cài:</strong>
+          <span id="nc-install-name"></span><br>
+          Cài bằng lệnh: <code id="nc-install-cmd"></code>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeNewChatModal()">Đóng</button>
+      <button class="btn-primary" onclick="confirmNewChat()">Tạo cuộc chat</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── AGENT PICKER (mini dropdown) ── -->
+<div id="agent-picker" style="display:none;position:fixed;z-index:700;background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.5);padding:8px;min-width:180px">
+  <div id="agent-picker-list"></div>
+</div>
+
+<script>
+// ── NEW CHAT MODAL ──────────────────────────────────────────────────────────
+
+const AGENT_DEFS = [
+  {
+    id:'claude', name:'Claude Code', icon:'✳️', color:'#a78bfa',
+    installCmd:'npm install -g @anthropic-ai/claude-code',
+    installUrl:'https://claude.ai/download',
+    desc:'Anthropic Claude — agent AI code mạnh nhất'
+  },
+  {
+    id:'opencode', name:'OpenCode', icon:'◼', color:'#22c55e',
+    installCmd:'npm install -g opencode-ai',
+    installUrl:'https://opencode.ai',
+    desc:'Open-source AI coding agent đa model'
+  },
+  {
+    id:'antigravity', name:'AntiGravity', icon:'🅰', color:'#38bdf8',
+    installCmd:null, installUrl:'https://antigravity.dev',
+    desc:'AntiGravity CLI (agy) — agent đa năng'
+  },
+  {
+    id:'codex', name:'Codex CLI', icon:'⚡', color:'#fbbf24',
+    installCmd:'npm install -g @openai/codex',
+    installUrl:'https://github.com/openai/codex',
+    desc:'OpenAI Codex CLI — code với GPT-4o'
+  },
+  {
+    id:'cursor', name:'Cursor', icon:'🎯', color:'#60a5fa',
+    installCmd:null, installUrl:'https://cursor.sh',
+    desc:'Cursor Agent Mode — AI code editor'
+  },
+  {
+    id:'kiro', name:'KIRO', icon:'👻', color:'#c084fc',
+    installCmd:null, installUrl:'https://kiro.dev',
+    desc:'AWS KIRO — AI agent từ Amazon'
+  },
+  {
+    id:'grok', name:'Grok', icon:'🌀', color:'#06b6d4',
+    installCmd:null, installUrl:'https://grok.com',
+    desc:'xAI Grok — agent từ Elon Musk'
+  },
+  {
+    id:'gemini', name:'Gemini CLI', icon:'♊', color:'#34d399',
+    installCmd:'npm install -g @google/gemini-cli',
+    installUrl:'https://github.com/google-gemini/gemini-cli',
+    desc:'Google Gemini CLI — 1M token context'
+  },
+  {
+    id:'shell', name:'Shell', icon:'🖥', color:'#94a3b8',
+    installCmd:null, installUrl:null,
+    desc:'Chạy lệnh shell trực tiếp trên máy'
+  },
+];
+
+let _ncSelectedAgent = 'claude';
+let _installedAgents = new Set(['claude', 'shell']); // fallback
+
+async function openNewChatModal() {
+  // Lấy danh sách agent installed từ server
+  try {
+    const sysInfo = await fetch('/api/system-info').then(r => r.json()).catch(() => ({}));
+    _installedAgents = new Set(['shell']);
+    if (sysInfo.agents) {
+      for (const [id, info] of Object.entries(sysInfo.agents)) {
+        if (info.installed) _installedAgents.add(id);
+      }
+    }
+  } catch {}
+
+  // Set tên mặc định
+  document.getElementById('nc-name').value = `Cuộc chat ${(chats||[]).length + 1}`;
+  _ncSelectedAgent = 'claude';
+  renderAgentGrid();
+  document.getElementById('new-chat-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('nc-name').select(), 100);
+}
+
+function closeNewChatModal() {
+  document.getElementById('new-chat-modal').style.display = 'none';
+  document.getElementById('nc-install-hint').classList.remove('show');
+}
+
+function renderAgentGrid() {
+  const grid = document.getElementById('nc-agent-grid');
+  grid.innerHTML = AGENT_DEFS.map(a => {
+    const installed = _installedAgents.has(a.id);
+    const sel = _ncSelectedAgent === a.id;
+    return `
+      <div class="agent-card ${sel ? 'selected' : ''} ${!installed ? 'disabled' : ''}"
+           onclick="selectAgent('${a.id}', ${installed})"
+           style="${sel ? `border-color:${a.color}40;background:${a.color}12` : ''}">
+        <div class="ac-icon" style="${installed ? `border-color:${a.color}30;color:${a.color}` : ''}">${a.icon}</div>
+        <div class="ac-info">
+          <div class="ac-name" style="${sel ? `color:${a.color}` : ''}">${a.name}</div>
+          <div class="ac-desc">${a.desc || ''}</div>
+        </div>
+        <div class="ac-status" style="${sel && installed ? `color:${a.color};background:${a.color}18;border-color:${a.color}40` : ''}">${installed ? (sel ? '✓ Đã chọn' : '● Sẵn sàng') : '✗ Chưa cài'}</div>
+      </div>`;
+  }).join('');
+}
+
+function selectAgent(id, installed) {
+  const a = AGENT_DEFS.find(x => x.id === id);
+  if (!a) return;
+  _ncSelectedAgent = id;
+  renderAgentGrid();
+
+  const hint = document.getElementById('nc-install-hint');
+  if (!installed) {
+    const cmd = a.installCmd || null;
+    const url = a.installUrl || null;
+    document.getElementById('nc-install-name').textContent = a.name;
+    document.getElementById('nc-install-cmd').textContent = cmd
+      ? cmd
+      : url ? 'Tải từ ' + url : 'Xem tài liệu chính thức';
+    hint.classList.add('show');
+  } else {
+    hint.classList.remove('show');
+  }
+}
+
+async function confirmNewChat() {
+  const name = document.getElementById('nc-name').value.trim() || `Cuộc chat mới`;
+  const pid = document.getElementById('project-select').value;
+  const res = await fetch(`/api/projects/${pid}/chats`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ name, agent: _ncSelectedAgent })
+  }).then(r => r.json());
+  closeNewChatModal();
+  await loadChats();
+  selectChat(res.id);
+}
+
+// ── AGENT PICKER (đổi agent trong chat đang chọn) ──────────────────────────
+function showAgentPicker() {
+  const picker = document.getElementById('agent-picker');
+  const pill = document.getElementById('agent-pill');
+  const rect = pill.getBoundingClientRect();
+  picker.style.top = (rect.bottom + 6) + 'px';
+  picker.style.left = rect.left + 'px';
+
+  const currentAgent = document.getElementById('agent-select').value;
+  picker.querySelector('#agent-picker-list').innerHTML = AGENT_DEFS
+    .filter(a => _installedAgents.has(a.id))
+    .map(a => `
+      <div onclick="pickAgent('${a.id}')"
+           style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:12px;${currentAgent===a.id ? 'background:rgba(124,58,237,.12);color:#a78bfa' : 'color:var(--text2)'};"
+           onmouseover="this.style.background='var(--bg3)'"
+           onmouseout="this.style.background='${currentAgent===a.id ? 'rgba(124,58,237,.12)' : 'transparent'}'">
+        <span>${a.icon}</span>
+        <span style="flex:1">${a.name}</span>
+        ${currentAgent===a.id ? '<span style="font-size:9px">✓</span>' : ''}
+      </div>`).join('');
+
+  picker.style.display = 'block';
+  setTimeout(() => document.addEventListener('click', closePicker, {once:true}), 10);
+}
+
+function closePicker() {
+  document.getElementById('agent-picker').style.display = 'none';
+}
+
+function pickAgent(id) {
+  const sel = document.getElementById('agent-select');
+  sel.value = id;
+  updateAgentPill(id);
+  closePicker();
+}
+
+function updateAgentPill(agentId) {
+  const a = AGENT_DEFS.find(x => x.id === agentId) || AGENT_DEFS[0];
+  document.getElementById('ap-name').textContent = a.name;
+  document.getElementById('ap-dot').style.background = a.color;
+}
+</script>
+
+<!-- ── BÉ KAGENT WIDGET ── -->
+<style>
+#bk-wrap{position:fixed;bottom:22px;right:22px;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;gap:10px;font-family:'Segoe UI',system-ui,sans-serif;cursor:grab}
+#bk-wrap:active{cursor:grabbing}
+#bk-tip{
+  background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;font-size:11px;
+  padding:5px 10px;border-radius:20px;white-space:nowrap;
+  box-shadow:0 4px 16px rgba(124,58,237,.5);cursor:pointer;user-select:none;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+#bk-wrap:hover #bk-tip{opacity:1;pointer-events:auto}
+#bk-btn{
+  width:40px;height:40px;border-radius:50%;
+  background:linear-gradient(135deg,#a78bfa,#7c3aed);
+  border:2px solid rgba(167,139,250,.4);
+  box-shadow:0 2px 12px rgba(124,58,237,.5);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:20px;transition:transform .2s,box-shadow .2s,opacity .2s;user-select:none;
+  opacity:0.75;
+}
+#bk-btn:hover{transform:scale(1.1);box-shadow:0 4px 20px rgba(124,58,237,.8);opacity:1}
+#bk-wrap:hover #bk-btn{opacity:1}
+
+#bk-popup{
+  position:fixed;bottom:90px;right:22px;z-index:9999;
+  width:340px;height:460px;
+  background:#0e1628;border:1px solid rgba(167,139,250,.25);border-radius:16px;
+  overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 0 1px rgba(167,139,250,.1);
+  display:none;flex-direction:column;animation:bk-slide-up .25s ease;
+}
+@keyframes bk-slide-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+#bk-header{
+  background:linear-gradient(135deg,#7c3aed,#a78bfa);
+  padding:12px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;
+  cursor:grab;user-select:none;
+}
+#bk-header:active{cursor:grabbing}
+#bk-avatar{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+#bk-title{flex:1}
+#bk-title strong{display:block;font-size:14px;color:#fff;font-weight:700}
+#bk-title span{font-size:11px;color:rgba(255,255,255,.75)}
+.bk-hbtn{cursor:pointer;color:rgba(255,255,255,.8);font-size:16px;line-height:1;padding:4px 6px;border-radius:4px;transition:background .15s}
+.bk-hbtn:hover{background:rgba(255,255,255,.2);color:#fff}
+
+#bk-messages{
+  flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;
+  scrollbar-width:thin;scrollbar-color:rgba(167,139,250,.3) transparent;
+}
+#bk-messages::-webkit-scrollbar{width:4px}
+#bk-messages::-webkit-scrollbar-thumb{background:rgba(167,139,250,.3);border-radius:2px}
+.bk-msg{max-width:82%;padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.5;word-break:break-word}
+.bk-msg.bot{background:#1c2844;color:rgba(255,255,255,.9);border-bottom-left-radius:4px;align-self:flex-start}
+.bk-msg.user{background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border-bottom-right-radius:4px;align-self:flex-end}
+.bk-msg.typing{color:rgba(255,255,255,.45);font-style:italic}
+.bk-dots{display:inline-block;animation:bk-dot 1.2s infinite}
+@keyframes bk-dot{0%,100%{opacity:.3}50%{opacity:1}}
+
+#bk-input-row{
+  display:flex;gap:8px;padding:10px 12px;
+  border-top:1px solid rgba(167,139,250,.15);flex-shrink:0;background:#0b1020;
+}
+#bk-input{
+  flex:1;background:#1c2844;border:1px solid rgba(167,139,250,.25);
+  border-radius:8px;padding:8px 12px;color:#fff;font-size:13px;
+  outline:none;transition:border-color .2s;resize:none;font-family:inherit;
+}
+#bk-input:focus{border-color:rgba(167,139,250,.6)}
+#bk-send{
+  background:linear-gradient(135deg,#7c3aed,#a78bfa);border:none;border-radius:8px;
+  color:#fff;width:36px;flex-shrink:0;cursor:pointer;font-size:16px;
+  transition:opacity .2s;display:flex;align-items:center;justify-content:center;
+}
+#bk-send:hover{opacity:.85}
+#bk-send:disabled{opacity:.4;cursor:not-allowed}
+</style>
+
+<div id="bk-wrap">
+  <div id="bk-tip" onclick="bkToggle()">Hỏi Bé KAgent nhé! 🤖</div>
+  <div id="bk-btn" onclick="bkToggle()">🤖</div>
+</div>
+
+<div id="bk-popup">
+  <div id="bk-header" onmousedown="bkDragStart(event)">
+    <div id="bk-avatar">🤖</div>
+    <div id="bk-title">
+      <strong>Bé KAgent</strong>
+      <span>AI trợ lý · luôn sẵn sàng</span>
+    </div>
+    <div class="bk-hbtn" onclick="bkMinimize()" title="Thu nhỏ">─</div>
+    <div class="bk-hbtn" onclick="bkClose()" title="Đóng">✕</div>
+  </div>
+  <div id="bk-messages">
+    <div class="bk-msg bot">Xin chào! Mình là <strong>Bé KAgent</strong> 🤖<br><br>Mình có thể giúp bạn về:<br>• Cách dùng KAgent & các agent<br>• Kim Tiêm system prompt<br>• Lệnh code, debug, hỏi đáp<br><br>Bạn cần hỗ trợ gì?</div>
+  </div>
+  <div id="bk-input-row">
+    <textarea id="bk-input" rows="1" placeholder="Hỏi Bé KAgent..." onkeydown="bkKey(event)"></textarea>
+    <button id="bk-send" onclick="bkSend()">➤</button>
+  </div>
+</div>
+
+<script>
+// ── Bé KAgent Widget (REST, draggable, minimizable) ──────────────────────────
+let bkOpen = false, bkMinimized = false, bkTypingEl = null, bkStreaming = false;
+
+function bkToggle(){ bkOpen ? (bkMinimized ? bkRestore() : bkClose()) : bkShow(); }
+
+function bkShow(){
+  bkOpen = true; bkMinimized = false;
+  const pop = document.getElementById('bk-popup');
+  pop.style.display = 'flex';
+  pop.style.height = '460px';
+  document.getElementById('bk-messages').style.display = 'flex';
+  document.getElementById('bk-input-row').style.display = 'flex';
+  document.getElementById('bk-tip').style.display = 'none';
+  setTimeout(() => document.getElementById('bk-input').focus(), 100);
+}
+
+function bkClose(){
+  bkOpen = false; bkMinimized = false;
+  document.getElementById('bk-popup').style.display = 'none';
+  document.getElementById('bk-tip').style.display = 'block';
+}
+
+function bkMinimize(){
+  bkMinimized = true;
+  const pop = document.getElementById('bk-popup');
+  pop.style.height = 'auto';
+  document.getElementById('bk-messages').style.display = 'none';
+  document.getElementById('bk-input-row').style.display = 'none';
+}
+
+function bkRestore(){
+  bkMinimized = false;
+  const pop = document.getElementById('bk-popup');
+  pop.style.height = '460px';
+  document.getElementById('bk-messages').style.display = 'flex';
+  document.getElementById('bk-input-row').style.display = 'flex';
+  setTimeout(() => document.getElementById('bk-input').focus(), 100);
+}
+
+// ── Drag ──────────────────────────────────────────────────────────────────────
+let bkDrag = null;
+function bkDragStart(e){
+  if(e.target.classList.contains('bk-hbtn')) return;
+  const pop = document.getElementById('bk-popup');
+  const rect = pop.getBoundingClientRect();
+  bkDrag = { startX: e.clientX - rect.left, startY: e.clientY - rect.top };
+  document.addEventListener('mousemove', bkDragMove);
+  document.addEventListener('mouseup', bkDragEnd);
+}
+function bkDragMove(e){
+  if(!bkDrag) return;
+  const pop = document.getElementById('bk-popup');
+  const x = e.clientX - bkDrag.startX;
+  const y = e.clientY - bkDrag.startY;
+  pop.style.left = Math.max(0, Math.min(x, innerWidth - pop.offsetWidth)) + 'px';
+  pop.style.top  = Math.max(0, Math.min(y, innerHeight - pop.offsetHeight)) + 'px';
+  pop.style.right = 'auto'; pop.style.bottom = 'auto';
+}
+function bkDragEnd(){ bkDrag = null; document.removeEventListener('mousemove',bkDragMove); document.removeEventListener('mouseup',bkDragEnd); }
+
+// ── Chat (REST streaming) ─────────────────────────────────────────────────────
+function bkAppendBot(text, el){
+  const msgs = document.getElementById('bk-messages');
+  if(el){ el.innerHTML = text.replace(/\n/g,'<br>'); }
+  else{
+    const div = document.createElement('div');
+    div.className = 'bk-msg bot'; div.innerHTML = text.replace(/\n/g,'<br>');
+    msgs.appendChild(div); return div;
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function bkAddTyping(){
+  bkRemoveTyping();
+  const div = document.createElement('div');
+  div.className = 'bk-msg bot typing';
+  div.innerHTML = 'Bé KAgent đang nghĩ <span class="bk-dots">...</span>';
+  document.getElementById('bk-messages').appendChild(div);
+  document.getElementById('bk-messages').scrollTop = 99999;
+  bkTypingEl = div;
+}
+function bkRemoveTyping(){ if(bkTypingEl){ bkTypingEl.remove(); bkTypingEl=null; } }
+
+async function bkSend(){
+  const inp = document.getElementById('bk-input');
+  const text = inp.value.trim();
+  if(!text || bkStreaming) return;
+
+  const msgs = document.getElementById('bk-messages');
+  const udiv = document.createElement('div');
+  udiv.className = 'bk-msg user'; udiv.textContent = text;
+  msgs.appendChild(udiv); msgs.scrollTop = msgs.scrollHeight;
+
+  inp.value = ''; inp.style.height = 'auto';
+  document.getElementById('bk-send').disabled = true;
+  bkStreaming = true;
+  bkAddTyping();
+
+  try {
+    const res = await fetch('/api/bekagent', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ message: text }),
+    });
+    if(!res.ok || !res.body) throw new Error('Server lỗi ' + res.status);
+
+    bkRemoveTyping();
+    const botDiv = document.createElement('div');
+    botDiv.className = 'bk-msg bot'; msgs.appendChild(botDiv);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let full = '';
+    while(true){
+      const { done, value } = await reader.read();
+      if(done) break;
+      full += decoder.decode(value, { stream:true });
+      botDiv.innerHTML = full.replace(/\n/g,'<br>');
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+    if(!full.trim()) botDiv.textContent = '(Không có phản hồi)';
+  } catch(err) {
+    bkRemoveTyping();
+    const ediv = document.createElement('div');
+    ediv.className = 'bk-msg bot';
+    ediv.textContent = '⚠ ' + err.message;
+    msgs.appendChild(ediv);
+  }
+
+  bkStreaming = false;
+  document.getElementById('bk-send').disabled = false;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function bkKey(e){
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); bkSend(); }
+  const ta = document.getElementById('bk-input');
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 80) + 'px';
+}
+
+// ── Drag nút avatar ──────────────────────────────────────────────────────────
+(function(){
+  const wrap = document.getElementById('bk-wrap');
+  let drag = null, moved = false;
+  wrap.addEventListener('mousedown', e => {
+    drag = { startX: e.clientX, startY: e.clientY, origRight: parseInt(getComputedStyle(wrap).right)||22, origBottom: parseInt(getComputedStyle(wrap).bottom)||22 };
+    moved = false;
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    e.preventDefault();
+  });
+  function onMove(e){
+    if(!drag) return;
+    const dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
+    if(Math.abs(dx)>3||Math.abs(dy)>3) moved = true;
+    const newRight = Math.max(0, drag.origRight - dx);
+    const newBottom = Math.max(0, drag.origBottom - dy);
+    wrap.style.right = Math.min(newRight, window.innerWidth - wrap.offsetWidth) + 'px';
+    wrap.style.bottom = Math.min(newBottom, window.innerHeight - wrap.offsetHeight) + 'px';
+    wrap.style.left = 'auto'; wrap.style.top = 'auto';
+  }
+  function onUp(e){
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    if(moved){
+      // Chặn click sau drag
+      const block = ev => { ev.stopImmediatePropagation(); ev.preventDefault(); };
+      document.addEventListener('click', block, { capture:true, once:true });
+    }
+    drag = null; moved = false;
+  }
+})();
+
+// ── Auto-update check ────────────────────────────────────────────────────────
+async function checkUpdate() {
+  try {
+    const r = await fetch('/api/check-update');
+    const d = await r.json();
+    if (d.available) {
+      document.getElementById('update-ver').textContent = `v${d.latestVersion}`;
+      document.getElementById('update-banner').style.display = 'block';
+    }
+  } catch {}
+}
+async function doUpdate() {
+  const banner = document.getElementById('update-banner');
+  banner.textContent = '⏳ Đang tải bản cập nhật...';
+  banner.style.cursor = 'default';
+  try {
+    const r = await fetch('/api/do-update', { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) {
+      banner.textContent = '✅ Cập nhật xong! Đang tải lại...';
+      setTimeout(() => location.reload(true), 1200);
+    } else {
+      banner.textContent = '⚠ Lỗi: ' + (d.msg || 'Không update được');
+    }
+  } catch (e) {
+    banner.textContent = '⚠ Lỗi kết nối: ' + e.message;
+  }
+}
+// Check update ngay khi load + mỗi 30 phút
+checkUpdate();
+setInterval(checkUpdate, 30 * 60 * 1000);
+
+// tooltip ẩn mặc định, hiện khi hover (CSS)
+</script>
+</body>
+</html>

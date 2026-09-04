@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Quản lý Agents — KAgent</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0b1020;--bg2:#0e1628;--bg3:#141e35;--bg4:#1c2844;
+  --border:rgba(255,255,255,.1);--border2:rgba(255,255,255,.06);
+  --text:rgba(255,255,255,.92);--text2:rgba(255,255,255,.45);--text3:rgba(255,255,255,.28);
+  --accent:#a78bfa;--accent2:#7c3aed;--accent-dim:rgba(167,139,250,.12);
+  --green:#4ade80;--green-bg:rgba(74,222,128,.1);
+  --red:#ff6b8b;--red-bg:rgba(255,107,139,.1);
+  --yellow:#fbbf24;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+
+#topbar{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:0 20px;height:46px;display:flex;align-items:center;gap:12px;
+}
+#topbar .logo{font-weight:800;font-size:15px;background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#topbar .sep{color:var(--border);font-size:14px}
+#topbar .page-title{font-size:13px;color:var(--text2);font-weight:500}
+#topbar .spacer{flex:1}
+#topbar a{color:var(--text2);font-size:12px;text-decoration:none;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);transition:all .15s}
+#topbar a:hover{border-color:var(--accent);color:var(--accent)}
+
+.container{max-width:860px;margin:0 auto;padding:28px 20px}
+h1{font-size:18px;font-weight:700;margin-bottom:6px}
+.subtitle{font-size:12px;color:var(--text2);margin-bottom:28px}
+
+.section{margin-bottom:32px}
+.section-title{
+  font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;
+  letter-spacing:.8px;margin-bottom:12px;display:flex;align-items:center;gap:8px;
+}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.agent-list{display:flex;flex-direction:column;gap:8px}
+
+.agent-row{
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px;display:flex;align-items:center;gap:14px;
+  transition:border-color .15s;
+}
+.agent-row.installed{border-color:rgba(74,222,128,.15)}
+.agent-row.installed:hover{border-color:rgba(74,222,128,.3)}
+.agent-row.not-installed{opacity:.75}
+.agent-row.not-installed:hover{border-color:var(--border);opacity:1}
+.agent-row.gui-only{border-color:rgba(251,191,36,.12)}
+
+.ag-icon{
+  width:40px;height:40px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:20px;background:var(--bg3);border:1px solid var(--border);
+  flex-shrink:0;
+}
+.ag-body{flex:1;min-width:0}
+.ag-name{font-size:13px;font-weight:700;margin-bottom:2px}
+.ag-desc{font-size:11px;color:var(--text2);line-height:1.5}
+.ag-meta{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ag-cmd{
+  font-family:'Cascadia Code','Consolas',monospace;font-size:10px;
+  background:var(--bg3);border:1px solid var(--border2);color:var(--text2);
+  padding:2px 7px;border-radius:4px;
+}
+.ag-url a{font-size:10px;color:var(--accent);text-decoration:none}
+.ag-url a:hover{text-decoration:underline}
+
+.ag-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;min-width:110px}
+.badge{
+  font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;
+  border:1px solid;white-space:nowrap;
+}
+.badge.ok{color:var(--green);border-color:rgba(74,222,128,.3);background:var(--green-bg)}
+.badge.err{color:var(--red);border-color:rgba(255,107,139,.3);background:var(--red-bg)}
+.badge.warn{color:var(--yellow);border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.08)}
+
+.install-box{
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;
+  margin-top:8px;font-size:11px;
+}
+.install-box .install-title{color:var(--text2);margin-bottom:6px;font-weight:600}
+.install-box code{
+  display:block;background:var(--bg4);color:var(--accent);font-family:'Cascadia Code','Consolas',monospace;
+  padding:7px 10px;border-radius:6px;font-size:11px;margin-top:4px;word-break:break-all;
+  cursor:pointer;transition:background .15s;
+}
+.install-box code:hover{background:var(--accent-dim)}
+.install-box .hint{color:var(--text3);font-size:10px;margin-top:5px}
+
+.copy-toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  padding:8px 18px;border-radius:8px;font-size:12px;opacity:0;
+  transition:opacity .2s;pointer-events:none;z-index:999;
+}
+.copy-toast.show{opacity:1}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <span class="logo">KAgent</span>
+  <span class="sep">›</span>
+  <span class="page-title">Quản lý Agents</span>
+  <div class="spacer"></div>
+  <a href="/">← Quay lại</a>
+</div>
+
+<div class="container">
+  <h1>🤖 Quản lý Agents</h1>
+  <p class="subtitle">Danh sách các AI agent hỗ trợ · Trạng thái cài đặt được kiểm tra tự động trên máy bạn</p>
+
+  <div class="section">
+    <div class="section-title">Đã cài đặt</div>
+    <div class="agent-list" id="installed-list">
+      <div style="color:var(--text2);font-size:12px;padding:16px 0;text-align:center">Đang kiểm tra...</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Chưa cài đặt</div>
+    <div class="agent-list" id="not-installed-list">
+      <div style="color:var(--text2);font-size:12px;padding:16px 0;text-align:center">Đang kiểm tra...</div>
+    </div>
+  </div>
+</div>
+
+<div class="copy-toast" id="copy-toast">✅ Đã sao chép lệnh!</div>
+
+<script>
+const AGENT_INFO = {
+  claude:      { name:'Claude Code',  icon:'✳️',  color:'#a78bfa', desc:'Anthropic Claude — AI code agent mạnh nhất 2025. Hỗ trợ MCP, tool use, agentic loop không giới hạn.', guiOnlyNote:null },
+  opencode:    { name:'OpenCode',     icon:'◼',   color:'#22c55e', desc:'Open-source AI coding agent hỗ trợ Claude, GPT-4o, Gemini. Giao diện terminal đẹp, có sidebar file tree.', guiOnlyNote:null },
+  antigravity: { name:'AntiGravity',  icon:'🅰',  color:'#38bdf8', desc:'AntiGravity — AI agent đa năng với GUI và CLI (agy). Hỗ trợ nhiều model, có package manager.', guiOnlyNote:'Đã phát hiện qua app GUI. Cài thêm CLI để dùng trong KAgent.' },
+  codex:       { name:'Codex CLI',    icon:'⚡',  color:'#fbbf24', desc:'OpenAI Codex CLI — chạy code với GPT-4o trực tiếp trong terminal. Tự động sửa lỗi, viết test.', guiOnlyNote:null },
+  cursor:      { name:'Cursor',       icon:'🎯',  color:'#60a5fa', desc:'Cursor Agent Mode — AI code editor mạnh nhất. Có tab completion, Composer, Chat.', guiOnlyNote:'Cursor là GUI app. KAgent sẽ tự mở Cursor khi chọn agent này.' },
+  kiro:        { name:'KIRO',         icon:'👻',  color:'#c084fc', desc:'AWS KIRO — AI agent từ Amazon. Tích hợp sâu với AWS services, hỗ trợ multi-step task.', guiOnlyNote:'KIRO là GUI app. KAgent sẽ tự mở KIRO khi chọn agent này.' },
+  grok:        { name:'Grok',         icon:'🌀',  color:'#06b6d4', desc:'xAI Grok — AI từ Elon Musk. Truy cập real-time X/Twitter data, lý luận logic mạnh, hỗ trợ code.', guiOnlyNote:null },
+  gemini:      { name:'Gemini CLI',   icon:'♊',  color:'#34d399', desc:'Google Gemini CLI — 1M token context window. Xuất sắc phân tích codebase lớn, tài liệu dài.', guiOnlyNote:null },
+  shell:       { name:'Shell',        icon:'🖥',  color:'#94a3b8', desc:'Chạy lệnh shell trực tiếp. Không cần cài thêm, luôn sẵn sàng trên mọi máy.', guiOnlyNote:null },
+};
+
+async function load() {
+  const sysInfo = await fetch('/api/system-info').then(r=>r.json()).catch(()=>({}));
+  const agents = sysInfo.agents || {};
+
+  const installed = [], notInstalled = [];
+
+  for (const [id, server] of Object.entries(agents)) {
+    const info = AGENT_INFO[id] || { name: id, icon: '🤖', color: '#888', desc: '', guiOnlyNote: null };
+    const row = buildRow(id, info, server);
+    if (server.installed) installed.push(row);
+    else notInstalled.push(row);
+  }
+
+  // add agents not in server info (grok etc)
+  for (const [id, info] of Object.entries(AGENT_INFO)) {
+    if (agents[id]) continue;
+    const row = buildRow(id, info, { installed: false, cmd: id, installCmd: null, installUrl: info.installUrl || null });
+    notInstalled.push(row);
+  }
+
+  document.getElementById('installed-list').innerHTML = installed.length
+    ? installed.join('')
+    : '<div style="color:var(--text2);font-size:12px;text-align:center;padding:16px">Chưa có agent nào</div>';
+
+  document.getElementById('not-installed-list').innerHTML = notInstalled.length
+    ? notInstalled.join('')
+    : '<div style="color:var(--green);font-size:12px;text-align:center;padding:16px">Tất cả đã cài! 🎉</div>';
+}
+
+function buildRow(id, info, server) {
+  const installed = server.installed;
+  const guiOnly = server.guiOnly;
+  const cls = installed ? (guiOnly ? 'gui-only' : 'installed') : 'not-installed';
+
+  const badge = installed
+    ? (guiOnly
+        ? `<span class="badge warn">⚠ GUI only</span>`
+        : `<span class="badge ok">✓ Sẵn sàng</span>`)
+    : `<span class="badge err">✗ Chưa cài</span>`;
+
+  let installSection = '';
+  if (!installed && (server.installCmd || server.installUrl)) {
+    const cmd = server.installCmd ? `<code onclick="copyCmd(this)">${esc(server.installCmd)}</code><div class="hint">Click để sao chép lệnh</div>` : '';
+    const url = server.installUrl ? `<div class="hint"><a href="${server.installUrl}" target="_blank" style="color:var(--accent)">📎 Tải về tại ${server.installUrl}</a></div>` : '';
+    installSection = `<div class="install-box"><div class="install-title">Cách cài:</div>${cmd}${url}</div>`;
+  }
+
+  if (guiOnly && info.guiOnlyNote) {
+    installSection = `<div class="install-box"><div class="install-title">Lưu ý:</div><div style="color:var(--yellow);font-size:11px;margin-top:4px">${info.guiOnlyNote}</div></div>`;
+  }
+
+  return `
+    <div class="agent-row ${cls}">
+      <div class="ag-icon" style="border-color:${info.color}30;color:${info.color}">${info.icon}</div>
+      <div class="ag-body">
+        <div class="ag-name" style="color:${installed ? info.color : 'var(--text2)'}">${info.name}</div>
+        <div class="ag-desc">${info.desc}</div>
+        <div class="ag-meta">
+          <span class="ag-cmd">cmd: ${esc(server.cmd || id)}</span>
+          ${server.installUrl ? `<span class="ag-url"><a href="${server.installUrl}" target="_blank">🔗 Trang chủ</a></span>` : ''}
+        </div>
+        ${installSection}
+      </div>
+      <div class="ag-right">${badge}</div>
+    </div>`;
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function copyCmd(el) {
+  navigator.clipboard.writeText(el.textContent).then(() => {
+    const t = document.getElementById('copy-toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  });
+}
+
+load();
+</script>
+</body>
+</html>

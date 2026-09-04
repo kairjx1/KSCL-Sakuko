@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KAgent Admin</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d0d0d;--bg2:#151515;--bg3:#1e1e1e;--bg4:#252525;
+  --border:#2a2a2a;--text:#e4e4e4;--text2:#9a9a9a;
+  --accent:#7c3aed;--accent2:#6d28d9;
+  --green:#10b981;--red:#ef4444;--yellow:#f59e0b;--blue:#3b82f6;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* TOPBAR */
+#topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;height:44px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+#topbar .logo{font-weight:800;font-size:15px;color:var(--accent)}
+#topbar .back{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:4px 12px;border-radius:5px;font-size:12px;cursor:pointer;text-decoration:none}
+#topbar .back:hover{border-color:var(--accent);color:var(--accent)}
+#topbar .spacer{flex:1}
+#topbar .user-info{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px}
+#topbar .user-info .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+
+/* TABS */
+#tab-bar{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;padding:0 16px;gap:2px;flex-shrink:0}
+.tab{padding:10px 16px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;user-select:none}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* CONTENT */
+#content{flex:1;overflow-y:auto;padding:20px}
+#content::-webkit-scrollbar{width:5px}
+#content::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+.panel{display:none}
+.panel.active{display:block}
+
+/* SECTION */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-title{font-size:15px;font-weight:700;color:var(--text)}
+.section-sub{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* CARDS */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;transition:border-color .15s}
+.card:hover{border-color:var(--border)}
+.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+.card-name{font-size:13px;font-weight:700;color:var(--text)}
+.card-desc{font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:10px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.card-actions{display:flex;gap:6px;flex-shrink:0}
+
+/* TAGS */
+.tag{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+.tag.enabled{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.tag.disabled{background:rgba(154,154,154,.1);color:var(--text2);border:1px solid var(--border)}
+.tag.admin{background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3)}
+.tag.user{background:rgba(59,130,246,.1);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
+
+/* BUTTONS */
+.btn{border:none;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{background:#059669}
+.btn-danger{background:transparent;color:var(--red);border:1px solid rgba(239,68,68,.3)}.btn-danger:hover{background:rgba(239,68,68,.1)}
+.btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm{padding:3px 8px;font-size:11px}
+
+/* TOGGLE */
+.toggle{position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--bg4);border:1px solid var(--border);border-radius:20px;transition:.2s}
+.toggle-slider:before{content:'';position:absolute;width:14px;height:14px;left:2px;top:2px;background:var(--text2);border-radius:50%;transition:.2s}
+.toggle input:checked+.toggle-slider{background:var(--green);border-color:var(--green)}
+.toggle input:checked+.toggle-slider:before{transform:translateX(16px);background:#fff}
+
+/* TABLE */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{background:var(--bg3);padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+td{padding:10px 14px;font-size:12px;border-top:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--bg3)}
+
+/* MODAL */
+#modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+#modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;width:500px;max-width:90vw;max-height:85vh;overflow-y:auto}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:16px;color:var(--text)}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.form-group input,.form-group textarea,.form-group select{
+  width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);
+  padding:9px 12px;border-radius:7px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s
+}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:100px;line-height:1.5}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:40px;color:var(--text2)}
+.empty .icon{font-size:36px;margin-bottom:10px;opacity:.4}
+.empty p{font-size:12px}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 16px;border-radius:8px;font-size:12px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9999}
+#toast.show{opacity:1}
+#toast.ok{border-color:var(--green);color:var(--green)}
+#toast.err{border-color:var(--red);color:var(--red)}
+
+/* STAT CARDS */
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.stat-value{font-size:24px;font-weight:800;color:var(--accent)}
+.stat-label{font-size:11px;color:var(--text2);margin-top:2px}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <span class="logo">⚙️ KAgent Admin</span>
+  <a href="/" class="back">← Về KAgent</a>
+  <div class="spacer"></div>
+  <div class="user-info">
+    <div class="dot"></div>
+    <span id="admin-name">Đang tải...</span>
+    <span style="color:var(--yellow);font-size:11px">👑 Admin</span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div id="tab-bar">
+  <div class="tab active" onclick="switchTab('modules')">🧩 Modules</div>
+  <div class="tab" onclick="switchTab('prompts')">📋 Prompt Library</div>
+  <div class="tab" onclick="switchTab('users')">👥 Users</div>
+  <div class="tab" onclick="switchTab('overview')">📊 Tổng quan</div>
+</div>
+
+<!-- CONTENT -->
+<div id="content">
+
+  <!-- ── MODULES ── -->
+  <div id="panel-modules" class="panel active">
+    <div class="section-header">
+      <div>
+        <div class="section-title">🧩 KAgent Modules</div>
+        <div class="section-sub">Kim tiêm — Inject system prompt vào agent khi chat</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModuleModal()">+ Thêm Module</button>
+    </div>
+    <div class="card-grid" id="modules-list">
+      <div class="empty"><div class="icon">🧩</div><p>Đang tải...</p></div>
+    </div>
+  </div>
+
+  <!-- ── PROMPTS ── -->
+  <div id="panel-prompts" class="panel">
+    <div class="section-header">
+      <div>
+        <div class="section-title">📋 Prompt Library</div>
+        <div class="section-sub">Thư viện câu lệnh mẫu cho team</div>
+      </div>
+      <button class="btn btn-primary" onclick="openPromptModal()">+ Thêm Prompt</button>
+    </div>
+    <div class="card-grid" id="prompts-list">
+      <div class="empty"><div class="icon">📋</div><p>Đang tải...</p></div>
+    </div>
+  </div>
+
+  <!-- ── USERS ── -->
+  <div id="panel-users" class="panel">
+    <div class="section-header">
+      <div>
+        <div class="section-title">👥 Quản lý Users</div>
+        <div class="section-sub">Xem danh sách, đổi role, tạo tài khoản email</div>
+      </div>
+      <button class="btn btn-primary" onclick="openCreateUserModal()">+ Tạo tài khoản</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tên</th><th>Email</th><th>Loại đăng nhập</th><th>Role</th><th>Lần cuối</th><th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="6" style="text-align:center;color:var(--text2)">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── OVERVIEW ── -->
+  <div id="panel-overview" class="panel">
+    <div class="section-title" style="margin-bottom:16px">📊 Tổng quan hệ thống</div>
+    <div class="stats" id="stats-grid">
+      <div class="stat"><div class="stat-value" id="stat-users">—</div><div class="stat-label">Tổng users</div></div>
+      <div class="stat"><div class="stat-value" id="stat-modules">—</div><div class="stat-label">Modules active</div></div>
+      <div class="stat"><div class="stat-value" id="stat-prompts">—</div><div class="stat-label">Prompts</div></div>
+      <div class="stat"><div class="stat-value" id="stat-chats">—</div><div class="stat-label">Tổng chats</div></div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:12px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">🔗 Relay Worker</div>
+      <div style="font-size:12px;color:var(--text2);line-height:2">
+        URL: <a id="relay-url-link" href="#" style="color:var(--accent)" target="_blank">—</a><br>
+        D1: kagent-db<br>
+        KV: SESSIONS (30 ngày)
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<!-- MODAL -->
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <!-- filled by JS -->
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const RELAY_URL = 'https://kagent-relay.kairjx1.workers.dev';
+let currentUser = null;
+
+// ── INIT ──
+async function init() {
+  // Check auth
+  try {
+    const res = await fetch(`${RELAY_URL}/auth/me`, { credentials: 'include' });
+    if (!res.ok) { window.location.href = '/'; return; }
+    const data = await res.json();
+    if (data.user.role !== 'admin') { alert('Bạn không có quyền Admin'); window.location.href = '/'; return; }
+    currentUser = data.user;
+    document.getElementById('admin-name').textContent = currentUser.name || currentUser.email;
+  } catch { window.location.href = '/'; return; }
+
+  loadModules();
+}
+
+// ── TABS ──
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById(`panel-${name}`).classList.add('active');
+
+  if (name === 'modules') loadModules();
+  else if (name === 'prompts') loadPrompts();
+  else if (name === 'users') loadUsers();
+  else if (name === 'overview') loadOverview();
+}
+
+// ── API ──
+async function api(path, opts = {}) {
+  const res = await fetch(`${RELAY_URL}${path}`, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    ...opts
+  });
+  return res.json();
+}
+
+// ── MODULES ──
+let _modules = []; // cache để lookup theo id
+
+async function loadModules() {
+  const mods = await api('/api/modules');
+  _modules = mods;
+  const el = document.getElementById('modules-list');
+  if (!mods.length) {
+    el.innerHTML = `<div class="empty"><div class="icon">🧩</div><p>Chưa có module nào<br>Bấm "+ Thêm Module" để tạo</p></div>`;
+    return;
+  }
+  el.innerHTML = mods.map(m => `
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-name">${esc(m.name)}</div>
+          <span class="tag ${m.enabled ? 'enabled' : 'disabled'}">${m.enabled ? '● Active' : '○ Tắt'}</span>
+        </div>
+        <label class="toggle" title="${m.enabled ? 'Tắt' : 'Bật'} module">
+          <input type="checkbox" ${m.enabled ? 'checked' : ''} onchange="toggleModule('${m.id}', this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="card-desc">${esc(m.description || 'Không có mô tả')}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        ${m.system_prompt
+          ? `<span style="font-size:10px;background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.25);border-radius:4px;padding:2px 7px;font-weight:600">📝 ${m.system_prompt.length.toLocaleString()} ký tự</span>`
+          : '<span style="font-size:10px;color:var(--text2)">Chưa có prompt</span>'}
+        <span style="font-size:10px;color:var(--text2)">Inject vào mỗi chat</span>
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editModuleById('${m.id}')">✏️ Sửa</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteModule('${m.id}')">🗑️ Xóa</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function editModuleById(id) {
+  const m = _modules.find(x => x.id === id);
+  if (m) openModuleModal(m);
+}
+
+async function toggleModule(id, enabled) {
+  await api(`/api/modules/${id}`, { method: 'PATCH', body: JSON.stringify({ enabled }) });
+  toast(enabled ? '✅ Đã bật module' : '⭕ Đã tắt module');
+}
+
+async function deleteModule(id) {
+  if (!confirm('Xóa module này?')) return;
+  await api(`/api/modules/${id}`, { method: 'DELETE' });
+  toast('🗑️ Đã xóa', 'ok');
+  loadModules();
+}
+
+function openModuleModal(mod = null) {
+  document.getElementById('modal-box').innerHTML = `
+    <h3>${mod ? '✏️ Sửa Module' : '+ Thêm Module mới'}</h3>
+    <div class="form-group"><label>Tên module *</label>
+      <input id="f-name" value="${esc(mod?.name || '')}" placeholder="VD: KAgent System, Quy trình KSCL..."></div>
+    <div class="form-group"><label>Mô tả</label>
+      <input id="f-desc" value="${esc(mod?.description || '')}" placeholder="Module này làm gì?"></div>
+    <div class="form-group"><label>System Prompt (inject vào agent)</label>
+      <textarea id="f-prompt" rows="6" placeholder="Nhập system prompt sẽ được inject vào mỗi chat...">${esc(mod?.system_prompt || '')}</textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="saveModule('${mod?.id || ''}')">
+        ${mod ? '💾 Lưu thay đổi' : '+ Tạo Module'}
+      </button>
+    </div>
+  `;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('f-name').focus();
+}
+
+function editModule(mod) { openModuleModal(mod); }
+
+async function saveModule(id) {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { toast('Nhập tên module', 'err'); return; }
+  const body = {
+    name,
+    description: document.getElementById('f-desc').value.trim(),
+    system_prompt: document.getElementById('f-prompt').value.trim()
+  };
+  if (id) {
+    await api(`/api/modules/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+    toast('✅ Đã cập nhật module', 'ok');
+  } else {
+    await api('/api/modules', { method: 'POST', body: JSON.stringify(body) });
+    toast('✅ Đã tạo module', 'ok');
+  }
+  closeModal();
+  loadModules();
+}
+
+// ── PROMPTS ──
+let _prompts = [];
+
+async function loadPrompts() {
+  const prompts = await api('/api/prompts');
+  _prompts = prompts;
+  const el = document.getElementById('prompts-list');
+  if (!prompts.length) {
+    el.innerHTML = `<div class="empty"><div class="icon">📋</div><p>Chưa có prompt nào<br>Bấm "+ Thêm Prompt" để tạo</p></div>`;
+    return;
+  }
+  el.innerHTML = prompts.map(p => `
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-name">${esc(p.title)}</div>
+          ${p.category ? `<span class="tag user">${esc(p.category)}</span>` : ''}
+        </div>
+        <label class="toggle">
+          <input type="checkbox" ${p.enabled ? 'checked' : ''} onchange="togglePrompt('${p.id}', this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="card-desc">${esc(p.content)}</div>
+      <div class="card-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editPromptById('${p.id}')">✏️ Sửa</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePrompt('${p.id}')">🗑️ Xóa</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function editPromptById(id) {
+  const p = _prompts.find(x => x.id === id);
+  if (p) openPromptModal(p);
+}
+
+async function togglePrompt(id, enabled) {
+  await api(`/api/prompts/${id}`, { method: 'PATCH', body: JSON.stringify({ enabled }) });
+  toast(enabled ? '✅ Đã bật prompt' : '⭕ Đã tắt prompt');
+}
+
+async function deletePrompt(id) {
+  if (!confirm('Xóa prompt này?')) return;
+  await api(`/api/prompts/${id}`, { method: 'DELETE' });
+  toast('🗑️ Đã xóa', 'ok');
+  loadPrompts();
+}
+
+function openPromptModal(p = null) {
+  document.getElementById('modal-box').innerHTML = `
+    <h3>${p ? '✏️ Sửa Prompt' : '+ Thêm Prompt mới'}</h3>
+    <div class="form-group"><label>Tiêu đề *</label>
+      <input id="f-title" value="${esc(p?.title || '')}" placeholder="VD: Viết email chuyên nghiệp..."></div>
+    <div class="form-group"><label>Danh mục</label>
+      <input id="f-cat" value="${esc(p?.category || '')}" placeholder="VD: Email, Báo cáo, Phân tích..."></div>
+    <div class="form-group"><label>Nội dung Prompt *</label>
+      <textarea id="f-content" rows="6" placeholder="Nhập nội dung prompt mẫu...">${esc(p?.content || '')}</textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="savePrompt('${p?.id || ''}')">
+        ${p ? '💾 Lưu' : '+ Tạo'}
+      </button>
+    </div>
+  `;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('f-title').focus();
+}
+
+function editPrompt(p) { openPromptModal(p); }
+
+async function savePrompt(id) {
+  const title = document.getElementById('f-title').value.trim();
+  const content = document.getElementById('f-content').value.trim();
+  if (!title || !content) { toast('Nhập đủ tiêu đề và nội dung', 'err'); return; }
+  const body = { title, content, category: document.getElementById('f-cat').value.trim() };
+  if (id) {
+    await api(`/api/prompts/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+    toast('✅ Đã cập nhật prompt', 'ok');
+  } else {
+    await api('/api/prompts', { method: 'POST', body: JSON.stringify(body) });
+    toast('✅ Đã tạo prompt', 'ok');
+  }
+  closeModal();
+  loadPrompts();
+}
+
+// ── USERS ──
+async function loadUsers() {
+  const users = await api('/api/admin/users');
+  const tbody = document.getElementById('users-tbody');
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text2)">Không có user</td></tr>';
+    return;
+  }
+  tbody.innerHTML = users.map(u => {
+    const isLark = u.id.startsWith('lark:');
+    const isLocal = u.id.startsWith('local:');
+    const lastSeen = u.last_seen ? new Date(u.last_seen * 1000).toLocaleDateString('vi') : '—';
+    return `<tr>
+      <td style="font-weight:600">${esc(u.name || '—')}</td>
+      <td style="color:var(--text2)">${esc(u.email || '—')}</td>
+      <td>${isLark ? '<span class="tag enabled">🐦 Lark</span>' : isLocal ? '<span class="tag user">🔑 Email</span>' : '<span class="tag disabled">?</span>'}</td>
+      <td>
+        <select onchange="setRole('${u.id}', this.value)" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:3px 6px;border-radius:5px;font-size:11px">
+          <option value="user" ${u.role==='user'?'selected':''}>User</option>
+          <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+        </select>
+      </td>
+      <td style="color:var(--text2);font-size:11px">${lastSeen}</td>
+      <td>
+        ${u.id !== currentUser.id ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}', '${esc(u.name)}')">Xóa</button>` : '<span style="color:var(--text2);font-size:11px">(bạn)</span>'}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function setRole(userId, role) {
+  await api(`/api/admin/users/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) });
+  toast(`✅ Đã đổi role → ${role}`, 'ok');
+}
+
+async function deleteUser(userId, name) {
+  if (!confirm(`Xóa user "${name}"? Tất cả chats/messages sẽ bị xóa!`)) return;
+  await api(`/api/admin/users/${userId}`, { method: 'DELETE' });
+  toast('🗑️ Đã xóa user', 'ok');
+  loadUsers();
+}
+
+function openCreateUserModal() {
+  document.getElementById('modal-box').innerHTML = `
+    <h3>+ Tạo tài khoản Email</h3>
+    <div class="form-group"><label>Tên hiển thị *</label><input id="f-uname" placeholder="Nguyễn Văn A"></div>
+    <div class="form-group"><label>Email *</label><input id="f-uemail" type="email" placeholder="email@sakuko.vn"></div>
+    <div class="form-group"><label>Mật khẩu *</label><input id="f-upass" type="password" placeholder="Mật khẩu tối thiểu 6 ký tự"></div>
+    <div class="form-group"><label>Role</label>
+      <select id="f-urole" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px;border-radius:7px;width:100%;font-size:13px">
+        <option value="user">User</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="createUser()">+ Tạo tài khoản</button>
+    </div>
+  `;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('f-uname').focus();
+}
+
+async function createUser() {
+  const name = document.getElementById('f-uname').value.trim();
+  const email = document.getElementById('f-uemail').value.trim();
+  const password = document.getElementById('f-upass').value;
+  const role = document.getElementById('f-urole').value;
+  if (!name || !email || !password) { toast('Nhập đủ thông tin', 'err'); return; }
+  const res = await api('/api/admin/accounts', { method: 'POST', body: JSON.stringify({ name, email, password, role }) });
+  if (res.error) { toast(res.error, 'err'); return; }
+  toast('✅ Đã tạo tài khoản', 'ok');
+  closeModal();
+  loadUsers();
+}
+
+// ── OVERVIEW ──
+async function loadOverview() {
+  const [users, modules, prompts] = await Promise.all([
+    api('/api/admin/users'),
+    api('/api/modules'),
+    api('/api/prompts')
+  ]);
+  document.getElementById('stat-users').textContent = users.length;
+  document.getElementById('stat-modules').textContent = modules.filter(m => m.enabled).length;
+  document.getElementById('stat-prompts').textContent = prompts.length;
+  document.getElementById('stat-chats').textContent = '—';
+  const link = document.getElementById('relay-url-link');
+  link.href = RELAY_URL;
+  link.textContent = RELAY_URL;
+}
+
+// ── MODAL ──
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+// ── UTILS ──
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Strip markdown cho preview card
+function stripMd(s) {
+  return String(s||'')
+    .replace(/```[\s\S]*?```/g, '[code]')  // code blocks
+    .replace(/`[^`]+`/g, m => m.slice(1,-1)) // inline code
+    .replace(/^#{1,6}\s+/gm, '')            // headers
+    .replace(/\*\*([^*]+)\*\*/g, '$1')      // bold
+    .replace(/\*([^*]+)\*/g, '$1')          // italic
+    .replace(/^\|.*\|$/gm, '')              // table rows
+    .replace(/^[-|*]{3,}$/gm, '')           // separators
+    .replace(/^\s*[-*+]\s+/gm, '• ')        // list items
+    .replace(/\n{2,}/g, ' ')                // multiple newlines
+    .replace(/\n/g, ' ')                    // single newlines
+    .trim();
+}
+
+let _toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (type ? ' ' + type : '');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.className = '', 2500);
+}
+
+init();
+</script>
+</body>
+</html>
