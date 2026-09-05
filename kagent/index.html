@@ -530,7 +530,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version">v1.0.20</span>
+  <span class="version">v1.0.22</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1305,11 +1305,12 @@ function sendPrompt() {
   window._pendingImages = [];
   renderImageStrip();
 
-  send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', workDir: window._workDir || null, relayToken: getRelayToken(), images });
   const displayText = text || '(ảnh)';
-  appendOutput(`\x1b[34m[Bạn] ${displayText}${images.length ? ` [+${images.length} ảnh]` : ''}\x1b[0m\r\n`);
-  appendChatUser(displayText + (images.length ? `<br>${images.map(img => `<img src="${img.dataUrl}" style="max-height:120px;border-radius:8px;margin-top:4px">`).join('')}` : '')); // thêm user bubble vào chat view
+  // appendOutput('[Bạn]') KHÔNG gọi ở đây — server sẽ broadcast lại qua type:'output'
+  // nếu gọi cả 2 sẽ bị duplicate trong terminal
+  appendChatUser(displayText + (images.length ? `<br>${images.map(img => `<img src="${img.dataUrl}" style="max-height:120px;border-radius:8px;margin-top:4px">`).join('')}` : '')); // chat view bubble (client-only, không bị echo)
   if (text) syncMessageToRelay(currentChatId, 'user', text);
+  send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', workDir: window._workDir || null, relayToken: getRelayToken(), images });
 
   input.value = '';
   autoResize(input);
