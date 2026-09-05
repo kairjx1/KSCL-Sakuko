@@ -530,7 +530,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version">v1.0.23</span>
+  <span class="version">v1.0.24</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1054,7 +1054,32 @@ async function deleteProjModal() {
 async function loadChats() {
   const pid = document.getElementById('sp-select').value;
   if (!pid) { chats = []; renderChatList(); return; }
-  chats = await apiGetChats(pid);
+
+  // Nếu đang dùng relay, lấy cả từ local để merge tên tốt hơn
+  if (useRelay()) {
+    const [relayChats, localChats] = await Promise.all([
+      apiGetChats(pid),
+      fetch(`/api/projects/${pid}/chats`).then(r => r.json()).catch(() => [])
+    ]);
+    // Build map tên local (có thể đã được rename nhưng chưa sync)
+    const localNameMap = {};
+    const DEFAULT_NAMES = ['Cuộc chat mới', 'KAgent Chat', 'New Chat'];
+    for (const c of localChats) {
+      if (c.name && !DEFAULT_NAMES.includes(c.name)) localNameMap[c.id] = c.name;
+    }
+    // Merge: nếu relay tên là default nhưng local có tên tốt hơn → dùng local + sync lên relay
+    chats = relayChats.map(c => {
+      const localName = localNameMap[c.id];
+      if (localName && DEFAULT_NAMES.includes(c.name || '')) {
+        // Sync tên local lên relay
+        relayFetch(`/chats/${c.id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: localName }) }).catch(() => {});
+        return { ...c, name: localName };
+      }
+      return c;
+    });
+  } else {
+    chats = await apiGetChats(pid);
+  }
   renderChatList();
 }
 
