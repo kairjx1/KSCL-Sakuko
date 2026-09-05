@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>KAgent</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -244,13 +245,77 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .status-badge.stopped{color:var(--text2);border-color:var(--border)}
 
 /* ── TERMINAL ── */
-#terminal-wrap{flex:1;overflow:hidden;position:relative;background:#0a0a0a}
+#terminal-wrap{flex:1;overflow:hidden;position:relative;background:#0a0a0a;display:flex;flex-direction:column}
 #terminal-out{
-  width:100%;height:100%;overflow-y:auto;overflow-x:hidden;
+  flex:1;overflow-y:auto;overflow-x:hidden;
   padding:10px 12px;font-family:'Cascadia Code','Fira Code','Consolas',monospace;
   font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-all;
   color:#d4d4d4;
 }
+
+/* ── CHAT MESSAGES (markdown-rendered AI responses) ── */
+#chat-messages{
+  overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:12px;
+  background:#0b1020;flex:1;
+}
+.chat-msg-user{
+  align-self:flex-end;max-width:80%;
+  background:var(--accent);color:#fff;
+  border-radius:16px 16px 4px 16px;
+  padding:10px 14px;font-size:13.5px;line-height:1.5;word-break:break-word;
+}
+.chat-msg-ai{
+  align-self:flex-start;max-width:90%;width:100%;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:4px 16px 16px 16px;
+  padding:14px 16px;font-size:13.5px;line-height:1.6;word-break:break-word;
+  color:var(--text);
+}
+.chat-msg-ai h1,.chat-msg-ai h2,.chat-msg-ai h3{
+  color:var(--accent);margin:12px 0 6px;font-size:1em;font-weight:600;
+}
+.chat-msg-ai h2{font-size:1.05em}
+.chat-msg-ai h1{font-size:1.1em}
+.chat-msg-ai p{margin:4px 0 8px}
+.chat-msg-ai ul,.chat-msg-ai ol{padding-left:20px;margin:4px 0 8px}
+.chat-msg-ai li{margin:3px 0}
+.chat-msg-ai code{
+  background:#1e2a45;border:1px solid rgba(255,255,255,.1);
+  border-radius:4px;padding:1px 5px;font-family:'Cascadia Code','Consolas',monospace;
+  font-size:12px;color:#e2c08d;
+}
+.chat-msg-ai pre{
+  background:#0a0f1e;border:1px solid rgba(255,255,255,.12);
+  border-radius:8px;padding:12px 14px;overflow-x:auto;margin:8px 0;
+}
+.chat-msg-ai pre code{background:none;border:none;padding:0;color:#c9d1d9;font-size:12px}
+.chat-msg-ai table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12.5px}
+.chat-msg-ai th,.chat-msg-ai td{border:1px solid var(--border);padding:6px 10px;text-align:left}
+.chat-msg-ai th{background:var(--bg4);color:var(--accent)}
+.chat-msg-ai a{color:var(--accent);text-decoration:underline}
+.chat-msg-ai strong{color:#fff}
+.chat-msg-ai blockquote{border-left:3px solid var(--accent);padding-left:12px;color:var(--text2);margin:8px 0}
+.chat-msg-ai hr{border:none;border-top:1px solid var(--border);margin:10px 0}
+
+/* Tool output block (terminal trong chat) */
+.tool-block{
+  background:#060c18;border:1px solid rgba(255,255,255,.08);
+  border-radius:6px;padding:8px 12px;margin:4px 0;
+  font-family:'Cascadia Code','Consolas',monospace;font-size:12px;
+  color:#94a3b8;white-space:pre-wrap;word-break:break-all;overflow-x:auto;
+}
+.tool-block.running{border-color:rgba(250,204,21,.3)}
+
+/* View toggle button */
+.view-toggle{
+  position:absolute;top:8px;right:10px;z-index:10;
+  display:flex;gap:4px;
+}
+.view-toggle button{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+  border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;transition:all .2s;
+}
+.view-toggle button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 #terminal-out::-webkit-scrollbar{width:5px}
 #terminal-out::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
 
@@ -465,7 +530,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version">v1.0.18</span>
+  <span class="version">v1.0.19</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -546,9 +611,14 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
         <button id="btn-start" onclick="toggleAgent()">▶ Khởi động</button>
       </div>
 
-      <!-- Terminal -->
+      <!-- Terminal / Chat view toggle -->
       <div id="terminal-wrap">
+        <div class="view-toggle">
+          <button id="btn-view-terminal" class="active" onclick="setView('terminal')" title="Terminal (raw output)">⌨ Terminal</button>
+          <button id="btn-view-chat" onclick="setView('chat')" title="Chat (markdown rendered)">💬 Chat</button>
+        </div>
         <div id="terminal-out"></div>
+        <div id="chat-messages" style="display:none"></div>
         <div id="empty-state">
           <div class="big-icon">⚡</div>
           <h3>Sẵn sàng</h3>
@@ -755,20 +825,100 @@ function setWorkDir(path) {
   showToast('📁 Working dir: ' + path);
 }
 
+// ── VIEW TOGGLE (Terminal ↔ Chat) ──
+let _currentView = localStorage.getItem('kagent_view') || 'chat'; // default chat
+
+function setView(v) {
+  _currentView = v;
+  localStorage.setItem('kagent_view', v);
+  document.getElementById('terminal-out').style.display = v === 'terminal' ? 'block' : 'none';
+  document.getElementById('chat-messages').style.display = v === 'chat' ? 'flex' : 'none';
+  document.getElementById('btn-view-terminal').classList.toggle('active', v === 'terminal');
+  document.getElementById('btn-view-chat').classList.toggle('active', v === 'chat');
+}
+
+// Markdown renderer config
+if (typeof marked !== 'undefined') {
+  marked.setOptions({ breaks: true, gfm: true });
+}
+
+function renderMarkdown(text) {
+  if (typeof marked === 'undefined') return '<pre>' + esc(text) + '</pre>';
+  return marked.parse(text);
+}
+
+// Append chat bubble (user or AI) into chat-messages panel
+let _toolBlock = null; // current streaming tool output block
+
+function appendChatUser(text) {
+  const el = document.createElement('div');
+  el.className = 'chat-msg-user';
+  el.textContent = text;
+  document.getElementById('chat-messages').appendChild(el);
+  scrollChat();
+}
+
+function appendChatAI(markdownText) {
+  // Remove any active tool block
+  _toolBlock = null;
+  const el = document.createElement('div');
+  el.className = 'chat-msg-ai';
+  el.innerHTML = renderMarkdown(markdownText);
+  document.getElementById('chat-messages').appendChild(el);
+  scrollChat();
+  return el;
+}
+
+// Streaming tool output in chat view (while claude is working)
+function appendChatTool(data) {
+  const cm = document.getElementById('chat-messages');
+  if (!_toolBlock) {
+    _toolBlock = document.createElement('div');
+    _toolBlock.className = 'tool-block running';
+    cm.appendChild(_toolBlock);
+  }
+  // Strip ANSI for chat tool block
+  const clean = data.replace(/\x1b\[[0-9;]*m/g, '').replace(/\r/g, '');
+  _toolBlock.textContent += clean;
+  scrollChat();
+}
+
+function finalizeToolBlock() {
+  if (_toolBlock) {
+    _toolBlock.classList.remove('running');
+    _toolBlock = null;
+  }
+}
+
+function scrollChat() {
+  const cm = document.getElementById('chat-messages');
+  cm.scrollTop = cm.scrollHeight;
+}
+
 function handleWsMessage(msg) {
   switch (msg.type) {
     case 'history':
       renderHistory(msg.messages);
       break;
     case 'output':
-      appendOutput(msg.data);
+      appendOutput(msg.data); // luôn append vào terminal
+      // Chat view: hiện tool output trong tool block
+      if (_currentView === 'chat') appendChatTool(msg.data);
+      break;
+    case 'ai_response':
+      // Response hoàn chỉnh từ server → render markdown
+      finalizeToolBlock();
+      appendChatAI(msg.text);
+      // Nếu đang ở terminal view, vẫn append raw (đã append qua 'output' events)
       break;
     case 'status':
       setStatus(msg.status);
+      if (msg.status === 'stopped') finalizeToolBlock();
       break;
     case 'exit':
       appendOutput(`\r\n\x1b[33m[KAgent] Agent đã thoát (code: ${msg.exitCode})\x1b[0m\r\n`);
       setStatus('stopped');
+      finalizeToolBlock();
       break;
     case 'error':
       showToast('⚠️ ' + msg.message);
@@ -778,6 +928,7 @@ function handleWsMessage(msg) {
 
 // ── INIT ──
 async function init() {
+  initView(); // set đúng view (terminal/chat) từ localStorage
   connect();
   agents = await fetch('/api/agents').then(r => r.json());
   renderAgentSelect();
@@ -933,8 +1084,10 @@ function selectChat(chatId) {
   document.getElementById('agent-select').value = chat.agent || 'claude';
   updateAgentPill(chat.agent || 'claude');
 
-  // Clear terminal
+  // Clear terminal + chat view
   document.getElementById('terminal-out').innerHTML = '';
+  document.getElementById('chat-messages').innerHTML = '';
+  _toolBlock = null;
   hasOutput = false;
   document.getElementById('empty-state').style.display = 'flex';
 
@@ -1050,7 +1203,10 @@ function appendOutput(data) {
 
 function renderHistory(messages) {
   const out = document.getElementById('terminal-out');
+  const cm = document.getElementById('chat-messages');
   out.innerHTML = '';
+  cm.innerHTML = '';
+  _toolBlock = null;
   hasOutput = messages.length > 0;
   document.getElementById('empty-state').style.display = hasOutput ? 'none' : 'flex';
   messages.forEach(m => {
@@ -1058,11 +1214,19 @@ function renderHistory(messages) {
       const span = document.createElement('span');
       span.innerHTML = `<span style="color:#60a5fa">[Bạn] </span>${esc(m.content)}\r\n`;
       out.appendChild(span);
-    } else {
-      appendOutput(m.content);
+      appendChatUser(m.content);
+    } else if (m.role === 'assistant') {
+      appendOutput(m.content); // terminal: raw
+      appendChatAI(m.content); // chat: markdown rendered
     }
   });
   out.scrollTop = out.scrollHeight;
+  scrollChat();
+}
+
+// Đảm bảo view đúng khi init
+function initView() {
+  setView(_currentView);
 }
 
 // ── INPUT ──
@@ -1084,6 +1248,7 @@ function sendPrompt() {
 
   send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', workDir: window._workDir || null, relayToken: getRelayToken() });
   appendOutput(`\x1b[34m[Bạn] ${text}\x1b[0m\r\n`);
+  appendChatUser(text); // thêm user bubble vào chat view
   syncMessageToRelay(currentChatId, 'user', text);
 
   input.value = '';
