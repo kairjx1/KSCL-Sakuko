@@ -465,7 +465,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version">v1.0.11</span>
+  <span class="version">v1.0.12</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -770,11 +770,7 @@ async function init() {
   renderAgentSelect();
   // Restore agent mode from localStorage
   const savedMode = localStorage.getItem('kagent_mode') || 'safe';
-  window._agentMode = savedMode;
-  document.querySelectorAll('#agent-mode-toggle .mode-opt').forEach(el => {
-    el.classList.remove('active-safe','active-auto');
-    if (el.dataset.mode === savedMode) el.classList.add(savedMode === 'auto' ? 'active-auto' : 'active-safe');
-  });
+  setAgentMode(savedMode); // dùng setAgentMode để cập nhật cả UI lẫn state
   projects = await apiGetProjects();
   renderProjects();
   await loadChats();
@@ -1153,6 +1149,15 @@ async function relayFetch(path, opts = {}) {
   return res.json();
 }
 
+// Như relayFetch nhưng trả về Response object (để caller kiểm tra .ok trước khi parse)
+async function relayFetchRaw(path, opts = {}) {
+  const apiPath = path.startsWith('/api') ? path : '/api' + path;
+  const token = getRelayToken();
+  const headers = { ...(opts.headers || {}) };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return fetch(RELAY_URL + apiPath, { ...opts, headers });
+}
+
 async function apiGetProjects() {
   if (useRelay()) {
     const rows = await relayFetch('/projects');
@@ -1323,12 +1328,13 @@ async function doEmailLogin() {
   try {
     const res = await fetch(`${RELAY_URL}/auth/login`, {
       method: 'POST',
-      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Sai email hoặc mật khẩu');
+    // Lưu Bearer token để dùng cho các request sau
+    if (data.token) localStorage.setItem('kagent_relay_token', data.token);
     relayUser = data.user;
     showUserLoggedIn(relayUser);
   } catch(e) {
@@ -1424,14 +1430,14 @@ async function loadKimTiemModules() {
   // Nếu đã có data trong cache, render ngay không chờ fetch
   if (_ktModules.length) renderKtList();
   try {
-    // Thử /api/modules/all (trả về tất cả kể cả tắt), fallback về /api/modules
+    // Dùng Bearer token (không dùng credentials: 'include' vì relay dùng Bearer auth)
     let mods;
     try {
-      const r = await fetch(`${RELAY_URL}/api/modules/all`, { credentials: 'include' });
+      const r = await relayFetchRaw('/api/modules/all');
       if (r.ok) mods = await r.json();
     } catch {}
     if (!mods) {
-      mods = await fetch(`${RELAY_URL}/api/modules`, { credentials: 'include' }).then(r => r.json());
+      mods = await relayFetch('/api/modules');
     }
     _ktModules = Array.isArray(mods) ? mods : [];
     if (!_ktModules.length) {
@@ -1485,9 +1491,8 @@ async function toggleModuleKT(id, enabled) {
   renderKtList();
 
   try {
-    await fetch(`${RELAY_URL}/api/modules/${id}`, {
+    await relayFetch(`/api/modules/${id}`, {
       method: 'PATCH',
-      credentials: 'include',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ enabled })
     });
@@ -1496,7 +1501,7 @@ async function toggleModuleKT(id, enabled) {
     // Revert nếu lỗi
     m.enabled = !enabled;
     renderKtList();
-    showToast('Lỗi cập nhật', 'err');
+    showToast('Lỗi cập nhật module');
   }
 }
 
@@ -1506,8 +1511,8 @@ async function toggleAllModules(enabled) {
   targets.forEach(m => m.enabled = enabled);
   renderKtList();
   await Promise.all(targets.map(m =>
-    fetch(`${RELAY_URL}/api/modules/${m.id}`, {
-      method: 'PATCH', credentials: 'include',
+    relayFetch(`/api/modules/${m.id}`, {
+      method: 'PATCH',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ enabled })
     }).catch(() => {})
