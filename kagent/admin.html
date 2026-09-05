@@ -224,15 +224,23 @@ tr:hover td{background:var(--bg3)}
 const RELAY_URL = 'https://kagent-relay.kairjx1.workers.dev';
 let currentUser = null;
 
+// ── AUTH TOKEN (Bearer, giống index.html) ──
+function getToken() { return localStorage.getItem('kagent_relay_token') || ''; }
+
 // ── INIT ──
 async function init() {
-  // Check auth
+  // Check auth bằng Bearer token
+  const token = getToken();
+  if (!token) { window.location.href = '/'; return; }
   try {
-    const res = await fetch(`${RELAY_URL}/auth/me`, { credentials: 'include' });
+    const res = await fetch(`${RELAY_URL}/auth/me`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     if (!res.ok) { window.location.href = '/'; return; }
     const data = await res.json();
-    if (data.user.role !== 'admin') { alert('Bạn không có quyền Admin'); window.location.href = '/'; return; }
-    currentUser = data.user;
+    const user = data.user || data;
+    if (user.role !== 'admin') { alert('Bạn không có quyền Admin'); window.location.href = '/'; return; }
+    currentUser = user;
     document.getElementById('admin-name').textContent = currentUser.name || currentUser.email;
   } catch { window.location.href = '/'; return; }
 
@@ -252,13 +260,12 @@ function switchTab(name) {
   else if (name === 'overview') loadOverview();
 }
 
-// ── API ──
+// ── API — dùng Bearer token ──
 async function api(path, opts = {}) {
-  const res = await fetch(`${RELAY_URL}${path}`, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-    ...opts
-  });
+  const token = getToken();
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${RELAY_URL}${path}`, { ...opts, headers });
   return res.json();
 }
 
@@ -266,7 +273,8 @@ async function api(path, opts = {}) {
 let _modules = []; // cache để lookup theo id
 
 async function loadModules() {
-  const mods = await api('/api/modules');
+  // Dùng /api/modules/all để thấy cả modules đã tắt
+  const mods = await api('/api/modules/all').catch(() => api('/api/modules'));
   _modules = mods;
   const el = document.getElementById('modules-list');
   if (!mods.length) {

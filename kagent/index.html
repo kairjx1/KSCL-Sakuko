@@ -465,7 +465,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version">v1.0.12</span>
+  <span class="version">v1.0.13</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -730,15 +730,30 @@ function setAgentMode(mode) {
   }
 }
 
-function pickWorkDir() {
+async function pickWorkDir() {
   const cur = window._workDir || 'C:\\';
-  const input = prompt('Nhập đường dẫn thư mục làm việc:', cur);
-  if (input && input.trim()) {
-    window._workDir = input.trim();
-    document.getElementById('workdir-label').textContent = window._workDir;
-    // Báo server đổi workDir cho session
-    send({ type: 'setWorkDir', path: window._workDir });
-    showToast('📁 Working dir: ' + window._workDir);
+  try {
+    // Dùng native Windows FolderBrowserDialog qua server API
+    const r = await fetch('/api/pick-folder', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ current: cur })
+    });
+    const { path } = await r.json();
+    if (path) {
+      window._workDir = path;
+      document.getElementById('workdir-label').textContent = window._workDir;
+      send({ type: 'setWorkDir', path: window._workDir });
+      showToast('📁 Working dir: ' + window._workDir);
+    }
+  } catch {
+    // Fallback về prompt nếu API lỗi
+    const input = prompt('Nhập đường dẫn thư mục làm việc:', cur);
+    if (input && input.trim()) {
+      window._workDir = input.trim();
+      document.getElementById('workdir-label').textContent = window._workDir;
+      send({ type: 'setWorkDir', path: window._workDir });
+      showToast('📁 Working dir: ' + window._workDir);
+    }
   }
 }
 
