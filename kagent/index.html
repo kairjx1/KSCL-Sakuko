@@ -465,7 +465,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version">v1.0.0</span>
+  <span class="version">v1.0.5</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1140,7 +1140,8 @@ function showToast(msg) {
 function useRelay() { return !!relayUser && !!RELAY_URL; }
 
 async function relayFetch(path, opts = {}) {
-  const res = await fetch(RELAY_URL + path, { credentials: 'include', ...opts });
+  const apiPath = path.startsWith('/api') ? path : '/api' + path;
+  const res = await fetch(RELAY_URL + apiPath, { credentials: 'include', ...opts });
   if (!res.ok) throw new Error(`relay ${res.status}`);
   return res.json();
 }
@@ -1226,7 +1227,7 @@ let relayUser = null;
 async function initRelay() {
   try {
     const cfg = await fetch('/api/relay-config').then(r => r.json());
-    RELAY_URL = cfg.relayUrl;
+    RELAY_URL = cfg.relayUrl ? cfg.relayUrl.replace(/\/+$/, '') : '';
   } catch { return; }
 
   // Kiểm tra đã login chưa
