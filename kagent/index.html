@@ -530,7 +530,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version">v1.0.25</span>
+  <span class="version" id="app-version">v1.0.27</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1124,10 +1124,44 @@ function selectChat(chatId) {
 
   renderChatList();
   joinChat(chatId);
+
+  // Load lịch sử từ relay (hiển thị tin nhắn cũ khi mở máy mới)
+  loadRelayHistory(chatId);
+}
+
+async function loadRelayHistory(chatId) {
+  if (!useRelay()) return;
+  try {
+    const msgs = await fetch(`/api/relay/chats/${chatId}/messages`).then(r => r.json());
+    if (!msgs || msgs.length === 0) return;
+    const cm = document.getElementById('chat-messages');
+    document.getElementById('empty-state').style.display = 'none';
+    hasOutput = true;
+    // Render header ngăn cách
+    const sep = document.createElement('div');
+    sep.style.cssText = 'text-align:center;color:var(--text2);font-size:11px;padding:8px 0 4px;border-bottom:1px solid var(--border);margin-bottom:8px';
+    sep.textContent = `── Lịch sử (${msgs.length} tin) ──`;
+    cm.insertBefore(sep, cm.firstChild);
+    // Render từng message
+    msgs.forEach(m => {
+      if (m.role === 'user') {
+        const el = document.createElement('div');
+        el.className = 'chat-msg-user';
+        el.textContent = m.content;
+        cm.appendChild(el);
+      } else if (m.role === 'assistant') {
+        const el = document.createElement('div');
+        el.className = 'chat-msg-ai';
+        el.innerHTML = renderMarkdown(m.content || '');
+        cm.appendChild(el);
+      }
+    });
+    scrollChat();
+  } catch {}
 }
 
 function joinChat(chatId) {
-  send({ type: 'join', chatId, relayToken: getRelayToken() });
+  send({ type: 'join', chatId, relayToken: getRelayToken(), relayUserId: relayUser?.open_id || relayUser?.id || null });
 }
 
 async function newChat(name, agent) {
@@ -1551,6 +1585,8 @@ async function initRelay() {
       const data = await res.json();
       relayUser = data.user || data;
       showUserLoggedIn(relayUser);
+      // Pull memory từ relay về local (máy mới chưa có data)
+      pullRelayMemory(token);
     } else {
       localStorage.removeItem('kagent_relay_token');
       showLoginButton();
@@ -1558,6 +1594,21 @@ async function initRelay() {
   } catch {
     showLoginButton();
   }
+}
+
+// Pull memory từ relay về local khi khởi động
+async function pullRelayMemory(token) {
+  try {
+    const r = await fetch('/api/memory/pull-relay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ relayToken: token || getRelayToken() })
+    });
+    const data = await r.json();
+    if (data.ok && data.pulled > 0) {
+      console.log(`[KAgent] 🧠 Đã đồng bộ ${data.pulled} memory từ cloud`);
+    }
+  } catch {}
 }
 
 function showLoginButton() {
@@ -1808,6 +1859,12 @@ document.addEventListener('click', (e) => {
 });
 
 // Relay auth trước → sau đó init (để apiGetProjects biết user đã login)
+// Tự đọc version từ version.json — không cần sửa tay trong HTML nữa
+fetch('/version.json').then(r=>r.json()).then(v=>{
+  const el = document.getElementById('app-version');
+  if (el && v.version) el.textContent = 'v' + v.version;
+}).catch(()=>{});
+
 initRelay().then(() => init());
 </script>
 
