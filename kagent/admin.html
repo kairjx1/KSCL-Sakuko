@@ -455,8 +455,14 @@ async function savePrompt(id) {
 
 // ── USERS ──
 async function loadUsers() {
-  const users = await api('/api/admin/users');
+  const raw = await api('/api/admin/users').catch(e => ({ error: e.message }));
   const tbody = document.getElementById('users-tbody');
+  // raw có thể là array hoặc object {error} hoặc {results:[]}
+  const users = Array.isArray(raw) ? raw : (raw?.results || []);
+  if (raw?.error || raw?.message) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#ef4444">Lỗi: ${esc(raw.error || raw.message)}</td></tr>`;
+    return;
+  }
   if (!users.length) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text2)">Không có user</td></tr>';
     return;
