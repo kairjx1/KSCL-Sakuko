@@ -462,30 +462,37 @@ async function loadUsers() {
     return;
   }
   tbody.innerHTML = users.map(u => {
-    const isLark = u.id.startsWith('lark:');
+    // ID từ Lark OAuth: ou_xxx (không có prefix). ID email: local:xxx
     const isLocal = u.id.startsWith('local:');
+    const isLark = !isLocal; // Tất cả non-local là Lark
+    const isSelf = u.id === currentUser.id;
     const lastSeen = u.last_seen ? new Date(u.last_seen * 1000).toLocaleDateString('vi') : '—';
+    const roleColor = u.role === 'admin' ? '#f59e0b' : 'var(--text2)';
     return `<tr>
-      <td style="font-weight:600">${esc(u.name || '—')}</td>
-      <td style="color:var(--text2)">${esc(u.email || '—')}</td>
-      <td>${isLark ? '<span class="tag enabled">🐦 Lark</span>' : isLocal ? '<span class="tag user">🔑 Email</span>' : '<span class="tag disabled">?</span>'}</td>
+      <td style="font-weight:600">${esc(u.name || '—')}${isSelf ? ' <span style="font-size:10px;color:var(--accent)">(bạn)</span>' : ''}</td>
+      <td style="color:var(--text2);font-size:11px">${esc(u.email || '—')}</td>
+      <td>${isLark ? '<span class="tag enabled">🐦 Lark</span>' : '<span class="tag user">🔑 Email</span>'}</td>
       <td>
-        <select onchange="setRole('${u.id}', this.value)" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:3px 6px;border-radius:5px;font-size:11px">
-          <option value="user" ${u.role==='user'?'selected':''}>User</option>
-          <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
-        </select>
+        ${isSelf
+          ? `<span style="font-size:11px;color:${roleColor};font-weight:600">${u.role === 'admin' ? '👑 Admin' : '👤 User'}</span>`
+          : `<select onchange="setRole('${u.id}', this.value)" style="background:var(--bg3);border:1px solid var(--border);color:${roleColor};padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600">
+              <option value="user" ${u.role==='user'?'selected':''}>👤 User</option>
+              <option value="admin" ${u.role==='admin'?'selected':''}>👑 Admin</option>
+            </select>`
+        }
       </td>
       <td style="color:var(--text2);font-size:11px">${lastSeen}</td>
       <td>
-        ${u.id !== currentUser.id ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}', '${esc(u.name)}')">Xóa</button>` : '<span style="color:var(--text2);font-size:11px">(bạn)</span>'}
+        ${!isSelf ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}', '${esc(u.name || '')}')">Xóa</button>` : '—'}
       </td>
     </tr>`;
   }).join('');
 }
 
 async function setRole(userId, role) {
-  await api(`/api/admin/users/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) });
-  toast(`✅ Đã đổi role → ${role}`, 'ok');
+  const res = await api(`/api/admin/users/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) });
+  if (res.error) { toast('Lỗi: ' + res.error, 'err'); loadUsers(); return; }
+  toast(`✅ Đã đổi role → ${role === 'admin' ? '👑 Admin' : '👤 User'}`, 'ok');
 }
 
 async function deleteUser(userId, name) {
