@@ -1139,9 +1139,16 @@ function showToast(msg) {
 // Dùng relay khi đã login, fallback về local API
 function useRelay() { return !!relayUser && !!RELAY_URL; }
 
+function getRelayToken() {
+  return localStorage.getItem('kagent_relay_token') || '';
+}
+
 async function relayFetch(path, opts = {}) {
   const apiPath = path.startsWith('/api') ? path : '/api' + path;
-  const res = await fetch(RELAY_URL + apiPath, { credentials: 'include', ...opts });
+  const token = getRelayToken();
+  const headers = { ...(opts.headers || {}) };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(RELAY_URL + apiPath, { ...opts, headers });
   if (!res.ok) throw new Error(`relay ${res.status}`);
   return res.json();
 }
@@ -1230,14 +1237,38 @@ async function initRelay() {
     RELAY_URL = cfg.relayUrl ? cfg.relayUrl.replace(/\/+$/, '') : '';
   } catch { return; }
 
-  // Kiểm tra đã login chưa
+  // Xử lý OAuth callback: ?token=...&user=...
+  const params = new URLSearchParams(window.location.search);
+  const urlToken = params.get('token');
+  const urlUser  = params.get('user');
+  if (urlToken) {
+    localStorage.setItem('kagent_relay_token', urlToken);
+    if (urlUser) {
+      try {
+        relayUser = JSON.parse(urlUser);
+        // Xóa params khỏi URL (không reload)
+        window.history.replaceState({}, '', window.location.pathname);
+        showUserLoggedIn(relayUser);
+        return;
+      } catch {}
+    }
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+
+  // Kiểm tra token đã lưu
+  const token = getRelayToken();
+  if (!token) { showLoginButton(); return; }
+
   try {
-    const res = await fetch(`${RELAY_URL}/auth/me`, { credentials: 'include' });
+    const res = await fetch(`${RELAY_URL}/auth/me`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     if (res.ok) {
       const data = await res.json();
-      relayUser = data.user;
+      relayUser = data.user || data;
       showUserLoggedIn(relayUser);
     } else {
+      localStorage.removeItem('kagent_relay_token');
       showLoginButton();
     }
   } catch {
@@ -1327,7 +1358,12 @@ function showUserMenu() {
 
 async function logoutRelay() {
   if (!RELAY_URL) return;
-  await fetch(`${RELAY_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
+  const token = getRelayToken();
+  await fetch(`${RELAY_URL}/auth/logout`, {
+    method: 'POST',
+    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+  });
+  localStorage.removeItem('kagent_relay_token');
   relayUser = null;
   showLoginButton();
   // Reset sidebar
