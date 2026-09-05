@@ -1193,14 +1193,14 @@ async function apiDeleteProject(id) {
 }
 
 async function apiGetChats(projectId) {
-  if (useRelay()) return relayFetch(`/chats?project_id=${projectId}`);
+  if (useRelay()) return relayFetch(`/projects/${projectId}/chats`);
   return fetch(`/api/projects/${projectId}/chats`).then(r => r.json());
 }
 
 async function apiCreateChat(projectId, name, agent) {
-  if (useRelay()) return relayFetch('/chats', {
+  if (useRelay()) return relayFetch(`/projects/${projectId}/chats`, {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ project_id: projectId, name, agent })
+    body: JSON.stringify({ name, agent })
   });
   return fetch('/api/chats', { method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ projectId, name, agent }) }).then(r => r.json());
