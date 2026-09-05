@@ -465,7 +465,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version">v1.0.14</span>
+  <span class="version">v1.0.15</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -721,7 +721,8 @@ function setAgentMode(mode) {
   const ww = document.getElementById('workdir-wrap');
   if (mode === 'auto') {
     ww.style.display = 'flex';
-    if (!window._workDir) window._workDir = 'C:\\';
+    // Restore từ localStorage, fallback về project workDir hoặc C:\
+    if (!window._workDir) window._workDir = localStorage.getItem('kagent_workdir') || 'C:\\';
     document.getElementById('workdir-label').textContent = window._workDir;
     showToast('⚡ Tự động bật — Claude sẽ tự edit file, chạy lệnh trong thư mục đã chọn');
   } else {
@@ -731,30 +732,27 @@ function setAgentMode(mode) {
 }
 
 async function pickWorkDir() {
-  const cur = window._workDir || 'C:\\';
+  const cur = window._workDir || localStorage.getItem('kagent_workdir') || 'C:\\';
   try {
-    // Dùng native Windows FolderBrowserDialog qua server API
     const r = await fetch('/api/pick-folder', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ current: cur })
     });
     const { path } = await r.json();
-    if (path) {
-      window._workDir = path;
-      document.getElementById('workdir-label').textContent = window._workDir;
-      send({ type: 'setWorkDir', path: window._workDir });
-      showToast('📁 Working dir: ' + window._workDir);
-    }
+    if (path) setWorkDir(path);
   } catch {
-    // Fallback về prompt nếu API lỗi
     const input = prompt('Nhập đường dẫn thư mục làm việc:', cur);
-    if (input && input.trim()) {
-      window._workDir = input.trim();
-      document.getElementById('workdir-label').textContent = window._workDir;
-      send({ type: 'setWorkDir', path: window._workDir });
-      showToast('📁 Working dir: ' + window._workDir);
-    }
+    if (input && input.trim()) setWorkDir(input.trim());
   }
+}
+
+function setWorkDir(path) {
+  window._workDir = path;
+  localStorage.setItem('kagent_workdir', path); // lưu để nhớ qua các lần mở
+  const lbl = document.getElementById('workdir-label');
+  if (lbl) lbl.textContent = path;
+  send({ type: 'setWorkDir', path });
+  showToast('📁 Working dir: ' + path);
 }
 
 function handleWsMessage(msg) {
