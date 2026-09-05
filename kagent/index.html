@@ -530,7 +530,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version">v1.0.19</span>
+  <span class="version">v1.0.20</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -630,11 +630,15 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
       <!-- Input bar -->
       <div id="input-bar" style="position:relative">
         <div id="history-panel"></div>
+        <!-- Image preview strip (ảnh paste/drop sẽ hiện ở đây) -->
+        <div id="image-strip" style="display:none;padding:6px 10px 0;display:flex;gap:6px;flex-wrap:wrap;"></div>
         <div id="input-row">
-          <textarea id="prompt-input" placeholder="Prompt (Enter = gửi, Shift+Enter = xuống dòng)…" rows="1"
-            onkeydown="handleKeydown(event)" oninput="autoResize(this)"></textarea>
+          <textarea id="prompt-input" placeholder="Prompt (Enter = gửi, Shift+Enter = xuống dòng)… | Paste ảnh để gửi kèm 🖼️" rows="1"
+            onkeydown="handleKeydown(event)" oninput="autoResize(this)" onpaste="handlePaste(event)"></textarea>
+          <button id="btn-image" onclick="triggerImagePick()" title="Đính kèm ảnh 🖼️" style="background:var(--bg3);color:var(--text2);border:1px solid var(--border);padding:10px 12px;border-radius:10px;cursor:pointer;font-size:16px">🖼️</button>
           <button id="btn-send" onclick="sendPrompt()" title="Gửi">↵</button>
         </div>
+        <input type="file" id="image-file-input" accept="image/*" style="display:none" multiple onchange="handleImageFiles(this.files)">
         <div id="kbd-row">
           <span class="kbd primary" onclick="sendKey('\t')">Tab</span>
           <span class="kbd" onclick="sendKey('1\r')">1</span>
@@ -1240,16 +1244,72 @@ function handleKeydown(e) {
   }
 }
 
+// ── IMAGE PASTE / UPLOAD ──────────────────────────────────────────────────────
+window._pendingImages = []; // [{dataUrl, name}]
+
+function handlePaste(e) {
+  const items = e.clipboardData?.items || [];
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      const file = item.getAsFile();
+      addImageFile(file);
+    }
+  }
+}
+
+function triggerImagePick() {
+  document.getElementById('image-file-input').click();
+}
+
+function handleImageFiles(files) {
+  for (const f of files) addImageFile(f);
+  document.getElementById('image-file-input').value = '';
+}
+
+function addImageFile(file) {
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const dataUrl = ev.target.result;
+    const idx = window._pendingImages.length;
+    window._pendingImages.push({ dataUrl, name: file.name || `image_${idx}.png` });
+    renderImageStrip();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeImage(idx) {
+  window._pendingImages.splice(idx, 1);
+  renderImageStrip();
+}
+
+function renderImageStrip() {
+  const strip = document.getElementById('image-strip');
+  if (!window._pendingImages.length) { strip.style.display = 'none'; strip.innerHTML = ''; return; }
+  strip.style.display = 'flex';
+  strip.innerHTML = window._pendingImages.map((img, i) => `
+    <div style="position:relative;display:inline-block">
+      <img src="${img.dataUrl}" style="height:60px;width:60px;object-fit:cover;border-radius:8px;border:2px solid var(--border)">
+      <button onclick="removeImage(${i})" style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1">✕</button>
+    </div>`).join('');
+}
+
 function sendPrompt() {
   const input = document.getElementById('prompt-input');
   const text = input.value.trim();
-  if (!text) return;
+  const hasImages = window._pendingImages.length > 0;
+  if (!text && !hasImages) return;
   if (!currentChatId) return showToast('Chọn cuộc chat trước');
 
-  send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', workDir: window._workDir || null, relayToken: getRelayToken() });
-  appendOutput(`\x1b[34m[Bạn] ${text}\x1b[0m\r\n`);
-  appendChatUser(text); // thêm user bubble vào chat view
-  syncMessageToRelay(currentChatId, 'user', text);
+  const images = [...window._pendingImages];
+  window._pendingImages = [];
+  renderImageStrip();
+
+  send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', workDir: window._workDir || null, relayToken: getRelayToken(), images });
+  const displayText = text || '(ảnh)';
+  appendOutput(`\x1b[34m[Bạn] ${displayText}${images.length ? ` [+${images.length} ảnh]` : ''}\x1b[0m\r\n`);
+  appendChatUser(displayText + (images.length ? `<br>${images.map(img => `<img src="${img.dataUrl}" style="max-height:120px;border-radius:8px;margin-top:4px">`).join('')}` : '')); // thêm user bubble vào chat view
+  if (text) syncMessageToRelay(currentChatId, 'user', text);
 
   input.value = '';
   autoResize(input);
