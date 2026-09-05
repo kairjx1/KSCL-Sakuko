@@ -530,7 +530,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version">v1.0.22</span>
+  <span class="version">v1.0.23</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1312,6 +1312,18 @@ function sendPrompt() {
   if (text) syncMessageToRelay(currentChatId, 'user', text);
   send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', workDir: window._workDir || null, relayToken: getRelayToken(), images });
 
+  // Auto-đặt tên chat theo prompt đầu tiên nếu tên vẫn là mặc định
+  const titleEl = document.getElementById('chat-title');
+  const currentTitle = titleEl ? titleEl.textContent.trim() : '';
+  if (text && (currentTitle === 'Cuộc chat mới' || currentTitle === 'KAgent Chat' || currentTitle === 'New Chat')) {
+    const autoName = text.slice(0, 35).replace(/\n/g, ' ') + (text.length > 35 ? '…' : '');
+    titleEl.textContent = autoName;
+    const chat = chats.find(c => c.id === currentChatId);
+    if (chat) chat.name = autoName;
+    renderChatList();
+    apiRenameChat(currentChatId, autoName); // lưu local + sync relay
+  }
+
   input.value = '';
   autoResize(input);
   closeHistory();
@@ -1463,12 +1475,13 @@ async function apiDeleteChat(id) {
 }
 
 async function apiRenameChat(id, name) {
+  // Luôn lưu local (SQLite) — dù có relay hay không
+  fetch(`/api/chats/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+  // Sync lên relay nếu đã kết nối — để sang máy mới tên vẫn đúng
   if (useRelay()) return relayFetch(`/chats/${id}`, {
     method:'PATCH', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ name })
   });
-  return fetch(`/api/chats/${id}/rename`, { method:'PATCH', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ name }) });
 }
 
 // ── RELAY AUTH ──
