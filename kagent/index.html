@@ -465,7 +465,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version">v1.0.10</span>
+  <span class="version">v1.0.11</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -934,7 +934,7 @@ function selectChat(chatId) {
 }
 
 function joinChat(chatId) {
-  send({ type: 'join', chatId });
+  send({ type: 'join', chatId, relayToken: getRelayToken() });
 }
 
 async function newChat(name, agent) {
@@ -1073,7 +1073,7 @@ function sendPrompt() {
   if (!text) return;
   if (!currentChatId) return showToast('Chọn cuộc chat trước');
 
-  send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', workDir: window._workDir || null });
+  send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', workDir: window._workDir || null, relayToken: getRelayToken() });
   appendOutput(`\x1b[34m[Bạn] ${text}\x1b[0m\r\n`);
   syncMessageToRelay(currentChatId, 'user', text);
 
