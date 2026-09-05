@@ -530,7 +530,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version">v1.0.24</span>
+  <span class="version">v1.0.25</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -857,7 +857,9 @@ let _toolBlock = null; // current streaming tool output block
 function appendChatUser(text) {
   const el = document.createElement('div');
   el.className = 'chat-msg-user';
-  el.textContent = text;
+  // Dùng innerHTML để render ảnh đính kèm (<img> tag từ sendPrompt)
+  // esc() đã xử lý text thường, nhưng ảnh cần innerHTML
+  el.innerHTML = text;
   document.getElementById('chat-messages').appendChild(el);
   scrollChat();
 }
