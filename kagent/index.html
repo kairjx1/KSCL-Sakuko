@@ -806,7 +806,7 @@ function setAgentMode(mode) {
 }
 
 async function pickWorkDir() {
-  const cur = window._workDir || localStorage.getItem('kagent_workdir') || 'C:\\';
+  const cur = window._workDir || localStorage.getItem('kagent_workdir') || '';
   try {
     const r = await fetch('/api/pick-folder', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -1007,7 +1007,7 @@ function toggleArea() {
 }
 
 async function pickProjDir() {
-  const cur = document.getElementById('pm-dir').value || 'C:\\';
+  const cur = document.getElementById('pm-dir').value || '';
   try {
     const r = await fetch('/api/pick-folder', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ current: cur }) });
