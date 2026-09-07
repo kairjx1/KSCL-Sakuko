@@ -813,9 +813,15 @@ async function pickWorkDir() {
       body: JSON.stringify({ current: cur })
     });
     const { path } = await r.json();
-    if (path) setWorkDir(path);
+    if (path) {
+      setWorkDir(path);
+    } else {
+      // Picker không hoạt động → gõ tay
+      const input = prompt('Nhập đường dẫn thư mục làm việc:', cur || '');
+      if (input && input.trim()) setWorkDir(input.trim());
+    }
   } catch {
-    const input = prompt('Nhập đường dẫn thư mục làm việc:', cur);
+    const input = prompt('Nhập đường dẫn thư mục làm việc:', cur || '');
     if (input && input.trim()) setWorkDir(input.trim());
   }
 }
@@ -1012,8 +1018,16 @@ async function pickProjDir() {
     const r = await fetch('/api/pick-folder', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ current: cur }) });
     const { path } = await r.json();
-    if (path) document.getElementById('pm-dir').value = path;
-  } catch (e) { showToast('Lỗi mở folder picker'); }
+    if (path) {
+      document.getElementById('pm-dir').value = path;
+    } else {
+      const input = prompt('Nhập đường dẫn thư mục:', document.getElementById('pm-dir').value || '');
+      if (input && input.trim()) document.getElementById('pm-dir').value = input.trim();
+    }
+  } catch (e) {
+    const input = prompt('Nhập đường dẫn thư mục:', document.getElementById('pm-dir').value || '');
+    if (input && input.trim()) document.getElementById('pm-dir').value = input.trim();
+  }
 }
 
 async function saveProjModal() {
