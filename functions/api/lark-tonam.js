@@ -32,6 +32,16 @@ async function getToken(id,secret){
   if(j.code!==0)throw new Error('Auth: '+j.msg);
   return j.tenant_access_token;
 }
+async function getUserToken(id,secret,refreshToken){
+  // Dùng refresh_token để lấy user_access_token (có quyền đọc toàn bộ bitable kể cả 2026)
+  const r=await fetch(`${LARK}/open-apis/authen/v1/refresh_access_token`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({grant_type:'refresh_token',refresh_token:refreshToken,app_id:id,app_secret:secret})
+  });
+  const j=await r.json();
+  if(j.code!==0)throw new Error('UserAuth: '+j.msg+' ('+j.code+')');
+  return j.data?.access_token||j.access_token;
+}
 
 const KNOWN_VIEWS={T01:'vewHqzX1XZ',T02:'vewvgrFCBc',T03:'vewqDpKLSv',T04:'vewuBDjb0W',T05:'vewHlcgIvH',T06:'vewbbA2pp3',T07:'vewPC4mQFY'};
 async function getViewId(token,month,tableId){
@@ -117,9 +127,13 @@ export async function onRequest({request,env}){
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:CORS});
   const APP_ID=env.LARK_APP_ID||'cli_aaa0cdd424b81eed';
   const APP_SECRET=env.LARK_APP_SECRET||'';
+  const REFRESH_TOKEN=env.LARK_REFRESH_TOKEN||'';
   if(!APP_SECRET)return new Response(JSON.stringify({ok:false,error:'LARK_APP_SECRET chưa cấu hình'}),{status:500,headers:CORS});
   try{
-    const token=await getToken(APP_ID,APP_SECRET);
+    // Ưu tiên user_access_token (đọc được bảng 2026), fallback bot token
+    const token=REFRESH_TOKEN
+      ?await getUserToken(APP_ID,APP_SECRET,REFRESH_TOKEN)
+      :await getToken(APP_ID,APP_SECRET);
     const tables=await discoverTables(token);
     if(!tables.length){
       const all=(j2=>j2)(null);
