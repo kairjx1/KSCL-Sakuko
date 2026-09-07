@@ -418,9 +418,11 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 /* ── MODAL overlay ── */
 .modal-overlay{
   position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;
-  display:flex;align-items:center;justify-content:center;
+  display:flex;align-items:flex-start;justify-content:center;
   backdrop-filter:blur(4px);
   animation:fadeIn .15s ease;
+  overflow-y:auto;
+  padding:16px 0;
 }
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .modal-box{
@@ -428,6 +430,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   width:480px;max-width:92vw;overflow:hidden;
   box-shadow:0 24px 80px rgba(0,0,0,.6);
   animation:slideUp .18s ease;
+  margin:auto;
 }
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 .modal-header{
@@ -1898,7 +1901,7 @@ initRelay().then(() => init());
       <!-- 2. Chọn agent -->
       <div>
         <div class="section-label"><span class="num">2</span> Chọn Agent <a href="/agents.html" target="_blank" style="font-size:10px;color:var(--accent);font-weight:400;margin-left:auto;text-decoration:none">⚙️ Quản lý Agents</a></div>
-        <div class="agent-grid" id="nc-agent-grid">
+        <div class="agent-grid" id="nc-agent-grid" style="max-height:40vh;overflow-y:auto;padding-right:4px">
           <!-- điền bằng JS -->
         </div>
         <!-- Install hint -->
