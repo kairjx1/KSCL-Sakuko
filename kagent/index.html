@@ -935,10 +935,49 @@ function handleWsMessage(msg) {
       setStatus('stopped');
       finalizeToolBlock();
       break;
+    case 'auth_error':
+      showAuthError(msg.info);
+      setStatus('stopped');
+      break;
     case 'error':
       showToast('⚠️ ' + msg.message);
       break;
   }
+}
+
+function showAuthError(info) {
+  const stepsHtml = (info.steps || []).map((s, i) => `
+    <div style="background:var(--bg3);border-radius:8px;padding:12px 14px;margin-top:8px">
+      <div style="font-weight:600;color:var(--text1);margin-bottom:6px">${s.label}</div>
+      <div style="color:var(--text2);font-size:13px;margin-bottom:${s.cmd ? '8px' : '0'}">${s.note}</div>
+      ${s.cmd ? `<div style="display:flex;align-items:center;gap:8px">
+        <code style="background:var(--bg4);padding:4px 10px;border-radius:6px;font-size:13px;flex:1">${s.cmd}</code>
+        <button onclick="navigator.clipboard.writeText('${s.cmd}');showToast('Đã copy!')" style="background:var(--accent);color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">Copy</button>
+      </div>` : ''}
+    </div>`).join('');
+
+  const card = `<div style="background:var(--bg2);border:1px solid #f59e0b44;border-radius:12px;padding:16px;margin:8px 0;max-width:600px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span style="font-size:20px">🔐</span>
+      <span style="font-weight:700;color:#f59e0b;font-size:15px">${info.agent} chưa đăng nhập</span>
+    </div>
+    <div style="color:var(--text2);font-size:13px;margin-bottom:4px">Mở <strong>terminal/cmd</strong> trên máy và làm theo một trong các cách sau:</div>
+    ${stepsHtml}
+    <div style="margin-top:12px;color:var(--text2);font-size:12px">💡 Sau khi đăng nhập xong, khởi động lại KAgent là dùng được ngay.</div>
+  </div>`;
+
+  // Append vào chat-messages (luôn append dù đang ở terminal view)
+  const cm = document.getElementById('chat-messages');
+  if (cm) {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;justify-content:flex-start;margin:4px 0';
+    div.innerHTML = card;
+    cm.appendChild(div);
+    cm.scrollTop = cm.scrollHeight;
+  }
+  // Nếu đang ở terminal, switch sang chat để user thấy hướng dẫn
+  if (_currentView !== 'chat') switchView('chat');
+  showToast('🔐 ' + info.agent + ' chưa đăng nhập — xem hướng dẫn bên dưới');
 }
 
 // ── INIT ──
