@@ -35,6 +35,15 @@ async function getToken(id,secret){
   if(j.code!==0)throw new Error('Auth: '+j.msg);
   return j.tenant_access_token;
 }
+async function getUserToken(id,secret,refreshToken){
+  const r=await fetch(`${LARK}/open-apis/authen/v1/refresh_access_token`,{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({grant_type:'refresh_token',refresh_token:refreshToken,app_id:id,app_secret:secret})
+  });
+  const j=await r.json();
+  if(j.code!==0)throw new Error('UserAuth: '+j.msg+' ('+j.code+')');
+  return j.data?.access_token||j.access_token;
+}
 
 // GET records with view_id (view filter applies on GET, not /search)
 async function fetchAll(token){
@@ -235,8 +244,11 @@ export async function onRequest(context){
   try{
     const APP_ID=env.LARK_APP_ID||'cli_aaa0cdd424b81eed';
     const APP_SECRET=env.LARK_APP_SECRET||'';
+    const REFRESH_TOKEN=env.LARK_REFRESH_TOKEN||'';
     if(!APP_SECRET)throw new Error('LARK_APP_SECRET chưa cấu hình');
-    const token=await getToken(APP_ID,APP_SECRET);
+    const token=REFRESH_TOKEN
+      ?await getUserToken(APP_ID,APP_SECRET,REFRESH_TOKEN)
+      :await getToken(APP_ID,APP_SECRET);
     const [records,revs,optMap,cvsRecords]=await Promise.all([
       fetchAll(token),fetchRevenue(token),cvsOptionMap(token),fetchAllCVS(token)
     ]);
