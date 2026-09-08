@@ -547,6 +547,29 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 }
 .agent-pill:hover{border-color:var(--accent);color:var(--text)}
 .agent-pill .ap-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+/* Model pill */
+.model-pill{
+  display:flex;align-items:center;gap:4px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:20px;padding:3px 9px;
+  cursor:pointer;font-size:11px;color:var(--text2);transition:all .15s;white-space:nowrap;
+}
+.model-pill:hover{border-color:var(--accent);color:var(--text)}
+/* Model picker popup */
+#model-picker{
+  position:absolute;top:100%;left:0;z-index:200;
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);padding:6px;min-width:240px;
+  display:none;
+}
+#model-picker.open{display:block}
+.model-opt{
+  padding:8px 12px;border-radius:7px;cursor:pointer;font-size:12px;
+  display:flex;flex-direction:column;gap:2px;
+}
+.model-opt:hover{background:var(--bg3)}
+.model-opt.active{background:var(--accent-bg,rgba(139,92,246,.15));color:var(--accent)}
+.model-opt .mo-name{font-weight:600}
+.model-opt .mo-note{font-size:10px;color:var(--text2);opacity:.8}
 </style>
 </head>
 <body>
@@ -559,7 +582,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.44</span>
+  <span class="version" id="app-version">v1.0.45</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -633,6 +656,14 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
           <span class="ap-dot" id="ap-dot" style="background:#7c3aed"></span>
           <span id="ap-name">Claude Code</span>
           <span style="font-size:9px;opacity:.5;margin-left:2px">▾</span>
+        </div>
+        <!-- Model pill -->
+        <div style="position:relative">
+          <div class="model-pill" id="model-pill" onclick="toggleModelPicker()" title="Đổi model">
+            <span id="model-pill-name">Sonnet 4.6</span>
+            <span style="font-size:9px;opacity:.5">▾</span>
+          </div>
+          <div id="model-picker"></div>
         </div>
         <!-- hidden select để backward compat -->
         <select id="agent-select" style="display:none"></select>
@@ -810,6 +841,60 @@ function connect() {
 
 function send(obj) {
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+}
+
+// ── Model selector ────────────────────────────────────────────────────────────
+window._selectedModel = null; // null = dùng defaultModel từ config
+
+function getSelectedModel() { return window._selectedModel; }
+
+function updateModelPill(agentId) {
+  const agentCfg = (window._agentsConfigCache || {})[agentId] || {};
+  const models = agentCfg.models || [];
+  const pill = document.getElementById('model-pill');
+  const pillName = document.getElementById('model-pill-name');
+  if (!models.length) {
+    if (pill) pill.style.display = 'none';
+    window._selectedModel = null;
+    return;
+  }
+  if (pill) pill.style.display = '';
+  // Lấy model đã lưu hoặc default
+  const saved = localStorage.getItem('kagent_model_' + agentId);
+  const model = saved && models.find(m => m.id === saved) ? saved : (agentCfg.defaultModel || models[0]?.id || '');
+  window._selectedModel = model || null;
+  const m = models.find(x => x.id === model);
+  if (pillName) pillName.textContent = m ? m.name : model;
+}
+
+function toggleModelPicker() {
+  const picker = document.getElementById('model-picker');
+  if (!picker) return;
+  if (picker.classList.contains('open')) { picker.classList.remove('open'); return; }
+  // Build options
+  const agentId = document.getElementById('agent-select').value || 'claude';
+  const agentCfg = (window._agentsConfigCache || {})[agentId] || {};
+  const models = agentCfg.models || [];
+  picker.innerHTML = models.map(m => `
+    <div class="model-opt ${window._selectedModel === m.id ? 'active' : ''}" onclick="selectModel('${agentId}','${m.id}','${esc(m.name)}')">
+      <span class="mo-name">${esc(m.name)}</span>
+      ${m.note ? `<span class="mo-note">${esc(m.note)}</span>` : ''}
+    </div>`).join('');
+  picker.classList.add('open');
+  // Click outside → close
+  setTimeout(() => document.addEventListener('click', closePicker, {once:true}), 50);
+}
+function closePicker(e) {
+  const picker = document.getElementById('model-picker');
+  if (picker && !picker.contains(e.target)) picker.classList.remove('open');
+}
+function selectModel(agentId, modelId, modelName) {
+  window._selectedModel = modelId;
+  localStorage.setItem('kagent_model_' + agentId, modelId);
+  const pillName = document.getElementById('model-pill-name');
+  if (pillName) pillName.textContent = modelName;
+  const picker = document.getElementById('model-picker');
+  if (picker) picker.classList.remove('open');
 }
 
 // ── Agent mode toggle ────────────────────────────────────────────────────────
@@ -1046,6 +1131,11 @@ async function init() {
   initView(); // set đúng view (terminal/chat) từ localStorage
   connect();
   agents = await fetch('/api/agents').then(r => r.json());
+  // Cache agents-config để model selector dùng
+  try {
+    const cfg = await fetch('/api/agents-config').then(r => r.json());
+    window._agentsConfigCache = cfg.agents || {};
+  } catch {}
   renderAgentSelect();
   // Restore agent mode from localStorage
   const savedMode = localStorage.getItem('kagent_mode') || 'safe';
@@ -1231,6 +1321,7 @@ function selectChat(chatId) {
   document.getElementById('chat-title').textContent = chat.name;
   document.getElementById('agent-select').value = chat.agent || 'claude';
   updateAgentPill(chat.agent || 'claude');
+  updateModelPill(chat.agent || 'claude');
 
   // Clear terminal + chat view
   document.getElementById('terminal-out').innerHTML = '';
@@ -1489,7 +1580,7 @@ function sendPrompt() {
   appendChatUser(displayText + (images.length ? `<br>${images.map(img => `<img src="${img.dataUrl}" style="max-height:120px;border-radius:8px;margin-top:4px">`).join('')}` : '')); // chat view bubble (client-only, không bị echo)
   if (_currentView === 'chat') showTyping(agents.find(a=>a.id===(document.getElementById('agent-select').value||'claude'))?.name || 'Agent');
   if (text) syncMessageToRelay(currentChatId, 'user', text);
-  send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', workDir: window._workDir || null, relayToken: getRelayToken(), images });
+  send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', model: window._selectedModel || null, workDir: window._workDir || null, relayToken: getRelayToken(), images });
 
   // Auto-đặt tên chat theo prompt đầu tiên nếu tên vẫn là mặc định
   const titleEl = document.getElementById('chat-title');
@@ -2198,6 +2289,7 @@ function updateAgentPill(agentId) {
   const a = AGENT_DEFS.find(x => x.id === agentId) || AGENT_DEFS[0];
   document.getElementById('ap-name').textContent = a.name;
   document.getElementById('ap-dot').style.background = a.color;
+  updateModelPill(agentId);
 }
 </script>
 
