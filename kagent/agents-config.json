@@ -1,0 +1,133 @@
+{
+  "agents": {
+    "claude": {
+      "name": "Claude Code",
+      "cmd": "claude",
+      "color": "#a78bfa",
+      "icon": "✳",
+      "installCmd": "npm install -g @anthropic-ai/claude-code",
+      "installUrl": "https://claude.ai/code",
+      "desc": "Anthropic Claude — AI code agent mạnh nhất, hỗ trợ MCP",
+      "modelFlag": "--model",
+      "defaultModel": "claude-sonnet-4-6",
+      "defaultThinking": "low",
+      "models": [
+        { "id": "claude-opus-5",             "name": "Opus 5",     "note": "Mạnh nhất, chậm hơn" },
+        { "id": "claude-sonnet-5",           "name": "Sonnet 5",   "note": "Cân bằng tốt" },
+        { "id": "claude-sonnet-4-6",         "name": "Sonnet 4.6", "note": "Ổn định, phổ biến" },
+        { "id": "claude-haiku-4-5-20251001", "name": "Haiku 4.5",  "note": "Nhanh, ít token nhất" }
+      ],
+      "thinkingLevels": [],
+      "safeArgs": ["--print", "{prompt}", "--output-format", "text"],
+      "safeArgsWithStdin": ["--output-format", "stream-json", "--verbose", "--input-format", "stream-json"],
+      "autoArgs": ["{prompt}", "--dangerously-skip-permissions", "--output-format", "stream-json", "--verbose"],
+      "autoArgsWithStdin": ["--dangerously-skip-permissions", "--output-format", "stream-json", "--verbose", "--input-format", "stream-json"],
+      "continueFlag": "--continue",
+      "streamJson": true,
+      "altPath": { "win32": "", "darwin": "", "linux": "" },
+      "authErrorPatterns": ["not logged in", "API key", "ANTHROPIC_API_KEY", "login required", "authenticate"],
+      "authGuide": {
+        "title": "Claude Code chưa đăng nhập",
+        "steps": [
+          { "label": "Đăng nhập Claude Code", "cmd": "claude login", "note": "Mở terminal, gõ lệnh này → làm theo hướng dẫn trên trình duyệt" }
+        ]
+      }
+    },
+    "gemini": {
+      "name": "Gemini CLI",
+      "cmd": "gemini",
+      "color": "#34d399",
+      "icon": "♊",
+      "installCmd": "npm install -g @google/gemini-cli",
+      "installUrl": "https://github.com/google-gemini/gemini-cli",
+      "desc": "Google Gemini — 1M token context, miễn phí",
+      "modelFlag": "--model",
+      "defaultModel": "gemini-2.5-pro",
+      "models": [
+        { "id": "gemini-2.5-pro",   "name": "Gemini 2.5 Pro",   "note": "Mạnh nhất, 1M context" },
+        { "id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash",  "note": "Nhanh hơn, tiết kiệm" },
+        { "id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash",  "note": "Ổn định" }
+      ],
+      "safeArgs": ["-p", "{prompt}"],
+      "autoArgs": ["-p", "{prompt}", "--yolo"],
+      "streamJson": false,
+      "authErrorPatterns": ["GEMINI_API_KEY", "Auth method", "GOOGLE_GENAI", "authentication", "not authenticated"],
+      "authGuide": {
+        "title": "Gemini CLI chưa đăng nhập",
+        "steps": [
+          { "label": "Cách 1 — Đăng nhập Google (dễ nhất)", "cmd": "gemini", "note": "Mở terminal, gõ lệnh này → trình duyệt tự mở → đăng nhập Google là xong" },
+          { "label": "Cách 2 — Dùng API Key", "cmd": null, "note": "Vào https://aistudio.google.com/apikey → tạo key → set GEMINI_API_KEY=<key> trong terminal rồi khởi động lại KAgent" }
+        ]
+      }
+    },
+    "opencode": {
+      "name": "OpenCode",
+      "cmd": "opencode",
+      "color": "#22c55e",
+      "icon": "⬛",
+      "installCmd": "npm install -g opencode-ai",
+      "installUrl": "https://opencode.ai",
+      "desc": "OpenCode — Gemini + Claude + GPT trong 1 tool",
+      "modelFlag": "--model",
+      "defaultModel": "",
+      "models": [
+        { "id": "anthropic/claude-sonnet-5",   "name": "Claude Sonnet 5",   "note": "Qua Anthropic" },
+        { "id": "anthropic/claude-opus-5",     "name": "Claude Opus 5",     "note": "Mạnh nhất Anthropic" },
+        { "id": "google/gemini-2.5-pro",       "name": "Gemini 2.5 Pro",    "note": "Qua Google" },
+        { "id": "openai/gpt-4o",               "name": "GPT-4o",            "note": "Qua OpenAI" },
+        { "id": "openai/o3",                   "name": "OpenAI o3",         "note": "Reasoning mạnh" }
+      ],
+      "safeArgs": ["run", "{prompt}"],
+      "autoArgs": ["run", "--auto", "{prompt}"],
+      "continueFlag": "--continue",
+      "streamJson": false,
+      "authErrorPatterns": ["not authenticated", "API key required", "login", "not configured"],
+      "authGuide": {
+        "title": "OpenCode chưa cài hoặc chưa cấu hình",
+        "steps": [
+          { "label": "Bước 1 — Cài OpenCode", "cmd": "npm install -g opencode-ai", "note": "Mở terminal, chạy lệnh này để cài" },
+          { "label": "Bước 2 — Cấu hình lần đầu", "cmd": "opencode", "note": "Gõ lệnh này → làm theo hướng dẫn chọn provider (Gemini/Claude/OpenAI) và nhập API key" },
+          { "label": "Bước 3 — Khởi động lại KAgent", "cmd": null, "note": "Tắt và mở lại KAgent để nhận diện OpenCode" }
+        ]
+      }
+    },
+    "codex": {
+      "name": "Codex CLI",
+      "cmd": "codex",
+      "color": "#fbbf24",
+      "icon": "⚡",
+      "installCmd": "npm install -g @openai/codex",
+      "installUrl": "https://github.com/openai/codex",
+      "desc": "OpenAI Codex CLI — code với GPT-4o",
+      "modelFlag": "--model",
+      "defaultModel": "gpt-4o",
+      "models": [
+        { "id": "gpt-4o",     "name": "GPT-4o",    "note": "Cân bằng tốt" },
+        { "id": "o3",         "name": "o3",         "note": "Reasoning mạnh nhất" },
+        { "id": "o4-mini",    "name": "o4-mini",    "note": "Nhanh, tiết kiệm" }
+      ],
+      "safeArgs": ["-p", "{prompt}"],
+      "autoArgs": ["-p", "{prompt}", "--full-auto"],
+      "streamJson": false,
+      "authErrorPatterns": ["OPENAI_API_KEY", "not authenticated", "api key"],
+      "authGuide": {
+        "title": "Codex CLI chưa cấu hình",
+        "steps": [
+          { "label": "Set OpenAI API Key", "cmd": null, "note": "Vào https://platform.openai.com/api-keys → tạo key → set OPENAI_API_KEY=<key> trong terminal rồi khởi động lại KAgent" }
+        ]
+      }
+    },
+    "shell": {
+      "name": "Shell",
+      "cmd": "auto",
+      "color": "#94a3b8",
+      "icon": "⬛",
+      "installCmd": null,
+      "desc": "Chạy lệnh shell trực tiếp",
+      "safeArgs": ["{prompt}"],
+      "autoArgs": ["{prompt}"],
+      "streamJson": false,
+      "authErrorPatterns": []
+    }
+  }
+}
