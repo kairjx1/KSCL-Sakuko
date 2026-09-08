@@ -98,7 +98,12 @@ export async function onRequest({request,env}){
         const f=rec.fields;
         const m=txt(f['Tháng']).padStart(2,'0');if(!m||m==='00')return null;
         const t='T'+m;
-        const dt=num(f['Doanh thu']),gv=num(f['Giá vốn']),tv=num(f['Thu về']),huy=num(f['Hủy']);
+        // Ưu tiên dùng detailAgg (bảng Chi tiết date) cho GV/TV/DT — chính xác hơn monthly summary
+        const agg=detailAgg[t]||{};
+        const dt=agg.dt||num(f['Doanh thu']);
+        const gv=agg.gv||num(f['Giá vốn']);
+        const tv=agg.tv||num(f['Thu về']);
+        const huy=num(f['Hủy']);
         const conlai=conlaiByMonth[t]||num(f['Còn lại theo mã DG'])||0;
         const dinhmuc=Math.round(num(f['Định mức tối đa']));
         const cp=gv-tv;
