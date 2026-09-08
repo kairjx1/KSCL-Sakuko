@@ -557,20 +557,31 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .model-pill:hover{border-color:var(--accent);color:var(--text)}
 /* Model picker popup */
 #model-picker{
-  position:absolute;top:100%;left:0;z-index:200;
-  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
-  box-shadow:0 8px 24px rgba(0,0,0,.4);padding:6px;min-width:240px;
+  position:absolute;top:calc(100% + 6px);left:0;z-index:200;
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);padding:10px;min-width:260px;
   display:none;
 }
 #model-picker.open{display:block}
+.mp-section-title{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:2px 4px 6px;font-weight:600}
 .model-opt{
-  padding:8px 12px;border-radius:7px;cursor:pointer;font-size:12px;
+  padding:8px 10px;border-radius:8px;cursor:pointer;font-size:12px;
   display:flex;flex-direction:column;gap:2px;
 }
 .model-opt:hover{background:var(--bg3)}
-.model-opt.active{background:var(--accent-bg,rgba(139,92,246,.15));color:var(--accent)}
+.model-opt.active{background:rgba(139,92,246,.15);color:var(--accent)}
 .model-opt .mo-name{font-weight:600}
-.model-opt .mo-note{font-size:10px;color:var(--text2);opacity:.8}
+.model-opt .mo-note{font-size:10px;color:var(--text2)}
+/* Thinking level buttons */
+.thinking-row{display:flex;gap:5px;padding:4px 0 2px}
+.thinking-btn{
+  flex:1;padding:5px 4px;border-radius:7px;border:1px solid var(--border);
+  background:var(--bg3);color:var(--text2);font-size:11px;font-weight:600;
+  cursor:pointer;text-align:center;transition:all .15s;
+}
+.thinking-btn:hover{border-color:var(--accent);color:var(--text)}
+.thinking-btn.active{background:rgba(139,92,246,.2);border-color:var(--accent);color:var(--accent)}
+.mp-divider{border:none;border-top:1px solid var(--border);margin:8px 0}
 </style>
 </head>
 <body>
@@ -583,7 +594,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.46</span>
+  <span class="version" id="app-version">v1.0.47</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -844,58 +855,94 @@ function send(obj) {
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
 }
 
-// ── Model selector ────────────────────────────────────────────────────────────
-window._selectedModel = null; // null = dùng defaultModel từ config
-
-function getSelectedModel() { return window._selectedModel; }
+// ── Model + Thinking selector ──────────────────────────────────────────────────
+window._selectedModel = null;
+window._selectedThinking = null;
 
 function updateModelPill(agentId) {
   const agentCfg = (window._agentsConfigCache || {})[agentId] || {};
   const models = agentCfg.models || [];
   const pill = document.getElementById('model-pill');
   const pillName = document.getElementById('model-pill-name');
-  if (!models.length) {
-    if (pill) pill.style.display = 'none';
-    window._selectedModel = null;
-    return;
-  }
+  if (!models.length) { if (pill) pill.style.display = 'none'; return; }
   if (pill) pill.style.display = '';
-  // Lấy model đã lưu hoặc default
-  const saved = localStorage.getItem('kagent_model_' + agentId);
-  const model = saved && models.find(m => m.id === saved) ? saved : (agentCfg.defaultModel || models[0]?.id || '');
-  window._selectedModel = model || null;
-  const m = models.find(x => x.id === model);
-  if (pillName) pillName.textContent = m ? m.name : model;
+
+  const savedModel = localStorage.getItem('kagent_model_' + agentId);
+  const modelId = savedModel && models.find(m => m.id === savedModel) ? savedModel : (agentCfg.defaultModel || models[0]?.id || '');
+  window._selectedModel = modelId || null;
+
+  const thinkingLevels = agentCfg.thinkingLevels || [];
+  const savedThinking = localStorage.getItem('kagent_thinking_' + agentId);
+  const thinkingId = savedThinking && thinkingLevels.find(t => t.id === savedThinking) ? savedThinking : (agentCfg.defaultThinking || '');
+  window._selectedThinking = thinkingId || null;
+
+  _refreshModelPill(agentCfg);
+}
+
+function _refreshModelPill(agentCfg) {
+  const pillName = document.getElementById('model-pill-name');
+  if (!pillName) return;
+  const m = (agentCfg.models || []).find(x => x.id === window._selectedModel);
+  const t = (agentCfg.thinkingLevels || []).find(x => x.id === window._selectedThinking);
+  const tLabel = t && t.id !== 'none' ? ` · ${t.name}` : '';
+  pillName.textContent = (m ? m.name : (window._selectedModel || '')) + tLabel;
 }
 
 function toggleModelPicker() {
   const picker = document.getElementById('model-picker');
   if (!picker) return;
   if (picker.classList.contains('open')) { picker.classList.remove('open'); return; }
-  // Build options
   const agentId = document.getElementById('agent-select').value || 'claude';
   const agentCfg = (window._agentsConfigCache || {})[agentId] || {};
   const models = agentCfg.models || [];
-  picker.innerHTML = models.map(m => `
-    <div class="model-opt ${window._selectedModel === m.id ? 'active' : ''}" onclick="selectModel('${agentId}','${m.id}','${esc(m.name)}')">
-      <span class="mo-name">${esc(m.name)}</span>
-      ${m.note ? `<span class="mo-note">${esc(m.note)}</span>` : ''}
-    </div>`).join('');
+  const thinkingLevels = agentCfg.thinkingLevels || [];
+
+  let html = '';
+  if (models.length) {
+    html += `<div class="mp-section-title">Model</div>`;
+    html += models.map(m => `
+      <div class="model-opt ${window._selectedModel === m.id ? 'active' : ''}" onclick="selectModel('${agentId}','${m.id}')">
+        <span class="mo-name">${esc(m.name)}</span>
+        ${m.note ? `<span class="mo-note">${esc(m.note)}</span>` : ''}
+      </div>`).join('');
+  }
+  if (thinkingLevels.length) {
+    html += `<hr class="mp-divider"><div class="mp-section-title">Thinking Budget</div>`;
+    html += `<div class="thinking-row">` + thinkingLevels.map(t => `
+      <div class="thinking-btn ${window._selectedThinking === t.id ? 'active' : ''}" onclick="selectThinking('${agentId}','${t.id}')" title="${esc(t.note||'')}">
+        ${esc(t.name)}
+      </div>`).join('') + `</div>`;
+  }
+  picker.innerHTML = html;
   picker.classList.add('open');
-  // Click outside → close
   setTimeout(() => document.addEventListener('click', closePicker, {once:true}), 50);
 }
+
 function closePicker(e) {
   const picker = document.getElementById('model-picker');
   if (picker && !picker.contains(e.target)) picker.classList.remove('open');
 }
-function selectModel(agentId, modelId, modelName) {
+
+function selectModel(agentId, modelId) {
   window._selectedModel = modelId;
   localStorage.setItem('kagent_model_' + agentId, modelId);
-  const pillName = document.getElementById('model-pill-name');
-  if (pillName) pillName.textContent = modelName;
+  const agentCfg = (window._agentsConfigCache || {})[agentId] || {};
+  _refreshModelPill(agentCfg);
+  // Refresh picker to update active state
   const picker = document.getElementById('model-picker');
-  if (picker) picker.classList.remove('open');
+  if (picker && picker.classList.contains('open')) toggleModelPicker();
+  else toggleModelPicker();
+}
+
+function selectThinking(agentId, thinkingId) {
+  window._selectedThinking = thinkingId;
+  localStorage.setItem('kagent_thinking_' + agentId, thinkingId);
+  const agentCfg = (window._agentsConfigCache || {})[agentId] || {};
+  _refreshModelPill(agentCfg);
+  // Update active state in picker without closing
+  document.querySelectorAll('.thinking-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim() === (agentCfg.thinkingLevels||[]).find(t=>t.id===thinkingId)?.name);
+  });
 }
 
 // ── Agent mode toggle ────────────────────────────────────────────────────────
