@@ -269,7 +269,17 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.3);
   border-radius:4px 12px 12px 12px;padding:10px 14px;
   color:#fca5a5;font-size:13px;white-space:pre-wrap;word-break:break-word;
+  position:relative;
 }
+/* ── DELETE BUTTON trên mỗi message ── */
+.msg-wrap{ position:relative; }
+.msg-wrap:hover .msg-del{ opacity:1; }
+.msg-del{
+  opacity:0;position:absolute;top:4px;right:4px;
+  background:rgba(220,38,38,.15);border:none;border-radius:6px;
+  color:#fca5a5;font-size:11px;padding:2px 7px;cursor:pointer;transition:opacity .15s;
+}
+.msg-del:hover{ background:rgba(220,38,38,.4);color:#fff; }
 
 /* ── TERMINAL ── */
 #terminal-wrap{flex:1;overflow:hidden;position:relative;background:#0a0a0a;display:flex;flex-direction:column}
@@ -594,7 +604,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.47</span>
+  <span class="version" id="app-version">v1.0.48</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -868,7 +878,10 @@ function updateModelPill(agentId) {
   if (pill) pill.style.display = '';
 
   const savedModel = localStorage.getItem('kagent_model_' + agentId);
-  const modelId = savedModel && models.find(m => m.id === savedModel) ? savedModel : (agentCfg.defaultModel || models[0]?.id || '');
+  const validSaved = savedModel && models.find(m => m.id === savedModel);
+  // Xóa localStorage cũ không hợp lệ (ví dụ: "sonnet-4-6-low" từ version cũ)
+  if (savedModel && !validSaved) localStorage.removeItem('kagent_model_' + agentId);
+  const modelId = validSaved ? savedModel : (agentCfg.defaultModel || models[0]?.id || '');
   window._selectedModel = modelId || null;
 
   const thinkingLevels = agentCfg.thinkingLevels || [];
@@ -1022,23 +1035,32 @@ function renderMarkdown(text) {
 // Append chat bubble (user or AI) into chat-messages panel
 let _toolBlock = null; // current streaming tool output block
 
+function _wrapMsg(el) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap';
+  wrap.appendChild(el);
+  const del = document.createElement('button');
+  del.className = 'msg-del';
+  del.textContent = '✕ Xóa';
+  del.onclick = () => wrap.remove(); // chỉ xóa local, không sync relay
+  wrap.appendChild(del);
+  return wrap;
+}
+
 function appendChatUser(text) {
   const el = document.createElement('div');
   el.className = 'chat-msg-user';
-  // Dùng innerHTML để render ảnh đính kèm (<img> tag từ sendPrompt)
-  // esc() đã xử lý text thường, nhưng ảnh cần innerHTML
   el.innerHTML = text;
-  document.getElementById('chat-messages').appendChild(el);
+  document.getElementById('chat-messages').appendChild(_wrapMsg(el));
   scrollChat();
 }
 
 function appendChatAI(markdownText) {
-  // Remove any active tool block
   _toolBlock = null;
   const el = document.createElement('div');
   el.className = 'chat-msg-ai';
   el.innerHTML = renderMarkdown(markdownText);
-  document.getElementById('chat-messages').appendChild(el);
+  document.getElementById('chat-messages').appendChild(_wrapMsg(el));
   scrollChat();
   return el;
 }
@@ -1086,7 +1108,7 @@ function appendChatError(msg) {
   const el = document.createElement('div');
   el.className = 'chat-msg-error';
   el.textContent = '⚠ ' + msg;
-  cm.appendChild(el);
+  cm.appendChild(_wrapMsg(el));
   scrollChat();
 }
 
