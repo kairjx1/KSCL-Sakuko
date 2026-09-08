@@ -244,6 +244,32 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 }
 .status-badge.stopped{color:var(--text2);border-color:var(--border)}
 
+/* ── TYPING INDICATOR ── */
+.typing-indicator{
+  display:flex;align-items:center;gap:8px;padding:10px 14px;
+  background:var(--bg2);border-radius:12px;border-radius:4px 12px 12px 12px;
+  width:fit-content;max-width:120px;
+}
+.typing-indicator .dots{display:flex;gap:4px;align-items:center}
+.typing-indicator .dot-anim{
+  width:7px;height:7px;border-radius:50%;background:var(--text2);
+  animation:typing-bounce 1.2s infinite ease-in-out;
+}
+.typing-indicator .dot-anim:nth-child(2){animation-delay:.2s}
+.typing-indicator .dot-anim:nth-child(3){animation-delay:.4s}
+@keyframes typing-bounce{
+  0%,60%,100%{transform:translateY(0);opacity:.4}
+  30%{transform:translateY(-5px);opacity:1}
+}
+.typing-indicator .agent-label{font-size:10px;color:var(--text2)}
+
+/* ── ERROR BUBBLE ── */
+.chat-msg-error{
+  background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.3);
+  border-radius:4px 12px 12px 12px;padding:10px 14px;
+  color:#fca5a5;font-size:13px;white-space:pre-wrap;word-break:break-word;
+}
+
 /* ── TERMINAL ── */
 #terminal-wrap{flex:1;overflow:hidden;position:relative;background:#0a0a0a;display:flex;flex-direction:column}
 #terminal-out{
@@ -533,7 +559,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.43</span>
+  <span class="version" id="app-version">v1.0.44</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -905,6 +931,32 @@ function finalizeToolBlock() {
   }
 }
 
+// ── Typing indicator ──
+let _typingEl = null;
+function showTyping(agentName) {
+  removeTyping();
+  const cm = document.getElementById('chat-messages');
+  _typingEl = document.createElement('div');
+  _typingEl.className = 'typing-indicator';
+  _typingEl.innerHTML = `<div class="dots"><div class="dot-anim"></div><div class="dot-anim"></div><div class="dot-anim"></div></div><span class="agent-label">${esc(agentName||'Agent')}</span>`;
+  cm.appendChild(_typingEl);
+  scrollChat();
+}
+function removeTyping() {
+  if (_typingEl) { _typingEl.remove(); _typingEl = null; }
+}
+
+// ── Error bubble ──
+function appendChatError(msg) {
+  removeTyping();
+  const cm = document.getElementById('chat-messages');
+  const el = document.createElement('div');
+  el.className = 'chat-msg-error';
+  el.textContent = '⚠ ' + msg;
+  cm.appendChild(el);
+  scrollChat();
+}
+
 function scrollChat() {
   const cm = document.getElementById('chat-messages');
   cm.scrollTop = cm.scrollHeight;
@@ -916,30 +968,39 @@ function handleWsMessage(msg) {
       renderHistory(msg.messages);
       break;
     case 'output':
+      removeTyping(); // có output → ẩn typing indicator
       appendOutput(msg.data); // luôn append vào terminal
       // Chat view: hiện tool output trong tool block
       if (_currentView === 'chat') appendChatTool(msg.data);
       break;
     case 'ai_response':
       // Response hoàn chỉnh từ server → render markdown
+      removeTyping();
       finalizeToolBlock();
       appendChatAI(msg.text);
       // Nếu đang ở terminal view, vẫn append raw (đã append qua 'output' events)
       break;
     case 'status':
       setStatus(msg.status);
-      if (msg.status === 'stopped') finalizeToolBlock();
+      if (msg.status === 'stopped') { finalizeToolBlock(); removeTyping(); }
       break;
     case 'exit':
+      removeTyping();
       appendOutput(`\r\n\x1b[33m[KAgent] Agent đã thoát (code: ${msg.exitCode})\x1b[0m\r\n`);
+      if (msg.exitCode && msg.exitCode !== 0 && _currentView === 'chat') {
+        appendChatError(`Agent thoát với mã lỗi ${msg.exitCode}. Xem tab Terminal để biết chi tiết.`);
+      }
       setStatus('stopped');
       finalizeToolBlock();
       break;
     case 'auth_error':
+      removeTyping();
       showAuthError(msg.info);
       setStatus('stopped');
       break;
     case 'error':
+      removeTyping();
+      if (_currentView === 'chat') appendChatError(msg.message || 'Đã xảy ra lỗi không xác định');
       showToast('⚠️ ' + msg.message);
       break;
   }
@@ -1426,6 +1487,7 @@ function sendPrompt() {
   // appendOutput('[Bạn]') KHÔNG gọi ở đây — server sẽ broadcast lại qua type:'output'
   // nếu gọi cả 2 sẽ bị duplicate trong terminal
   appendChatUser(displayText + (images.length ? `<br>${images.map(img => `<img src="${img.dataUrl}" style="max-height:120px;border-radius:8px;margin-top:4px">`).join('')}` : '')); // chat view bubble (client-only, không bị echo)
+  if (_currentView === 'chat') showTyping(agents.find(a=>a.id===(document.getElementById('agent-select').value||'claude'))?.name || 'Agent');
   if (text) syncMessageToRelay(currentChatId, 'user', text);
   send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', workDir: window._workDir || null, relayToken: getRelayToken(), images });
 
