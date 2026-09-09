@@ -258,9 +258,13 @@ export async function onRequest(context){
     const hasCVS=Object.keys(cvs).length>0;
     // Nếu cả 2 đều rỗng (bot token không đọc được bitable) → dùng static cache + ts mới
     if(!hasData&&!hasCVS){
-      const origin=new URL(request.url).origin;
-      const sc=await fetch(`${origin}/xuathuy-cache.json`,{signal:AbortSignal.timeout(5000)});
-      if(sc.ok){const sj=await sc.json();if(sj.data&&Object.keys(sj.data).length){return new Response(JSON.stringify({...sj,ts:Date.now(),_src:'static'}),{status:200,headers:{...CORS,'X-Cache':'STATIC'}});}}
+      try{
+        const origin=new URL(request.url).origin;
+        const sc=await fetch(`${origin}/xuathuy-cache.json`,{signal:AbortSignal.timeout(5000)});
+        if(sc.ok){const sj=await sc.json();if(sj.data&&Object.keys(sj.data).length){return new Response(JSON.stringify({...sj,ts:Date.now(),_src:'static'}),{status:200,headers:{...CORS,'X-Cache':'STATIC'}});}}
+      }catch(_){}
+      // Static cache cũng rỗng → báo lỗi để browser dùng GitHub cache
+      return new Response(JSON.stringify({ok:false,error:'Bot token không đọc được bitable và không có static cache'}),{status:500,headers:CORS});
     }
     // Nếu chỉ CVS rỗng → lấy CVS từ static cache
     let cvsFinal=cvs,revCVSFinal=revs.revenueCVS;
