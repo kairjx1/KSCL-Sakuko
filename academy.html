@@ -1781,7 +1781,7 @@ function rKKXuatHuy(){
     <span style="font-size:12px;color:var(--t2)">${C?'✅ Dữ liệu Lark · '+ageStr:'⚠️ Chưa có dữ liệu'}</span>
     <button onclick="syncXuatHuy(this)" style="background:#1a2558;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer">🔄 Đồng bộ Lark</button>
   </div>`;
-  if(!C||!C.data)return`<div class="card">${syncBar}<div style="text-align:center;padding:32px 0"><div style="font-size:48px;margin-bottom:10px">🗑️</div><p style="color:var(--t2);font-size:13px">Bấm <strong>Đồng bộ Lark</strong> để tải dữ liệu xuất hủy từ Lark bitable.</p></div></div>`;
+  if(!C||!C.data||!Object.keys(C.data).length)return`<div class="card">${syncBar}<div style="text-align:center;padding:32px 0"><div style="font-size:48px;margin-bottom:10px">🗑️</div><p style="color:var(--t2);font-size:13px">Bấm <strong>Đồng bộ Lark</strong> để tải dữ liệu xuất hủy từ Lark bitable.</p></div></div>`;
 
   // ── Chế độ: ST (siêu thị) / CVS ──
   const mode=S.xhMode==='cvs'?'cvs':'st';
@@ -2003,7 +2003,7 @@ async function syncXuatHuy(btn){
     let larkH={};
     try{const tok=await larkGLGetToken();if(tok)larkH['X-Lark-Token']=tok;}catch(_){}
     const {d,src}=await _syncFetch(btn,[
-      {src:'Lark API',url:'http://localhost:3002/api/sync-xuathuy',timeout:180000,check:j=>j.data&&!j.error},
+      {src:'Lark API',url:'http://localhost:3002/api/sync-xuathuy',timeout:15000,check:j=>j.data&&Object.keys(j.data).length>0&&!j.error},
       {src:'Lark API',url:'/api/lark-xuathuy?refresh=1',timeout:60000,check:j=>j.data&&Object.keys(j.data).length>0&&!j.error,headers:larkH},
       {src:'GitHub cache',url:'https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/xuathuy-cache.json?t='+Date.now(),timeout:10000,check:j=>j.data},
     ],j=>j.data&&typeof j.data==='object','Xuất hủy');
