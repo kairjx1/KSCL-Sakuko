@@ -2007,8 +2007,14 @@ async function syncXuatHuy(btn){
       {src:'Lark API',url:'/api/lark-xuathuy?refresh=1',timeout:60000,check:j=>j.data&&Object.keys(j.data).length>0&&!j.error,headers:larkH},
       {src:'GitHub cache',url:'https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/xuathuy-cache.json?t='+Date.now(),timeout:10000,check:j=>j.data},
     ],j=>j.data&&typeof j.data==='object','Xuất hủy');
-    localStorage.setItem('xuathuy_cache',JSON.stringify({...d,ts:d.ts||Date.now()}));
-    S.xhCache={...d,ts:d.ts||Date.now()};
+    // Nếu cvs trong response rỗng, giữ lại cvs cũ từ cache
+    const oldCVS=S.xhCache?.cvs||{};
+    const mergedCVS=(d.cvs&&Object.keys(d.cvs).length>0)?d.cvs:oldCVS;
+    const oldRevCVS=S.xhCache?.revenueCVS||{};
+    const mergedRevCVS=(d.revenueCVS&&Object.keys(d.revenueCVS).length>0)?d.revenueCVS:oldRevCVS;
+    const merged={...d,ts:d.ts||Date.now(),cvs:mergedCVS,revenueCVS:mergedRevCVS};
+    localStorage.setItem('xuathuy_cache',JSON.stringify(merged));
+    S.xhCache=merged;
     go(S.page,S.tab);
     const yr=Object.keys(d.data||{}).sort().pop()||'';
     const ms=yr?Object.keys(d.data[yr]).sort():[];

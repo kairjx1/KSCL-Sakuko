@@ -249,8 +249,10 @@ export async function onRequest(context){
     if(!APP_SECRET&&!userTokenFromHeader)throw new Error('LARK_APP_SECRET chưa cấu hình');
     const token=userTokenFromHeader
       ||(REFRESH_TOKEN?await getUserToken(APP_ID,APP_SECRET,REFRESH_TOKEN):await getToken(APP_ID,APP_SECRET));
+    // CVS bitable luôn dùng bot token (user token có thể không có quyền đọc CVS)
+    const botToken=APP_SECRET?await getToken(APP_ID,APP_SECRET):token;
     const [records,revs,optMap,cvsRecords]=await Promise.all([
-      fetchAll(token),fetchRevenue(token),cvsOptionMap(token),fetchAllCVS(token)
+      fetchAll(token),fetchRevenue(token),cvsOptionMap(botToken),fetchAllCVS(botToken)
     ]);
     const data=aggregate(records);
     const cvs=aggregateCVS(cvsRecords,optMap);
