@@ -252,18 +252,26 @@ export async function onRequest(context){
     const [records,revs,optMap,cvsRecords]=await Promise.all([
       fetchAll(token),fetchRevenue(token),cvsOptionMap(token),fetchAllCVS(token)
     ]);
+    const data=aggregate(records);
     const cvs=aggregateCVS(cvsRecords,optMap);
-    // Nếu CVS rỗng (bot token không đọc được bảng CVS) → lấy CVS từ static cache
-    let cvsFallback=cvs,revenueCVSFallback=revs.revenueCVS;
-    if(!Object.keys(cvs).length){
+    const hasData=Object.keys(data).length>0;
+    const hasCVS=Object.keys(cvs).length>0;
+    // Nếu cả 2 đều rỗng (bot token không đọc được bitable) → dùng static cache + ts mới
+    if(!hasData&&!hasCVS){
+      const origin=new URL(request.url).origin;
+      const sc=await fetch(`${origin}/xuathuy-cache.json`,{signal:AbortSignal.timeout(5000)});
+      if(sc.ok){const sj=await sc.json();if(sj.data&&Object.keys(sj.data).length){return new Response(JSON.stringify({...sj,ts:Date.now(),_src:'static'}),{status:200,headers:{...CORS,'X-Cache':'STATIC'}});}}
+    }
+    // Nếu chỉ CVS rỗng → lấy CVS từ static cache
+    let cvsFinal=cvs,revCVSFinal=revs.revenueCVS;
+    if(hasData&&!hasCVS){
       try{
         const origin=new URL(request.url).origin;
         const sc=await fetch(`${origin}/xuathuy-cache.json`,{signal:AbortSignal.timeout(5000)});
-        if(sc.ok){const sj=await sc.json();if(sj.cvs&&Object.keys(sj.cvs).length){cvsFallback=sj.cvs;if(sj.revenueCVS)revenueCVSFallback=sj.revenueCVS;}}
+        if(sc.ok){const sj=await sc.json();if(sj.cvs&&Object.keys(sj.cvs).length){cvsFinal=sj.cvs;if(sj.revenueCVS)revCVSFinal=sj.revenueCVS;}}
       }catch(_){}
     }
-    const cache={ts:Date.now(),data:aggregate(records),revenue:revs.revenue,
-      cvs:cvsFallback,revenueCVS:revenueCVSFallback};
+    const cache={ts:Date.now(),data,revenue:revs.revenue,cvs:cvsFinal,revenueCVS:revCVSFinal};
     return new Response(JSON.stringify(cache),{status:200,headers:{...CORS,'X-Cache':'MISS'}});
   }catch(e){
     // 3. Fetch mới thất bại → trả cache cũ dù hết hạn, báo stale
