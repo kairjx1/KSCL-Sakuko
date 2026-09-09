@@ -44,6 +44,16 @@ async function getToken(id, secret) {
   if (j.code !== 0) throw new Error('Auth lỗi: ' + j.msg + ' (' + j.code + ')');
   return j.tenant_access_token;
 }
+async function getUserToken(id, secret, refreshToken) {
+  const r = await fetch(`${LARK}/open-apis/authen/v1/refresh_access_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ grant_type: 'refresh_token', refresh_token: refreshToken, app_id: id, app_secret: secret })
+  });
+  const j = await r.json();
+  if (j.code !== 0) throw new Error('UserAuth: ' + j.msg + ' (' + j.code + ')');
+  return j.data?.access_token || j.access_token;
+}
 
 async function fetchAll(token, tblId, fields) {
   let all = [], pt = '', more = true;
@@ -66,11 +76,14 @@ async function fetchAll(token, tblId, fields) {
 
 export async function onRequest({ request, env }) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-  const APP_ID     = env.LARK_APP_ID     || 'cli_aaa0cdd424b81eed';
-  const APP_SECRET = env.LARK_APP_SECRET || '';
+  const APP_ID       = env.LARK_APP_ID       || 'cli_aaa0cdd424b81eed';
+  const APP_SECRET   = env.LARK_APP_SECRET   || '';
+  const REFRESH_TOKEN = env.LARK_REFRESH_TOKEN || '';
   if (!APP_SECRET) return new Response(JSON.stringify({ ok: false, error: 'LARK_APP_SECRET chưa cấu hình' }), { status: 500, headers: CORS });
   try {
-    const token = await getToken(APP_ID, APP_SECRET);
+    const token = REFRESH_TOKEN
+      ? await getUserToken(APP_ID, APP_SECRET, REFRESH_TOKEN)
+      : await getToken(APP_ID, APP_SECRET);
     const [dkRecs, ctkmRecs] = await Promise.all([
       fetchAll(token, 'tblU0OlbMShM5ooe', ['Ngày kiểm tra','Tên Siêu thị','Kết quả check cam','Lỗi vi phạm','Tháng','Năm','Giải trình lý do']),
       fetchAll(token, 'tblQxeGxroYYFpY6', ['Thời gian','Tên Siêu thị','Kết quả','Tháng','Năm'])
