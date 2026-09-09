@@ -31,7 +31,7 @@ function getArr(v) {
   return [];
 }
 
-const DK_FAIL   = new Set(['Sai phạm','Không đạt','CGT','Fail','fail','Có sai phạm']);
+const DK_FAIL   = new Set(['Sai phạm','Không đạt','CGT','Fail','fail','Có sai phạm','Check lại','Cần kiểm tra','Vi phạm']);
 const CTKM_FAIL = new Set(['Không tặng khách','Không đạt','CGT','Sai phạm','Fail','Có lỗi','Không tặng','Không tặng KH']);
 
 async function getToken(id, secret) {
