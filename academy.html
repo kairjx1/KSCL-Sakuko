@@ -2219,8 +2219,11 @@ function qcDiemImportFile(input){
       if(month){S.qcDiemMonth=month;S.qcDiemYear=year;}
       // Bump load token để Firebase callback cũ (auto-load) không ghi đè data vừa import
       S._qcDiemLoadSeq=(S._qcDiemLoadSeq||0)+1;
-      S.qcDiemRows=newRows;S.qcDiemLoiHM=newLoi;S._qcDiemAutoLoaded=true;
-      go('qc','Chấm điểm dịch vụ');
+      S.qcDiemRows=newRows;S.qcDiemLoiHM=newLoi;
+      // Gọi go() sẽ trigger _flushQCSaves() reset _qcDiemAutoLoaded=false → auto-load đè tháng mặc định
+      // Thay bằng render() trực tiếp sau khi set flag để tránh bug đó
+      S._qcDiemAutoLoaded=true;
+      if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ'){render();}else{go('qc','Chấm điểm dịch vụ');S._qcDiemAutoLoaded=true;}
       // Tự động lưu lên Firebase ngay sau import — không cần bấm Lưu thủ công
       const _y=S.qcDiemYear,_m=S.qcDiemMonth;
       setTimeout(()=>qcDiemSaveCore(_y,_m,newRows,newLoi,null,`✅ Đã import & tự lưu ${newRows.length} ST · ${newLoi.length} hạng mục (T${_m}/${_y})`),300);
