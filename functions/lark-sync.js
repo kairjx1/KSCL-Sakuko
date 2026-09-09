@@ -111,12 +111,13 @@ export async function onRequest({ request, env }) {
       const kq = getTxt(f['Kết quả check cam'] ?? f['Kết quả']).trim();
       if (DK_FAIL.has(kq)) {
         s.dk.sp++;
+        // CGT = tất cả vi phạm QC phát hiện (store cần giải trình)
+        // không phụ thuộc vào trường "Giải trình lý do"
+        s.dk.cgt++;
+        s.dk.stDetails[stName].cgt++;
         const gt = f['Giải trình lý do'];
         const hasGT = Array.isArray(gt) ? gt.length > 0 : !!getTxt(gt);
-        if (hasGT) s.dk.dgt++; else {
-          s.dk.cgt++;
-          s.dk.stDetails[stName].cgt++;
-        }
+        if (hasGT) s.dk.dgt++;
         for (const l of getArr(f['Lỗi vi phạm'])) {
           const lk = l.trim(); if (lk) {
             s.dk.loiVPs[lk] = (s.dk.loiVPs[lk]||0)+1;
