@@ -76,14 +76,15 @@ async function fetchAll(token, tblId, fields) {
 
 export async function onRequest({ request, env }) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-  const APP_ID       = env.LARK_APP_ID       || 'cli_aaa0cdd424b81eed';
-  const APP_SECRET   = env.LARK_APP_SECRET   || '';
+  const APP_ID        = env.LARK_APP_ID       || 'cli_aaa0cdd424b81eed';
+  const APP_SECRET    = env.LARK_APP_SECRET   || '';
   const REFRESH_TOKEN = env.LARK_REFRESH_TOKEN || '';
-  if (!APP_SECRET) return new Response(JSON.stringify({ ok: false, error: 'LARK_APP_SECRET chưa cấu hình' }), { status: 500, headers: CORS });
+  // Ưu tiên dùng user token từ browser (OAuth popup) nếu có
+  const userTokenFromHeader = request.headers.get('X-Lark-Token') || '';
+  if (!APP_SECRET && !userTokenFromHeader) return new Response(JSON.stringify({ ok: false, error: 'LARK_APP_SECRET chưa cấu hình' }), { status: 500, headers: CORS });
   try {
-    const token = REFRESH_TOKEN
-      ? await getUserToken(APP_ID, APP_SECRET, REFRESH_TOKEN)
-      : await getToken(APP_ID, APP_SECRET);
+    const token = userTokenFromHeader
+      || (REFRESH_TOKEN ? await getUserToken(APP_ID, APP_SECRET, REFRESH_TOKEN) : await getToken(APP_ID, APP_SECRET));
     const [dkRecs, ctkmRecs] = await Promise.all([
       fetchAll(token, 'tblU0OlbMShM5ooe', ['Ngày kiểm tra','Tên Siêu thị','Kết quả check cam','Lỗi vi phạm','Tháng','Năm','Giải trình lý do']),
       fetchAll(token, 'tblQxeGxroYYFpY6', ['Thời gian','Tên Siêu thị','Kết quả','Tháng','Năm'])
