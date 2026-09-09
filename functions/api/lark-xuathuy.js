@@ -252,8 +252,18 @@ export async function onRequest(context){
     const [records,revs,optMap,cvsRecords]=await Promise.all([
       fetchAll(token),fetchRevenue(token),cvsOptionMap(token),fetchAllCVS(token)
     ]);
+    const cvs=aggregateCVS(cvsRecords,optMap);
+    // Nếu CVS rỗng (bot token không đọc được bảng CVS) → lấy CVS từ static cache
+    let cvsFallback=cvs,revenueCVSFallback=revs.revenueCVS;
+    if(!Object.keys(cvs).length){
+      try{
+        const origin=new URL(request.url).origin;
+        const sc=await fetch(`${origin}/xuathuy-cache.json`,{signal:AbortSignal.timeout(5000)});
+        if(sc.ok){const sj=await sc.json();if(sj.cvs&&Object.keys(sj.cvs).length){cvsFallback=sj.cvs;if(sj.revenueCVS)revenueCVSFallback=sj.revenueCVS;}}
+      }catch(_){}
+    }
     const cache={ts:Date.now(),data:aggregate(records),revenue:revs.revenue,
-      cvs:aggregateCVS(cvsRecords,optMap),revenueCVS:revs.revenueCVS};
+      cvs:cvsFallback,revenueCVS:revenueCVSFallback};
     return new Response(JSON.stringify(cache),{status:200,headers:{...CORS,'X-Cache':'MISS'}});
   }catch(e){
     // 3. Fetch mới thất bại → trả cache cũ dù hết hạn, báo stale
