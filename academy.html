@@ -2260,12 +2260,21 @@ function qcDiemShowHistory(){
 function qcDiemRestoreVersion(key){
   const data=_qcDiemHistCache[key];
   if(!data){alert('Không tìm thấy phiên bản!');return;}
-  if(!confirm('Khôi phục phiên bản này? Dữ liệu hiện tại sẽ bị thay thế (chưa lưu lên Firebase).'))return;
+  if(!confirm('Khôi phục phiên bản này? Dữ liệu hiện tại sẽ bị thay thế.'))return;
   S.qcDiemRows=Array.isArray(data.rows)?data.rows:[];
   S.qcDiemLoiHM=Array.isArray(data.loiHM)?data.loiHM:[];
   S._qcDiemAutoLoaded=true;
-  go('qc','Chấm điểm dịch vụ');
-  setTimeout(()=>{const s=document.getElementById('qcd-diem-saved');if(s){s.textContent='⏪ Đã khôi phục phiên bản cũ. Kiểm tra rồi bấm Lưu để ghi lại.';s.style.display='block';setTimeout(()=>s.style.display='none',6000);}},300);
+  // Dùng render() trực tiếp thay vì go() — tránh _flushQCSaves() reset _qcDiemAutoLoaded
+  // rồi auto-load từ Firebase (đang rỗng) ghi đè lại rows vừa khôi phục
+  if(S.page==='qc'&&S.tab==='Chấm điểm dịch vụ'){render();}else{go('qc','Chấm điểm dịch vụ');S._qcDiemAutoLoaded=true;}
+  // Auto-lưu luôn lên Firebase để không bị mất khi reload
+  const _y=S.qcDiemYear,_m=S.qcDiemMonth;
+  const _rows=S.qcDiemRows,_loi=S.qcDiemLoiHM;
+  setTimeout(()=>{
+    qcDiemSaveCore(_y,_m,_rows,_loi,null,'⏪ Đã khôi phục & lưu lên Firebase thành công!');
+    const s=document.getElementById('qcd-diem-saved');
+    if(s){s.textContent='⏪ Đang khôi phục...';s.style.display='block';}
+  },200);
 }
 function qcLoiHMRowsHTML(){
   if(!S.qcDiemLoiHM.length)return`<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8">Chưa có hạng mục nào. Gõ tên hạng mục ở trên và bấm Thêm.</td></tr>`;
