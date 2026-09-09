@@ -2000,9 +2000,11 @@ function qDebounce(el,path,id,tab){
 async function syncXuatHuy(btn){
   if(btn){btn.disabled=true;btn.innerHTML='⏳ Kết nối...';}
   try{
+    let larkH={};
+    try{const tok=await larkGLGetToken();if(tok)larkH['X-Lark-Token']=tok;}catch(_){}
     const {d,src}=await _syncFetch(btn,[
       {src:'Lark API',url:'http://localhost:3002/api/sync-xuathuy',timeout:180000,check:j=>j.data&&!j.error},
-      {src:'Lark API',url:'/api/lark-xuathuy?refresh=1',timeout:60000,check:j=>j.data&&!j.error&&!(j.cvs&&Object.keys(j.cvs).length===0)},
+      {src:'Lark API',url:'/api/lark-xuathuy?refresh=1',timeout:60000,check:j=>j.data&&!j.error&&!(j.cvs&&Object.keys(j.cvs).length===0),headers:larkH},
       {src:'GitHub cache',url:'https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/xuathuy-cache.json?t='+Date.now(),timeout:10000,check:j=>j.data},
     ],j=>j.data&&typeof j.data==='object','Xuất hủy');
     localStorage.setItem('xuathuy_cache',JSON.stringify({...d,ts:d.ts||Date.now()}));
@@ -4202,12 +4204,12 @@ function parseLarkDate(raw){
 }
 /* ── SYNC HELPER chung (tránh lặp code, track nguồn) ── */
 async function _syncFetch(btn,steps,validate,label){
-  /* steps: [{src,url,check}] — thử lần lượt, dừng khi có dữ liệu hợp lệ */
+  /* steps: [{src,url,check,headers?}] — thử lần lượt, dừng khi có dữ liệu hợp lệ */
   let d=null,src='';
   for(const step of steps){
     if(btn)btn.innerHTML=`⏳ ${step.src}...`;
     try{
-      const r=await fetch(step.url,{signal:AbortSignal.timeout(step.timeout||20000)});
+      const r=await fetch(step.url,{signal:AbortSignal.timeout(step.timeout||20000),headers:step.headers||{}});
       if(!r.ok)continue;
       const j=await r.json();
       if(step.check(j)){d=j;src=step.src;break;}
@@ -4223,9 +4225,11 @@ function _staleBadge(ageMin){return ageMin>360?'🔴':ageMin>120?'🟡':'';}
 async function syncLarkDate(btn){
   if(btn){btn.disabled=true;btn.innerHTML='⏳ Kết nối...';}
   try{
+    let larkH={};
+    try{const tok=await larkGLGetToken();if(tok)larkH['X-Lark-Token']=tok;}catch(_){}
     const {d,src}=await _syncFetch(btn,[
       {src:'Lark API',url:'http://localhost:3002/api/sync-date',timeout:60000,check:j=>j.monthly?.length>0&&!j.error},
-      {src:'Lark API',url:'/api/lark-date',timeout:25000,check:j=>j.ok&&j.monthly?.length>0},
+      {src:'Lark API',url:'/api/lark-date',timeout:25000,check:j=>j.ok&&j.monthly?.length>0,headers:larkH},
       {src:'GitHub cache',url:'https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/date-cache.json?t='+Date.now(),timeout:10000,check:j=>j.monthly?.length>0},
     ],j=>j.monthly?.length>0,'Đổi Date');
     const months=d.monthly.map(r=>r.t);
@@ -4242,9 +4246,11 @@ async function syncLarkDate(btn){
 async function syncTonAm(btn){
   if(btn){btn.disabled=true;btn.innerHTML='⏳ Kết nối...';}
   try{
+    let larkH={};
+    try{const tok=await larkGLGetToken();if(tok)larkH['X-Lark-Token']=tok;}catch(_){}
     const {d,src}=await _syncFetch(btn,[
       {src:'Lark API',url:'http://localhost:3002/api/sync-tonam',timeout:90000,check:j=>j.months&&!j.error},
-      {src:'Lark API',url:'/api/lark-tonam',timeout:60000,check:j=>j.ok&&j.months},
+      {src:'Lark API',url:'/api/lark-tonam',timeout:60000,check:j=>j.ok&&j.months,headers:larkH},
       {src:'GitHub cache',url:'https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/tonam-cache.json?t='+Date.now(),timeout:10000,check:j=>j.months},
     ],j=>j.months&&typeof j.months==='object','Tồn âm');
     const ms=Object.keys(d.months).sort();
@@ -4263,9 +4269,11 @@ async function syncTonAm(btn){
 async function syncBBKK(btn){
   if(btn){btn.disabled=true;btn.innerHTML='⏳ Kết nối...';}
   try{
+    let larkH={};
+    try{const tok=await larkGLGetToken();if(tok)larkH['X-Lark-Token']=tok;}catch(_){}
     const {d,src}=await _syncFetch(btn,[
       {src:'Lark API',url:'http://localhost:3002/api/sync-bbkk',timeout:60000,check:j=>Array.isArray(j.t1)&&!j.error},
-      {src:'Lark API',url:'/api/lark-bbkk',timeout:30000,check:j=>j.ok&&Array.isArray(j.t1)},
+      {src:'Lark API',url:'/api/lark-bbkk',timeout:30000,check:j=>j.ok&&Array.isArray(j.t1),headers:larkH},
       {src:'GitHub cache',url:'https://raw.githubusercontent.com/kairjx1/KSCL-Sakuko/main/bbkk-cache.json?t='+Date.now(),timeout:10000,check:j=>Array.isArray(j.t1)},
     ],j=>Array.isArray(j.t1),'Biên bản KK');
     localStorage.setItem('bbkk_cache',JSON.stringify({...d,ts:d.ts||Date.now()}));

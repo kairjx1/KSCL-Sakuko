@@ -245,10 +245,10 @@ export async function onRequest(context){
     const APP_ID=env.LARK_APP_ID||'cli_aaa0cdd424b81eed';
     const APP_SECRET=env.LARK_APP_SECRET||'';
     const REFRESH_TOKEN=env.LARK_REFRESH_TOKEN||'';
-    if(!APP_SECRET)throw new Error('LARK_APP_SECRET chưa cấu hình');
-    const token=REFRESH_TOKEN
-      ?await getUserToken(APP_ID,APP_SECRET,REFRESH_TOKEN)
-      :await getToken(APP_ID,APP_SECRET);
+    const userTokenFromHeader=request.headers.get('X-Lark-Token')||'';
+    if(!APP_SECRET&&!userTokenFromHeader)throw new Error('LARK_APP_SECRET chưa cấu hình');
+    const token=userTokenFromHeader
+      ||(REFRESH_TOKEN?await getUserToken(APP_ID,APP_SECRET,REFRESH_TOKEN):await getToken(APP_ID,APP_SECRET));
     const [records,revs,optMap,cvsRecords]=await Promise.all([
       fetchAll(token),fetchRevenue(token),cvsOptionMap(token),fetchAllCVS(token)
     ]);

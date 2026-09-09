@@ -128,12 +128,12 @@ export async function onRequest({request,env}){
   const APP_ID=env.LARK_APP_ID||'cli_aaa0cdd424b81eed';
   const APP_SECRET=env.LARK_APP_SECRET||'';
   const REFRESH_TOKEN=env.LARK_REFRESH_TOKEN||'';
-  if(!APP_SECRET)return new Response(JSON.stringify({ok:false,error:'LARK_APP_SECRET chưa cấu hình'}),{status:500,headers:CORS});
+  const userTokenFromHeader=request.headers.get('X-Lark-Token')||'';
+  if(!APP_SECRET&&!userTokenFromHeader)return new Response(JSON.stringify({ok:false,error:'LARK_APP_SECRET chưa cấu hình'}),{status:500,headers:CORS});
   try{
-    // Ưu tiên user_access_token (đọc được bảng 2026), fallback bot token
-    const token=REFRESH_TOKEN
-      ?await getUserToken(APP_ID,APP_SECRET,REFRESH_TOKEN)
-      :await getToken(APP_ID,APP_SECRET);
+    // Ưu tiên user token từ browser (OAuth popup), rồi REFRESH_TOKEN, rồi bot token
+    const token=userTokenFromHeader
+      ||(REFRESH_TOKEN?await getUserToken(APP_ID,APP_SECRET,REFRESH_TOKEN):await getToken(APP_ID,APP_SECRET));
     const tables=await discoverTables(token);
     if(!tables.length){
       const all=(j2=>j2)(null);

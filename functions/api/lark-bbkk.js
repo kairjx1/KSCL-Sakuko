@@ -108,12 +108,12 @@ export async function onRequest({request,env}){
   const APP_ID=env.LARK_APP_ID||'cli_aaa0cdd424b81eed';
   const APP_SECRET=env.LARK_APP_SECRET||'';
   const REFRESH_TOKEN=env.LARK_REFRESH_TOKEN||'';
-  if(!APP_SECRET)return new Response(JSON.stringify({ok:false,error:'LARK_APP_SECRET chưa cấu hình'}),{status:500,headers:CORS});
+  const userTokenFromHeader=request.headers.get('X-Lark-Token')||'';
+  if(!APP_SECRET&&!userTokenFromHeader)return new Response(JSON.stringify({ok:false,error:'LARK_APP_SECRET chưa cấu hình'}),{status:500,headers:CORS});
   try{
-    // Ưu tiên user_access_token (đọc được toàn bộ bitable), fallback bot token
-    const token=REFRESH_TOKEN
-      ?await getUserToken(APP_ID,APP_SECRET,REFRESH_TOKEN)
-      :await getToken(APP_ID,APP_SECRET);
+    // Ưu tiên user token từ browser (OAuth popup), rồi REFRESH_TOKEN, rồi bot token
+    const token=userTokenFromHeader
+      ||(REFRESH_TOKEN?await getUserToken(APP_ID,APP_SECRET,REFRESH_TOKEN):await getToken(APP_ID,APP_SECRET));
     const [raw1,raw2,raw4]=await Promise.all([fetchAll(token,TABLES.t1),fetchAll(token,TABLES.t2),fetchAll(token,TABLES.t4)]);
     const t1=processT1(raw1),t2=processT2(raw2),t4=processT4(raw4);
     return new Response(JSON.stringify({ok:true,t1,t2,t4,ts:Date.now()}),{headers:{...CORS,'Cache-Control':'no-store'}});
