@@ -128,7 +128,7 @@
       "installUrl": "https://antigravity.google",
       "desc": "AntiGravity CLI (agy) v1.2 — Google AI agent, tích hợp AGS, dùng Gemini Flash/Pro",
       "altPath": {
-        "win32": "%APPDATA%\\..\\Local\\agy\\bin\\agy.exe",
+        "win32": "%LOCALAPPDATA%\\agy\\bin\\agy.exe",
         "darwin": "%HOME%/.local/share/agy/bin/agy",
         "linux": "%HOME%/.local/share/agy/bin/agy"
       },
