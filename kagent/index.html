@@ -604,7 +604,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.52</span>
+  <span class="version" id="app-version">v1.0.53</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -692,7 +692,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
         <span class="status-badge stopped" id="status-badge">Chưa chạy</span>
         <button id="btn-start" onclick="toggleAgent()">▶ Khởi động</button>
         <button id="btn-start-interactive" onclick="startInteractive()" title="Chạy trực tiếp như terminal — gõ trực tiếp vào agent"
-          style="background:linear-gradient(135deg,#22c55e,#16a34a);border:none;color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;display:none">
+          style="background:linear-gradient(135deg,#22c55e,#16a34a);border:none;color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">
           ⚡ Live
         </button>
       </div>
@@ -882,11 +882,10 @@ function updateModelPill(agentId) {
   const pill = document.getElementById('model-pill');
   const pillName = document.getElementById('model-pill-name');
 
-  // Hiện/ẩn nút Live dựa vào interactiveArgs
+  // Hiện nút Live cho tất cả agent (trừ shell)
   const liveBtn = document.getElementById('btn-start-interactive');
   if (liveBtn) {
-    const hasInteractive = Array.isArray(agentCfg.interactiveArgs);
-    liveBtn.style.display = hasInteractive ? '' : 'none';
+    liveBtn.style.display = agentId === 'shell' ? 'none' : '';
   }
 
   if (!models.length) { if (pill) pill.style.display = 'none'; return; }
