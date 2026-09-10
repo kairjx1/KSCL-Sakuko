@@ -81,6 +81,31 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 /* ── LAYOUT ── */
 #main{display:flex;flex:1;overflow:hidden}
 
+/* ── RIGHTBAR (bảng phải kéo-giãn) ── */
+:root{--rightbar-w:340px}
+#rightbar{
+  display:none;flex-direction:column;width:var(--rightbar-w);flex-shrink:0;
+  border-left:1px solid var(--border);background:var(--bg2);overflow:hidden;
+}
+#main.has-right #rightbar{display:flex}
+#rightbar-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;
+  flex-shrink:0;
+}
+#rightbar-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;padding:0;line-height:1}
+#rightbar-close:hover{color:var(--text)}
+#slot-right{flex:1;overflow:auto;display:flex;flex-direction:column;min-height:0}
+.rb-handle{display:none;width:6px;flex-shrink:0;cursor:col-resize;background:transparent;touch-action:none}
+#main.has-right .rb-handle{display:block}
+.rb-handle:hover,.rb-handle.dragging{background:var(--accent-dim)}
+.icon-btn{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+  width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:13px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s;
+}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+
 /* ── SIDEBAR ── */
 #sidebar{
   width:var(--sidebar-w);min-width:var(--sidebar-w);
@@ -480,6 +505,62 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .modal-body{padding:20px}
 .modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
 
+/* ── User menu dropdown ── */
+.user-area{position:relative}
+#user-menu{
+  position:absolute;top:calc(100% + 6px);right:0;min-width:200px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  box-shadow:0 12px 40px rgba(0,0,0,.5);padding:6px;z-index:900;
+}
+#user-menu .um-info{padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+#user-menu .um-info span{font-size:12px;color:var(--text)}
+#user-menu .um-info .muted{font-size:10px;color:var(--text2)}
+.um-divider{height:1px;background:var(--border);margin:4px 0}
+#user-menu button{
+  width:100%;text-align:left;background:none;border:none;color:var(--text);
+  padding:8px 10px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;
+}
+#user-menu button:hover{background:var(--bg3)}
+#user-menu button.danger{color:var(--red)}
+#user-menu button.danger:hover{background:var(--red-bg)}
+
+/* ── Settings dialog ── */
+dialog.dlg{
+  /* *{margin:0} ở đầu file đè mất margin:auto mặc định của <dialog> nên phải tự căn giữa */
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;
+  background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:14px;
+  width:520px;max-width:92vw;padding:0;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.6);
+  animation:dlgSlideUp .18s ease;
+}
+/* Riêng cho dialog (khác .modal-box) vì transform còn phải giữ translate(-50%,-50%) để căn giữa */
+@keyframes dlgSlideUp{from{transform:translate(-50%,-50%) translateY(12px);opacity:0}to{transform:translate(-50%,-50%) translateY(0);opacity:1}}
+dialog.dlg::backdrop{background:rgba(0,0,0,.7);backdrop-filter:blur(4px)}
+dialog.dlg header{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+dialog.dlg header h3{font-size:14px;font-weight:700}
+dialog.dlg header button{background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px}
+dialog.dlg header button:hover{color:var(--text)}
+.settings-tabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--border)}
+.settings-tab{
+  background:none;border:none;color:var(--text2);padding:10px 12px;font-size:12px;
+  cursor:pointer;font-family:inherit;border-bottom:2px solid transparent;transition:all .12s;
+}
+.settings-tab:hover{color:var(--text)}
+.settings-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.dlg-body{padding:20px;max-height:60vh;overflow:auto}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border2)}
+.settings-row:last-child{border-bottom:none}
+.settings-row .sr-label{font-size:12px;color:var(--text2)}
+.settings-row .sr-value{font-size:12px;color:var(--text);font-weight:600}
+.settings-btn{
+  background:var(--accent-dim);border:1px solid rgba(167,139,250,.3);color:var(--accent);
+  padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;font-family:inherit;
+}
+.settings-btn:hover{background:var(--accent-glow)}
+.settings-btn.danger{background:var(--red-bg);border-color:rgba(255,107,139,.3);color:var(--red)}
+
 /* ── Agent list trong modal — AGS style ── */
 .agent-grid{display:flex;flex-direction:column;gap:4px;margin-top:10px}
 .agent-card{
@@ -604,7 +685,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.68</span>
+  <span class="version" id="app-version">v1.0.69</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -618,13 +699,26 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
     <span id="workdir-label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">C:\</span>
   </div>
   <span class="ram-badge" id="ram-info">Đang kết nối...</span>
+  <button id="btn-rightbar" class="icon-btn" title="Bảng phải" onclick="toggleRightbar()">▥</button>
+  <button id="btn-settings" class="icon-btn" title="Cấu hình" onclick="openSettingsDialog()">⚙️</button>
   <!-- Auth area -->
   <a id="btn-admin" href="/admin.html" style="display:none;background:var(--bg3);border:1px solid var(--border);color:var(--yellow);padding:4px 10px;border-radius:5px;font-size:11px;text-decoration:none;font-weight:600">⚙️ Admin</a>
   <button id="btn-login" onclick="loginLark()" style="display:none">🔑 Đăng nhập Lark</button>
-  <div id="user-badge" style="display:none" onclick="showUserMenu()">
-    <div class="uavatar" id="user-avatar">?</div>
-    <span id="user-name">...</span>
-    <span style="font-size:9px;opacity:.5">▾</span>
+  <div class="user-area">
+    <div id="user-badge" style="display:none" onclick="toggleUserMenu()">
+      <div class="uavatar" id="user-avatar">?</div>
+      <span id="user-name">...</span>
+      <span style="font-size:9px;opacity:.5">▾</span>
+    </div>
+    <div id="user-menu" hidden>
+      <div class="um-info">
+        <span id="um-name"></span>
+        <span id="um-email" class="muted"></span>
+      </div>
+      <div class="um-divider"></div>
+      <button onclick="closeUserMenuAnd(() => openSettingsDialog('account'))">⚙️ Cấu hình</button>
+      <button class="danger" onclick="closeUserMenuAnd(logoutRelay)">🚪 Đăng xuất</button>
+    </div>
   </div>
 </div>
 
@@ -754,21 +848,31 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
       </div>
     </div>
   </div>
+
+  <!-- RIGHTBAR (bảng phải kéo-giãn) -->
+  <div class="rb-handle" id="rightbar-handle" title="Kéo để đổi bề rộng"></div>
+  <aside id="rightbar">
+    <div id="rightbar-head">
+      <span id="rightbar-title">Bảng phải</span>
+      <button id="rightbar-close" title="Đóng">✕</button>
+    </div>
+    <div id="slot-right"></div>
+  </aside>
 </div>
 
 <!-- KIM TIÊM PANEL -->
 <div id="kim-tiem-panel" style="display:none;position:fixed;bottom:80px;right:16px;z-index:500;width:310px;background:#151515;border:1px solid #2a2a2a;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.6);overflow:hidden">
-  <div style="padding:10px 14px;border-bottom:1px solid #2a2a2a;display:flex;align-items:center;justify-content:space-between">
-    <span style="font-size:12px;font-weight:700;color:#7c3aed">💉 Kim Tiêm</span>
+  <!-- Header ✕/tiêu đề riêng đã bỏ — panel giờ luôn mở trong rightbar, dùng header của rightbar
+       (#rightbar-title/#rightbar-close). Chỉ giữ badge trạng thái. -->
+  <div style="padding:8px 14px;border-bottom:1px solid #2a2a2a;display:flex;align-items:center;justify-content:flex-end">
     <span style="font-size:10px;color:#22c55e;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);padding:2px 8px;border-radius:10px" id="kt-auto-label">● 0/0 modules active</span>
-    <button onclick="toggleKimTiem()" style="background:none;border:none;color:#9a9a9a;cursor:pointer;font-size:14px;padding:0 2px">✕</button>
   </div>
   <!-- Giải thích ngắn -->
   <div style="padding:8px 14px;background:rgba(124,58,237,.06);border-bottom:1px solid #1e1e1e;font-size:10px;color:#9a9a9a;line-height:1.5">
     ✅ <strong style="color:#a78bfa">Modules đang bật</strong> tự động inject vào mỗi prompt qua <code style="color:#7c3aed">--system</code> — Claude nhận được nhưng không in ra.<br>
     Dùng checkbox để bật/tắt từng module.
   </div>
-  <div id="kt-list" style="max-height:320px;overflow-y:auto;padding:8px">
+  <div id="kt-list" style="flex:1;overflow-y:auto;padding:8px">
     <div style="text-align:center;padding:20px;color:#9a9a9a;font-size:12px">Đang tải...</div>
   </div>
   <div style="padding:8px 14px;border-top:1px solid #2a2a2a;display:flex;gap:6px">
@@ -2309,11 +2413,22 @@ async function loginLark() {
   }
 }
 
-function showUserMenu() {
-  if (!relayUser) return;
-  const choice = confirm(`Đăng xuất khỏi relay?\n(${relayUser.name || relayUser.email})`);
-  if (choice) logoutRelay();
+function toggleUserMenu() {
+  const m = document.getElementById('user-menu');
+  m.hidden = !m.hidden;
+  if (!m.hidden) {
+    document.getElementById('um-name').textContent = relayUser?.name || relayUser?.email || 'KAgent Local';
+    document.getElementById('um-email').textContent = relayUser?.name ? (relayUser.email || '') : '';
+  }
 }
+function closeUserMenuAnd(fn) {
+  document.getElementById('user-menu').hidden = true;
+  if (typeof fn === 'function') fn();
+}
+document.addEventListener('click', e => {
+  const m = document.getElementById('user-menu');
+  if (m && !m.hidden && !e.target.closest('.user-area')) m.hidden = true;
+}, true);
 
 async function logoutRelay() {
   if (!RELAY_URL) return;
@@ -2366,6 +2481,140 @@ async function syncMessageToRelay(chatId, role, content) {
   }).catch(() => {});
 }
 
+// ── RIGHTBAR (bảng phải kéo-giãn) ────────────────────────────────────────────
+const RightPanel = (() => {
+  const LS_W = 'kagent.rightbar.w', LS_OPEN = 'kagent.rightbar.open';
+  const mainEl = () => document.getElementById('main');
+  const slot = () => document.getElementById('slot-right');
+  let onCloseCb = null;
+
+  function open({ title, node, html, onClose } = {}) {
+    document.getElementById('rightbar-title').textContent = title || 'Bảng phải';
+    if (node) { slot().innerHTML = ''; slot().appendChild(node); }
+    else if (html != null) { slot().innerHTML = html; }
+    mainEl().classList.add('has-right');
+    localStorage.setItem(LS_OPEN, '1');
+    onCloseCb = onClose || null;
+  }
+  function close() {
+    mainEl().classList.remove('has-right');
+    localStorage.setItem(LS_OPEN, '0');
+    if (onCloseCb) { try { onCloseCb(); } catch {} }
+  }
+  function toggle(openOpts) {
+    if (mainEl().classList.contains('has-right')) close();
+    else open(openOpts);
+  }
+  function isOpen() { return mainEl().classList.contains('has-right'); }
+
+  function initResize() {
+    const handle = document.getElementById('rightbar-handle');
+    if (!handle) return;
+    let dragging = false, startX = 0, startW = 0;
+    handle.addEventListener('pointerdown', e => {
+      dragging = true; startX = e.clientX;
+      startW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--rightbar-w')) || 340;
+      handle.classList.add('dragging');
+      handle.setPointerCapture(e.pointerId);
+    });
+    handle.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      const w = Math.min(560, Math.max(280, startW + (startX - e.clientX)));
+      document.documentElement.style.setProperty('--rightbar-w', w + 'px');
+    });
+    handle.addEventListener('pointerup', () => {
+      if (!dragging) return;
+      dragging = false;
+      handle.classList.remove('dragging');
+      const w = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--rightbar-w'));
+      if (w) localStorage.setItem(LS_W, w);
+    });
+    const closeBtn = document.getElementById('rightbar-close');
+    if (closeBtn) closeBtn.onclick = close;
+    const savedW = localStorage.getItem(LS_W);
+    if (savedW) document.documentElement.style.setProperty('--rightbar-w', savedW + 'px');
+  }
+  initResize();
+
+  return { open, close, toggle, isOpen };
+})();
+
+// Nút ▥ trên topbar: nếu chưa có nội dung nào mở, mặc định mở Kim Tiêm.
+function toggleRightbar() {
+  if (RightPanel.isOpen()) { RightPanel.close(); _ktOpen = false; return; }
+  toggleKimTiem();
+}
+
+// ── SETTINGS DIALOG (Kim Tiêm / Tài khoản / Hệ thống) ───────────────────────
+function openSettingsDialog(tab) {
+  document.getElementById('dlg-settings').showModal();
+  setSettingsTab(tab || 'kimtiem');
+}
+function setSettingsTab(tab) {
+  document.querySelectorAll('.settings-tab').forEach(b => b.classList.toggle('active', b.dataset.stab === tab));
+  ['kimtiem', 'account', 'system'].forEach(id => {
+    document.getElementById('settings-panel-' + id).hidden = (id !== tab);
+  });
+  if (tab === 'kimtiem') renderSettingsKimTiem();
+  if (tab === 'account') renderSettingsAccount();
+  if (tab === 'system') renderSettingsSystem();
+}
+
+async function renderSettingsKimTiem() {
+  const el = document.getElementById('settings-panel-kimtiem');
+  if (!_ktModules.length) { try { await loadKimTiemModules(); } catch {} }
+  const active = _ktModules.filter(m => m.enabled).length;
+  el.innerHTML = `
+    <div class="settings-row">
+      <span class="sr-label">Modules đang bật</span>
+      <span class="sr-value">${active}/${_ktModules.length}</span>
+    </div>
+    <div class="settings-row">
+      <span class="sr-label">Bật/tắt từng module, xem chi tiết</span>
+      <button class="settings-btn" onclick="document.getElementById('dlg-settings').close(); if(!_ktOpen) toggleKimTiem();">Quản lý Kim Tiêm →</button>
+    </div>`;
+}
+
+function renderSettingsAccount() {
+  const el = document.getElementById('settings-panel-account');
+  if (relayUser) {
+    el.innerHTML = `
+      <div class="settings-row">
+        <span class="sr-label">Tên</span>
+        <span class="sr-value">${relayUser.name || '—'}</span>
+      </div>
+      <div class="settings-row">
+        <span class="sr-label">Email</span>
+        <span class="sr-value">${relayUser.email || '—'}</span>
+      </div>
+      <div class="settings-row">
+        <span class="sr-label">Trạng thái</span>
+        <button class="settings-btn danger" onclick="document.getElementById('dlg-settings').close(); logoutRelay();">🚪 Đăng xuất</button>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <div class="settings-row">
+        <span class="sr-label">Chưa đăng nhập — dữ liệu chỉ lưu local</span>
+        <button class="settings-btn" onclick="document.getElementById('dlg-settings').close(); loginLark();">🔑 Đăng nhập Lark</button>
+      </div>`;
+  }
+}
+
+function renderSettingsSystem() {
+  const el = document.getElementById('settings-panel-system');
+  const ver = document.getElementById('app-version')?.textContent || '—';
+  const updateAvailable = document.getElementById('update-banner')?.style.display === 'block';
+  el.innerHTML = `
+    <div class="settings-row">
+      <span class="sr-label">Phiên bản hiện tại</span>
+      <span class="sr-value">${ver}</span>
+    </div>
+    <div class="settings-row">
+      <span class="sr-label">${updateAvailable ? 'Đã có bản cập nhật mới' : 'Kiểm tra bản cập nhật mới'}</span>
+      <button class="settings-btn" onclick="${updateAvailable ? 'doUpdate()' : 'checkUpdate().then(()=>renderSettingsSystem())'}">${updateAvailable ? 'Cài đặt ngay' : 'Kiểm tra cập nhật'}</button>
+    </div>`;
+}
+
 // ── START ──
 // ── KIM TIÊM PANEL ──────────────────────────────────────────────────────────
 let _ktModules = [];
@@ -2374,8 +2623,14 @@ let _ktOpen = false;
 async function toggleKimTiem() {
   const panel = document.getElementById('kim-tiem-panel');
   _ktOpen = !_ktOpen;
-  panel.style.display = _ktOpen ? 'block' : 'none';
-  if (_ktOpen) await loadKimTiemModules();
+  if (_ktOpen) {
+    // Bỏ dáng bảng nổi (position:fixed), cho nó lấp đầy rightbar thay vào đó.
+    panel.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%';
+    RightPanel.open({ title: '💉 Kim Tiêm', node: panel, onClose: () => { _ktOpen = false; } });
+    await loadKimTiemModules();
+  } else {
+    RightPanel.close();
+  }
 }
 
 async function loadKimTiemModules() {
@@ -2473,13 +2728,8 @@ async function toggleAllModules(enabled) {
   showToast(enabled ? `✅ Đã bật ${targets.length} modules` : `⭕ Đã tắt ${targets.length} modules`);
 }
 
-// Đóng panel khi click ngoài
-document.addEventListener('click', (e) => {
-  if (_ktOpen && !e.target.closest('#kim-tiem-panel') && !e.target.closest('#btn-kim-tiem')) {
-    _ktOpen = false;
-    document.getElementById('kim-tiem-panel').style.display = 'none';
-  }
-});
+// (Kim Tiêm giờ nằm trong rightbar — đóng bằng nút ✕ của rightbar, không cần
+// tự đóng khi click ra ngoài nữa, xem RightPanel/toggleKimTiem.)
 
 // Relay auth trước → sau đó init (để apiGetProjects biết user đã login)
 // Tự đọc version từ version.json — không cần sửa tay trong HTML nữa
@@ -3017,6 +3267,24 @@ setInterval(checkUpdate, 30 * 60 * 1000);
 
 // tooltip ẩn mặc định, hiện khi hover (CSS)
 </script>
+
+<!-- SETTINGS DIALOG -->
+<dialog id="dlg-settings" class="dlg dlg-settings">
+  <header>
+    <h3>Cấu hình</h3>
+    <button onclick="document.getElementById('dlg-settings').close()">✕</button>
+  </header>
+  <div class="settings-tabs">
+    <button type="button" class="settings-tab" data-stab="kimtiem" onclick="setSettingsTab('kimtiem')">💉 Kim Tiêm</button>
+    <button type="button" class="settings-tab" data-stab="account" onclick="setSettingsTab('account')">👤 Tài khoản</button>
+    <button type="button" class="settings-tab" data-stab="system" onclick="setSettingsTab('system')">⚙️ Hệ thống</button>
+  </div>
+  <div class="dlg-body">
+    <div id="settings-panel-kimtiem"></div>
+    <div id="settings-panel-account" hidden></div>
+    <div id="settings-panel-system" hidden></div>
+  </div>
+</dialog>
 
 <!-- PROJECT MODAL -->
 <div id="pm-overlay" onclick="if(event.target===this)closeProjModal()">
