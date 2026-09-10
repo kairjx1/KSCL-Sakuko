@@ -604,7 +604,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.57</span>
+  <span class="version" id="app-version">v1.0.58</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1273,6 +1273,27 @@ function showInstallModal(info) {
           <div style="width:22px;height:22px;border-radius:50%;background:var(--bg4);color:var(--text2);
             display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px">2</div>
           <div style="color:var(--text2);font-size:13px">Sau khi cài xong, nhấn <strong style="color:var(--text)">"Cài đặt ngay"</strong> để KAgent tự cài cho bạn — hoặc mở terminal và chạy lệnh trên thủ công.</div>
+        </div>
+        ` : info.agentId === 'antigravity' ? `
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:4px">
+          <div style="display:flex;align-items:flex-start;gap:8px">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;
+              display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">1</div>
+            <div style="font-size:13px">
+              Tải và cài ứng dụng <strong>AGS (AGENTSSS)</strong> — AGS sẽ tự cài <code style="background:var(--bg3);padding:1px 6px;border-radius:4px">agy.exe</code> kèm theo.
+              <br><a href="https://antigravity.google" target="_blank" style="color:var(--accent);margin-top:4px;display:inline-block">🔗 antigravity.google →</a>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:8px">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--bg4);color:var(--text2);
+              display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">2</div>
+            <div style="font-size:13px;color:var(--text2)">Mở AGS lần đầu → đăng nhập Google account của bạn.</div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:8px">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--bg4);color:var(--text2);
+              display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">3</div>
+            <div style="font-size:13px;color:var(--text2)"><strong style="color:var(--text)">Khởi động lại KAgent</strong> — KAgent sẽ tự tìm thấy agy và bật agent AntiGravity.</div>
+          </div>
         </div>
         ` : `
         <div style="background:var(--bg3);border-radius:8px;padding:12px 14px;margin-bottom:14px;color:var(--text2);font-size:13px">
@@ -2451,8 +2472,8 @@ const AGENT_DEFS = [
   },
   {
     id:'antigravity', name:'AntiGravity', icon:'🅰', color:'#38bdf8',
-    installCmd:null, installUrl:'https://antigravity.dev',
-    desc:'AntiGravity CLI (agy) — agent đa năng'
+    installCmd:null, installUrl:'https://antigravity.google',
+    desc:'AntiGravity (agy) — Google AI agent, cài qua AGS'
   },
   {
     id:'codex', name:'Codex CLI', icon:'⚡', color:'#fbbf24',
