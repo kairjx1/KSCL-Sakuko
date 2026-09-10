@@ -604,7 +604,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.59</span>
+  <span class="version" id="app-version">v1.0.60</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -876,24 +876,15 @@ function send(obj) {
 window._selectedModel = null;
 window._selectedThinking = null;
 
-function updateModelPill(agentId) {
-  const agentCfg = (window._agentsConfigCache || {})[agentId] || {};
+function _applyModelPill(agentId, agentCfg) {
   const models = agentCfg.models || [];
   const pill = document.getElementById('model-pill');
-  const pillName = document.getElementById('model-pill-name');
-
-  // Hiện nút Live cho tất cả agent (trừ shell)
-  const liveBtn = document.getElementById('btn-start-interactive');
-  if (liveBtn) {
-    liveBtn.style.display = agentId === 'shell' ? 'none' : '';
-  }
 
   if (!models.length) { if (pill) pill.style.display = 'none'; return; }
   if (pill) pill.style.display = '';
 
   const savedModel = localStorage.getItem('kagent_model_' + agentId);
   const validSaved = savedModel && models.find(m => m.id === savedModel);
-  // Xóa localStorage cũ không hợp lệ (ví dụ: "sonnet-4-6-low" từ version cũ)
   if (savedModel && !validSaved) localStorage.removeItem('kagent_model_' + agentId);
   const modelId = validSaved ? savedModel : (agentCfg.defaultModel || models[0]?.id || '');
   window._selectedModel = modelId || null;
@@ -906,6 +897,37 @@ function updateModelPill(agentId) {
   _refreshModelPill(agentCfg);
 }
 
+function updateModelPill(agentId) {
+  const agentCfg = (window._agentsConfigCache || {})[agentId] || {};
+  const pill = document.getElementById('model-pill');
+
+  // Hiện nút Live cho tất cả agent (trừ shell)
+  const liveBtn = document.getElementById('btn-start-interactive');
+  if (liveBtn) {
+    liveBtn.style.display = agentId === 'shell' ? 'none' : '';
+  }
+
+  // Dynamic model list for antigravity: fetch from /api/agy-models
+  if (agentId === 'antigravity') {
+    fetch('/api/agy-models').then(r => r.json()).then(data => {
+      if (data.models && data.models.length) {
+        // Update cache with live models
+        if (!window._agentsConfigCache) window._agentsConfigCache = {};
+        if (!window._agentsConfigCache.antigravity) window._agentsConfigCache.antigravity = {};
+        window._agentsConfigCache.antigravity.models = data.models;
+        _applyModelPill(agentId, window._agentsConfigCache.antigravity);
+      } else {
+        _applyModelPill(agentId, agentCfg);
+      }
+    }).catch(() => {
+      _applyModelPill(agentId, agentCfg);
+    });
+    return;
+  }
+
+  _applyModelPill(agentId, agentCfg);
+}
+
 function _refreshModelPill(agentCfg) {
   const pillName = document.getElementById('model-pill-name');
   if (!pillName) return;
@@ -915,11 +937,9 @@ function _refreshModelPill(agentCfg) {
   pillName.textContent = (m ? m.name : (window._selectedModel || '')) + tLabel;
 }
 
-function toggleModelPicker() {
+function _renderModelPicker(agentId) {
   const picker = document.getElementById('model-picker');
   if (!picker) return;
-  if (picker.classList.contains('open')) { picker.classList.remove('open'); return; }
-  const agentId = document.getElementById('agent-select').value || 'claude';
   const agentCfg = (window._agentsConfigCache || {})[agentId] || {};
   const models = agentCfg.models || [];
   const thinkingLevels = agentCfg.thinkingLevels || [];
@@ -941,6 +961,35 @@ function toggleModelPicker() {
       </div>`).join('') + `</div>`;
   }
   picker.innerHTML = html;
+}
+
+function toggleModelPicker() {
+  const picker = document.getElementById('model-picker');
+  if (!picker) return;
+  if (picker.classList.contains('open')) { picker.classList.remove('open'); return; }
+  const agentId = document.getElementById('agent-select').value || 'claude';
+
+  // For antigravity: fetch live models before showing picker
+  if (agentId === 'antigravity') {
+    picker.innerHTML = '<div style="padding:8px;opacity:.6;font-size:12px">Đang tải model...</div>';
+    picker.classList.add('open');
+    fetch('/api/agy-models').then(r => r.json()).then(data => {
+      if (data.models && data.models.length) {
+        if (!window._agentsConfigCache) window._agentsConfigCache = {};
+        if (!window._agentsConfigCache.antigravity) window._agentsConfigCache.antigravity = {};
+        window._agentsConfigCache.antigravity.models = data.models;
+        // Update selected model if needed
+        const cur = window._selectedModel;
+        const valid = data.models.find(m => m.id === cur);
+        if (!valid) { window._selectedModel = data.models[0]?.id || null; _refreshModelPill(window._agentsConfigCache.antigravity); }
+      }
+      _renderModelPicker(agentId);
+    }).catch(() => { _renderModelPicker(agentId); });
+    setTimeout(() => document.addEventListener('click', closePicker, {once:true}), 50);
+    return;
+  }
+
+  _renderModelPicker(agentId);
   picker.classList.add('open');
   setTimeout(() => document.addEventListener('click', closePicker, {once:true}), 50);
 }
