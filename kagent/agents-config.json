@@ -126,21 +126,26 @@
       "color": "#38bdf8",
       "icon": "🅰",
       "installUrl": "https://antigravity.google",
-      "desc": "AntiGravity CLI (agy) — Gemini agent từ Google, tích hợp với AGS",
+      "desc": "AntiGravity CLI (agy) v1.2 — Google AI agent, tích hợp AGS, dùng Gemini Flash/Pro",
       "altPath": {
         "win32": "%APPDATA%\\..\\Local\\agy\\bin\\agy.exe",
-        "darwin": "",
-        "linux": ""
+        "darwin": "%HOME%/.local/share/agy/bin/agy",
+        "linux": "%HOME%/.local/share/agy/bin/agy"
       },
-      "interactiveArgs": ["--dangerously-skip-permissions"],
-      "safeArgs": ["-p", "{prompt}"],
-      "autoArgs": ["-p", "{prompt}", "--dangerously-skip-permissions"],
-      "streamJson": false,
-      "authErrorPatterns": ["not authenticated", "login", "API key"],
+      "modelFlag": "--model",
+      "defaultModel": "",
+      "models": [
+        { "id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash", "note": "Nhanh, miễn phí" },
+        { "id": "gemini-2.5-pro",   "name": "Gemini 2.5 Pro",   "note": "Mạnh hơn, context lớn" }
+      ],
+      "safeArgs": ["--print", "{prompt}", "--output-format", "stream-json"],
+      "autoArgs": ["--print", "{prompt}", "--dangerously-skip-permissions", "--output-format", "stream-json"],
+      "streamJson": "agy",
+      "authErrorPatterns": ["not authenticated", "login required", "unauthenticated", "api key"],
       "authGuide": {
         "title": "AntiGravity chưa đăng nhập",
         "steps": [
-          { "label": "Cài và đăng nhập qua AGS", "cmd": null, "note": "Tải AGS tại https://antigravity.google → đăng nhập Google → agy sẽ tự hoạt động" }
+          { "label": "Mở AGS để đăng nhập", "cmd": null, "note": "Mở ứng dụng AGS → đăng nhập Google → agy sẽ tự hoạt động trong KAgent" }
         ]
       }
     },
