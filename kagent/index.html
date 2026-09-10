@@ -604,7 +604,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.51</span>
+  <span class="version" id="app-version">v1.0.52</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -691,6 +691,10 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
         <select id="agent-select" style="display:none"></select>
         <span class="status-badge stopped" id="status-badge">Chưa chạy</span>
         <button id="btn-start" onclick="toggleAgent()">▶ Khởi động</button>
+        <button id="btn-start-interactive" onclick="startInteractive()" title="Chạy trực tiếp như terminal — gõ trực tiếp vào agent"
+          style="background:linear-gradient(135deg,#22c55e,#16a34a);border:none;color:#fff;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;display:none">
+          ⚡ Live
+        </button>
       </div>
 
       <!-- Terminal / Chat view toggle -->
@@ -704,8 +708,11 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
         <div id="empty-state">
           <div class="big-icon">⚡</div>
           <h3>Sẵn sàng</h3>
-          <p>Bấm "Khởi động" để chạy agent hoặc gõ prompt và nhấn Enter.</p>
-          <button class="btn-start-big" onclick="toggleAgent()">▶ Khởi động Agent</button>
+          <p>Bấm <strong>⚡ Live</strong> để chat trực tiếp (như AGS), hoặc <strong>▶ Khởi động</strong> để dùng chat có markdown.</p>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <button class="btn-start-big" onclick="startInteractive()" style="background:linear-gradient(135deg,#22c55e,#16a34a)">⚡ Live — Chạy trực tiếp</button>
+            <button class="btn-start-big" onclick="toggleAgent()" style="background:var(--accent2)">▶ Chat có markdown</button>
+          </div>
         </div>
       </div>
 
@@ -874,6 +881,14 @@ function updateModelPill(agentId) {
   const models = agentCfg.models || [];
   const pill = document.getElementById('model-pill');
   const pillName = document.getElementById('model-pill-name');
+
+  // Hiện/ẩn nút Live dựa vào interactiveArgs
+  const liveBtn = document.getElementById('btn-start-interactive');
+  if (liveBtn) {
+    const hasInteractive = Array.isArray(agentCfg.interactiveArgs);
+    liveBtn.style.display = hasInteractive ? '' : 'none';
+  }
+
   if (!models.length) { if (pill) pill.style.display = 'none'; return; }
   if (pill) pill.style.display = '';
 
@@ -1136,8 +1151,13 @@ function handleWsMessage(msg) {
       // Nếu đang ở terminal view, vẫn append raw (đã append qua 'output' events)
       break;
     case 'status':
-      setStatus(msg.status);
-      if (msg.status === 'stopped') { finalizeToolBlock(); removeTyping(); }
+      setStatus(msg.status, { interactive: msg.interactive });
+      if (msg.interactive && msg.status === 'running') {
+        _interactiveMode = true;
+        updateInteractiveUI(true);
+        setView('terminal');
+      }
+      if (msg.status === 'stopped') { finalizeToolBlock(); removeTyping(); _interactiveMode = false; updateInteractiveUI(false); }
       break;
     case 'exit':
       removeTyping();
@@ -1623,31 +1643,91 @@ function renderAgentSelect() {
   sel.innerHTML = agents.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
 }
 
+// Track interactive mode
+let _interactiveMode = false;
+
 function toggleAgent() {
   if (!currentChatId) return showToast('Chọn cuộc chat trước');
   if (currentStatus === 'running') {
+    _interactiveMode = false;
     send({ type: 'stop' });
   } else {
+    _interactiveMode = false;
     const agent = document.getElementById('agent-select').value;
     send({ type: 'start', agent });
   }
 }
 
-function setStatus(status) {
+// ⚡ Live mode — chạy agent interactive như AGS
+function startInteractive() {
+  if (!currentChatId) return showToast('Chọn cuộc chat trước');
+  if (currentStatus === 'running') {
+    _interactiveMode = false;
+    send({ type: 'stop' });
+    return;
+  }
+
+  // Đảm bảo session đã start
+  const agent = document.getElementById('agent-select').value;
+  // Nếu chưa có session → start trước, rồi start interactive
+  if (currentStatus !== 'running') {
+    send({ type: 'start', agent });
+  }
+  // Gửi start_interactive ngay sau
+  setTimeout(() => {
+    _interactiveMode = true;
+    send({ type: 'start_interactive' });
+    // Switch sang terminal view để thấy output
+    setView('terminal');
+    updateInteractiveUI(true);
+    // Focus vào input
+    const inp = document.getElementById('prompt-input');
+    if (inp) { inp.placeholder = '✏️ Gõ trực tiếp vào agent (Enter = gửi)…'; inp.focus(); }
+  }, 300);
+}
+
+function updateInteractiveUI(active) {
+  const liveBtn = document.getElementById('btn-start-interactive');
+  const startBtn = document.getElementById('btn-start');
+  if (active) {
+    if (liveBtn) { liveBtn.textContent = '■ Dừng Live'; liveBtn.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'; }
+    if (startBtn) startBtn.style.display = 'none';
+  } else {
+    if (liveBtn) { liveBtn.textContent = '⚡ Live'; liveBtn.style.background = 'linear-gradient(135deg,#22c55e,#16a34a)'; }
+    if (startBtn) startBtn.style.display = '';
+  }
+}
+
+function setStatus(status, opts = {}) {
   currentStatus = status;
   const badge = document.getElementById('status-badge');
   const btn = document.getElementById('btn-start');
+  const liveBtn = document.getElementById('btn-start-interactive');
 
   if (status === 'running') {
-    badge.textContent = 'Đang chạy';
+    badge.textContent = opts.interactive ? '⚡ Live' : 'Đang chạy';
     badge.className = 'status-badge running';
-    btn.textContent = '■ Dừng';
-    btn.className = 'running';
+    if (opts.interactive) {
+      badge.style.background = '#22c55e22';
+      badge.style.color = '#22c55e';
+      badge.style.borderColor = '#22c55e44';
+    }
+    if (!_interactiveMode) {
+      btn.textContent = '■ Dừng';
+      btn.className = 'running';
+      if (liveBtn) liveBtn.style.display = 'none';
+    }
+    if (liveBtn) liveBtn.style.display = '';
   } else {
+    _interactiveMode = false;
     badge.textContent = 'Chưa chạy';
     badge.className = 'status-badge stopped';
+    badge.style.background = '';
+    badge.style.color = '';
+    badge.style.borderColor = '';
     btn.textContent = '▶ Khởi động';
     btn.className = '';
+    updateInteractiveUI(false);
   }
 
   // Update dot in sidebar
@@ -1721,6 +1801,19 @@ function initView() {
 function handleKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
+    // Interactive mode: gửi thẳng vào stdin
+    if (_interactiveMode) {
+      const input = document.getElementById('prompt-input');
+      const text = input.value;
+      if (text) {
+        send({ type: 'input', data: text + '\n' });
+        input.value = '';
+        autoResize(input);
+      } else {
+        send({ type: 'input', data: '\n' });
+      }
+      return;
+    }
     sendPrompt();
   }
   if (e.key === 'ArrowUp' && e.ctrlKey) {

@@ -18,6 +18,7 @@
         { "id": "claude-haiku-4-5-20251001", "name": "Haiku 4.5",  "note": "Nhanh, ít token nhất" }
       ],
       "thinkingLevels": [],
+      "interactiveArgs": [],
       "safeArgs": ["--print", "{prompt}", "--output-format", "text"],
       "safeArgsWithStdin": ["--output-format", "stream-json", "--verbose", "--input-format", "stream-json"],
       "autoArgs": ["{prompt}", "--dangerously-skip-permissions", "--output-format", "stream-json", "--verbose"],
@@ -48,6 +49,7 @@
         { "id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash",  "note": "Nhanh hơn, tiết kiệm" },
         { "id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash",  "note": "Ổn định" }
       ],
+      "interactiveArgs": [],
       "safeArgs": ["-p", "{prompt}"],
       "autoArgs": ["-p", "{prompt}", "--yolo"],
       "streamJson": false,
@@ -68,6 +70,7 @@
       "installCmd": "npm install -g opencode-ai",
       "installUrl": "https://opencode.ai",
       "desc": "OpenCode — Gemini + Claude + GPT trong 1 tool",
+      "interactiveArgs": [],
       "modelFlag": "--model",
       "defaultModel": "",
       "models": [

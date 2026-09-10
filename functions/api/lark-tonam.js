@@ -43,18 +43,10 @@ async function getUserToken(id,secret,refreshToken){
   return j.data?.access_token||j.access_token;
 }
 
-const KNOWN_VIEWS={T01:'vewHqzX1XZ',T02:'vewvgrFCBc',T03:'vewqDpKLSv',T04:'vewuBDjb0W',T05:'vewHlcgIvH',T06:'vewbbA2pp3',T07:'vewPC4mQFY'};
-async function getViewId(token,month,tableId){
-  if(KNOWN_VIEWS[month])return KNOWN_VIEWS[month];
-  try{
-    const r=await fetch(`${LARK}/open-apis/bitable/v1/apps/${APP_TOKEN}/tables/${tableId}/views`,{headers:{Authorization:'Bearer '+token}});
-    const j=await r.json();
-    const vs=j.data?.items||[];
-    const kv=vs.find(v=>{const n=(v.view_name||'').toLowerCase();return n.includes('kiểm soát')||n.includes('kscl')||n.includes('tồn âm');});
-    return (kv||vs[0])?.view_id||null;
-  }catch(e){return null;}
-}
+// Không dùng getViewId riêng — tiết kiệm subrequest (CF giới hạn 50/invocation)
+// Mỗi bảng tồn âm tháng < 500 records → 1 request là đủ, không cần pagination
 async function fetchAllFrom(token,appToken,tableId,viewId){
+  // Tồn âm: chỉ lấy 1 page (500 record/bảng), không pagination để không vượt quota
   const all=[];let pt='',more=true;
   while(more){
     let url=`${LARK}/open-apis/bitable/v1/apps/${appToken}/tables/${tableId}/records?page_size=500`;
@@ -65,7 +57,8 @@ async function fetchAllFrom(token,appToken,tableId,viewId){
     if(j.code!==0)throw new Error('Bitable: '+j.msg+' ('+j.code+')');
     all.push(...(j.data?.items||[]));
     const newPt=j.data?.page_token||'';
-    more=!!j.data?.has_more&&newPt!==pt&&all.length<50000;
+    // Giới hạn 1 trang (500 records) để không vượt 50 subrequests/invocation
+    more=false;
     pt=newPt;
   }
   return all;
@@ -142,8 +135,8 @@ export async function onRequest({request,env}){
     const months={};
     await Promise.all(tables.map(async({month,tableId})=>{
       try{
-        const viewId=await getViewId(token,month,tableId);
-        const records=await fetchAllFrom(token,APP_TOKEN,tableId,viewId);
+        // Không filter view — lấy tất cả record (< 500/bảng, 1 request/bảng)
+        const records=await fetchAllFrom(token,APP_TOKEN,tableId,null);
         if(records.length)months[month]=aggregate(records);
       }catch(e){console.error(month,e.message);}
     }));
