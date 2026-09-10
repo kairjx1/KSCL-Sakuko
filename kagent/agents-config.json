@@ -126,6 +126,7 @@
       "color": "#38bdf8",
       "icon": "🅰",
       "installUrl": "https://antigravity.google",
+      "installCmd": "__download__",
       "desc": "AntiGravity CLI (agy) v1.2 — Google AI agent, tích hợp AGS, dùng Gemini Flash/Pro",
       "altPath": {
         "win32": "%LOCALAPPDATA%\\agy\\bin\\agy.exe",
