@@ -604,7 +604,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.50</span>
+  <span class="version" id="app-version">v1.0.51</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1158,6 +1158,10 @@ function handleWsMessage(msg) {
       if (_currentView === 'chat') appendChatError(msg.message || 'Đã xảy ra lỗi không xác định');
       showToast('⚠️ ' + msg.message);
       break;
+    case 'agent_not_installed':
+      removeTyping();
+      showInstallModal(msg);
+      break;
   }
 }
 
@@ -1194,6 +1198,147 @@ function showAuthError(info) {
   // Nếu đang ở terminal, switch sang chat để user thấy hướng dẫn
   if (_currentView !== 'chat') switchView('chat');
   showToast('🔐 ' + info.agent + ' chưa đăng nhập — xem hướng dẫn bên dưới');
+}
+
+// ── Install Modal ─────────────────────────────────────────────────────────────
+function showInstallModal(info) {
+  // Xóa modal cũ nếu có
+  const old = document.getElementById('install-modal');
+  if (old) old.remove();
+
+  const hasNpmCmd = info.installCmd && info.installCmd.startsWith('npm');
+  const canInstall = !!info.installCmd;
+
+  const modal = document.createElement('div');
+  modal.id = 'install-modal';
+  modal.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;
+    display:flex;align-items:center;justify-content:center;
+  `;
+  modal.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+      width:520px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+      <!-- Header -->
+      <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <span style="font-size:24px">📦</span>
+          <div>
+            <div style="font-weight:700;font-size:16px">${info.agentName} chưa được cài</div>
+            <div style="color:var(--text2);font-size:12px;margin-top:2px">
+              Lệnh <code style="background:var(--bg3);padding:1px 6px;border-radius:4px">${info.cmd}</code> không tìm thấy trên máy này
+            </div>
+          </div>
+          <button onclick="document.getElementById('install-modal').remove()"
+            style="margin-left:auto;background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;padding:4px">✕</button>
+        </div>
+      </div>
+
+      <!-- Steps -->
+      <div style="padding:16px 20px;flex-shrink:0">
+        ${canInstall ? `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;
+            display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">1</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">Cài đặt qua npm</div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <code style="background:var(--bg3);padding:5px 10px;border-radius:6px;font-size:13px;flex:1">${info.installCmd}</code>
+              <button onclick="navigator.clipboard.writeText('${info.installCmd}');showToast('Đã copy!')"
+                style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap">
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:14px">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--bg4);color:var(--text2);
+            display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px">2</div>
+          <div style="color:var(--text2);font-size:13px">Sau khi cài xong, nhấn <strong style="color:var(--text)">"Cài đặt ngay"</strong> để KAgent tự cài cho bạn — hoặc mở terminal và chạy lệnh trên thủ công.</div>
+        </div>
+        ` : `
+        <div style="background:var(--bg3);border-radius:8px;padding:12px 14px;margin-bottom:14px;color:var(--text2);font-size:13px">
+          ${info.installUrl
+            ? `Agent này cần cài thủ công. <a href="${info.installUrl}" target="_blank" style="color:var(--accent)">Tải về tại đây →</a>`
+            : `Agent này không hỗ trợ cài tự động. Vui lòng cài theo hướng dẫn của nhà cung cấp.`
+          }
+        </div>
+        `}
+      </div>
+
+      <!-- Log area (ẩn lúc đầu) -->
+      <div id="install-log-wrap" style="display:none;flex:1;min-height:0;padding:0 20px 4px">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Nhật ký cài đặt:</div>
+        <pre id="install-log" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;
+          padding:10px;font-size:12px;overflow-y:auto;max-height:200px;color:var(--green);
+          white-space:pre-wrap;word-break:break-all;font-family:monospace"></pre>
+      </div>
+
+      <!-- Actions -->
+      <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0">
+        <button onclick="document.getElementById('install-modal').remove()"
+          style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+            padding:7px 16px;border-radius:7px;cursor:pointer;font-size:13px">
+          Đóng
+        </button>
+        ${info.installUrl ? `
+        <button onclick="window.open('${info.installUrl}','_blank')"
+          style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+            padding:7px 16px;border-radius:7px;cursor:pointer;font-size:13px">
+          🔗 Trang chủ
+        </button>` : ''}
+        ${canInstall ? `
+        <button id="install-btn" onclick="runInstall('${info.agentId}')"
+          style="background:var(--accent);border:none;color:#fff;
+            padding:7px 20px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600">
+          ⬇ Cài đặt ngay
+        </button>` : ''}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  if (_currentView !== 'chat') switchView('chat');
+}
+
+function runInstall(agentId) {
+  const btn = document.getElementById('install-btn');
+  const logWrap = document.getElementById('install-log-wrap');
+  const log = document.getElementById('install-log');
+  if (!btn || !log) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Đang cài...';
+  logWrap.style.display = 'block';
+  log.textContent = '';
+
+  const es = new EventSource(`/api/install-agent?agentId=${encodeURIComponent(agentId)}`);
+  es.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'log') {
+      log.textContent += msg.data;
+      log.scrollTop = log.scrollHeight;
+    } else if (msg.type === 'done') {
+      es.close();
+      if (msg.data?.ok) {
+        btn.textContent = '✅ Cài xong!';
+        btn.style.background = 'var(--green)';
+        showToast('✅ Cài đặt thành công! Hãy thử lại.');
+        setTimeout(() => {
+          const m = document.getElementById('install-modal');
+          if (m) m.remove();
+        }, 2500);
+      } else {
+        btn.disabled = false;
+        btn.textContent = '⬇ Thử lại';
+        showToast('❌ Cài đặt thất bại — xem nhật ký');
+      }
+    }
+  };
+  es.onerror = () => {
+    es.close();
+    btn.disabled = false;
+    btn.textContent = '⬇ Thử lại';
+    log.textContent += '\n[Mất kết nối với server]\n';
+  };
 }
 
 // ── INIT ──
