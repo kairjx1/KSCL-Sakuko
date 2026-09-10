@@ -604,7 +604,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.53</span>
+  <span class="version" id="app-version">v1.0.54</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1663,26 +1663,36 @@ function startInteractive() {
   if (currentStatus === 'running') {
     _interactiveMode = false;
     send({ type: 'stop' });
+    updateInteractiveUI(false);
+    const inp = document.getElementById('prompt-input');
+    if (inp) inp.placeholder = 'Prompt (Enter = gửi, Shift+Enter = xuống dòng)… | Paste ảnh để gửi kèm 🖼️';
     return;
   }
 
-  // Đảm bảo session đã start
-  const agent = document.getElementById('agent-select').value;
-  // Nếu chưa có session → start trước, rồi start interactive
-  if (currentStatus !== 'running') {
-    send({ type: 'start', agent });
+  const agentId = document.getElementById('agent-select').value;
+  const agentCfg = (window._agentsConfigCache || {})[agentId] || {};
+
+  // Claude Code: không có PTY → dùng auto mode (stream-json), vẫn live nhưng theo kiểu chat
+  const needsPty = ['claude'].indexOf(agentId) === -1;
+
+  if (!needsPty) {
+    // Claude: Live = auto mode, chat view
+    _interactiveMode = false;
+    send({ type: 'start', agent: agentId });
+    showToast('⚡ Claude Live — Tự động mode (stream-json)');
+    return;
   }
-  // Gửi start_interactive ngay sau
+
+  // Các agent khác: stdin interactive mode (Gemini, OpenCode, Codex...)
+  send({ type: 'start', agent: agentId });
   setTimeout(() => {
     _interactiveMode = true;
     send({ type: 'start_interactive' });
-    // Switch sang terminal view để thấy output
     setView('terminal');
     updateInteractiveUI(true);
-    // Focus vào input
     const inp = document.getElementById('prompt-input');
     if (inp) { inp.placeholder = '✏️ Gõ trực tiếp vào agent (Enter = gửi)…'; inp.focus(); }
-  }, 300);
+  }, 400);
 }
 
 function updateInteractiveUI(active) {
