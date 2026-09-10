@@ -120,6 +120,30 @@
         ]
       }
     },
+    "antigravity": {
+      "name": "AntiGravity",
+      "cmd": "agy",
+      "color": "#38bdf8",
+      "icon": "🅰",
+      "installUrl": "https://antigravity.google",
+      "desc": "AntiGravity CLI (agy) — Gemini agent từ Google, tích hợp với AGS",
+      "altPath": {
+        "win32": "%APPDATA%\\..\\Local\\agy\\bin\\agy.exe",
+        "darwin": "",
+        "linux": ""
+      },
+      "interactiveArgs": ["--dangerously-skip-permissions"],
+      "safeArgs": ["-p", "{prompt}"],
+      "autoArgs": ["-p", "{prompt}", "--dangerously-skip-permissions"],
+      "streamJson": false,
+      "authErrorPatterns": ["not authenticated", "login", "API key"],
+      "authGuide": {
+        "title": "AntiGravity chưa đăng nhập",
+        "steps": [
+          { "label": "Cài và đăng nhập qua AGS", "cmd": null, "note": "Tải AGS tại https://antigravity.google → đăng nhập Google → agy sẽ tự hoạt động" }
+        ]
+      }
+    },
     "shell": {
       "name": "Shell",
       "cmd": "auto",
