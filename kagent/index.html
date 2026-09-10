@@ -604,7 +604,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.61</span>
+  <span class="version" id="app-version">v1.0.62</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1766,14 +1766,17 @@ function startInteractive() {
   const agentId = document.getElementById('agent-select').value;
   const agentCfg = (window._agentsConfigCache || {})[agentId] || {};
 
-  // Claude Code: không có PTY → dùng auto mode (stream-json), vẫn live nhưng theo kiểu chat
-  const needsPty = ['claude'].indexOf(agentId) === -1;
+  // Agent dùng --print (stream-json): không có PTY → dùng auto mode, vẫn live nhưng theo kiểu chat
+  // Claude và AntiGravity (agy) đều thuộc nhóm này
+  const noPtyAgents = ['claude', 'antigravity'];
+  const needsPty = !noPtyAgents.includes(agentId);
 
   if (!needsPty) {
-    // Claude: Live = auto mode, chat view
+    // Live = auto mode (--dangerously-skip-permissions), chat view
     _interactiveMode = false;
     send({ type: 'start', agent: agentId });
-    showToast('⚡ Claude Live — Tự động mode (stream-json)');
+    const label = agentId === 'antigravity' ? 'AntiGravity Live' : 'Claude Live';
+    showToast(`⚡ ${label} — Tự động mode`);
     return;
   }
 
