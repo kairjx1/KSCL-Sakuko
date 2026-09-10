@@ -267,6 +267,15 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .status-badge.running{
   color:var(--green);border-color:rgba(74,222,128,.3);
   background:var(--green-bg);
+  display:inline-flex;align-items:center;gap:5px;
+}
+/* Chấm nhấp nháy — để biết agent còn đang sống/xử lý, không chỉ đứng yên hiện chữ
+   "Đang chạy" (dễ tưởng bị treo khi terminal im lặng lâu). Dùng lại @keyframes pulse
+   đã có cho .dot.running ở sidebar cho đồng bộ hình ảnh. */
+.status-badge.running::before{
+  content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0;
+  background:var(--green);box-shadow:0 0 6px var(--green);
+  animation:pulse 1.4s infinite;
 }
 .status-badge.stopped{color:var(--text2);border-color:var(--border)}
 
@@ -686,7 +695,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.70</span>
+  <span class="version" id="app-version">v1.0.71</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1806,18 +1815,20 @@ async function loadRelayHistory(chatId) {
     sep.style.cssText = 'text-align:center;color:var(--text2);font-size:11px;padding:8px 0 4px;border-bottom:1px solid var(--border);margin-bottom:8px';
     sep.textContent = `── Lịch sử (${msgs.length} tin) ──`;
     cm.insertBefore(sep, cm.firstChild);
-    // Render từng message
+    // Render từng message — bọc _wrapMsg() giống tin nhắn live (appendChatUser/appendChatAI)
+    // để có nút ✕ Xóa khi hover, kể cả tin nhắn tải lại từ lịch sử (trước đây thiếu, nên
+    // tin cũ/tin gửi trùng không xóa được sau khi mở lại chat hoặc mở máy khác).
     msgs.forEach(m => {
       if (m.role === 'user') {
         const el = document.createElement('div');
         el.className = 'chat-msg-user';
         el.textContent = m.content;
-        cm.appendChild(el);
+        cm.appendChild(_wrapMsg(el));
       } else if (m.role === 'assistant') {
         const el = document.createElement('div');
         el.className = 'chat-msg-ai';
         el.innerHTML = renderMarkdown(m.content || '');
-        cm.appendChild(el);
+        cm.appendChild(_wrapMsg(el));
       }
     });
     scrollChat();
