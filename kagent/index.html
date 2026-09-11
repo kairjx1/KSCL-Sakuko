@@ -330,6 +330,20 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 }
 .scroll-bottom-btn:hover{background:var(--accent2);transform:translateY(-2px)}
 .scroll-bottom-btn.show{display:flex}
+/* Banner "[X/20] Bấm để chắt lọc bộ nhớ" — kiểu giống AGSMem, nằm ngay trên thanh nhập liệu,
+   luôn hiện khi cuộc chat đã có tin nhắn, bấm vào là chắt lọc ngay không cần đợi đủ 20. */
+.memory-banner{
+  display:none;align-items:center;justify-content:center;gap:10px;
+  background:#f59e0b;color:#1a1a1a;font-weight:700;font-size:12.5px;
+  padding:7px 14px;cursor:pointer;user-select:none;flex-shrink:0;
+}
+.memory-banner.show{display:flex}
+.memory-banner:hover{background:#fbbf24}
+.memory-banner-close{
+  background:rgba(0,0,0,.12);border:none;color:#1a1a1a;border-radius:5px;
+  width:20px;height:20px;line-height:20px;cursor:pointer;font-size:11px;flex-shrink:0;padding:0;
+}
+.memory-banner-close:hover{background:rgba(0,0,0,.25)}
 #terminal-out{
   flex:1;overflow-y:auto;overflow-x:hidden;
   padding:10px 12px;font-family:'Cascadia Code','Fira Code','Consolas',monospace;
@@ -707,7 +721,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.79</span>
+  <span class="version" id="app-version">v1.0.80</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -833,6 +847,12 @@ dialog.dlg header button:hover{color:var(--text)}
         </div>
       </div>
 
+      <!-- Banner chắt lọc bộ nhớ — giống banner "[X/20] Bấm để ghi AGSMem" bên AGS -->
+      <div id="memory-banner" class="memory-banner" onclick="summarizeMemoryNow()" title="Bấm để chắt lọc bộ nhớ ngay — không cần đợi đủ 20 tin">
+        <span id="memory-banner-text">[0/20] Bấm để chắt lọc bộ nhớ.</span>
+        <button class="memory-banner-close" onclick="event.stopPropagation();dismissMemoryBanner()" title="Ẩn">✕</button>
+      </div>
+
       <!-- Input bar -->
       <div id="input-bar" style="position:relative">
         <div id="history-panel"></div>
@@ -867,8 +887,6 @@ dialog.dlg header button:hover{color:var(--text)}
           <span class="kbd" onclick="toggleHistory()">📋 Lịch sử</span>
           <span class="sep">|</span>
           <span class="kbd" onclick="toggleKimTiem()" id="btn-kim-tiem" title="Kim Tiêm — Inject module vào chat">💉 Kim Tiêm</span>
-          <span class="sep">|</span>
-          <span class="kbd" onclick="summarizeMemoryNow()" id="btn-memory" title="Bấm để chắt lọc bộ nhớ ngay — không cần đợi đủ 20 tin">🧠 Bộ nhớ <span id="memory-progress">…</span></span>
         </div>
       </div>
     </div>
@@ -2799,14 +2817,28 @@ async function toggleKimTiem() {
   }
 }
 
-// ── BỘ NHỚ (tóm tắt tự động mỗi 20 tin, giống banner AGSMem) ────────────────
+// ── BỘ NHỚ (tóm tắt tự động mỗi 20 tin, banner giống "[X/20] Bấm để ghi AGSMem" bên AGS) ──
+let _memoryBannerDismissedKey = null; // `${chatId}:${progress}` bị bấm ✕ — hiện lại ngay khi có tin mới đẩy progress lên
+
 async function refreshMemoryProgress() {
-  const el = document.getElementById('memory-progress');
-  if (!el || !currentChatId) return;
+  const banner = document.getElementById('memory-banner');
+  const textEl = document.getElementById('memory-banner-text');
+  if (!banner || !currentChatId) { if (banner) banner.classList.remove('show'); return; }
   try {
     const d = await fetch(`/api/chats/${currentChatId}/memory-status`).then(r => r.json());
-    el.textContent = `(${d.count % d.every || (d.count > 0 ? d.every : 0)}/${d.every})`;
-  } catch { el.textContent = ''; }
+    const progress = d.count % d.every || (d.count > 0 ? d.every : 0);
+    textEl.textContent = `[${progress}/${d.every}] Bấm để chắt lọc bộ nhớ.`;
+    const key = `${currentChatId}:${progress}`;
+    const shouldShow = d.count > 0 && _memoryBannerDismissedKey !== key;
+    banner.classList.toggle('show', shouldShow);
+  } catch { banner.classList.remove('show'); }
+}
+
+function dismissMemoryBanner() {
+  const textEl = document.getElementById('memory-banner-text');
+  const m = textEl.textContent.match(/^\[(\d+)\//);
+  _memoryBannerDismissedKey = `${currentChatId}:${m ? m[1] : ''}`;
+  document.getElementById('memory-banner').classList.remove('show');
 }
 
 async function summarizeMemoryNow() {
