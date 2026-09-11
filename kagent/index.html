@@ -330,20 +330,19 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 }
 .scroll-bottom-btn:hover{background:var(--accent2);transform:translateY(-2px)}
 .scroll-bottom-btn.show{display:flex}
-/* Banner "[X/20] Bấm để chắt lọc bộ nhớ" — kiểu giống AGSMem, nằm ngay trên thanh nhập liệu,
-   luôn hiện khi cuộc chat đã có tin nhắn, bấm vào là chắt lọc ngay không cần đợi đủ 20. */
-.memory-banner{
-  display:none;align-items:center;justify-content:center;gap:10px;
-  background:#f59e0b;color:#1a1a1a;font-weight:700;font-size:12.5px;
-  padding:7px 14px;cursor:pointer;user-select:none;flex-shrink:0;
+/* Panel "🧠 Bộ nhớ" dock vào rightbar giống hệt Kim Tiêm khi bấm nút trong hàng phím tắt */
+.mem-btn{
+  border:none;border-radius:6px;padding:7px 10px;font-size:11.5px;font-weight:600;cursor:pointer;
 }
-.memory-banner.show{display:flex}
-.memory-banner:hover{background:#fbbf24}
-.memory-banner-close{
-  background:rgba(0,0,0,.12);border:none;color:#1a1a1a;border-radius:5px;
-  width:20px;height:20px;line-height:20px;cursor:pointer;font-size:11px;flex-shrink:0;padding:0;
+.mem-btn.primary{background:var(--accent);color:#fff;width:100%}
+.mem-btn.primary:hover{background:var(--accent2)}
+.mem-btn.ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.mem-btn.ghost:hover{color:var(--text)}
+.mem-textarea{
+  width:100%;min-height:80px;resize:vertical;background:var(--bg3);
+  border:1px solid var(--border);color:var(--text);border-radius:6px;
+  padding:8px 9px;font-size:12px;font-family:inherit;
 }
-.memory-banner-close:hover{background:rgba(0,0,0,.25)}
 #terminal-out{
   flex:1;overflow-y:auto;overflow-x:hidden;
   padding:10px 12px;font-family:'Cascadia Code','Fira Code','Consolas',monospace;
@@ -721,7 +720,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.80</span>
+  <span class="version" id="app-version">v1.0.81</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -847,12 +846,6 @@ dialog.dlg header button:hover{color:var(--text)}
         </div>
       </div>
 
-      <!-- Banner chắt lọc bộ nhớ — giống banner "[X/20] Bấm để ghi AGSMem" bên AGS -->
-      <div id="memory-banner" class="memory-banner" onclick="summarizeMemoryNow()" title="Bấm để chắt lọc bộ nhớ ngay — không cần đợi đủ 20 tin">
-        <span id="memory-banner-text">[0/20] Bấm để chắt lọc bộ nhớ.</span>
-        <button class="memory-banner-close" onclick="event.stopPropagation();dismissMemoryBanner()" title="Ẩn">✕</button>
-      </div>
-
       <!-- Input bar -->
       <div id="input-bar" style="position:relative">
         <div id="history-panel"></div>
@@ -887,6 +880,8 @@ dialog.dlg header button:hover{color:var(--text)}
           <span class="kbd" onclick="toggleHistory()">📋 Lịch sử</span>
           <span class="sep">|</span>
           <span class="kbd" onclick="toggleKimTiem()" id="btn-kim-tiem" title="Kim Tiêm — Inject module vào chat">💉 Kim Tiêm</span>
+          <span class="sep">|</span>
+          <span class="kbd" id="btn-memory" onclick="toggleMemoryPanel()" title="Bộ nhớ — chắt lọc & cấu hình">🧠 Bộ nhớ <span id="memory-progress">…</span></span>
         </div>
       </div>
     </div>
@@ -922,6 +917,29 @@ dialog.dlg header button:hover{color:var(--text)}
     <button onclick="toggleAllModules(true)" style="flex:1;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:#22c55e;padding:5px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600">✅ Bật tất cả</button>
     <button onclick="toggleAllModules(false)" style="flex:1;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#ef4444;padding:5px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600">⭕ Tắt tất cả</button>
     <a href="/admin.html" target="_blank" style="flex:0;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.2);color:#a78bfa;padding:5px 10px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600;text-decoration:none;display:flex;align-items:center">⚙️</a>
+  </div>
+</div>
+
+<!-- BỘ NHỚ PANEL (dock vào rightbar giống Kim Tiêm) -->
+<div id="memory-panel" style="display:none;position:fixed;bottom:80px;right:16px;z-index:500;width:310px;background:#151515;border:1px solid #2a2a2a;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.6);overflow:hidden">
+  <div style="padding:8px 14px;border-bottom:1px solid #2a2a2a;display:flex;align-items:center;justify-content:flex-end">
+    <span style="font-size:10px;color:#f59e0b;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);padding:2px 8px;border-radius:10px" id="mem-progress-badge">[0/20]</span>
+  </div>
+  <!-- Giải thích ngắn -->
+  <div style="padding:8px 14px;background:rgba(245,158,11,.06);border-bottom:1px solid #1e1e1e;font-size:10px;color:#9a9a9a;line-height:1.5">
+    ✅ Cứ mỗi <strong style="color:#f59e0b">20 tin</strong>, KAgent tự động tóm tắt cuộc hội thoại thành một bản ghi nhớ ngắn để AI đọc lại không quên việc đã làm.<br>
+    Bấm nút bên dưới để chắt lọc ngay, không cần đợi đủ 20 tin.
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+    <button class="mem-btn primary" onclick="summarizeMemoryNow()">🧠 Chắt lọc ngay</button>
+    <div>
+      <div style="font-size:10.5px;color:#9a9a9a;margin-bottom:5px;line-height:1.4">Hướng dẫn thêm cho AI khi chắt lọc (tùy chọn) — ví dụ: luôn giữ lại số liệu SLA, ưu tiên liệt kê các quyết định kỹ thuật...</div>
+      <textarea id="memory-prompt-box" class="mem-textarea" placeholder="Để trống = dùng mặc định"></textarea>
+    </div>
+  </div>
+  <div style="padding:8px 14px;border-top:1px solid #2a2a2a;display:flex;gap:6px">
+    <button class="mem-btn ghost" style="flex:1" onclick="resetMemoryPrompt()">Lấy mặc định</button>
+    <button class="mem-btn primary" style="flex:1" onclick="saveMemoryPrompt()">Lưu</button>
   </div>
 </div>
 
@@ -2817,28 +2835,60 @@ async function toggleKimTiem() {
   }
 }
 
-// ── BỘ NHỚ (tóm tắt tự động mỗi 20 tin, banner giống "[X/20] Bấm để ghi AGSMem" bên AGS) ──
-let _memoryBannerDismissedKey = null; // `${chatId}:${progress}` bị bấm ✕ — hiện lại ngay khi có tin mới đẩy progress lên
+// ── BỘ NHỚ (tóm tắt tự động mỗi 20 tin) — nút gọn, bấm mở panel cấu hình trong rightbar ──
+const MEMORY_PROMPT_KEY = '_summary_prompt_override';
 
 async function refreshMemoryProgress() {
-  const banner = document.getElementById('memory-banner');
-  const textEl = document.getElementById('memory-banner-text');
-  if (!banner || !currentChatId) { if (banner) banner.classList.remove('show'); return; }
+  const pill = document.getElementById('memory-progress');
+  const badge = document.getElementById('mem-progress-badge');
+  if (!pill || !currentChatId) return;
   try {
     const d = await fetch(`/api/chats/${currentChatId}/memory-status`).then(r => r.json());
     const progress = d.count % d.every || (d.count > 0 ? d.every : 0);
-    textEl.textContent = `[${progress}/${d.every}] Bấm để chắt lọc bộ nhớ.`;
-    const key = `${currentChatId}:${progress}`;
-    const shouldShow = d.count > 0 && _memoryBannerDismissedKey !== key;
-    banner.classList.toggle('show', shouldShow);
-  } catch { banner.classList.remove('show'); }
+    pill.textContent = `(${progress}/${d.every})`;
+    if (badge) badge.textContent = `[${progress}/${d.every}]`;
+  } catch { pill.textContent = ''; }
 }
 
-function dismissMemoryBanner() {
-  const textEl = document.getElementById('memory-banner-text');
-  const m = textEl.textContent.match(/^\[(\d+)\//);
-  _memoryBannerDismissedKey = `${currentChatId}:${m ? m[1] : ''}`;
-  document.getElementById('memory-banner').classList.remove('show');
+let _memOpen = false;
+
+async function toggleMemoryPanel() {
+  const panel = document.getElementById('memory-panel');
+  _memOpen = !_memOpen;
+  if (_memOpen) {
+    panel.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%';
+    RightPanel.open({ title: '🧠 Bộ nhớ', node: panel, onClose: () => { _memOpen = false; } });
+    await loadMemoryPrompt();
+    refreshMemoryProgress();
+  } else {
+    RightPanel.close();
+  }
+}
+
+async function loadMemoryPrompt() {
+  const box = document.getElementById('memory-prompt-box');
+  try {
+    const r = await fetch(`/api/memory/${MEMORY_PROMPT_KEY}`);
+    if (r.ok) { const d = await r.json(); box.value = d.value || ''; }
+    else box.value = '';
+  } catch { box.value = ''; }
+}
+
+async function saveMemoryPrompt() {
+  const box = document.getElementById('memory-prompt-box');
+  try {
+    await fetch('/api/memory', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: MEMORY_PROMPT_KEY, value: box.value.trim(), tags: ['system'] })
+    });
+    showToast('✅ Đã lưu hướng dẫn chắt lọc');
+  } catch { showToast('⚠️ Lưu thất bại — kiểm tra kết nối'); }
+}
+
+async function resetMemoryPrompt() {
+  document.getElementById('memory-prompt-box').value = '';
+  try { await fetch(`/api/memory/${MEMORY_PROMPT_KEY}`, { method: 'DELETE' }); } catch {}
+  showToast('↺ Đã về mặc định');
 }
 
 async function summarizeMemoryNow() {
