@@ -122,9 +122,9 @@
       "cmd": "agy",
       "color": "#38bdf8",
       "icon": "🅰",
-      "installUrl": "https://antigravity.google",
+      "installUrl": "https://antigravity.google/product/antigravity-cli",
       "installCmd": "__download__",
-      "desc": "AntiGravity CLI (agy) v1.2 — Google AI agent, tích hợp AGS, dùng Gemini Flash/Pro",
+      "desc": "AntiGravity CLI (agy) — agent AI của Google, dùng Gemini Flash/Pro",
       "altPath": {
         "win32": "%LOCALAPPDATA%\\agy\\bin\\agy.exe",
         "darwin": "%HOME%/.local/share/agy/bin/agy",
@@ -143,7 +143,7 @@
       "authGuide": {
         "title": "AntiGravity chưa đăng nhập",
         "steps": [
-          { "label": "Mở AGS để đăng nhập", "cmd": null, "note": "Mở ứng dụng AGS → đăng nhập Google → agy sẽ tự hoạt động trong KAgent" }
+          { "label": "Mở ứng dụng Antigravity để đăng nhập", "cmd": null, "note": "Mở app Antigravity đã cài trên máy (không liên quan AGS) → đăng nhập Google → agy đọc chung phiên đăng nhập này, tự hoạt động trong KAgent" }
         ]
       }
     },

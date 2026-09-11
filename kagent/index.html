@@ -695,7 +695,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.75</span>
+  <span class="version" id="app-version">v1.0.76</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1397,6 +1397,7 @@ function handleWsMessage(msg) {
 }
 
 function showAuthError(info) {
+  const hasCmdStep = (info.steps || []).some(s => s.cmd);
   const stepsHtml = (info.steps || []).map((s, i) => `
     <div style="background:var(--bg3);border-radius:8px;padding:12px 14px;margin-top:8px">
       <div style="font-weight:600;color:var(--text1);margin-bottom:6px">${s.label}</div>
@@ -1407,13 +1408,23 @@ function showAuthError(info) {
       </div>` : ''}
     </div>`).join('');
 
+  // AntiGravity đăng nhập qua chính app Antigravity (GUI), không phải gõ lệnh terminal
+  // và không liên quan AGS — có nút mở thẳng app đã cài trên máy nếu tìm thấy.
+  const isAntigravity = info.agent === 'AntiGravity';
+  const openAppBtn = isAntigravity ? `
+    <button onclick="openAntigravityApp()" style="margin-top:10px;background:var(--accent);border:none;color:#fff;
+      padding:7px 16px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600">
+      🚀 Mở Antigravity để đăng nhập
+    </button>` : '';
+
   const card = `<div style="background:var(--bg2);border:1px solid #f59e0b44;border-radius:12px;padding:16px;margin:8px 0;max-width:600px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
       <span style="font-size:20px">🔐</span>
       <span style="font-weight:700;color:#f59e0b;font-size:15px">${info.agent} chưa đăng nhập</span>
     </div>
-    <div style="color:var(--text2);font-size:13px;margin-bottom:4px">Mở <strong>terminal/cmd</strong> trên máy và làm theo một trong các cách sau:</div>
+    <div style="color:var(--text2);font-size:13px;margin-bottom:4px">${hasCmdStep ? 'Mở <strong>terminal/cmd</strong> trên máy và làm theo một trong các cách sau:' : 'Làm theo hướng dẫn sau:'}</div>
     ${stepsHtml}
+    ${openAppBtn}
     <div style="margin-top:12px;color:var(--text2);font-size:12px">💡 Sau khi đăng nhập xong, khởi động lại KAgent là dùng được ngay.</div>
   </div>`;
 
@@ -1429,6 +1440,18 @@ function showAuthError(info) {
   // Nếu đang ở terminal, switch sang chat để user thấy hướng dẫn
   if (_currentView !== 'chat') switchView('chat');
   showToast('🔐 ' + info.agent + ' chưa đăng nhập — xem hướng dẫn bên dưới');
+}
+
+// Mở thẳng app Antigravity đã cài trên máy (không qua AGS) để đăng nhập Google.
+async function openAntigravityApp() {
+  try {
+    const r = await fetch('/api/open-antigravity', { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) showToast('🚀 Đang mở Antigravity...');
+    else showToast('⚠️ ' + (d.error || 'Chưa tìm thấy Antigravity trên máy — tải tại antigravity.google/product/antigravity-cli'));
+  } catch {
+    showToast('⚠️ Không mở được Antigravity');
+  }
 }
 
 // ── Install Modal ─────────────────────────────────────────────────────────────
