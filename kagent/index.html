@@ -695,7 +695,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.73</span>
+  <span class="version" id="app-version">v1.0.74</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1030,6 +1030,26 @@ function updateModelPill(agentId) {
         if (!window._agentsConfigCache.antigravity) window._agentsConfigCache.antigravity = {};
         window._agentsConfigCache.antigravity.models = data.models;
         _applyModelPill(agentId, window._agentsConfigCache.antigravity);
+      } else {
+        _applyModelPill(agentId, agentCfg);
+      }
+    }).catch(() => {
+      _applyModelPill(agentId, agentCfg);
+    });
+    return;
+  }
+
+  // Dynamic model list for opencode: fetch from /api/opencode-models — danh sách tĩnh
+  // trong config (anthropic/..., openai/...) chỉ đúng khi user đã tự cấu hình provider
+  // riêng; máy chưa cấu hình gì thì opencode chỉ có model miễn phí của chính nó
+  // (opencode/big-pickle...) — chọn nhầm model tĩnh làm opencode báo lỗi ngay từ câu đầu.
+  if (agentId === 'opencode') {
+    fetch('/api/opencode-models').then(r => r.json()).then(data => {
+      if (data.models && data.models.length) {
+        if (!window._agentsConfigCache) window._agentsConfigCache = {};
+        if (!window._agentsConfigCache.opencode) window._agentsConfigCache.opencode = {};
+        window._agentsConfigCache.opencode.models = data.models;
+        _applyModelPill(agentId, window._agentsConfigCache.opencode);
       } else {
         _applyModelPill(agentId, agentCfg);
       }
@@ -1999,12 +2019,20 @@ function setStatus(status, opts = {}) {
     if (liveBtn) liveBtn.style.display = '';
   } else {
     _interactiveMode = false;
-    badge.textContent = 'Chưa chạy';
+    // Với agent kiểu --print (claude/gemini/opencode/codex/antigravity khi không ở chế
+    // độ Live/PTY), tiến trình THOÁT SAU MỖI CÂU TRẢ LỜI là bình thường — mỗi tin nhắn
+    // là 1 lượt gọi CLI độc lập, không phải phiên bị treo/lỗi. Trước đây badge hiện
+    // "Chưa chạy" + nút "▶ Khởi động" to màu nổi bật ngay sau khi trả lời xong, khiến
+    // người dùng tưởng PHẢI bấm lại mới gõ tiếp được — đã kiểm chứng: gõ thẳng tin nhắn
+    // tiếp theo (không bấm Khởi động lại) vẫn gửi và nhận trả lời bình thường, vì session
+    // (workDir/agentId) vẫn còn nguyên trên server, chỉ cờ "đang chạy" tạm tắt. Đổi chữ
+    // cho đúng bản chất: "Sẵn sàng" thay vì ngụ ý phải khởi động lại.
+    badge.textContent = '● Sẵn sàng';
     badge.className = 'status-badge stopped';
     badge.style.background = '';
     badge.style.color = '';
     badge.style.borderColor = '';
-    btn.textContent = '▶ Khởi động';
+    btn.textContent = '↻ Khởi động lại';
     btn.className = '';
     updateInteractiveUI(false);
   }
@@ -2833,9 +2861,13 @@ initRelay().then(() => init());
         </div>
         <!-- Install hint -->
         <div class="install-hint" id="nc-install-hint">
-          <strong style="color:var(--red)">⚠️ Agent chưa được cài:</strong>
-          <span id="nc-install-name"></span><br>
-          Cài bằng lệnh: <code id="nc-install-cmd"></code>
+          <strong style="color:var(--red)">⚠️ <span id="nc-install-name"></span> chưa sẵn sàng:</strong><br>
+          <span id="nc-install-cmd"></span>
+          <button id="nc-install-btn" type="button" onclick=""
+            style="display:none;margin-top:8px;background:var(--accent);border:none;color:#fff;
+              padding:6px 14px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600">
+            🚀 Cài đặt ngay
+          </button>
         </div>
       </div>
     </div>
@@ -2953,6 +2985,16 @@ function renderAgentGrid() {
   }).join('');
 }
 
+// Agent KAgent THẬT SỰ chạy được ở backend (có cmd/args trong agents-config.json).
+// cursor/kiro/grok chỉ tồn tại ở danh sách hiển thị AGENT_DEFS phía trên (để người dùng
+// biết KAgent có kế hoạch hỗ trợ) — chưa hề có cấu hình lệnh chạy thật nào. Trước đây
+// chọn 1 trong 3 cái này rồi tạo chat vẫn được, nhưng lúc gửi tin nhắn thì server ÂM THẦM
+// chạy Claude thay thế (agent-runner.js rơi vào nhánh fallback), khiến người dùng tưởng
+// nhầm agent kia đang hoạt động. Backend giờ đã chặn hẳn trường hợp này (xem
+// agent-runner.js: throw rõ "chưa hỗ trợ" thay vì âm thầm dùng Claude) — phía UI cũng
+// chặn từ sớm để không cho tạo chat với agent chưa hỗ trợ.
+const BACKEND_SUPPORTED_AGENTS = new Set(['claude', 'gemini', 'opencode', 'codex', 'antigravity', 'shell']);
+
 function selectAgent(id, installed) {
   const a = AGENT_DEFS.find(x => x.id === id);
   if (!a) return;
@@ -2960,20 +3002,48 @@ function selectAgent(id, installed) {
   renderAgentGrid();
 
   const hint = document.getElementById('nc-install-hint');
-  if (!installed) {
+  const backendSupported = BACKEND_SUPPORTED_AGENTS.has(id);
+
+  if (!backendSupported) {
+    // Honest: chưa hỗ trợ chạy trong KAgent, kể cả khi user đã cài app đó trên máy —
+    // không hứa suông "khởi động lại KAgent sẽ nhận diện" như agent thật.
+    document.getElementById('nc-install-name').textContent = a.name;
+    document.getElementById('nc-install-cmd').innerHTML =
+      `KAgent chưa hỗ trợ chạy trực tiếp ${a.name} (đang phát triển).` +
+      (a.installUrl ? ` <a href="${a.installUrl}" target="_blank" style="color:var(--accent)">Xem trang chủ →</a>` : '');
+    hint.classList.add('show');
+    const btn = document.getElementById('nc-install-btn');
+    if (btn) btn.style.display = 'none';
+  } else if (!installed) {
     const cmd = a.installCmd || null;
     const url = a.installUrl || null;
     document.getElementById('nc-install-name').textContent = a.name;
-    document.getElementById('nc-install-cmd').textContent = cmd
-      ? cmd
-      : url ? 'Tải từ ' + url : 'Xem tài liệu chính thức';
+    document.getElementById('nc-install-cmd').innerHTML = cmd
+      ? `Cài bằng lệnh: <code>${esc(cmd)}</code>`
+      : url ? `Tải từ <a href="${url}" target="_blank" style="color:var(--accent)">${url}</a>` : 'Xem tài liệu chính thức';
     hint.classList.add('show');
+    // Nút cài đặt ngay — dùng lại đúng modal + luồng SSE cài thật đã có sẵn (showInstallModal/
+    // runInstall), thay vì bắt người dùng tự copy lệnh ra terminal khác rồi quay lại bấm F5.
+    const btn = document.getElementById('nc-install-btn');
+    if (btn && cmd) {
+      btn.style.display = '';
+      btn.onclick = () => showInstallModal({ agentId: id, agentName: a.name, cmd: a.id, installCmd: cmd, installUrl: url });
+    } else if (btn) {
+      btn.style.display = 'none';
+    }
   } else {
     hint.classList.remove('show');
   }
 }
 
 async function confirmNewChat() {
+  if (!BACKEND_SUPPORTED_AGENTS.has(_ncSelectedAgent)) {
+    // Chặn từ sớm — tạo chat với agent chưa có cấu hình backend trước đây vẫn cho qua,
+    // nhưng gửi tin nhắn đầu tiên thì server âm thầm chạy Claude thay thế (xem
+    // agent-runner.js). Giờ backend đã từ chối rõ ràng, chặn luôn ở đây cho người dùng
+    // biết ngay thay vì phải gửi thử mới thấy lỗi.
+    return showToast('⚠️ KAgent chưa hỗ trợ chạy agent này, vui lòng chọn agent khác');
+  }
   const name = document.getElementById('nc-name').value.trim() || `Cuộc chat mới`;
   const pid = document.getElementById('sp-select').value;
   if (!pid) { showToast('Chọn dự án trước!'); return; }

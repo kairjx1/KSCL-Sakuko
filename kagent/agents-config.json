@@ -73,12 +73,9 @@
       "interactiveArgs": [],
       "modelFlag": "--model",
       "defaultModel": "",
+      "_note_models": "Danh sách này CHỈ dùng khi /api/opencode-models (gọi `opencode models` thật trên máy) lỗi — client luôn ưu tiên gọi API đó trước. Trước đây danh sách tĩnh ở đây toàn model cần cấu hình provider riêng (Anthropic/Google/OpenAI) mà máy chưa cấu hình gì thì KHÔNG DÙNG ĐƯỢC — chọn nhầm là opencode báo lỗi ngay từ câu đầu, tưởng như 'mất' OpenCode. Danh sách dưới đây là model MIỄN PHÍ luôn có sẵn không cần cấu hình gì.",
       "models": [
-        { "id": "anthropic/claude-sonnet-5",   "name": "Claude Sonnet 5",   "note": "Qua Anthropic" },
-        { "id": "anthropic/claude-opus-5",     "name": "Claude Opus 5",     "note": "Mạnh nhất Anthropic" },
-        { "id": "google/gemini-2.5-pro",       "name": "Gemini 2.5 Pro",    "note": "Qua Google" },
-        { "id": "openai/gpt-4o",               "name": "GPT-4o",            "note": "Qua OpenAI" },
-        { "id": "openai/o3",                   "name": "OpenAI o3",         "note": "Reasoning mạnh" }
+        { "id": "opencode/big-pickle", "name": "Big Pickle", "note": "Miễn phí, không cần cấu hình" }
       ],
       "safeArgs": ["run", "{prompt}"],
       "autoArgs": ["run", "--auto", "{prompt}"],
