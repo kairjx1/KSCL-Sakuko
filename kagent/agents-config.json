@@ -139,8 +139,8 @@
         { "id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash", "note": "Nhanh, miễn phí" },
         { "id": "gemini-2.5-pro",   "name": "Gemini 2.5 Pro",   "note": "Mạnh hơn, context lớn" }
       ],
-      "safeArgs": ["--print", "{prompt}", "--output-format", "stream-json"],
-      "autoArgs": ["--print", "{prompt}", "--dangerously-skip-permissions", "--output-format", "stream-json"],
+      "safeArgs": ["--print", "{prompt}", "--output-format", "stream-json", "--print-timeout", "20m0s"],
+      "autoArgs": ["--print", "{prompt}", "--dangerously-skip-permissions", "--output-format", "stream-json", "--print-timeout", "20m0s"],
       "streamJson": "agy",
       "authErrorPatterns": ["not authenticated", "login required", "unauthenticated", "api key"],
       "authGuide": {
