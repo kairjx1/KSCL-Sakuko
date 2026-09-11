@@ -318,6 +318,18 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 /* ── TERMINAL ── */
 #terminal-wrap{flex:1;overflow:hidden;position:relative;background:#0a0a0a;display:flex;flex-direction:column}
+/* Nút cuộn xuống cuối — hiện khi đã cuộn lên xem lại tin cũ trong cuộc hội thoại dài,
+   bấm 1 cái nhảy thẳng xuống tin mới nhất thay vì kéo tay rất lâu. */
+.scroll-bottom-btn{
+  display:none;position:absolute;right:16px;bottom:16px;z-index:50;
+  width:38px;height:38px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;cursor:pointer;
+  font-size:16px;box-shadow:0 4px 14px rgba(0,0,0,.4);
+  align-items:center;justify-content:center;
+  transition:transform .12s,background .12s;
+}
+.scroll-bottom-btn:hover{background:var(--accent2);transform:translateY(-2px)}
+.scroll-bottom-btn.show{display:flex}
 #terminal-out{
   flex:1;overflow-y:auto;overflow-x:hidden;
   padding:10px 12px;font-family:'Cascadia Code','Fira Code','Consolas',monospace;
@@ -695,7 +707,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.76</span>
+  <span class="version" id="app-version">v1.0.77</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -809,6 +821,7 @@ dialog.dlg header button:hover{color:var(--text)}
         </div>
         <div id="terminal-out"></div>
         <div id="chat-messages" style="display:none"></div>
+        <button id="btn-scroll-bottom" class="scroll-bottom-btn" onclick="scrollToBottomNow()" title="Xuống tin mới nhất">▼</button>
         <div id="empty-state">
           <div class="big-icon">⚡</div>
           <h3>Sẵn sàng</h3>
@@ -854,6 +867,8 @@ dialog.dlg header button:hover{color:var(--text)}
           <span class="kbd" onclick="toggleHistory()">📋 Lịch sử</span>
           <span class="sep">|</span>
           <span class="kbd" onclick="toggleKimTiem()" id="btn-kim-tiem" title="Kim Tiêm — Inject module vào chat">💉 Kim Tiêm</span>
+          <span class="sep">|</span>
+          <span class="kbd" onclick="summarizeMemoryNow()" id="btn-memory" title="Bấm để chắt lọc bộ nhớ ngay — không cần đợi đủ 20 tin">🧠 Bộ nhớ <span id="memory-progress">…</span></span>
         </div>
       </div>
     </div>
@@ -1217,6 +1232,7 @@ function setView(v) {
   document.getElementById('chat-messages').style.display = v === 'chat' ? 'flex' : 'none';
   document.getElementById('btn-view-terminal').classList.toggle('active', v === 'terminal');
   document.getElementById('btn-view-chat').classList.toggle('active', v === 'chat');
+  _updateScrollBottomBtn();
 }
 
 // Markdown renderer config
@@ -1333,7 +1349,31 @@ function appendChatError(msg) {
 function scrollChat() {
   const cm = document.getElementById('chat-messages');
   cm.scrollTop = cm.scrollHeight;
+  _updateScrollBottomBtn();
 }
+
+// Nút cuộn xuống cuối — theo dõi cả 2 khung (terminal + chat), hiện nút khi người dùng
+// đã cuộn lên xem lại tin cũ (cách đáy > 120px), tự ẩn khi đã ở gần cuối.
+function scrollToBottomNow() {
+  const cm = document.getElementById('chat-messages');
+  const out = document.getElementById('terminal-out');
+  const target = _currentView === 'chat' ? cm : out;
+  if (target) target.scrollTo({ top: target.scrollHeight, behavior: 'smooth' });
+}
+function _updateScrollBottomBtn() {
+  const btn = document.getElementById('btn-scroll-bottom');
+  if (!btn) return;
+  const target = _currentView === 'chat' ? document.getElementById('chat-messages') : document.getElementById('terminal-out');
+  if (!target) { btn.classList.remove('show'); return; }
+  const awayFromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+  btn.classList.toggle('show', awayFromBottom > 120);
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const cm = document.getElementById('chat-messages');
+  const out = document.getElementById('terminal-out');
+  if (cm) cm.addEventListener('scroll', _updateScrollBottomBtn);
+  if (out) out.addEventListener('scroll', _updateScrollBottomBtn);
+});
 
 function handleWsMessage(msg) {
   switch (msg.type) {
@@ -1352,6 +1392,7 @@ function handleWsMessage(msg) {
       finalizeToolBlock();
       appendChatAI(msg.text, msg.id); // msg.id: cùng ID với bản lưu local+relay, cho nút Xóa
       // Nếu đang ở terminal view, vẫn append raw (đã append qua 'output' events)
+      refreshMemoryProgress(); // cập nhật đếm X/20 sau mỗi câu trả lời
       break;
     case 'user_msg_id': {
       // Server vừa lưu xong tin nhắn user (local db) và báo ID về — gắn vào bong bóng
@@ -1872,6 +1913,7 @@ function selectChat(chatId) {
 
   // Load lịch sử từ relay (hiển thị tin nhắn cũ khi mở máy mới)
   loadRelayHistory(chatId);
+  refreshMemoryProgress();
 }
 
 async function loadRelayHistory(chatId) {
@@ -2097,6 +2139,7 @@ function appendOutput(data) {
 
   // Auto scroll
   out.scrollTop = out.scrollHeight;
+  _updateScrollBottomBtn();
 }
 
 function renderHistory(messages) {
@@ -2753,6 +2796,30 @@ async function toggleKimTiem() {
   } else {
     RightPanel.close();
   }
+}
+
+// ── BỘ NHỚ (tóm tắt tự động mỗi 20 tin, giống banner AGSMem) ────────────────
+async function refreshMemoryProgress() {
+  const el = document.getElementById('memory-progress');
+  if (!el || !currentChatId) return;
+  try {
+    const d = await fetch(`/api/chats/${currentChatId}/memory-status`).then(r => r.json());
+    el.textContent = `(${d.count % d.every || (d.count > 0 ? d.every : 0)}/${d.every})`;
+  } catch { el.textContent = ''; }
+}
+
+async function summarizeMemoryNow() {
+  if (!currentChatId) return showToast('Chọn cuộc chat trước');
+  showToast('🧠 Đang chắt lọc bộ nhớ...');
+  try {
+    const r = await fetch(`/api/chats/${currentChatId}/summarize-now`, { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) showToast('✅ Đã cập nhật tóm tắt bộ nhớ');
+    else showToast('⚠️ ' + (d.error || 'Chắt lọc thất bại'));
+  } catch {
+    showToast('⚠️ Chắt lọc thất bại — kiểm tra kết nối');
+  }
+  refreshMemoryProgress();
 }
 
 async function loadKimTiemModules() {
