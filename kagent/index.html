@@ -707,7 +707,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.78</span>
+  <span class="version" id="app-version">v1.0.79</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -2515,7 +2515,7 @@ function showUserLoggedIn(user) {
   document.getElementById('main').style.display = 'flex';
   document.getElementById('btn-login').style.display = 'none';
   document.getElementById('user-badge').style.display = 'flex';
-  if (user.role === 'admin') document.getElementById('btn-admin').style.display = 'inline-flex';
+  if (['admin', 'manager'].includes(user.role)) document.getElementById('btn-admin').style.display = 'inline-flex';
   document.getElementById('user-name').textContent = user.name || user.email || 'User';
 
   // Avatar
@@ -2528,10 +2528,11 @@ function showUserLoggedIn(user) {
 
   // Sidebar
   document.getElementById('sb-name').textContent = user.name || user.email;
-  document.getElementById('sb-role').textContent = user.role === 'admin' ? '👑 Admin' : '🔵 Online';
+  document.getElementById('sb-role').textContent = user.role === 'admin' ? '👑 Admin' : (user.role === 'manager' ? '🛠️ Quản lý' : '🔵 Online');
   const sbAvatar = document.getElementById('sb-avatar');
   sbAvatar.textContent = (user.name || 'U')[0].toUpperCase();
   if (user.role === 'admin') sbAvatar.style.background = '#f59e0b';
+  else if (user.role === 'manager') sbAvatar.style.background = '#38bdf8';
 }
 
 async function doEmailLogin() {
