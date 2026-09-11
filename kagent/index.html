@@ -739,7 +739,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.86</span>
+  <span class="version" id="app-version">v1.0.87</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1349,15 +1349,22 @@ function appendChatUser(text, msgId) {
 // MỌI agent (claude, antigravity, gemini, codex, opencode...) vì đây chỉ là quy ước
 // định dạng text, không phụ thuộc cơ chế tool-call riêng của agent nào.
 function extractKagentChoice(text) {
-  const m = /```kagent-choice\s*([\s\S]*?)```/.exec(text || '');
-  if (!m) return { text, choice: null };
-  let choice = null;
-  try {
-    const obj = JSON.parse(m[1].trim());
-    if (obj && Array.isArray(obj.options) && obj.options.length >= 2) choice = obj;
-  } catch {}
-  const cleanText = (text.slice(0, m.index) + text.slice(m.index + m[0].length)).trim();
-  return { text: cleanText, choice };
+  if (!text) return { text, choice: null };
+  // Ưu tiên đúng tag "kagent-choice" như hướng dẫn, nhưng KHOAN DUNG với mọi fence khác
+  // (```json, ``` trơn...) vì đã test thật: model không phải lúc nào cũng theo đúng tên
+  // tag (vd AntiGravity/Gemini hay tự đổi thành ```json) — miễn nội dung parse ra đúng
+  // schema {question?, options:[...]} thì vẫn coi là khối chọn hợp lệ.
+  const fenceRe = /```[a-zA-Z0-9_-]*\s*\n?([\s\S]*?)```/g;
+  let m;
+  while ((m = fenceRe.exec(text))) {
+    let obj = null;
+    try { obj = JSON.parse(m[1].trim()); } catch { continue; }
+    if (obj && Array.isArray(obj.options) && obj.options.length >= 2 && obj.options.every(o => typeof o === 'string')) {
+      const cleanText = (text.slice(0, m.index) + text.slice(m.index + m[0].length)).trim();
+      return { text: cleanText, choice: obj };
+    }
+  }
+  return { text, choice: null };
 }
 
 function sendQuickText(text) {
