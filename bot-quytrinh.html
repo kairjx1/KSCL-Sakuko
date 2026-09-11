@@ -1,192 +1,438 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Agent Quy Trình - Quản trị</title>
+<title>Agent Quy Trình Pro - Trung Tâm Quản Trị KSCL Sakuko</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0b1324; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; }
+
 /* Topbar */
-.topbar { background: #1e293b; color: #fff; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; flex-shrink: 0; }
-.topbar-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: #14b8a6; }
+.topbar { background: #131d33; color: #fff; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e293b; flex-shrink: 0; }
+.topbar-logo { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 17px; color: #14b8a6; }
 .topbar-right { display: flex; align-items: center; gap: 12px; font-size: 13px; }
-.tbtn { background: none; border: none; color: #94a3b8; font-size: 13px; cursor: pointer; padding: 6px 12px; border-radius: 6px; font-weight: 500; text-decoration: none; }
-.tbtn:hover { background: #334155; color: #f8fafc; }
+.tbtn { background: #1e293b; border: 1px solid #334155; color: #94a3b8; font-size: 12px; cursor: pointer; padding: 6px 12px; border-radius: 6px; font-weight: 500; text-decoration: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+.tbtn:hover { background: #334155; color: #f8fafc; border-color: #14b8a6; }
+.tbtn.active { background: #14b8a620; color: #14b8a6; border-color: #14b8a6; }
 .badge-live { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; margin-right: 6px; box-shadow: 0 0 8px #10b981; }
 
 /* Main Layout */
 .app-container { display: flex; flex: 1; overflow: hidden; }
 
 /* Sidebar */
-.sidebar { width: 260px; background: #1e293b; border-right: 1px solid #334155; display: flex; flex-direction: column; padding: 20px 0; }
-.nav-item { padding: 12px 24px; color: #94a3b8; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 500; font-size: 14px; transition: 0.2s; border-left: 3px solid transparent; }
-.nav-item:hover { background: #0f172a; color: #f8fafc; }
-.nav-item.active { background: #0f172a; color: #14b8a6; border-left-color: #14b8a6; }
-.nav-icon { width: 20px; text-align: center; font-size: 16px; }
+.sidebar { width: 250px; background: #131d33; border-right: 1px solid #1e293b; display: flex; flex-direction: column; padding: 15px 0; flex-shrink: 0; }
+.nav-item { padding: 11px 20px; color: #94a3b8; cursor: pointer; display: flex; align-items: center; gap: 11px; font-weight: 500; font-size: 13.5px; transition: 0.15s; border-left: 3px solid transparent; }
+.nav-item:hover { background: #0b1324; color: #f8fafc; }
+.nav-item.active { background: #0b1324; color: #14b8a6; border-left-color: #14b8a6; font-weight: 600; }
+.nav-icon { width: 20px; text-align: center; font-size: 15px; }
+.nav-badge { margin-left: auto; font-size: 10px; background: #1e293b; padding: 2px 7px; border-radius: 10px; color: #cbd5e1; }
 
 /* Content Area */
-.main-content { flex: 1; overflow-y: auto; padding: 30px; background: #0f172a; }
-.page-title { font-size: 24px; font-weight: 600; margin-bottom: 24px; color: #f8fafc; display: flex; justify-content: space-between; align-items: center; }
+.main-content { flex: 1; overflow-y: auto; padding: 26px; background: #0b1324; }
+.page-title { font-size: 22px; font-weight: 600; margin-bottom: 20px; color: #f8fafc; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.page-desc { color: #94a3b8; font-size: 13.5px; margin-top: -14px; margin-bottom: 22px; }
 
 /* Cards & Panels */
-.panel { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
-.panel-header { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+.panel { background: #131d33; border: 1px solid #1e293b; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+.panel-header { font-size: 15px; font-weight: 600; margin-bottom: 14px; color: #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
+.card-stat { background: #131d33; border: 1px solid #1e293b; border-radius: 10px; padding: 16px; }
+.card-stat-label { font-size: 12px; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.card-stat-value { font-size: 24px; font-weight: 700; color: #f8fafc; display: flex; align-items: baseline; gap: 8px; }
+.card-stat-sub { font-size: 12px; color: #64748b; font-weight: 400; }
 
 /* Sandbox / Chat Test */
-.chat-container { display: flex; gap: 20px; height: 500px; }
-.chat-box { flex: 1; display: flex; flex-direction: column; background: #0f172a; border: 1px solid #334155; border-radius: 12px; overflow: hidden; }
-.chat-history { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-.chat-input-area { padding: 15px; background: #1e293b; border-top: 1px solid #334155; display: flex; gap: 10px; }
-.chat-input { flex: 1; background: #0f172a; border: 1px solid #334155; color: #fff; padding: 12px; border-radius: 6px; outline: none; }
-.chat-btn { background: #14b8a6; color: #000; border: none; padding: 0 20px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+.chat-container { display: flex; gap: 16px; height: 580px; }
+.chat-box { flex: 1; display: flex; flex-direction: column; background: #0b1324; border: 1px solid #1e293b; border-radius: 10px; overflow: hidden; }
+.chat-history { flex: 1; padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.chat-input-area { padding: 12px; background: #131d33; border-top: 1px solid #1e293b; display: flex; gap: 10px; }
+.chat-input { flex: 1; background: #0b1324; border: 1px solid #334155; color: #fff; padding: 10px 14px; border-radius: 6px; outline: none; font-size: 13.5px; }
+.chat-input:focus { border-color: #14b8a6; }
+.chat-btn { background: #14b8a6; color: #000; border: none; padding: 0 18px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13.5px; transition: 0.2s; }
 .chat-btn:hover { background: #0d9488; }
-.msg { max-width: 80%; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
-.msg.user { background: #3b82f6; color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
-.msg.ai { background: #334155; color: #e2e8f0; align-self: flex-start; border-bottom-left-radius: 2px; white-space: pre-wrap; }
+.msg { max-width: 82%; padding: 11px 15px; border-radius: 10px; font-size: 13.5px; line-height: 1.55; }
+.msg.user { background: #2563eb; color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; }
+.msg.ai { background: #1e293b; color: #e2e8f0; align-self: flex-start; border-bottom-left-radius: 2px; }
+.msg.ai p { margin-bottom: 8px; }
+.msg.ai p:last-child { margin-bottom: 0; }
+.msg.ai pre { background: #0b1324; padding: 10px; border-radius: 6px; overflow-x: auto; margin: 8px 0; border: 1px solid #334155; font-size: 12px; }
+.msg.ai code { font-family: monospace; color: #a5b4fc; }
+.msg.ai strong { color: #38bdf8; }
 
 /* Tracing Box */
-.tracing-box { width: 350px; background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 20px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #94a3b8; }
-.trace-step { margin-bottom: 15px; padding-left: 15px; border-left: 2px solid #334155; position: relative; }
+.tracing-box { width: 330px; background: #0b1324; border: 1px solid #1e293b; border-radius: 10px; padding: 16px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #94a3b8; flex-shrink: 0; }
+.trace-step { margin-bottom: 14px; padding-left: 14px; border-left: 2px solid #1e293b; position: relative; line-height: 1.4; }
 .trace-step::before { content: ''; position: absolute; left: -5px; top: 0; width: 8px; height: 8px; border-radius: 50%; background: #334155; }
 .trace-step.active::before { background: #14b8a6; box-shadow: 0 0 8px #14b8a6; }
 .trace-step.active { border-left-color: #14b8a6; color: #e2e8f0; }
+.trace-step.done::before { background: #10b981; }
+.trace-step.done { border-left-color: #10b981; }
+.trace-time { font-size: 10px; color: #64748b; margin-top: 2px; }
 
-/* Config Forms */
-.form-group { margin-bottom: 20px; }
-.form-label { display: block; font-size: 14px; color: #94a3b8; margin-bottom: 8px; font-weight: 500; }
-.form-control { width: 100%; background: #0f172a; border: 1px solid #334155; color: #fff; padding: 12px; border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; }
+/* Agent Sandbox Tools Sidebar */
+.agent-sidebar { width: 230px; background: #131d33; border: 1px solid #1e293b; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.tool-btn { background: #0b1324; color: #94a3b8; border: 1px solid #1e293b; padding: 9px 10px; border-radius: 7px; text-align: left; cursor: pointer; transition: 0.15s; font-size: 12px; }
+.tool-btn:hover { background: #1e293b; color: #f8fafc; border-color: #14b8a6; }
+.tool-btn-title { font-weight: 600; color: #e2e8f0; margin-bottom: 3px; display: block; font-size: 12.5px; }
+
+/* Forms & Tables */
+.form-group { margin-bottom: 18px; }
+.form-label { display: block; font-size: 13.5px; color: #94a3b8; margin-bottom: 7px; font-weight: 500; }
+.form-control { width: 100%; background: #0b1324; border: 1px solid #334155; color: #fff; padding: 10px 12px; border-radius: 6px; font-family: inherit; font-size: 13.5px; outline: none; }
 .form-control:focus { border-color: #14b8a6; }
-textarea.form-control { height: 250px; resize: vertical; line-height: 1.5; }
-.btn-primary { background: #14b8a6; color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; }
+textarea.form-control { height: 180px; resize: vertical; line-height: 1.5; }
+.btn-primary { background: #14b8a6; color: #000; border: none; padding: 9px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13.5px; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; }
 .btn-primary:hover { background: #0d9488; }
+.btn-danger { background: #ef444420; color: #ef4444; border: 1px solid #ef444440; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.btn-danger:hover { background: #ef4444; color: #fff; }
+.btn-success { background: #10b98120; color: #10b981; border: 1px solid #10b98140; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.btn-success:hover { background: #10b981; color: #000; }
 
-/* Log Table */
 .log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.log-table th { text-align: left; padding: 12px 16px; color: #94a3b8; font-weight: 500; border-bottom: 1px solid #334155; }
-.log-table td { padding: 16px; border-bottom: 1px solid #334155; color: #cbd5e1; vertical-align: top; }
-.log-time { color: #64748b; white-space: nowrap; }
+.log-table th { text-align: left; padding: 10px 14px; color: #94a3b8; font-weight: 600; border-bottom: 1px solid #1e293b; background: #0b1324; }
+.log-table td { padding: 12px 14px; border-bottom: 1px solid #1e293b; color: #cbd5e1; vertical-align: top; }
+.log-time { color: #64748b; white-space: nowrap; font-size: 12px; }
 .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
 .tag.ai_reply { background: #14b8a620; color: #14b8a6; }
 .tag.startup { background: #f59e0b20; color: #f59e0b; }
-.detail-box { background: #0f172a; padding: 12px; border-radius: 6px; border: 1px solid #334155; margin-top: 8px; font-family: monospace; white-space: pre-wrap; color: #a5b4fc; }
+.tag.critical { background: #ef444420; color: #ef4444; }
+.tag.high { background: #f9731620; color: #f97316; }
+.tag.normal { background: #3b82f620; color: #3b82f6; }
+.detail-box { background: #0b1324; padding: 10px 12px; border-radius: 6px; border: 1px solid #1e293b; margin-top: 6px; font-family: monospace; white-space: pre-wrap; color: #a5b4fc; font-size: 12px; }
 
 .hidden { display: none !important; }
-.toast { position: fixed; bottom: 20px; right: 20px; background: #10b981; color: #000; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transform: translateY(100px); opacity: 0; transition: 0.3s; }
+.toast { position: fixed; bottom: 24px; right: 24px; background: #10b981; color: #000; padding: 12px 22px; border-radius: 8px; font-weight: 600; font-size: 13.5px; box-shadow: 0 6px 18px rgba(0,0,0,0.4); transform: translateY(100px); opacity: 0; transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 999; }
 .toast.show { transform: translateY(0); opacity: 1; }
-
-/* AgentSEE UI Adjustments */
-.chat-container { height: 600px; }
-.agent-sidebar { width: 250px; background: #1e293b; border-right: 1px solid #334155; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-.tool-btn { background: #0f172a; color: #94a3b8; border: 1px solid #334155; padding: 10px; border-radius: 8px; text-align: left; cursor: pointer; transition: 0.2s; font-size: 13px; }
-.tool-btn:hover { background: #334155; color: #f8fafc; border-color: #14b8a6; }
-.tool-btn-title { font-weight: 600; color: #e2e8f0; margin-bottom: 4px; display: block; }
-.msg.ai p { margin-bottom: 10px; }
-.msg.ai pre { background: #0f172a; padding: 10px; border-radius: 6px; overflow-x: auto; margin-bottom: 10px; border: 1px solid #334155; }
-.msg.ai code { font-family: monospace; color: #a5b4fc; }
-.msg.ai table { border-collapse: collapse; width: 100%; margin-bottom: 10px; }
-.msg.ai th, .msg.ai td { border: 1px solid #334155; padding: 8px; }
-.msg.ai strong { color: #f8fafc; font-weight: 700; }
-
+.toggle-wrap { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+.toggle-wrap input { width: 18px; height: 18px; cursor: pointer; }
 </style>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 
+<!-- Topbar -->
 <div class="topbar">
   <div class="topbar-logo">
-    🧠 Agent Quy Trình Pro
+    <span>🧠</span>
+    <span>Bé Quy Trình Pro <span style="font-size:12px; font-weight:400; color:#94a3b8;">| KSCL Sakuko Vietnam</span></span>
   </div>
   <div class="topbar-right">
-    <span id="statusDot"><span class="badge-live"></span>Online</span>
+    <span id="modelBadge" class="tag" style="background:#14b8a620;color:#14b8a6;border:1px solid #14b8a640;">gemini-flash-latest</span>
+    <span id="pingBadge" style="color:#10b981;font-weight:600;font-size:12px;">⚡ Live</span>
+    <button class="tbtn" onclick="pingModel()">⚡ Ping</button>
+    <button class="tbtn" onclick="triggerSync()">🔄 Nạp Tri Thức</button>
     <a href="index.html" class="tbtn">Về Trang chủ KSCL</a>
   </div>
 </div>
 
 <div class="app-container">
+  <!-- Sidebar -->
   <div class="sidebar">
     <div class="nav-item active" onclick="switchTab('sandbox', event)">
       <div class="nav-icon">🔬</div> Agent Sandbox
     </div>
+    <div class="nav-item" onclick="switchTab('models', event)">
+      <div class="nav-icon">🤖</div> Gemini Engine
+      <div class="nav-badge" id="navModelBadge">Auto</div>
+    </div>
+    <div class="nav-item" onclick="switchTab('incidents', event)">
+      <div class="nav-icon">🚨</div> Sự cố & Ticket SLA
+      <div class="nav-badge" id="navIncidentsBadge">0</div>
+    </div>
+    <div class="nav-item" onclick="switchTab('profiles', event)">
+      <div class="nav-icon">👥</div> Hồ sơ Nhân sự
+    </div>
+    <div class="nav-item" onclick="switchTab('knowledge', event)">
+      <div class="nav-icon">📚</div> Kho Tri thức SOP
+      <div class="nav-badge" id="navRagBadge">1.9k</div>
+    </div>
     <div class="nav-item" onclick="switchTab('config', event)">
-      <div class="nav-icon">⚙️</div> Agent Settings
+      <div class="nav-icon">⚙️</div> Cấu hình Agent
     </div>
     <div class="nav-item" onclick="switchTab('logs', event)">
-      <div class="nav-icon">📜</div> Agent Logs
-    </div>
-    
-    <div class="nav-item" onclick="switchTab('knowledge', event)">
-      <div class="nav-icon">📚</div> Knowledge Base
+      <div class="nav-icon">📜</div> Hoạt động Logs
     </div>
     <div class="nav-item" onclick="switchTab('analytics', event)">
-      <div class="nav-icon">📊</div> Knowledge Analytics
+      <div class="nav-icon">📊</div> Thiếu Tri thức
     </div>
   </div>
 
-  <!-- Sandbox Tab -->
+  <!-- TAB 1: SANDBOX (LIVE TEST) -->
   <div class="main-content" id="sandbox-tab">
-    <div class="page-title">Agent Sandbox (Live Test)</div>
-    <p style="color: #94a3b8; margin-bottom: 24px;">Giao diện giả lập để kiểm tra khả năng tư duy và phản hồi thực tế của Agent.</p>
+    <div class="page-title">
+      <div>🔬 Agent Sandbox (Live Test Real-Time)</div>
+      <div style="font-size:13px; color:#94a3b8;">Thử nghiệm toàn diện Vòng lặp Suy luận & Công cụ của Bé Quy Trình</div>
+    </div>
+    <div class="page-desc">Giao diện giả lập tương tác trực tiếp với Render Server và Google Gemini API với Tracing thực tế.</div>
     
     <div class="chat-container">
+      <!-- Tool Trigger Sidebar -->
       <div class="agent-sidebar">
-        <div style="color: #f8fafc; font-weight: 600; margin-bottom: 10px;">⚡ Kích hoạt kỹ năng</div>
-        <button class="tool-btn" onclick="document.getElementById('chatInput').value='Khách hàng phản ánh nhân viên cửa hàng 5 thái độ lồi lõm, yêu cầu xử lý ngay!'; sendTest();">
+        <div style="color: #f8fafc; font-weight: 600; font-size: 13px; margin-bottom: 6px;">⚡ Tình huống Test</div>
+        <button class="tool-btn" onclick="injectPrompt('Đoàn Quản lý thị trường và Công an quận vừa đến siêu thị kiểm tra, yêu cầu xuất trình hồ sơ ngay!');">
           <span class="tool-btn-title">🚨 Báo động vượt cấp</span>
-          Test kỹ năng Tự động cảnh báo
+          Test Đoàn QLTT kiểm tra
         </button>
-        <button class="tool-btn" onclick="document.getElementById('chatInput').value='Có được phép dùng điện thoại trong ca làm việc không?'; sendTest();">
-          <span class="tool-btn-title">📖 Trích xuất Quy trình</span>
-          Test kỹ năng RAG
+        <button class="tool-btn" onclick="injectPrompt('Hàng bị hỏng xử lý thế nào em?');">
+          <span class="tool-btn-title">❓ Vòng lặp 5W1H</span>
+          Test hỏi làm rõ chủ động
         </button>
-        <button class="tool-btn" onclick="document.getElementById('chatInput').value='Viết cho tôi một kịch bản xử lý khi phát hiện hàng hết date.'; sendTest();">
-          <span class="tool-btn-title">✍️ Soạn thảo Kịch bản</span>
-          Test tư duy Logic
+        <button class="tool-btn" onclick="injectPrompt('Tủ mát số 2 Sakuko Thái Hà mất điện từ 10h, nhiệt độ lên 18 độ, có 30 hộp sữa chua cận date 3 ngày.');">
+          <span class="tool-btn-title">🎫 Tạo Ticket & SLA</span>
+          Test tạo mã INC & cấp BM
+        </button>
+        <button class="tool-btn" onclick="injectPrompt('Có được phép dùng điện thoại cá nhân trong ca làm việc không và quy định trang phục ra sao?');">
+          <span class="tool-btn-title">📖 Trích xuất SOP RAG</span>
+          Test tra cứu 1,908 docs
+        </button>
+        <button class="tool-btn" onclick="injectPrompt('Mình là Mai, thu ngân tại siêu thị Sakuko Linh Đàm.');">
+          <span class="tool-btn-title">👤 Cập nhật Hồ sơ</span>
+          Test bộ nhớ nhân viên
         </button>
       </div>
 
-      <div class="chat-box" style="border-left: none; border-radius: 0 12px 12px 0;">
+      <!-- Chat Area -->
+      <div class="chat-box">
         <div class="chat-history" id="chatHistory">
-          <div class="msg ai"><strong>Hệ thống Agent Quy Trình (Bản nâng cấp) đã sẵn sàng.</strong><br>Tôi đã được tích hợp <em>Tool Calling</em>. Hãy thử các tính năng ở thanh công cụ bên trái!</div>
+          <div class="msg ai">
+            <strong>Bé Quy Trình Pro đã sẵn sàng phục vụ!</strong><br>
+            Hệ thống đã tích hợp <strong>Self-Healing Gemini Engine</strong>, <strong>Chuỗi công cụ đa bước (8 Tools)</strong> và <strong>Vòng lặp Phản tư 5W1H</strong>. Hãy thử gửi tin nhắn hoặc bấm các tình huống bên trái!
+          </div>
         </div>
         <div class="chat-input-area">
-          <input type="text" id="chatInput" class="chat-input" placeholder="Nhập câu lệnh của bạn..." onkeypress="if(event.key === 'Enter') sendTest()">
+          <input type="text" id="chatInput" class="chat-input" placeholder="Nhập câu hỏi hoặc sự cố vận hành..." onkeypress="if(event.key === 'Enter') sendTest()">
           <button class="chat-btn" onclick="sendTest()">Gửi Lệnh</button>
         </div>
       </div>
       
+      <!-- Real-time Tracing -->
       <div class="tracing-box" id="tracingBox">
-        <div style="color: #f8fafc; font-size: 14px; font-weight: 600; margin-bottom: 20px; font-family: sans-serif;">Live Tracing (Log Tư Duy)</div>
-        <div id="traceContent" style="opacity: 0.5;">
-          Hệ thống đang chờ lệnh...
+        <div style="color: #f8fafc; font-size: 13px; font-weight: 600; margin-bottom: 14px; font-family: sans-serif; display: flex; justify-content: space-between; align-items: center;">
+          <span>Live Tracing (Log Tư Duy)</span>
+          <span id="traceStatus" style="font-size: 11px; color: #10b981;">Ready</span>
+        </div>
+        <div id="traceContent">
+          <div style="color: #64748b; font-size: 11.5px;">Sẵn sàng ghi nhận từng bước suy luận khi bạn gửi lệnh...</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Config Tab -->
-  <div class="main-content hidden" id="config-tab">
-    <div class="page-title">Agent Settings (Cấu hình Não bộ)</div>
+  <!-- TAB 2: GEMINI ENGINE MANAGEMENT -->
+  <div class="main-content hidden" id="models-tab">
+    <div class="page-title">
+      <div>🤖 Quản trị Google Gemini Engine & Self-Healing</div>
+      <button class="btn-primary" onclick="loadModels()">🔄 Tải lại Danh sách</button>
+    </div>
+    <div class="page-desc">Giám sát trạng thái hoạt động của các model Gemini, kiểm tra độ trễ (ping latency) và cấu hình chuyển đổi.</div>
+
+    <div class="grid-cards">
+      <div class="card-stat">
+        <div class="card-stat-label">Model Đang Phục Vụ</div>
+        <div class="card-stat-value" id="cardActiveModel" style="color: #14b8a6; font-size: 20px;">gemini-flash-latest</div>
+        <div class="card-stat-sub" id="cardModelMode">Chế độ: Tự Chữa Lành</div>
+      </div>
+      <div class="card-stat">
+        <div class="card-stat-label">Độ Trễ Phản Hồi (Ping)</div>
+        <div class="card-stat-value" id="cardPingVal" style="color: #10b981;">-- ms</div>
+        <div class="card-stat-sub">Đo trực tiếp tới Google Cloud</div>
+      </div>
+      <div class="card-stat">
+        <div class="card-stat-label">Dòng Thác Dự Phòng (Waterfall)</div>
+        <div class="card-stat-value" style="font-size: 16px; color: #cbd5e1;" id="cardWaterfallCount">7 Models</div>
+        <div class="card-stat-sub">Tự động failover khi 404/429/503</div>
+      </div>
+    </div>
+
     <div class="panel">
-      <div class="panel-header">Thiết lập System Prompt (Quy tắc hành xử)</div>
-      <p style="color: #94a3b8; font-size: 13px; margin-bottom: 15px;">Dùng để áp đặt luật lệ cốt lõi cho Agent. Agent sẽ luôn tuân thủ các quy định ở đây trước khi trả lời.</p>
+      <div class="panel-header">
+        <span>Cài đặt Chế độ Lựa chọn Model</span>
+        <button class="tbtn" onclick="setModeAuto()">🛡️ Bật Tự Động Tự Chữa Lành (Auto)</button>
+      </div>
+      <p style="color: #94a3b8; font-size: 13px; margin-bottom: 15px;">
+        Khi bật <strong>Tự Động Tự Chữa Lành (Auto)</strong>, Bé Quy Trình sẽ tự động phát hiện model Google mới nhất, tự động chuyển đổi trong 0.3s nếu gặp sự cố quota hoặc khai tử mà không cần can thiệp.
+      </p>
       
+      <div style="margin-top: 15px;">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Tên Model Gemini</th>
+              <th>Vai trò trong Hệ thống</th>
+              <th>Trạng thái Cooldown</th>
+              <th width="140">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="modelsTableBody">
+            <tr><td colspan="4" style="text-align: center;">Đang quét danh sách model từ Google API...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: INCIDENTS & TICKET SLA -->
+  <div class="main-content hidden" id="incidents-tab">
+    <div class="page-title">
+      <div>🚨 Quản lý Sự Cố & Ticket SLA Siêu Thị</div>
+      <button class="btn-primary" onclick="loadIncidents()">🔄 Tải mới Sự cố</button>
+    </div>
+    <div class="page-desc">Theo dõi toàn bộ các sự cố vận hành, cảnh báo khẩn cấp và cam kết thời gian SLA giải quyết tại các cửa hàng Sakuko.</div>
+
+    <div class="grid-cards">
+      <div class="card-stat">
+        <div class="card-stat-label">Tổng Số Sự Cố</div>
+        <div class="card-stat-value" id="incTotal">0</div>
+        <div class="card-stat-sub">Ghi nhận từ nhân viên</div>
+      </div>
+      <div class="card-stat">
+        <div class="card-stat-label">Đang Xử Lý</div>
+        <div class="card-stat-value" id="incPending" style="color: #f59e0b;">0</div>
+        <div class="card-stat-sub">Cần giải quyết theo SLA</div>
+      </div>
+      <div class="card-stat">
+        <div class="card-stat-label">Đã Hoàn Tất</div>
+        <div class="card-stat-value" id="incResolved" style="color: #10b981;">0</div>
+        <div class="card-stat-sub">Đã đóng biên bản</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">Danh sách Sự cố & Vụ việc</div>
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th width="140">Mã Ticket</th>
+            <th width="150">Siêu thị</th>
+            <th width="130">Mức độ / SLA</th>
+            <th>Nội dung sự cố</th>
+            <th width="110">Trạng thái</th>
+            <th width="120">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="incidentsBody">
+          <tr><td colspan="6" style="text-align: center;">Đang tải dữ liệu từ Firebase...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 4: EMPLOYEE PROFILES & MEMORY -->
+  <div class="main-content hidden" id="profiles-tab">
+    <div class="page-title">
+      <div>👥 Hồ sơ Nhân sự Tuyến Đầu & Bộ nhớ Dài hạn</div>
+      <button class="btn-primary" onclick="loadProfiles()">🔄 Tải lại Hồ sơ</button>
+    </div>
+    <div class="page-desc">Danh sách nhân viên siêu thị tương tác với bot, cửa hàng công tác và sổ tay ca trực.</div>
+
+    <div class="panel">
+      <div style="margin-bottom: 16px; display: flex; gap: 10px;">
+        <input type="text" id="profSearch" class="form-control" style="max-width: 320px;" placeholder="Tìm theo tên hoặc siêu thị (Thái Hà, Linh Đàm...)" oninput="filterProfiles()">
+      </div>
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th width="160">Nhân viên</th>
+            <th width="160">Siêu thị Sakuko</th>
+            <th width="130">Chức vụ</th>
+            <th>Lưu ý Ca trực / Sổ tay</th>
+            <th width="140">Tương tác cuối</th>
+          </tr>
+        </thead>
+        <tbody id="profilesBody">
+          <tr><td colspan="5" style="text-align: center;">Đang tải danh sách nhân viên...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB 5: KNOWLEDGE BASE & RAG -->
+  <div class="main-content hidden" id="knowledge-tab">
+    <div class="page-title">
+      <div>📚 Kho Tri Thức SOP & Tra Cứu BM25 RAG</div>
+      <button class="btn-primary" onclick="triggerSync()">⚡ Đồng bộ Nóng vào RAM</button>
+    </div>
+    <div class="page-desc">Quản lý kho tri thức 1,908+ tài liệu quy trình, tiêu chuẩn 5S và an toàn thực phẩm.</div>
+
+    <div class="grid-cards">
+      <div class="card-stat">
+        <div class="card-stat-label">Tổng Tài Liệu SOP</div>
+        <div class="card-stat-value" id="ragChunksCount" style="color: #14b8a6;">1,908</div>
+        <div class="card-stat-sub">Từ rag_db.json (Wiki Sakuko)</div>
+      </div>
+      <div class="card-stat">
+        <div class="card-stat-label">Lần Cập Nhật Gần Nhất</div>
+        <div class="card-stat-value" id="ragLastUpdated" style="font-size: 18px;">11/09/2026</div>
+        <div class="card-stat-sub" id="ragDbSize">Kích thước: 7.7 MB</div>
+      </div>
+      <div class="card-stat">
+        <div class="card-stat-label">Trạng thái RAM Cache</div>
+        <div class="card-stat-value" style="color: #10b981; font-size: 18px;">Sẵn Sàng 100%</div>
+        <div class="card-stat-sub">BM25 nạp sẵn trong bộ nhớ</div>
+      </div>
+    </div>
+
+    <!-- BM25 Search Tester -->
+    <div class="panel">
+      <div class="panel-header">Tra Cứu Thử Nghiệm BM25 RAG Trực Tiếp</div>
+      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <input type="text" id="ragQueryInput" class="form-control" placeholder="Nhập từ khóa tra cứu (VD: 'đổi trả hàng lỗi nsx', 'bảo quản hàng đông lạnh', 'hủy hóa đơn pos')..." onkeypress="if(event.key==='Enter') testRagSearch()">
+        <button class="btn-primary" onclick="testRagSearch()">Tìm Kiếm</button>
+      </div>
+      <div id="ragSearchResults" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="color: #64748b; font-size: 13px;">Nhập từ khóa để kiểm tra xem bot sẽ đọc được tài liệu nào từ kho SOP...</div>
+      </div>
+    </div>
+
+    <!-- Fast-Inject Knowledge -->
+    <div class="panel">
+      <div class="panel-header">Thêm Tri Thức Bổ Sung Tức Thì (Fast-Inject)</div>
+      <p style="color: #94a3b8; font-size: 13px; margin-bottom: 12px;">Dùng khi ban lãnh đạo vừa ban hành quy định mới chưa kịp đưa vào Wiki/SOP. Bot sẽ học ngay lập tức!</p>
+      <textarea id="kbInput" class="form-control" style="height: 90px; margin-bottom: 10px;" placeholder="Dán nội dung quy định mới vào đây..."></textarea>
+      <button class="btn-primary" onclick="addKnowledge()">Nạp Quy Định Này</button>
+      
+      <div class="panel-header" style="margin-top: 20px;">Quy Định Tạm Thời Đang Hoạt Động</div>
+      <div id="kbList" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="color: #94a3b8;">Đang tải...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 6: CONFIG -->
+  <div class="main-content hidden" id="config-tab">
+    <div class="page-title">⚙️ Cấu hình Não bộ Agent & Bước 4 (Settings)</div>
+    <div class="panel">
+      <div class="panel-header">System Prompt (Quy tắc Ứng xử & Persona KSCL)</div>
       <div class="form-group">
-        <textarea id="systemPrompt" class="form-control" placeholder="Đang tải dữ liệu..."></textarea>
+        <textarea id="systemPrompt" class="form-control" style="height: 220px;" placeholder="Đang tải dữ liệu..."></textarea>
+      </div>
+
+      <!-- Proactive 5W1H Toggle -->
+      <div class="form-group" style="background:#0b1324; padding: 14px; border-radius: 8px; border:1px solid #334155;">
+        <label class="toggle-wrap">
+          <input type="checkbox" id="proactiveClarifyToggle" checked>
+          <div>
+            <div style="font-weight: 600; color: #f8fafc; font-size: 14px;">🌟 Kích hoạt Vòng lặp Tự Phản tư & Hỏi làm rõ 5W1H (Bước 4)</div>
+            <div style="color: #94a3b8; font-size: 12px; margin-top: 2px;">
+              Khi nhân viên hỏi câu quá ngắn hoặc mơ hồ, bot sẽ không đoán mò mà đưa ra câu hỏi làm rõ kèm kịch bản lựa chọn nhanh 1️⃣, 2️⃣, 3️⃣.
+            </div>
+          </div>
+        </label>
       </div>
       
       <div class="form-group" style="display: flex; gap: 20px;">
         <div style="flex: 1;">
           <label class="form-label">LLM Engine</label>
           <select id="llmEngine" class="form-control">
-            <option value="gemini">Google Gemini Flash (Khuyên dùng)</option>
-            <option value="claude">Anthropic Claude 3.5</option>
-            <option value="groq">Groq (Llama 3)</option>
+            <option value="gemini">Google Gemini Flash (Khuyên dùng - Self-Healing)</option>
+            <option value="claude">Anthropic Claude 3.5 Haiku</option>
+            <option value="groq">Groq Llama 3.3 70B</option>
           </select>
         </div>
         <div style="flex: 1;">
-          <label class="form-label">Temperature (Độ sáng tạo)</label>
-          <input type="number" id="llmTemp" class="form-control" value="0.2" step="0.1" min="0" max="1">
+          <label class="form-label">Temperature (Độ sáng tạo 0.0 - 1.0)</label>
+          <input type="number" id="llmTemp" class="form-control" value="0.3" step="0.1" min="0" max="1">
         </div>
       </div>
       
@@ -194,37 +440,21 @@ textarea.form-control { height: 250px; resize: vertical; line-height: 1.5; }
     </div>
   </div>
 
-  
-  <!-- Knowledge Tab -->
-  <div class="main-content hidden" id="knowledge-tab">
-    <div class="page-title">Kho Dữ Liệu (Knowledge Base)</div>
-    <div class="panel">
-      <div class="panel-header">Thêm Tri thức Mới (Fast-Inject)</div>
-      <textarea id="kbInput" class="form-control" style="height: 100px; margin-bottom: 10px;" placeholder="Dán văn bản quy định mới vào đây... Bot sẽ tự động học ngay lập tức!"></textarea>
-      <button class="btn-primary" onclick="addKnowledge()">Thêm Dữ Liệu</button>
-    </div>
-    
-    <div class="panel">
-      <div class="panel-header">Tri thức đang hoạt động</div>
-      <div id="kbList" style="display: flex; flex-direction: column; gap: 10px;">
-         <div style="color: #94a3b8;">Đang tải...</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Logs Tab -->
+  <!-- TAB 7: LOGS -->
   <div class="main-content hidden" id="logs-tab">
     <div class="page-title">
-      Agent Activity Logs
-      <button class="tbtn" onclick="loadLogs()" style="background: #1e293b; border: 1px solid #334155;">🔄 Tải mới</button>
-      <label style='font-size:13px; color:#94a3b8; margin-left:10px;'><input type='checkbox' id='autoRefreshLogs' onchange='toggleAutoRefresh(this)'> Tự động tải (3s)</label></button>
+      <div>📜 Nhật Ký Hoạt Động (Agent Activity Logs)</div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button class="tbtn" onclick="loadLogs()">🔄 Tải mới</button>
+        <label style='font-size:12.5px; color:#94a3b8;'><input type='checkbox' id='autoRefreshLogs' onchange='toggleAutoRefresh(this)'> Tự động tải (3s)</label>
+      </div>
     </div>
     <div class="panel">
       <table class="log-table">
         <thead>
           <tr>
-            <th width="150">Thời gian</th>
-            <th width="120">Loại Sự Kiện</th>
+            <th width="140">Thời gian</th>
+            <th width="130">Loại Sự Kiện</th>
             <th>Nội dung chi tiết</th>
           </tr>
         </thead>
@@ -235,22 +465,24 @@ textarea.form-control { height: 250px; resize: vertical; line-height: 1.5; }
     </div>
   </div>
 
-  <!-- Analytics Tab -->
+  <!-- TAB 8: MISSING KNOWLEDGE -->
   <div class="main-content hidden" id="analytics-tab">
     <div class="page-title">
-      Khoảng trống tri thức (Missing Knowledge)
-      <button class="tbtn" onclick="loadMissingKnowledge()" style="background: #1e293b; border: 1px solid #334155;">🔄 Tải lại</button>
+      <div>📊 Khoảng Trống Tri Thức (Missing Knowledge)</div>
+      <button class="tbtn" onclick="loadMissingKnowledge()">🔄 Tải lại</button>
     </div>
+    <div class="page-desc">Danh sách câu hỏi nhân viên siêu thị hỏi mà hệ thống chưa có quy trình rõ ràng, được lưu tự động để KSCL bổ sung.</div>
     <div class="panel">
       <table class="log-table">
         <thead>
           <tr>
             <th width="150">Thời gian</th>
-            <th>Câu hỏi chưa trả lời được</th>
+            <th width="180">Chủ đề</th>
+            <th>Câu hỏi chưa có quy định</th>
           </tr>
         </thead>
         <tbody id="missingBody">
-          <tr><td colspan="2" style="text-align: center;">Đang tải...</td></tr>
+          <tr><td colspan="3" style="text-align: center;">Đang tải...</td></tr>
         </tbody>
       </table>
     </div>
@@ -262,17 +494,25 @@ textarea.form-control { height: 250px; resize: vertical; line-height: 1.5; }
 <script>
 const API_URL = "https://quytrinh-bot.onrender.com/api";
 
+let _allProfiles = [];
+let _allModels = [];
+let _allIncidents = [];
+
 function switchTab(tabId, event) {
   document.querySelectorAll('.main-content').forEach(el => el.classList.add('hidden'));
-  document.getElementById(tabId + '-tab').classList.remove('hidden');
+  const target = document.getElementById(tabId + '-tab');
+  if (target) target.classList.remove('hidden');
   
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  if (event && event.currentTarget) event.currentTarget.classList.add('active');
   
+  if (tabId === 'models') loadModels();
+  if (tabId === 'incidents') loadIncidents();
+  if (tabId === 'profiles') loadProfiles();
+  if (tabId === 'knowledge') { loadKnowledge(); loadRagStats(); }
   if (tabId === 'config') loadConfig();
   if (tabId === 'logs') loadLogs();
   if (tabId === 'analytics') loadMissingKnowledge();
-  if (tabId === 'knowledge') loadKnowledge();
 }
 
 function showToast(msg) {
@@ -282,7 +522,45 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// --- Sandbox ---
+// --- Status & Ping ---
+async function pingModel() {
+  const badge = document.getElementById('pingBadge');
+  badge.innerText = "⏳ Ping...";
+  try {
+    const res = await fetch(`${API_URL}/qt/models/ping`, { method: "POST" });
+    const data = await res.json();
+    if (data.ok) {
+      badge.innerText = `⚡ ${data.ping_ms}ms`;
+      document.getElementById('cardPingVal').innerText = `${data.ping_ms} ms`;
+      showToast(`Ping thành công: ${data.ping_ms}ms (${data.model})`);
+    } else {
+      badge.innerText = "⚠️ Lỗi";
+    }
+  } catch(e) {
+    badge.innerText = "⚠️ Mất mạng";
+  }
+}
+
+async function triggerSync() {
+  showToast("Đang đồng bộ nóng vào RAM...");
+  try {
+    const res = await fetch(`${API_URL}/qt/sync`, { method: "POST" });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(data.msg || "Đồng bộ nóng hoàn tất!");
+      loadRagStats();
+    }
+  } catch(e) {
+    alert("Lỗi khi đồng bộ!");
+  }
+}
+
+// --- Sandbox Live Test with REAL TRACING ---
+function injectPrompt(text) {
+  document.getElementById('chatInput').value = text;
+  sendTest();
+}
+
 async function sendTest() {
   const input = document.getElementById('chatInput');
   const text = input.value.trim();
@@ -294,40 +572,300 @@ async function sendTest() {
   history.scrollTop = history.scrollHeight;
   
   const trace = document.getElementById('traceContent');
-  trace.style.opacity = '1';
-  trace.innerHTML = `<div class="trace-step active" id="ts1">1. Phân tích ngữ nghĩa Intent...<br><span style="color:#64748b">Query: "${text}"</span></div>`;
+  const statusEl = document.getElementById('traceStatus');
+  statusEl.innerText = "Đang suy luận...";
+  statusEl.style.color = "#f59e0b";
   
-  setTimeout(() => {
-    if (document.getElementById('ts1')) document.getElementById('ts1').classList.remove('active');
-    trace.innerHTML += `<div class="trace-step active" id="ts2">2. Truy vấn RAG Local...<br><span style="color:#64748b">Duyệt qua 1,360 tài liệu Wiki (Lọc bỏ Biên bản/Nháp)...</span></div>`;
-  }, 1000);
-  
-  setTimeout(() => {
-    if (document.getElementById('ts2')) document.getElementById('ts2').classList.remove('active');
-    trace.innerHTML += `<div class="trace-step active" id="ts3">3. Gọi LLM AI Engine...<br><span style="color:#64748b">Đang đọc tài liệu tìm được và tổng hợp câu trả lời...</span></div>`;
-  }, 2500);
+  trace.innerHTML = `
+    <div class="trace-step active" id="ts_live">
+      <div><strong>Đang kết nối Agentic ReAct Engine...</strong></div>
+      <div class="trace-time">Phân tích ý định & kích hoạt chuỗi công cụ...</div>
+    </div>
+  `;
 
   try {
     const res = await fetch(`${API_URL}/qt/test`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: text })
+      body: JSON.stringify({ question: text, sender_id: "admin_sandbox" })
     });
     const data = await res.json();
     
-    if (document.getElementById('ts3')) document.getElementById('ts3').classList.remove('active');
-    trace.innerHTML += `<div class="trace-step active" style="color:#10b981; border-color:#10b981;">4. Hoàn tất (${data.elapsed || '?'}s)<br><span style="color:#64748b">Đã trả về kết quả.</span></div>`;
+    statusEl.innerText = `Hoàn tất (${data.elapsed || '?'}s)`;
+    statusEl.style.color = "#10b981";
     
-    const replyText = data.ok ? data.reply : "Lỗi: " + data.error;
+    // Render Real Traces returned from Agent
+    if (data.ok && data.traces && data.traces.length > 0) {
+      let traceHtml = '';
+      data.traces.forEach((tr, idx) => {
+        const isLast = (idx === data.traces.length - 1);
+        const cls = isLast ? 'trace-step done active' : 'trace-step done';
+        traceHtml += `
+          <div class="${cls}">
+            <div><strong>${tr.step}</strong></div>
+            <div style="color:#cbd5e1; margin-top:2px;">${tr.detail}</div>
+          </div>
+        `;
+      });
+      trace.innerHTML = traceHtml;
+    } else {
+      trace.innerHTML = `
+        <div class="trace-step done">
+          <div><strong>1. Xử lý phản hồi</strong></div>
+          <div style="color:#cbd5e1;">Hoàn tất trong ${data.elapsed || '?'}s (Model: ${data.model || 'Gemini'})</div>
+        </div>
+      `;
+    }
+    
+    if (data.model) {
+      document.getElementById('modelBadge').innerText = data.model;
+    }
+    
+    const replyText = data.ok ? data.reply : ("Lỗi: " + (data.error || "Không thể xử lý"));
     const formattedHtml = typeof marked !== 'undefined' ? marked.parse(replyText) : replyText;
     history.innerHTML += `<div class="msg ai">${formattedHtml}</div>`;
     history.scrollTop = history.scrollHeight;
     
   } catch(e) {
-    if (document.getElementById('ts3')) document.getElementById('ts3').classList.remove('active');
-    trace.innerHTML += `<div class="trace-step" style="color:#f43f5e;">Lỗi kết nối Server!</div>`;
-    history.innerHTML += `<div class="msg ai" style="background:#7f1d1d;color:#fecaca;">Không thể kết nối đến Render Server.</div>`;
+    statusEl.innerText = "Lỗi";
+    statusEl.style.color = "#ef4444";
+    trace.innerHTML = `<div class="trace-step" style="border-left-color:#ef4444;color:#ef4444;">Không thể kết nối đến Render Server.</div>`;
+    history.innerHTML += `<div class="msg ai" style="background:#7f1d1d;color:#fecaca;">Không thể kết nối đến Render Server. Vui lòng thử lại sau giây lát!</div>`;
     history.scrollTop = history.scrollHeight;
+  }
+}
+
+// --- Gemini Models Management ---
+async function loadModels() {
+  const tbody = document.getElementById('modelsTableBody');
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Đang tải danh sách model...</td></tr>';
+  try {
+    const res = await fetch(`${API_URL}/qt/models`);
+    const data = await res.json();
+    if (data.ok) {
+      _allModels = data.models || [];
+      document.getElementById('cardActiveModel').innerText = data.active_model;
+      document.getElementById('modelBadge').innerText = data.active_model;
+      document.getElementById('cardModelMode').innerText = data.mode === "auto" ? "Chế độ: Tự Chữa Lành" : `Ghim cố định: ${data.active_model}`;
+      document.getElementById('navModelBadge').innerText = data.mode === "auto" ? "Auto" : "Pinned";
+      
+      let html = '';
+      _allModels.forEach(m => {
+        const isAct = m.is_active;
+        const isWf = m.is_waterfall;
+        const inCd = m.cooldown_remaining > 0;
+        
+        let badgeHtml = '';
+        if (isAct) badgeHtml += '<span class="tag" style="background:#10b98120;color:#10b981;margin-right:4px;">ĐANG DÙNG</span>';
+        if (isWf) badgeHtml += '<span class="tag" style="background:#3b82f620;color:#3b82f6;margin-right:4px;">FALLBACK WATERFALL</span>';
+        if (inCd) badgeHtml += `<span class="tag" style="background:#ef444420;color:#ef4444;">COOLDOWN (${m.cooldown_remaining}s)</span>`;
+        
+        html += `
+          <tr>
+            <td><strong style="color:${isAct ? '#14b8a6' : '#f8fafc'}; font-family:monospace;">${m.name}</strong></td>
+            <td>${badgeHtml || '<span style="color:#64748b;">Khả dụng từ Google API</span>'}</td>
+            <td>${inCd ? `<span style="color:#ef4444;">Nghỉ ${m.cooldown_remaining}s</span>` : '<span style="color:#10b981;">Bình thường</span>'}</td>
+            <td>
+              ${isAct ? '<span style="color:#10b981;font-weight:600;font-size:12px;">Đang Phục Vụ</span>' : `<button class="tbtn" onclick="setModel('${m.name}')">📌 Chọn Dùng</button>`}
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html || '<tr><td colspan="4" style="text-align:center;">Không tìm thấy model.</td></tr>';
+    }
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="4" style="color:#ef4444;text-align:center;">Lỗi tải danh sách model!</td></tr>';
+  }
+}
+
+async function setModel(modelName) {
+  showToast(`Đang ghim model ${modelName}...`);
+  try {
+    const res = await fetch(`${API_URL}/qt/models`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: modelName })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(data.message || "Đã đổi model thành công!");
+      loadModels();
+    } else {
+      alert("Lỗi: " + data.error);
+    }
+  } catch(e) {
+    alert("Không thể kết nối đến máy chủ.");
+  }
+}
+
+async function setModeAuto() {
+  setModel("auto");
+}
+
+// --- Incidents & SLA ---
+async function loadIncidents() {
+  const tbody = document.getElementById('incidentsBody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Đang tải dữ liệu sự cố...</td></tr>';
+  try {
+    const res = await fetch(`${API_URL}/qt/incidents`);
+    const data = await res.json();
+    if (data.ok) {
+      _allIncidents = data.data || [];
+      
+      const total = _allIncidents.length;
+      const pending = _allIncidents.filter(x => x.status !== 'Đã xong').length;
+      const resolved = total - pending;
+      
+      document.getElementById('incTotal').innerText = total;
+      document.getElementById('incPending').innerText = pending;
+      document.getElementById('incResolved').innerText = resolved;
+      document.getElementById('navIncidentsBadge').innerText = pending;
+      
+      let html = '';
+      _allIncidents.forEach(inc => {
+        const isDone = inc.status === 'Đã xong';
+        const sev = (inc.severity || 'NORMAL').toUpperCase();
+        let sevClass = 'normal';
+        if (sev === 'CRITICAL') sevClass = 'critical';
+        if (sev === 'HIGH') sevClass = 'high';
+        
+        const details = inc.details || inc.notes || 'Không có mô tả chi tiết';
+        const ticketId = inc.ticket_id || inc.id || 'INC-SKK';
+        
+        html += `
+          <tr>
+            <td><strong style="color:#38bdf8; font-family:monospace;">${ticketId}</strong><br><span style="font-size:11px;color:#64748b;">${inc.created_at || ''}</span></td>
+            <td><strong style="color:#f8fafc;">${inc.store || 'Toàn hệ thống'}</strong></td>
+            <td>
+              <span class="tag ${sevClass}">${sev}</span><br>
+              <span style="font-size:11px;color:#94a3b8;">${inc.sla_duration || 'SLA 24h'}</span>
+            </td>
+            <td>
+              <div style="font-size:13px;color:#e2e8f0;margin-bottom:4px;"><strong>${inc.incident_type || 'Sự cố'}</strong></div>
+              <div style="font-size:12px;color:#94a3b8;">${details.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+            </td>
+            <td>
+              ${isDone ? '<span style="color:#10b981;font-weight:600;">Đã Xong</span>' : '<span style="color:#f59e0b;font-weight:600;">Đang Xử Lý</span>'}
+            </td>
+            <td>
+              ${isDone ? '<span style="color:#64748b;font-size:12px;">Đã Đóng</span>' : `<button class="btn-success" onclick="resolveIncident('${inc.id}', ${inc.is_ticket ? 'true' : 'false'})">✅ Xử Lý Xong</button>`}
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;">Chưa có sự cố nào được ghi nhận.</td></tr>';
+    }
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="color:#ef4444;text-align:center;">Lỗi tải sự cố!</td></tr>';
+  }
+}
+
+async function resolveIncident(id, isTicket) {
+  if (!confirm("Xác nhận đánh dấu sự cố này là ĐÃ XỬ LÝ XONG?")) return;
+  try {
+    const res = await fetch(`${API_URL}/qt/incidents/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, is_ticket: isTicket })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast("Đã cập nhật trạng thái sự cố!");
+      loadIncidents();
+    }
+  } catch(e) {
+    alert("Lỗi cập nhật!");
+  }
+}
+
+// --- Profiles ---
+async function loadProfiles() {
+  const tbody = document.getElementById('profilesBody');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Đang tải danh sách nhân sự...</td></tr>';
+  try {
+    const res = await fetch(`${API_URL}/qt/profiles`);
+    const data = await res.json();
+    if (data.ok) {
+      _allProfiles = data.data || [];
+      renderProfiles(_allProfiles);
+    }
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#ef4444;text-align:center;">Lỗi tải hồ sơ!</td></tr>';
+  }
+}
+
+function renderProfiles(list) {
+  const tbody = document.getElementById('profilesBody');
+  let html = '';
+  list.forEach(p => {
+    const lastSeen = p.last_seen ? new Date(p.last_seen * 1000).toLocaleString('vi-VN') : 'Chưa rõ';
+    html += `
+      <tr>
+        <td><strong>${p.name || 'Nhân viên'}</strong> <span style="font-size:11px;color:#64748b;">(${p.preferred_title || 'Bạn'})</span></td>
+        <td><span style="color:#14b8a6;font-weight:600;">${p.store || 'Chưa cập nhật'}</span></td>
+        <td>${p.role || 'Nhân viên bán lẻ'}</td>
+        <td><div style="font-size:12px;color:#cbd5e1;">${p.notes || 'Không có ghi chú'}</div></td>
+        <td class="log-time">${lastSeen}</td>
+      </tr>
+    `;
+  });
+  tbody.innerHTML = html || '<tr><td colspan="5" style="text-align:center;">Chưa có hồ sơ nhân viên nào.</td></tr>';
+}
+
+function filterProfiles() {
+  const q = document.getElementById('profSearch').value.toLowerCase().trim();
+  if (!q) return renderProfiles(_allProfiles);
+  const filtered = _allProfiles.filter(p => {
+    return (p.name || '').toLowerCase().includes(q) || (p.store || '').toLowerCase().includes(q) || (p.role || '').toLowerCase().includes(q);
+  });
+  renderProfiles(filtered);
+}
+
+// --- RAG Stats & BM25 Search ---
+async function loadRagStats() {
+  try {
+    const res = await fetch(`${API_URL}/qt/rag/stats`);
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('ragChunksCount').innerText = data.total_chunks.toLocaleString();
+      document.getElementById('navRagBadge').innerText = (data.total_chunks / 1000).toFixed(1) + 'k';
+      document.getElementById('ragLastUpdated').innerText = data.last_updated;
+      document.getElementById('ragDbSize').innerText = `Kích thước: ${data.size_mb} MB`;
+    }
+  } catch(e) {}
+}
+
+async function testRagSearch() {
+  const q = document.getElementById('ragQueryInput').value.trim();
+  if (!q) return;
+  const resBox = document.getElementById('ragSearchResults');
+  resBox.innerHTML = '<div style="color:#94a3b8;">Đang truy vấn BM25 RAG...</div>';
+  try {
+    const res = await fetch(`${API_URL}/qt/rag/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: q, top_k: 4 })
+    });
+    const data = await res.json();
+    if (data.ok && data.results && data.results.length > 0) {
+      let html = '';
+      data.results.forEach((doc, i) => {
+        html += `
+          <div style="background:#0b1324; border:1px solid #1e293b; border-radius:8px; padding:12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <strong style="color:#38bdf8;">[${i+1}] ${doc.title}</strong>
+              ${doc.url ? `<a href="${doc.url}" target="_blank" style="color:#14b8a6; font-size:12px; text-decoration:none;">Xem Tài Liệu ↗</a>` : ''}
+            </div>
+            <div style="font-size:12px; color:#cbd5e1; line-height:1.5;">${doc.snippet.replace(/</g,'&lt;').replace(/>/g,'&gt;')}...</div>
+          </div>
+        `;
+      });
+      resBox.innerHTML = html;
+    } else {
+      resBox.innerHTML = '<div style="color:#f59e0b;">Không tìm thấy tài liệu nào khớp trong kho SOP.</div>';
+    }
+  } catch(e) {
+    resBox.innerHTML = '<div style="color:#ef4444;">Lỗi tra cứu RAG!</div>';
   }
 }
 
@@ -339,7 +877,8 @@ async function loadConfig() {
     if (data.ok && data.config) {
       document.getElementById('systemPrompt').value = data.config.system_prompt || "";
       document.getElementById('llmEngine').value = data.config.engine || "gemini";
-      document.getElementById('llmTemp').value = data.config.temperature || 0.2;
+      document.getElementById('llmTemp').value = data.config.temperature || 0.3;
+      document.getElementById('proactiveClarifyToggle').checked = (data.config.proactive_clarify !== false);
     }
   } catch(e) {
     console.error("Config load error:", e);
@@ -350,7 +889,8 @@ async function saveConfig() {
   const payload = {
     system_prompt: document.getElementById('systemPrompt').value,
     engine: document.getElementById('llmEngine').value,
-    temperature: parseFloat(document.getElementById('llmTemp').value) || 0.2
+    temperature: parseFloat(document.getElementById('llmTemp').value) || 0.3,
+    proactive_clarify: document.getElementById('proactiveClarifyToggle').checked
   };
   
   try {
@@ -366,11 +906,9 @@ async function saveConfig() {
   }
 }
 
-// --- Logs ---
+// --- Logs & Takeover ---
 async function loadLogs() {
   const tbody = document.getElementById('logBody');
-  tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Đang tải...</td></tr>';
-  
   try {
     const res = await fetch(`${API_URL}/panel/logs`);
     const data = await res.json();
@@ -384,10 +922,12 @@ async function loadLogs() {
         html += `
           <tr>
             <td class="log-time">${timeStr}</td>
-            <td><span class="tag ${cls}">${(l.event||'').toUpperCase()}</span><br><br><button onclick="toggleTakeover('lark_chat_'+'${l.chat_id || ''}', true)" style="background:#ef4444;color:#fff;border:none;padding:4px 8px;border-radius:4px;font-size:10px;cursor:pointer;">Cướp Quyền</button><button onclick="toggleTakeover('lark_chat_'+'${l.chat_id || ''}', false)" style="background:#3b82f6;color:#fff;border:none;padding:4px 8px;border-radius:4px;font-size:10px;cursor:pointer;margin-left:4px;">Trả Quyền</button></td>
             <td>
-              <div class="detail-box">${(l.detail||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+              <span class="tag ${cls}">${(l.event||'').toUpperCase()}</span><br><br>
+              <button onclick="toggleTakeover('lark_chat_'+'${l.chat_id || ''}', true)" style="background:#ef4444;color:#fff;border:none;padding:4px 8px;border-radius:4px;font-size:10px;cursor:pointer;">Cướp Quyền</button>
+              <button onclick="toggleTakeover('lark_chat_'+'${l.chat_id || ''}', false)" style="background:#3b82f6;color:#fff;border:none;padding:4px 8px;border-radius:4px;font-size:10px;cursor:pointer;margin-left:4px;">Trả Quyền</button>
             </td>
+            <td><div class="detail-box">${(l.detail||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div></td>
           </tr>
         `;
       });
@@ -398,7 +938,6 @@ async function loadLogs() {
   }
 }
 
-
 let refreshInterval;
 function toggleAutoRefresh(cb) {
   if (cb.checked) {
@@ -408,6 +947,18 @@ function toggleAutoRefresh(cb) {
   }
 }
 
+async function toggleTakeover(conv_key, state) {
+  try {
+    await fetch(`${API_URL}/qt/takeover`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ conv_key, state })
+    });
+    showToast(state ? "Đã cướp quyền Bot!" : "Đã trả quyền cho Bot!");
+  } catch(e) {}
+}
+
+// --- Missing Knowledge ---
 async function loadMissingKnowledge() {
   const tbody = document.getElementById('missingBody');
   try {
@@ -419,14 +970,19 @@ async function loadMissingKnowledge() {
         const d = new Date((l.ts || 0) * 1000);
         html += `<tr>
           <td class="log-time">${d.toLocaleString('vi-VN')}</td>
-          <td><div class="detail-box">${l.question}</div></td>
+          <td><strong style="color:#f59e0b;">${l.topic || 'Chưa phân loại'}</strong></td>
+          <td>
+            <div style="color:#f8fafc; margin-bottom:4px;">${l.question}</div>
+            ${l.notes ? `<div style="font-size:12px;color:#94a3b8;">${l.notes}</div>` : ''}
+          </td>
         </tr>`;
       });
-      tbody.innerHTML = html || '<tr><td colspan="2" style="text-align: center;">Chưa có câu hỏi nào bị lỡ.</td></tr>';
+      tbody.innerHTML = html || '<tr><td colspan="3" style="text-align: center;">Chưa có câu hỏi nào bị lỡ.</td></tr>';
     }
   } catch(e) {}
 }
 
+// --- Custom Knowledge Base Fast-Inject ---
 async function loadKnowledge() {
   const list = document.getElementById('kbList');
   try {
@@ -435,11 +991,11 @@ async function loadKnowledge() {
     if (data.ok && data.data) {
       let html = '';
       data.data.forEach(l => {
-        html += `<div style="background: #0f172a; padding: 15px; border: 1px solid #334155; border-radius: 8px;">
+        html += `<div style="background: #0b1324; padding: 12px; border: 1px solid #1e293b; border-radius: 8px;">
           <pre style="white-space: pre-wrap; font-family: inherit; font-size: 13px; color: #cbd5e1;">${l.content}</pre>
         </div>`;
       });
-      list.innerHTML = html || '<div style="color: #94a3b8;">Chưa có dữ liệu nào.</div>';
+      list.innerHTML = html || '<div style="color: #94a3b8;">Chưa có quy định tạm thời nào.</div>';
     }
   } catch(e) {}
 }
@@ -459,20 +1015,10 @@ async function addKnowledge() {
   } catch(e) { alert('Lỗi'); }
 }
 
-async function toggleTakeover(conv_key, state) {
-  try {
-    await fetch(`${API_URL}/qt/takeover`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conv_key, state })
-    });
-    showToast(state ? "Đã cướp quyền Bot!" : "Đã trả quyền cho Bot!");
-  } catch(e) {}
-}
-
-
-// Init Load Config so it's ready
+// Init
 loadConfig();
+loadRagStats();
+pingModel();
 </script>
 </body>
 </html>
