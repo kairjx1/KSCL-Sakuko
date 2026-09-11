@@ -739,7 +739,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.88</span>
+  <span class="version" id="app-version">v1.0.89</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -3675,8 +3675,10 @@ async function doUpdate() {
     banner.textContent = '⚠ Lỗi kết nối: ' + e.message;
   }
 }
-// Check update ngay khi load + mỗi 30 phút
+// Check update ngay khi load + 1 lần bù sau 10s (server hoãn lần check đầu 8s để
+// tránh race với launcher.js đang tải public/ — xem giải thích ở server.js) + mỗi 30 phút.
 checkUpdate();
+setTimeout(checkUpdate, 10000);
 setInterval(checkUpdate, 30 * 60 * 1000);
 
 // tooltip ẩn mặc định, hiện khi hover (CSS)
