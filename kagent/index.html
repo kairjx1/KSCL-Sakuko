@@ -720,7 +720,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.84</span>
+  <span class="version" id="app-version">v1.0.85</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -2405,8 +2405,13 @@ async function apiGetProjects() {
     const extra = await fetch('/api/projects-extra').then(r => r.json()).catch(() => ({}));
     return rows.map(p => ({ ...p, workDir: extra[p.id]?.workDir || p.work_dir || '' }));
   }
-  return fetch('/api/projects').then(r => r.json());
+  return fetch(`/api/projects?userId=${encodeURIComponent(localUserId())}`).then(r => r.json());
 }
+// ID người dùng hiện tại — dùng để lọc project/chat local (chế độ chưa đăng nhập Lark,
+// hoặc RELAY_URL trống) theo đúng người, tránh 2 người dùng CHUNG 1 máy KAgent thấy/sửa
+// dữ liệu của nhau. Khi đã đăng nhập Lark thật thì luồng chính đi qua relayFetch (đã lọc
+// đúng theo session.id ở Cloudflare Worker), hàm này chỉ áp dụng cho nhánh dự phòng.
+function localUserId() { return relayUser?.open_id || relayUser?.id || ''; }
 
 async function apiCreateProject(name, workDir, promptPrefix, promptSuffix) {
   if (useRelay()) {
@@ -2421,7 +2426,7 @@ async function apiCreateProject(name, workDir, promptPrefix, promptSuffix) {
     return p;
   }
   return fetch('/api/projects', { method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ name, workDir, promptPrefix, promptSuffix }) }).then(r => r.json());
+    body: JSON.stringify({ name, workDir, promptPrefix, promptSuffix, userId: localUserId() }) }).then(r => r.json());
 }
 
 async function apiUpdateProject(id, name, workDir, promptPrefix, promptSuffix) {
@@ -2446,7 +2451,7 @@ async function apiDeleteProject(id) {
 
 async function apiGetChats(projectId) {
   if (useRelay()) return relayFetch(`/projects/${projectId}/chats`);
-  return fetch(`/api/projects/${projectId}/chats`).then(r => r.json());
+  return fetch(`/api/projects/${projectId}/chats?userId=${encodeURIComponent(localUserId())}`).then(r => r.json());
 }
 
 async function apiCreateChat(projectId, name, agent) {
@@ -2454,8 +2459,10 @@ async function apiCreateChat(projectId, name, agent) {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ name, agent })
   });
-  return fetch('/api/chats', { method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ projectId, name, agent }) }).then(r => r.json());
+  // BUG THẬT đã sửa: trước đây gọi '/api/chats' (không tồn tại trên server local,
+  // đúng route là '/api/projects/:pid/chats') — tạo chat ở chế độ Local từng luôn lỗi 404.
+  return fetch(`/api/projects/${projectId}/chats`, { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ name, agent, userId: localUserId() }) }).then(r => r.json());
 }
 
 async function apiDeleteChat(id) {
