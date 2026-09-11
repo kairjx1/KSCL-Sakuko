@@ -715,12 +715,12 @@ dialog.dlg header button:hover{color:var(--text)}
 <!-- TOP BAR -->
 <!-- Update banner -->
 <div id="update-banner" style="display:none;background:linear-gradient(90deg,#dc2626,#b91c1c);color:#fff;text-align:center;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.2px;flex-shrink:0;z-index:1000" onclick="doUpdate()">
-  ⬆ Có bản cập nhật KAgent <span id="update-ver"></span> — bấm để cập nhật ngay (trang sẽ tải lại)
+  ⬆ Có bản cập nhật KAgent <span id="update-ver"></span> — bấm để cập nhật ngay (app sẽ khởi động lại)
 </div>
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.82</span>
+  <span class="version" id="app-version">v1.0.83</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -3568,6 +3568,20 @@ async function doUpdate() {
   const banner = document.getElementById('update-banner');
   banner.textContent = '⏳ Đang tải bản cập nhật...';
   banner.style.cursor = 'default';
+  // Ưu tiên full-update (thay cả .exe — áp dụng khi có thay đổi backend như tính năng
+  // Bộ nhớ). Nếu chưa cấu hình nơi tải .exe (R2 chưa sẵn sàng) thì fallback về
+  // do-update cũ (chỉ vá HTML) để người dùng vẫn thấy giao diện mới nhất trong lúc chờ.
+  try {
+    const rFull = await fetch('/api/do-full-update', { method: 'POST' });
+    const dFull = await rFull.json();
+    if (dFull.ok) {
+      banner.textContent = '✅ Đang khởi động lại KAgent...';
+      setTimeout(() => location.reload(true), 3000);
+      return;
+    }
+    console.log('[update] full-update không dùng được, fallback HTML-only:', dFull.msg);
+  } catch (e) { console.log('[update] full-update lỗi, fallback HTML-only:', e.message); }
+
   try {
     const r = await fetch('/api/do-update', { method: 'POST' });
     const d = await r.json();
