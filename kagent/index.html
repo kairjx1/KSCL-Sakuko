@@ -695,7 +695,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.71</span>
+  <span class="version" id="app-version">v1.0.72</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1211,35 +1211,56 @@ function renderMarkdown(text) {
 
 // Append chat bubble (user or AI) into chat-messages panel
 let _toolBlock = null; // current streaming tool output block
+// Hàng đợi các bong bóng tin nhắn user vừa gửi (optimistic UI) còn thiếu ID thật —
+// nhận ID qua case 'user_msg_id' (xem handleWsMessage), theo đúng thứ tự gửi.
+let _pendingUserWraps = [];
 
-function _wrapMsg(el) {
+function _wrapMsg(el, msgId) {
   const wrap = document.createElement('div');
   wrap.className = 'msg-wrap';
+  // msgId có thể đến TRỄ hơn lúc bong bóng vừa hiện (gửi tin nhắn là optimistic UI,
+  // server báo ID về sau qua WS) — đọc dataset TẠI LÚC BẤM thay vì chốt cứng từ đầu,
+  // để khi wrap.dataset.msgId được gắn muộn (xem case 'user_msg_id'), nút Xóa vẫn xóa
+  // đúng tin nhắn thật trên server, không chỉ gỡ khỏi màn hình như trước đây.
+  if (msgId) wrap.dataset.msgId = msgId;
   wrap.appendChild(el);
   const del = document.createElement('button');
   del.className = 'msg-del';
   del.textContent = '✕ Xóa';
-  del.onclick = () => wrap.remove(); // chỉ xóa local, không sync relay
+  del.onclick = async () => {
+    wrap.remove(); // gỡ khỏi màn hình ngay cho mượt
+    const id = wrap.dataset.msgId;
+    if (!id) return; // tin nhắn quá mới, chưa kịp có ID từ server — không có gì để xóa trên server
+    try {
+      const r = await fetch(`/api/messages/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!r.ok) throw new Error('bad status');
+    } catch {
+      showToast('⚠️ Xóa trên máy chưa đồng bộ lên cloud — mở lại chat có thể thấy lại');
+    }
+  };
   wrap.appendChild(del);
   return wrap;
 }
 
-function appendChatUser(text) {
+function appendChatUser(text, msgId) {
   const el = document.createElement('div');
   el.className = 'chat-msg-user';
   el.innerHTML = text;
-  document.getElementById('chat-messages').appendChild(_wrapMsg(el));
+  const wrap = _wrapMsg(el, msgId);
+  document.getElementById('chat-messages').appendChild(wrap);
   scrollChat();
+  return wrap;
 }
 
-function appendChatAI(markdownText) {
+function appendChatAI(markdownText, msgId) {
   _toolBlock = null;
   const el = document.createElement('div');
   el.className = 'chat-msg-ai';
   el.innerHTML = renderMarkdown(markdownText);
-  document.getElementById('chat-messages').appendChild(_wrapMsg(el));
+  const wrap = _wrapMsg(el, msgId);
+  document.getElementById('chat-messages').appendChild(wrap);
   scrollChat();
-  return el;
+  return wrap;
 }
 
 // Streaming tool output in chat view (while claude is working)
@@ -1309,9 +1330,17 @@ function handleWsMessage(msg) {
       // Response hoàn chỉnh từ server → render markdown
       removeTyping();
       finalizeToolBlock();
-      appendChatAI(msg.text);
+      appendChatAI(msg.text, msg.id); // msg.id: cùng ID với bản lưu local+relay, cho nút Xóa
       // Nếu đang ở terminal view, vẫn append raw (đã append qua 'output' events)
       break;
+    case 'user_msg_id': {
+      // Server vừa lưu xong tin nhắn user (local db) và báo ID về — gắn vào bong bóng
+      // optimistic đã hiện lúc gửi (xem sendPrompt/_pendingUserWraps). Tin nhắn gửi
+      // trước luôn được xác nhận trước (server xử lý tuần tự theo chat) nên FIFO là đủ.
+      const wrap = _pendingUserWraps.shift();
+      if (wrap && wrap.isConnected) wrap.dataset.msgId = msg.id;
+      break;
+    }
     case 'status':
       setStatus(msg.status, { interactive: msg.interactive });
       if (msg.interactive && msg.status === 'running') {
@@ -1808,27 +1837,32 @@ async function loadRelayHistory(chatId) {
     const msgs = await fetch(`/api/relay/chats/${chatId}/messages`).then(r => r.json());
     if (!msgs || msgs.length === 0) return;
     const cm = document.getElementById('chat-messages');
+    // THAY HẲN nội dung bằng bản từ relay thay vì cộng dồn lên trên bản 'history' local
+    // vừa render (renderHistory) — relay là kho đầy đủ/đồng bộ nhiều máy, còn local chỉ
+    // là cache dự phòng cùng dữ liệu. Trước đây append thêm vào khiến MỖI tin nhắn hiện
+    // 2 lần (1 từ local, 1 từ relay) mỗi lần mở lại chat — đây cũng là một phần lý do
+    // tin nhắn tưởng như "nhân bản" mãi không hết dù đã xóa.
+    cm.innerHTML = '';
     document.getElementById('empty-state').style.display = 'none';
     hasOutput = true;
     // Render header ngăn cách
     const sep = document.createElement('div');
     sep.style.cssText = 'text-align:center;color:var(--text2);font-size:11px;padding:8px 0 4px;border-bottom:1px solid var(--border);margin-bottom:8px';
     sep.textContent = `── Lịch sử (${msgs.length} tin) ──`;
-    cm.insertBefore(sep, cm.firstChild);
-    // Render từng message — bọc _wrapMsg() giống tin nhắn live (appendChatUser/appendChatAI)
-    // để có nút ✕ Xóa khi hover, kể cả tin nhắn tải lại từ lịch sử (trước đây thiếu, nên
-    // tin cũ/tin gửi trùng không xóa được sau khi mở lại chat hoặc mở máy khác).
+    cm.appendChild(sep);
+    // Render từng message — bọc _wrapMsg() kèm ID thật (m.id) để nút ✕ Xóa xóa được
+    // đúng tin nhắn ở cả local db lẫn relay (xem case 'prompt' ở server.js).
     msgs.forEach(m => {
       if (m.role === 'user') {
         const el = document.createElement('div');
         el.className = 'chat-msg-user';
         el.textContent = m.content;
-        cm.appendChild(_wrapMsg(el));
+        cm.appendChild(_wrapMsg(el, m.id));
       } else if (m.role === 'assistant') {
         const el = document.createElement('div');
         el.className = 'chat-msg-ai';
         el.innerHTML = renderMarkdown(m.content || '');
-        cm.appendChild(_wrapMsg(el));
+        cm.appendChild(_wrapMsg(el, m.id));
       }
     });
     scrollChat();
@@ -2027,10 +2061,10 @@ function renderHistory(messages) {
       const span = document.createElement('span');
       span.innerHTML = `<span style="color:#60a5fa">[Bạn] </span>${esc(m.content)}\r\n`;
       out.appendChild(span);
-      appendChatUser(m.content);
+      appendChatUser(m.content, m.id); // m.id: cùng ID với bản relay, cho nút Xóa
     } else if (m.role === 'assistant') {
       appendOutput(m.content); // terminal: raw
-      appendChatAI(m.content); // chat: markdown rendered
+      appendChatAI(m.content, m.id); // chat: markdown rendered
     }
   });
   out.scrollTop = out.scrollHeight;
@@ -2130,7 +2164,9 @@ function sendPrompt() {
   const displayText = text || '(ảnh)';
   // appendOutput('[Bạn]') KHÔNG gọi ở đây — server sẽ broadcast lại qua type:'output'
   // nếu gọi cả 2 sẽ bị duplicate trong terminal
-  appendChatUser(displayText + (images.length ? `<br>${images.map(img => `<img src="${img.dataUrl}" style="max-height:120px;border-radius:8px;margin-top:4px">`).join('')}` : '')); // chat view bubble (client-only, không bị echo)
+  // chat view bubble (client-only, không bị echo) — ID thật đến sau qua 'user_msg_id'
+  const _userWrap = appendChatUser(displayText + (images.length ? `<br>${images.map(img => `<img src="${img.dataUrl}" style="max-height:120px;border-radius:8px;margin-top:4px">`).join('')}` : ''));
+  _pendingUserWraps.push(_userWrap);
   if (_currentView === 'chat') showTyping(agents.find(a=>a.id===(document.getElementById('agent-select').value||'claude'))?.name || 'Agent');
   if (text) syncMessageToRelay(currentChatId, 'user', text);
   send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', model: window._selectedModel || null, workDir: window._workDir || null, relayToken: getRelayToken(), images });
