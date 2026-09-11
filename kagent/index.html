@@ -371,6 +371,25 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .chat-msg-ai h1,.chat-msg-ai h2,.chat-msg-ai h3{
   color:var(--accent);margin:12px 0 6px;font-size:1em;font-weight:600;
 }
+/* Nút bấm chọn phương án (khối kagent-choice do AI xuất ra) */
+.kagent-choice-box{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.kagent-choice-q{font-weight:600;font-size:13px;color:var(--text);margin-bottom:2px}
+.kagent-choice-btn{
+  display:flex;align-items:center;gap:10px;text-align:left;width:100%;
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;color:var(--text);font-size:13px;cursor:pointer;
+  transition:border-color .15s,background .15s;
+}
+.kagent-choice-btn:hover{border-color:var(--accent);background:var(--bg1)}
+.kagent-choice-btn.recommended{border-color:var(--accent);background:var(--accent-dim,rgba(167,139,250,.08))}
+.kagent-choice-box.answered .kagent-choice-btn{opacity:.5;cursor:default}
+.kagent-choice-box.answered .kagent-choice-btn:hover{border-color:var(--border);background:var(--bg2)}
+.kc-num{
+  flex-shrink:0;width:20px;height:20px;border-radius:50%;background:var(--bg1);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text2);
+}
+.kc-label{flex:1}
+.kc-tag{flex-shrink:0;font-size:10px;font-weight:700;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 6px}
 .chat-msg-ai h2{font-size:1.05em}
 .chat-msg-ai h1{font-size:1.1em}
 .chat-msg-ai p{margin:4px 0 8px}
@@ -720,7 +739,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.85</span>
+  <span class="version" id="app-version">v1.0.86</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1324,11 +1343,56 @@ function appendChatUser(text, msgId) {
   return wrap;
 }
 
+// Phát hiện khối ```kagent-choice {...}``` do AI xuất ra (theo module Kim Tiêm
+// "Trình bày phương án quyết định") — tách khỏi text hiển thị, KAgent tự vẽ thành
+// nút bấm thật thay vì để nguyên JSON thô hoặc bắt người dùng gõ số. Áp dụng cho
+// MỌI agent (claude, antigravity, gemini, codex, opencode...) vì đây chỉ là quy ước
+// định dạng text, không phụ thuộc cơ chế tool-call riêng của agent nào.
+function extractKagentChoice(text) {
+  const m = /```kagent-choice\s*([\s\S]*?)```/.exec(text || '');
+  if (!m) return { text, choice: null };
+  let choice = null;
+  try {
+    const obj = JSON.parse(m[1].trim());
+    if (obj && Array.isArray(obj.options) && obj.options.length >= 2) choice = obj;
+  } catch {}
+  const cleanText = (text.slice(0, m.index) + text.slice(m.index + m[0].length)).trim();
+  return { text: cleanText, choice };
+}
+
+function sendQuickText(text) {
+  const input = document.getElementById('prompt-input');
+  input.value = text;
+  sendPrompt();
+}
+
+function renderChoiceWidget(choice) {
+  const box = document.createElement('div');
+  box.className = 'kagent-choice-box';
+  if (choice.question) {
+    const q = document.createElement('div');
+    q.className = 'kagent-choice-q';
+    q.textContent = choice.question;
+    box.appendChild(q);
+  }
+  choice.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'kagent-choice-btn' + (choice.recommended === i ? ' recommended' : '');
+    btn.innerHTML = `<span class="kc-num">${i + 1}</span><span class="kc-label">${opt.replace(/</g,'&lt;')}</span>` +
+      (choice.recommended === i ? '<span class="kc-tag">Đề xuất</span>' : '');
+    btn.onclick = () => { box.querySelectorAll('button').forEach(b => b.disabled = true); box.classList.add('answered'); sendQuickText(opt); };
+    box.appendChild(btn);
+  });
+  return box;
+}
+
 function appendChatAI(markdownText, msgId) {
   _toolBlock = null;
+  const { text: cleanText, choice } = extractKagentChoice(markdownText);
   const el = document.createElement('div');
   el.className = 'chat-msg-ai';
-  el.innerHTML = renderMarkdown(markdownText);
+  el.innerHTML = renderMarkdown(cleanText);
+  if (choice) el.appendChild(renderChoiceWidget(choice));
   const wrap = _wrapMsg(el, msgId);
   document.getElementById('chat-messages').appendChild(wrap);
   scrollChat();
@@ -1982,7 +2046,9 @@ async function loadRelayHistory(chatId) {
       } else if (m.role === 'assistant') {
         const el = document.createElement('div');
         el.className = 'chat-msg-ai';
-        el.innerHTML = renderMarkdown(m.content || '');
+        // Lịch sử cũ: chỉ bỏ khối kagent-choice thô đi (đã trả lời rồi, không cần vẽ
+        // lại nút bấm — bấm lại nút của quyết định cũ dễ gây nhầm lẫn).
+        el.innerHTML = renderMarkdown(extractKagentChoice(m.content || '').text);
         cm.appendChild(_wrapMsg(el, m.id));
       }
     });
