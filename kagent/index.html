@@ -339,7 +339,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .mem-btn.ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
 .mem-btn.ghost:hover{color:var(--text)}
 .mem-textarea{
-  width:100%;min-height:80px;resize:vertical;background:var(--bg3);
+  width:100%;min-height:150px;resize:vertical;background:var(--bg3);
   border:1px solid var(--border);color:var(--text);border-radius:6px;
   padding:8px 9px;font-size:12px;font-family:inherit;
 }
@@ -720,7 +720,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.81</span>
+  <span class="version" id="app-version">v1.0.82</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -933,8 +933,8 @@ dialog.dlg header button:hover{color:var(--text)}
   <div style="flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px">
     <button class="mem-btn primary" onclick="summarizeMemoryNow()">🧠 Chắt lọc ngay</button>
     <div>
-      <div style="font-size:10.5px;color:#9a9a9a;margin-bottom:5px;line-height:1.4">Hướng dẫn thêm cho AI khi chắt lọc (tùy chọn) — ví dụ: luôn giữ lại số liệu SLA, ưu tiên liệt kê các quyết định kỹ thuật...</div>
-      <textarea id="memory-prompt-box" class="mem-textarea" placeholder="Để trống = dùng mặc định"></textarea>
+      <div style="font-size:10.5px;color:#9a9a9a;margin-bottom:5px;line-height:1.4">Hướng dẫn cho AI khi chắt lọc — ô dưới đã điền sẵn mặc định, sửa trực tiếp rồi bấm Lưu để dùng bản của bạn.</div>
+      <textarea id="memory-prompt-box" class="mem-textarea" placeholder="Đang tải mặc định..."></textarea>
     </div>
   </div>
   <div style="padding:8px 14px;border-top:1px solid #2a2a2a;display:flex;gap:6px">
@@ -2865,13 +2865,19 @@ async function toggleMemoryPanel() {
   }
 }
 
+async function fetchDefaultSummaryPrompt() {
+  try { return (await fetch('/api/summary-prompt-default').then(r => r.json())).text || ''; }
+  catch { return ''; }
+}
+
 async function loadMemoryPrompt() {
   const box = document.getElementById('memory-prompt-box');
   try {
     const r = await fetch(`/api/memory/${MEMORY_PROMPT_KEY}`);
-    if (r.ok) { const d = await r.json(); box.value = d.value || ''; }
-    else box.value = '';
-  } catch { box.value = ''; }
+    if (r.ok) { const d = await r.json(); if (d.value) { box.value = d.value; return; } }
+  } catch {}
+  // Chưa lưu hướng dẫn riêng — điền sẵn mặc định để người dùng biết mặc định là gì, sửa trực tiếp từ đây.
+  box.value = await fetchDefaultSummaryPrompt();
 }
 
 async function saveMemoryPrompt() {
@@ -2886,8 +2892,8 @@ async function saveMemoryPrompt() {
 }
 
 async function resetMemoryPrompt() {
-  document.getElementById('memory-prompt-box').value = '';
   try { await fetch(`/api/memory/${MEMORY_PROMPT_KEY}`, { method: 'DELETE' }); } catch {}
+  document.getElementById('memory-prompt-box').value = await fetchDefaultSummaryPrompt();
   showToast('↺ Đã về mặc định');
 }
 
