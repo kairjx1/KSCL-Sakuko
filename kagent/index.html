@@ -762,7 +762,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.95</span>
+  <span class="version" id="app-version">v1.0.96</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1906,6 +1906,7 @@ function runInstall(agentId) {
 async function init() {
   initView(); // set đúng view (terminal/chat) từ localStorage
   connect();
+  refreshInstalledAgents(); // không await — chạy song song, đủ nhanh trước khi người dùng mở agent picker
   agents = await fetch('/api/agents').then(r => r.json());
   // Cache agents-config để model selector dùng
   try {
@@ -3463,19 +3464,27 @@ const AGENT_DEFS = [
 ];
 
 let _ncSelectedAgent = 'claude';
-let _installedAgents = new Set(['claude', 'shell']); // fallback
+let _installedAgents = new Set(['claude', 'shell']); // fallback tới khi refreshInstalledAgents() chạy xong
 
-async function openNewChatModal() {
-  // Lấy danh sách agent installed từ server
+// BUG THẬT đã sửa: trước đây danh sách agent "đã cài" chỉ được tải khi mở modal "Tạo chat
+// mới" — ai mở thẳng 1 chat có sẵn (không qua modal đó trong phiên này) sẽ thấy dropdown đổi
+// agent (showAgentPicker) chỉ còn đúng 2 lựa chọn mặc định (Claude + Shell), tưởng nhầm là
+// giới hạn "1 chat chỉ dùng được 1 loại AI". Giờ tải ngay lúc khởi động app, không đợi.
+async function refreshInstalledAgents() {
   try {
     const sysInfo = await fetch('/api/system-info').then(r => r.json()).catch(() => ({}));
-    _installedAgents = new Set(['shell']);
+    const next = new Set(['shell']);
     if (sysInfo.agents) {
       for (const [id, info] of Object.entries(sysInfo.agents)) {
-        if (info.installed) _installedAgents.add(id);
+        if (info.installed) next.add(id);
       }
     }
+    _installedAgents = next;
   } catch {}
+}
+
+async function openNewChatModal() {
+  await refreshInstalledAgents(); // làm mới — phòng khi cài thêm agent giữa lúc app đang mở
 
   // Set tên mặc định
   document.getElementById('nc-name').value = `Cuộc chat ${(chats||[]).length + 1}`;
