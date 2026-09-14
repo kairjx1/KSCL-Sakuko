@@ -762,7 +762,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.96</span>
+  <span class="version" id="app-version">v1.0.97</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -3078,8 +3078,11 @@ async function renderSettingsMemory() {
     ? entries.map(([key, item]) => `
       <div class="settings-row" data-mem-key="${esc(key)}">
         <div style="min-width:0;flex:1;margin-right:10px">
-          <div style="font-size:12px;font-weight:600;color:var(--text)">${esc(key)}</div>
-          <div style="font-size:11.5px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(String(item.value))}">${esc(String(item.value))}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px">
+            ${esc(key)}
+            ${(item.tags || []).includes('auto') ? '<span title="AI tự ghi nhớ" style="font-size:9px;font-weight:500;color:var(--text3)">🤖 tự động</span>' : ''}
+          </div>
+          <div class="mem-fact-value" style="font-size:11.5px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" title="Bấm để sửa: ${esc(String(item.value))}" onclick='editMemoryFact(${JSON.stringify(key)}, this, ${JSON.stringify(item.tags || [])})'>${esc(String(item.value))}</div>
           <div style="font-size:9.5px;color:var(--text3);margin-top:2px">${item.updatedAt ? new Date(item.updatedAt).toLocaleString('vi-VN') : ''}</div>
         </div>
         <button class="settings-btn danger" style="flex-shrink:0" onclick="deleteMemoryFact('${esc(key)}')">🗑</button>
@@ -3088,7 +3091,7 @@ async function renderSettingsMemory() {
 
   el.innerHTML = `
     <div class="settings-row" style="border-bottom:none;padding-bottom:4px">
-      <span class="sr-label">Những điều AI đang nhớ về bạn, dùng lại trong mọi cuộc chat</span>
+      <span class="sr-label">Những điều AI đang nhớ về bạn, dùng lại trong mọi cuộc chat — bấm vào nội dung để sửa cho đúng</span>
     </div>
     <div id="mem-fact-list">${listHtml}</div>
     <div class="settings-row" style="gap:6px;flex-wrap:wrap">
@@ -3096,6 +3099,38 @@ async function renderSettingsMemory() {
       <input id="mem-new-value" placeholder="Nội dung" style="flex:2;min-width:120px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:6px 8px">
       <button class="settings-btn" onclick="addMemoryFact()">+ Thêm</button>
     </div>`;
+}
+
+// Sửa tại chỗ: bấm vào giá trị -> hiện ô nhập, Enter/blur để lưu (giống sửa inline thông
+// thường). Giữ nguyên key + tags cũ (kể cả tag "auto"), chỉ đổi value — đúng ý người dùng
+// "AI tự đẩy ra, tôi có thể chỉnh cho đúng với tôi" mà không mất dấu đây là fact loại nào.
+function editMemoryFact(key, el, tags) {
+  const current = el.textContent;
+  const input = document.createElement('input');
+  input.value = current;
+  input.style.cssText = 'width:100%;background:var(--bg);border:1px solid var(--accent);border-radius:5px;color:var(--text);font-size:11.5px;padding:3px 6px';
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+  const save = async () => {
+    const newValue = input.value.trim();
+    if (newValue && newValue !== current) {
+      try {
+        // Giữ nguyên tags cũ (kể cả "auto") — thiếu dòng này sẽ mất badge 🤖 sau khi sửa
+        await fetch('/api/memory', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, value: newValue, tags: tags || [], relayToken: getRelayToken() }),
+        });
+        showToast('✅ Đã lưu');
+      } catch { showToast('⚠️ Lỗi lưu — thử lại'); }
+    }
+    renderSettingsMemory();
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') { input.value = current; input.blur(); }
+  });
+  input.addEventListener('blur', save, { once: true });
 }
 
 async function deleteMemoryFact(key) {
@@ -3247,7 +3282,10 @@ async function summarizeMemoryNow() {
   if (!currentChatId) return showToast('Chọn cuộc chat trước');
   showToast('🧠 Đang chắt lọc bộ nhớ...');
   try {
-    const r = await fetch(`/api/chats/${currentChatId}/summarize-now`, { method: 'POST' });
+    const r = await fetch(`/api/chats/${currentChatId}/summarize-now`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ relayToken: getRelayToken() }),
+    });
     const d = await r.json();
     if (d.ok) showToast('✅ Đã cập nhật tóm tắt bộ nhớ');
     else showToast('⚠️ ' + (d.error || 'Chắt lọc thất bại'));
