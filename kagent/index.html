@@ -762,7 +762,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.98</span>
+  <span class="version" id="app-version">v1.0.99</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -3316,7 +3316,7 @@ async function summarizeMemoryNow() {
     });
     const d = await r.json();
     if (d.ok) { showToast('✅ Đã cập nhật tóm tắt bộ nhớ'); await loadMemorySummaryView(); }
-    else showToast('⚠️ ' + (d.error || 'Chắt lọc thất bại'));
+    else showToast('⚠️ ' + (d.reason || d.error || 'Chắt lọc thất bại'));
   } catch {
     showToast('⚠️ Chắt lọc thất bại — kiểm tra kết nối');
   }
