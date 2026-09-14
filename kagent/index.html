@@ -762,7 +762,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.100</span>
+  <span class="version" id="app-version">v1.0.101</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -978,7 +978,7 @@ dialog.dlg header button:hover{color:var(--text)}
     Bấm nút bên dưới để chắt lọc ngay, không cần đợi đủ 20 tin.
   </div>
   <div style="flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px">
-    <button class="mem-btn primary" onclick="summarizeMemoryNow()">🧠 Chắt lọc ngay</button>
+    <button class="mem-btn primary" id="btn-summarize-now" onclick="summarizeMemoryNow()">🧠 Chắt lọc ngay</button>
     <div>
       <div style="font-size:10.5px;color:#9a9a9a;margin-bottom:5px;line-height:1.4;display:flex;justify-content:space-between;align-items:center">
         <span>Bản tóm tắt hiện có của chat này</span>
@@ -3306,19 +3306,33 @@ async function resetMemoryPrompt() {
   showToast('↺ Đã về mặc định');
 }
 
+// BUG THẬT người dùng báo: bấm xong chỉ thấy "Đang chắt lọc..." rồi im, tưởng không có
+// phản hồi gì. Nguyên nhân: toast tự ẩn sau 2.5s (showToast), trong khi việc chắt lọc thật
+// có thể chạy LÂU HƠN NHIỀU (thử lần lượt nhiều agent AI, mỗi agent timeout tới 30s) — toast
+// biến mất trước khi có kết quả, tạo cảm giác "im lặng" dù vẫn đang chạy ngầm. Sửa: nút bấm
+// tự đổi chữ + khóa lại (không tự ẩn) suốt thời gian chờ, chỉ đổi lại khi có kết quả THẬT.
 async function summarizeMemoryNow() {
   if (!currentChatId) return showToast('Chọn cuộc chat trước');
-  showToast('🧠 Đang chắt lọc bộ nhớ...');
+  const btn = document.getElementById('btn-summarize-now');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '🧠 Đang chắt lọc... (có thể mất tới 1-2 phút)';
   try {
+    // Timeout phòng xa: nếu server treo thật sự (không phải chỉ chậm), vẫn phải có phản hồi
+    // sau tối đa 3 phút thay vì im lặng vô thời hạn.
     const r = await fetch(`/api/chats/${currentChatId}/summarize-now`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ relayToken: getRelayToken() }),
+      signal: AbortSignal.timeout(180000),
     });
     const d = await r.json();
     if (d.ok) { showToast('✅ Đã cập nhật tóm tắt bộ nhớ'); await loadMemorySummaryView(); }
     else showToast('⚠️ ' + (d.reason || d.error || 'Chắt lọc thất bại'));
-  } catch {
-    showToast('⚠️ Chắt lọc thất bại — kiểm tra kết nối');
+  } catch (e) {
+    showToast(e?.name === 'TimeoutError' ? '⚠️ Chắt lọc quá lâu (>3 phút) — thử lại sau' : '⚠️ Chắt lọc thất bại — kiểm tra kết nối');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
   refreshMemoryProgress();
 }
