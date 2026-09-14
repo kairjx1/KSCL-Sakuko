@@ -739,7 +739,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.89</span>
+  <span class="version" id="app-version">v1.0.90</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1091,6 +1091,25 @@ function updateModelPill(agentId) {
     liveBtn.style.display = agentId === 'shell' ? 'none' : '';
   }
 
+  // Dynamic model list for claude: fetch từ /api/claude-models — cache do kagent-relay
+  // tự đồng bộ hàng ngày từ Anthropic API thật (Claude Code CLI không có lệnh liệt kê
+  // model như agy/opencode). Nếu chưa sync lần nào hoặc lỗi mạng, models trả về rỗng →
+  // fallback đúng về danh sách tĩnh sẵn có trong agents-config.json, không vỡ UI.
+  if (agentId === 'claude') {
+    fetch('/api/claude-models').then(r => r.json()).then(data => {
+      if (data.models && data.models.length) {
+        if (!window._agentsConfigCache) window._agentsConfigCache = {};
+        window._agentsConfigCache.claude = { ...agentCfg, models: data.models };
+        _applyModelPill(agentId, window._agentsConfigCache.claude);
+      } else {
+        _applyModelPill(agentId, agentCfg);
+      }
+    }).catch(() => {
+      _applyModelPill(agentId, agentCfg);
+    });
+    return;
+  }
+
   // Dynamic model list for antigravity: fetch from /api/agy-models
   if (agentId === 'antigravity') {
     fetch('/api/agy-models').then(r => r.json()).then(data => {
@@ -1172,6 +1191,26 @@ function toggleModelPicker() {
   if (!picker) return;
   if (picker.classList.contains('open')) { picker.classList.remove('open'); return; }
   const agentId = document.getElementById('agent-select').value || 'claude';
+
+  // For claude: fetch cached live models (đồng bộ hàng ngày từ Anthropic API, xem
+  // /api/claude-models) before showing picker
+  if (agentId === 'claude') {
+    picker.innerHTML = '<div style="padding:8px;opacity:.6;font-size:12px">Đang tải model...</div>';
+    picker.classList.add('open');
+    const agentCfg = (window._agentsConfigCache || {}).claude || {};
+    fetch('/api/claude-models').then(r => r.json()).then(data => {
+      if (data.models && data.models.length) {
+        if (!window._agentsConfigCache) window._agentsConfigCache = {};
+        window._agentsConfigCache.claude = { ...agentCfg, models: data.models };
+        const cur = window._selectedModel;
+        const valid = data.models.find(m => m.id === cur);
+        if (!valid) { window._selectedModel = data.models[0]?.id || null; _refreshModelPill(window._agentsConfigCache.claude); }
+      }
+      _renderModelPicker(agentId);
+    }).catch(() => { _renderModelPicker(agentId); });
+    setTimeout(() => document.addEventListener('click', closePicker, {once:true}), 50);
+    return;
+  }
 
   // For antigravity: fetch live models before showing picker
   if (agentId === 'antigravity') {
