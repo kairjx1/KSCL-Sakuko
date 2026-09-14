@@ -762,7 +762,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.94</span>
+  <span class="version" id="app-version">v1.0.95</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -3038,10 +3038,11 @@ function openSettingsDialog(tab) {
 }
 function setSettingsTab(tab) {
   document.querySelectorAll('.settings-tab').forEach(b => b.classList.toggle('active', b.dataset.stab === tab));
-  ['kimtiem', 'account', 'system'].forEach(id => {
+  ['kimtiem', 'memory', 'account', 'system'].forEach(id => {
     document.getElementById('settings-panel-' + id).hidden = (id !== tab);
   });
   if (tab === 'kimtiem') renderSettingsKimTiem();
+  if (tab === 'memory') renderSettingsMemory();
   if (tab === 'account') renderSettingsAccount();
   if (tab === 'system') renderSettingsSystem();
 }
@@ -3059,6 +3060,63 @@ async function renderSettingsKimTiem() {
       <span class="sr-label">Bật/tắt từng module, xem chi tiết</span>
       <button class="settings-btn" onclick="document.getElementById('dlg-settings').close(); if(!_ktOpen) toggleKimTiem();">Quản lý Kim Tiêm →</button>
     </div>`;
+}
+
+// Bộ nhớ cá nhân (bảng `memory` D1, theo user_id) — AI tự dùng lại trong MỌI chat của người
+// này. Trước đây chỉ xem được qua truy vấn D1 trực tiếp; giờ có màn hình cho chính người dùng
+// tự đọc/xóa. Ẩn các key bắt đầu bằng "_" (key hệ thống nội bộ, vd _summary_prompt_override —
+// đã có UI riêng ở panel Bộ nhớ chat, tránh hiện trùng/gây nhầm ở đây).
+async function renderSettingsMemory() {
+  const el = document.getElementById('settings-panel-memory');
+  el.innerHTML = '<div class="settings-row"><span class="sr-label">Đang tải...</span></div>';
+  let mem = {};
+  try { mem = await fetch('/api/memory').then(r => r.json()); } catch {}
+  const entries = Object.entries(mem).filter(([k]) => !k.startsWith('_'));
+
+  const listHtml = entries.length
+    ? entries.map(([key, item]) => `
+      <div class="settings-row" data-mem-key="${esc(key)}">
+        <div style="min-width:0;flex:1;margin-right:10px">
+          <div style="font-size:12px;font-weight:600;color:var(--text)">${esc(key)}</div>
+          <div style="font-size:11.5px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(String(item.value))}">${esc(String(item.value))}</div>
+          <div style="font-size:9.5px;color:var(--text3);margin-top:2px">${item.updatedAt ? new Date(item.updatedAt).toLocaleString('vi-VN') : ''}</div>
+        </div>
+        <button class="settings-btn danger" style="flex-shrink:0" onclick="deleteMemoryFact('${esc(key)}')">🗑</button>
+      </div>`).join('')
+    : '<div class="settings-row"><span class="sr-label">Chưa có gì — AI sẽ tự ghi nhớ khi bạn nói những điều muốn AI nhớ lâu dài</span></div>';
+
+  el.innerHTML = `
+    <div class="settings-row" style="border-bottom:none;padding-bottom:4px">
+      <span class="sr-label">Những điều AI đang nhớ về bạn, dùng lại trong mọi cuộc chat</span>
+    </div>
+    <div id="mem-fact-list">${listHtml}</div>
+    <div class="settings-row" style="gap:6px;flex-wrap:wrap">
+      <input id="mem-new-key" placeholder="Tên (vd: sở thích)" style="flex:1;min-width:100px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:6px 8px">
+      <input id="mem-new-value" placeholder="Nội dung" style="flex:2;min-width:120px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:6px 8px">
+      <button class="settings-btn" onclick="addMemoryFact()">+ Thêm</button>
+    </div>`;
+}
+
+async function deleteMemoryFact(key) {
+  document.querySelector(`[data-mem-key="${CSS.escape(key)}"]`)?.remove();
+  try {
+    await fetch(`/api/memory/${encodeURIComponent(key)}?relayToken=${encodeURIComponent(getRelayToken() || '')}`, { method: 'DELETE' });
+    showToast('🗑️ Đã xóa');
+  } catch { showToast('⚠️ Lỗi xóa — thử lại'); }
+}
+
+async function addMemoryFact() {
+  const key = document.getElementById('mem-new-key').value.trim();
+  const value = document.getElementById('mem-new-value').value.trim();
+  if (!key || !value) return showToast('Nhập đủ tên và nội dung');
+  try {
+    await fetch('/api/memory', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value, tags: [], relayToken: getRelayToken() }),
+    });
+    showToast('✅ Đã thêm');
+    renderSettingsMemory();
+  } catch { showToast('⚠️ Lỗi lưu — thử lại'); }
 }
 
 function renderSettingsAccount() {
@@ -3899,11 +3957,13 @@ setInterval(checkUpdate, 30 * 60 * 1000);
   </header>
   <div class="settings-tabs">
     <button type="button" class="settings-tab" data-stab="kimtiem" onclick="setSettingsTab('kimtiem')">💉 Kim Tiêm</button>
+    <button type="button" class="settings-tab" data-stab="memory" onclick="setSettingsTab('memory')">🧠 Bộ nhớ</button>
     <button type="button" class="settings-tab" data-stab="account" onclick="setSettingsTab('account')">👤 Tài khoản</button>
     <button type="button" class="settings-tab" data-stab="system" onclick="setSettingsTab('system')">⚙️ Hệ thống</button>
   </div>
   <div class="dlg-body">
     <div id="settings-panel-kimtiem"></div>
+    <div id="settings-panel-memory" hidden></div>
     <div id="settings-panel-account" hidden></div>
     <div id="settings-panel-system" hidden></div>
   </div>
