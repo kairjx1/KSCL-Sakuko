@@ -133,6 +133,29 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   text-decoration:none;padding:2px 2px;border-radius:4px;
 }
 #sp-addproj:hover{text-decoration:underline}
+#search-box-wrap{position:relative;padding:6px 8px 2px}
+#search-box{
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;
+  color:var(--text);font-size:12px;padding:7px 10px;outline:none;transition:border-color .12s;
+}
+#search-box:focus{border-color:var(--accent)}
+#search-results{
+  display:none;position:absolute;left:8px;right:8px;top:calc(100% - 2px);z-index:50;
+  background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  max-height:360px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+#search-results.open{display:block}
+.sr-item{
+  padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;
+}
+.sr-item:last-child{border-bottom:none}
+.sr-item:hover{background:var(--bg3)}
+.sr-item .sr-chat{font-size:11px;font-weight:600;color:var(--accent);margin-bottom:3px;display:flex;justify-content:space-between;gap:8px}
+.sr-item .sr-chat .sr-src{font-size:9px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}
+.sr-item .sr-snippet{font-size:11.5px;color:var(--text2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.sr-item .sr-snippet mark{background:var(--accent);color:#000;border-radius:2px;padding:0 1px}
+.sr-empty,.sr-loading{padding:14px 12px;font-size:11.5px;color:var(--text3);text-align:center}
+
 #sp-chat-hdr{
   display:flex;align-items:center;justify-content:space-between;
   padding:6px 8px 2px;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;
@@ -739,7 +762,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.90</span>
+  <span class="version" id="app-version">v1.0.91</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -787,6 +810,11 @@ dialog.dlg header button:hover{color:var(--text)}
       </div>
       <div id="sp-dir" title="Thư mục làm việc"></div>
       <a id="sp-addproj" onclick="openProjModal(true)">＋ Thêm dự án</a>
+    </div>
+
+    <div id="search-box-wrap">
+      <input id="search-box" type="text" placeholder="🔍 Tìm trong lịch sử chat..." oninput="onSearchInput(this.value)" onfocus="onSearchInput(this.value)">
+      <div id="search-results"></div>
     </div>
 
     <div id="sp-chat-hdr">
@@ -1992,6 +2020,81 @@ async function loadChats() {
   }
   renderChatList();
 }
+
+// ── TÌM KIẾM LỊCH SỬ CHAT ──────────────────────────────────────────────────
+// Tìm toàn văn qua messages + chat_summaries (kể cả tin nhắn cũ đã bị cron dọn dẹp
+// khi D1 chạm 4GB, vì tóm tắt vẫn giữ lại) — chỉ hoạt động khi đã đăng nhập Lark
+// (dữ liệu nằm trên relay D1); chế độ Local chưa có kho trung tâm để tìm xuyên project.
+let _searchDebounce = null;
+function onSearchInput(q) {
+  clearTimeout(_searchDebounce);
+  const box = document.getElementById('search-results');
+  q = q.trim();
+  if (!q) { box.classList.remove('open'); box.innerHTML = ''; return; }
+  if (!useRelay()) {
+    box.innerHTML = '<div class="sr-empty">Tìm kiếm cần đăng nhập Lark (chưa hỗ trợ ở chế độ Local)</div>';
+    box.classList.add('open');
+    return;
+  }
+  if (q.length < 2) return;
+  box.innerHTML = '<div class="sr-loading">Đang tìm...</div>';
+  box.classList.add('open');
+  _searchDebounce = setTimeout(() => runSearch(q), 300);
+}
+
+function highlightMatch(text, q) {
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  const CTX = 50;
+  let snippet = text;
+  if (idx >= 0) {
+    const start = Math.max(0, idx - CTX);
+    const end = Math.min(text.length, idx + q.length + CTX);
+    snippet = (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
+  } else {
+    snippet = text.slice(0, CTX * 2);
+  }
+  const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+  return esc(snippet).replace(re, '<mark>$1</mark>');
+}
+
+async function runSearch(q) {
+  const box = document.getElementById('search-results');
+  try {
+    const { results } = await relayFetch(`/search?q=${encodeURIComponent(q)}`);
+    if (!results || !results.length) {
+      box.innerHTML = '<div class="sr-empty">Không tìm thấy gì khớp</div>';
+      return;
+    }
+    box.innerHTML = results.map(r => `
+      <div class="sr-item" onclick='jumpToChat(${JSON.stringify(r.project_id)}, ${JSON.stringify(r.chat_id)})'>
+        <div class="sr-chat"><span>${esc(r.chat_name || 'Chat')}</span><span class="sr-src">${r.source === 'summary' ? '📋 tóm tắt' : (r.role === 'user' ? '🗣️ bạn hỏi' : '🤖 trả lời')}</span></div>
+        <div class="sr-snippet">${highlightMatch(r.content || '', q)}</div>
+      </div>`).join('');
+  } catch (e) {
+    box.innerHTML = '<div class="sr-empty">Lỗi tìm kiếm: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function jumpToChat(projectId, chatId) {
+  document.getElementById('search-results').classList.remove('open');
+  document.getElementById('search-box').value = '';
+  const sel = document.getElementById('sp-select');
+  if (sel.value !== projectId && projects.find(p => p.id === projectId)) {
+    sel.value = projectId;
+    const p = projects.find(x => x.id === projectId);
+    if (p) window._workDir = p.workDir || p.work_dir || null;
+    updateSpDir();
+    await loadChats();
+  }
+  if (!chats.find(c => c.id === chatId)) { showToast('⚠️ Không tìm thấy chat này (có thể đã bị xóa)'); return; }
+  selectChat(chatId);
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#search-box-wrap')) {
+    document.getElementById('search-results')?.classList.remove('open');
+  }
+});
 
 // ── CHATS ──
 function renderChatList() {
