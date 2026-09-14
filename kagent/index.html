@@ -762,7 +762,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.91</span>
+  <span class="version" id="app-version">v1.0.92</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -2168,7 +2168,11 @@ function selectChat(chatId) {
 async function loadRelayHistory(chatId) {
   if (!useRelay()) return;
   try {
-    const msgs = await fetch(`/api/relay/chats/${chatId}/messages`).then(r => r.json());
+    // Dùng route relay ĐÃ XÁC THỰC (Bearer + kiểm tra user_id) thay vì proxy local cũ
+    // '/api/relay/chats/:id/messages' — route đó KHÔNG kiểm tra ai đang hỏi, chỉ cần biết
+    // đúng chatId (UUID) là đọc được nội dung của BẤT KỲ ai. Phát hiện khi rà soát bảo mật
+    // theo yêu cầu "mỗi tài khoản chỉ thấy đúng chat của mình".
+    const msgs = await relayFetch(`/chats/${chatId}/messages`).catch(() => []);
     if (!msgs || msgs.length === 0) return;
     const cm = document.getElementById('chat-messages');
     // THAY HẲN nội dung bằng bản từ relay thay vì cộng dồn lên trên bản 'history' local
