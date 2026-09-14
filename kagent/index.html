@@ -762,7 +762,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.93</span>
+  <span class="version" id="app-version">v1.0.94</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1147,6 +1147,24 @@ function updateModelPill(agentId) {
     return;
   }
 
+  // Dynamic model list for codex: fetch từ /api/codex-models — cùng cơ chế như claude
+  // ở trên (cache do kagent-relay tự đồng bộ hàng ngày từ OpenAI API thật, vì Codex CLI
+  // cũng không có lệnh liệt kê model). Rỗng/lỗi → fallback về danh sách tĩnh.
+  if (agentId === 'codex') {
+    fetch('/api/codex-models').then(r => r.json()).then(data => {
+      if (data.models && data.models.length) {
+        if (!window._agentsConfigCache) window._agentsConfigCache = {};
+        window._agentsConfigCache.codex = { ...agentCfg, models: data.models };
+        _applyModelPill(agentId, window._agentsConfigCache.codex);
+      } else {
+        _applyModelPill(agentId, agentCfg);
+      }
+    }).catch(() => {
+      _applyModelPill(agentId, agentCfg);
+    });
+    return;
+  }
+
   // Dynamic model list for antigravity: fetch from /api/agy-models
   if (agentId === 'antigravity') {
     fetch('/api/agy-models').then(r => r.json()).then(data => {
@@ -1242,6 +1260,26 @@ function toggleModelPicker() {
         const cur = window._selectedModel;
         const valid = data.models.find(m => m.id === cur);
         if (!valid) { window._selectedModel = data.models[0]?.id || null; _refreshModelPill(window._agentsConfigCache.claude); }
+      }
+      _renderModelPicker(agentId);
+    }).catch(() => { _renderModelPicker(agentId); });
+    setTimeout(() => document.addEventListener('click', closePicker, {once:true}), 50);
+    return;
+  }
+
+  // For codex: fetch cached live models (đồng bộ hàng ngày từ OpenAI API, xem
+  // /api/codex-models) before showing picker
+  if (agentId === 'codex') {
+    picker.innerHTML = '<div style="padding:8px;opacity:.6;font-size:12px">Đang tải model...</div>';
+    picker.classList.add('open');
+    const agentCfg = (window._agentsConfigCache || {}).codex || {};
+    fetch('/api/codex-models').then(r => r.json()).then(data => {
+      if (data.models && data.models.length) {
+        if (!window._agentsConfigCache) window._agentsConfigCache = {};
+        window._agentsConfigCache.codex = { ...agentCfg, models: data.models };
+        const cur = window._selectedModel;
+        const valid = data.models.find(m => m.id === cur);
+        if (!valid) { window._selectedModel = data.models[0]?.id || null; _refreshModelPill(window._agentsConfigCache.codex); }
       }
       _renderModelPicker(agentId);
     }).catch(() => { _renderModelPicker(agentId); });
