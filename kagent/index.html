@@ -762,7 +762,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.97</span>
+  <span class="version" id="app-version">v1.0.98</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -979,6 +979,13 @@ dialog.dlg header button:hover{color:var(--text)}
   </div>
   <div style="flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px">
     <button class="mem-btn primary" onclick="summarizeMemoryNow()">🧠 Chắt lọc ngay</button>
+    <div>
+      <div style="font-size:10.5px;color:#9a9a9a;margin-bottom:5px;line-height:1.4;display:flex;justify-content:space-between;align-items:center">
+        <span>Bản tóm tắt hiện có của chat này</span>
+        <span id="mem-summary-updated" style="color:#666;font-weight:400"></span>
+      </div>
+      <div id="mem-summary-view" style="font-size:11px;color:#c9c9c9;line-height:1.5;background:#0f0f0f;border:1px solid #262626;border-radius:8px;padding:10px;max-height:220px;overflow-y:auto;white-space:pre-wrap">Chưa có bản tóm tắt nào — bấm "Chắt lọc ngay" ở trên.</div>
+    </div>
     <div>
       <div style="font-size:10.5px;color:#9a9a9a;margin-bottom:5px;line-height:1.4">Hướng dẫn cho AI khi chắt lọc — ô dưới đã điền sẵn mặc định, sửa trực tiếp rồi bấm Lưu để dùng bản của bạn.</div>
       <textarea id="memory-prompt-box" class="mem-textarea" placeholder="Đang tải mặc định..."></textarea>
@@ -3240,6 +3247,7 @@ async function toggleMemoryPanel() {
     panel.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%';
     RightPanel.open({ title: '🧠 Bộ nhớ', node: panel, onClose: () => { _memOpen = false; } });
     await loadMemoryPrompt();
+    await loadMemorySummaryView();
     refreshMemoryProgress();
   } else {
     RightPanel.close();
@@ -3272,6 +3280,26 @@ async function saveMemoryPrompt() {
   } catch { showToast('⚠️ Lưu thất bại — kiểm tra kết nối'); }
 }
 
+// Hiện bản tóm tắt đã chắt lọc — TRƯỚC ĐÂY chắt lọc xong lưu đúng vào D1 nhưng không có
+// chỗ nào hiển thị lại, khiến người dùng bấm "Chắt lọc ngay" xong không biết kết quả ở đâu.
+async function loadMemorySummaryView() {
+  const view = document.getElementById('mem-summary-view');
+  const updatedEl = document.getElementById('mem-summary-updated');
+  if (!currentChatId) return;
+  try {
+    const s = await fetch(`/api/chats/${currentChatId}/summary`).then(r => r.json());
+    if (s && s.summary) {
+      view.textContent = s.summary;
+      updatedEl.textContent = s.updated_at ? new Date(s.updated_at * 1000).toLocaleString('vi-VN') : '';
+    } else {
+      view.textContent = 'Chưa có bản tóm tắt nào — bấm "Chắt lọc ngay" ở trên.';
+      updatedEl.textContent = '';
+    }
+  } catch {
+    view.textContent = 'Không tải được — kiểm tra kết nối.';
+  }
+}
+
 async function resetMemoryPrompt() {
   try { await fetch(`/api/memory/${MEMORY_PROMPT_KEY}`, { method: 'DELETE' }); } catch {}
   document.getElementById('memory-prompt-box').value = await fetchDefaultSummaryPrompt();
@@ -3287,7 +3315,7 @@ async function summarizeMemoryNow() {
       body: JSON.stringify({ relayToken: getRelayToken() }),
     });
     const d = await r.json();
-    if (d.ok) showToast('✅ Đã cập nhật tóm tắt bộ nhớ');
+    if (d.ok) { showToast('✅ Đã cập nhật tóm tắt bộ nhớ'); await loadMemorySummaryView(); }
     else showToast('⚠️ ' + (d.error || 'Chắt lọc thất bại'));
   } catch {
     showToast('⚠️ Chắt lọc thất bại — kiểm tra kết nối');
