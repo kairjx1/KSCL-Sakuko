@@ -211,7 +211,10 @@ tr:hover td{background:var(--bg3)}
     <div id="backup-section" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:12px;display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:13px;font-weight:700">💾 Sao lưu D1</div>
-        <button class="btn btn-ghost btn-sm" id="btn-backup-now" onclick="runBackupNow()">📦 Sao lưu ngay</button>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" id="btn-backup-now" onclick="runBackupNow()">📦 Sao lưu ngay</button>
+          <button class="btn btn-ghost btn-sm" id="btn-backup-download" onclick="downloadLatestBackup()">⬇️ Tải xuống</button>
+        </div>
       </div>
       <div style="font-size:11px;color:var(--text2);margin-bottom:10px">
         Tự động chạy hàng ngày (~02:00 sáng), giữ 14 bản gần nhất trên R2. Restore là thao tác tay.
@@ -584,6 +587,8 @@ async function loadOverview() {
 }
 
 // ── BACKUP D1 (chỉ admin) ──
+let _backups = []; // cache danh sách backup gần nhất để "Tải xuống" (nút chung) biết bản mới nhất
+
 function fmtBytes(n) {
   if (n > 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
   return (n / 1024).toFixed(1) + ' KB';
@@ -595,15 +600,47 @@ async function loadBackups() {
     const data = await api('/api/admin/backups');
     const items = data.backups || [];
     if (!items.length) { el.innerHTML = 'Chưa có bản sao lưu nào.'; return; }
+    _backups = items;
     el.innerHTML = items.map(b => `
-      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
         <span>${esc(b.key.replace('backups/', ''))}</span>
-        <span>${fmtBytes(b.sizeBytes)} — ${new Date(b.uploaded).toLocaleString('vi-VN')}</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          ${fmtBytes(b.sizeBytes)} — ${new Date(b.uploaded).toLocaleString('vi-VN')}
+          <button class="btn btn-ghost btn-sm" onclick="downloadBackup('${esc(b.key)}')" title="Tải xuống">⬇️</button>
+        </span>
       </div>
     `).join('');
   } catch (e) {
     el.innerHTML = `<span style="color:var(--red)">Lỗi tải danh sách: ${esc(e.message)}</span>`;
   }
+}
+
+// Endpoint trả file nhị phân (không phải JSON) nên không dùng api() — fetch riêng,
+// đọc blob rồi tự tạo link tải (route yêu cầu Bearer header, <a href> thường không
+// gửi được header nên phải làm qua JS).
+async function downloadBackup(key) {
+  try {
+    const res = await fetch(`${RELAY_URL}/api/admin/backups/download?key=${encodeURIComponent(key)}`, {
+      headers: { 'Authorization': `Bearer ${getToken()}` }
+    });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `HTTP ${res.status}`); }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = key.replace('backups/', '');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    toast('❌ Lỗi tải xuống: ' + e.message, 'err');
+  }
+}
+
+async function downloadLatestBackup() {
+  if (!_backups.length) { toast('Chưa có bản sao lưu nào', 'err'); return; }
+  await downloadBackup(_backups[0].key); // đã sort mới nhất trước
 }
 
 async function runBackupNow() {
