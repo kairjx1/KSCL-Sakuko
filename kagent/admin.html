@@ -487,17 +487,21 @@ async function loadUsers() {
     return;
   }
   tbody.innerHTML = users.map(u => {
-    // ID từ Lark OAuth: ou_xxx (không có prefix). ID email: local:xxx
+    // ID từ Lark OAuth: ou_xxx (không có prefix). ID email: local:xxx. ID Google: google:xxx
     const isLocal = u.id.startsWith('local:');
-    const isLark = !isLocal; // Tất cả non-local là Lark
+    const isGoogle = u.id.startsWith('google:');
+    const isLark = !isLocal && !isGoogle;
     const isSelf = u.id === currentUser.id;
     const lastSeen = u.last_seen ? new Date(u.last_seen * 1000).toLocaleDateString('vi') : '—';
     const roleColor = u.role === 'admin' ? '#f59e0b' : (u.role === 'manager' ? '#38bdf8' : 'var(--text2)');
     const roleLabel = u.role === 'admin' ? '👑 Admin' : (u.role === 'manager' ? '🛠️ Quản lý' : '👤 User');
+    const loginTag = isLark ? '<span class="tag enabled">🐦 Lark</span>'
+      : isGoogle ? '<span class="tag enabled" style="background:rgba(66,133,244,.12);color:#8ab4f8;border-color:rgba(66,133,244,.3)">🔵 Google</span>'
+      : '<span class="tag user">🔑 Email</span>';
     return `<tr>
       <td style="font-weight:600">${esc(u.name || '—')}${isSelf ? ' <span style="font-size:10px;color:var(--accent)">(bạn)</span>' : ''}</td>
       <td style="color:var(--text2);font-size:11px">${esc(u.email || '—')}</td>
-      <td>${isLark ? '<span class="tag enabled">🐦 Lark</span>' : '<span class="tag user">🔑 Email</span>'}</td>
+      <td>${loginTag}</td>
       <td>
         ${isSelf
           ? `<span style="font-size:11px;color:${roleColor};font-weight:600">${roleLabel}</span>`
@@ -509,8 +513,9 @@ async function loadUsers() {
         }
       </td>
       <td style="color:var(--text2);font-size:11px">${lastSeen}</td>
-      <td>
-        ${!isSelf ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}', '${esc(u.name || '')}')">Xóa</button>` : '—'}
+      <td style="display:flex;gap:6px">
+        ${isLocal ? `<button class="btn btn-ghost btn-sm" onclick="resetUserPassword('${u.id}', '${esc(u.name || u.email || '')}')" title="Tài khoản đăng nhập bằng email/mật khẩu — cấp lại mật khẩu mới khi họ quên">🔑 Đặt lại MK</button>` : ''}
+        ${!isSelf ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}', '${esc(u.name || '')}')">Xóa</button>` : (!isLocal ? '—' : '')}
       </td>
     </tr>`;
   }).join('');
@@ -528,6 +533,46 @@ async function deleteUser(userId, name) {
   await api(`/api/admin/users/${userId}`, { method: 'DELETE' });
   toast('🗑️ Đã xóa user', 'ok');
   loadUsers();
+}
+
+// ── ĐẶT LẠI MẬT KHẨU (chỉ tài khoản đăng nhập bằng email — người dùng Lark/Google
+// không có mật khẩu cục bộ nên không cần) — dùng khi người dùng quên mật khẩu, admin
+// cấp ngay 1 mật khẩu mới ngẫu nhiên để đưa lại cho họ, không cần biết mật khẩu cũ.
+// Server tự tăng token_version nên MỌI phiên đăng nhập cũ của người đó (mọi thiết bị)
+// bị thu hồi ngay lập tức, buộc đăng nhập lại bằng mật khẩu mới này.
+async function resetUserPassword(userId, name) {
+  if (!confirm(`Đặt lại mật khẩu cho "${name}"?\n\nMật khẩu mới sẽ được tạo ngẫu nhiên và hiện ra để bạn gửi lại cho người dùng. Mọi phiên đăng nhập cũ của họ sẽ bị đăng xuất ngay.`)) return;
+  const res = await api(`/api/admin/users/${userId}/reset-password`, { method: 'POST' });
+  if (res.error) { toast('❌ Lỗi: ' + res.error, 'err'); return; }
+  showResetPasswordResult(name, res.password);
+  loadUsers();
+}
+
+function showResetPasswordResult(name, password) {
+  document.getElementById('modal-box').innerHTML = `
+    <h3>🔑 Mật khẩu mới cho "${esc(name)}"</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
+      Mật khẩu này CHỈ hiện ra 1 lần — sao chép và gửi lại cho người dùng ngay. Họ sẽ cần đăng nhập
+      lại (mọi phiên cũ đã bị đăng xuất) và nên đổi sang mật khẩu riêng nếu KAgent có mục đổi mật khẩu.
+    </p>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="f-new-password" readonly value="${esc(password)}" style="flex:1;font-family:monospace;font-size:14px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:7px">
+      <button class="btn btn-primary btn-sm" onclick="copyNewPassword()">📋 Copy</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal()">Xong</button>
+    </div>
+  `;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function copyNewPassword() {
+  const el = document.getElementById('f-new-password');
+  el.select();
+  navigator.clipboard?.writeText(el.value).then(() => toast('✅ Đã copy mật khẩu', 'ok')).catch(() => {
+    document.execCommand('copy');
+    toast('✅ Đã copy mật khẩu', 'ok');
+  });
 }
 
 function openCreateUserModal() {
