@@ -762,7 +762,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.112</span>
+  <span class="version" id="app-version">v1.0.113</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -3320,9 +3320,11 @@ async function summarizeMemoryNow() {
   try {
     // Timeout phòng xa: nếu server treo thật sự (không phải chỉ chậm), vẫn phải có phản hồi
     // sau tối đa 3 phút thay vì im lặng vô thời hạn.
+    // Gửi kèm agentId của CHÍNH cuộc chat này — người dùng chỉ ra đúng: đang chat với AI nào
+    // thì AI đó nên tự tóm tắt, không phải luôn cố định 1 agent khác cho mọi chat.
     const r = await fetch(`/api/chats/${currentChatId}/summarize-now`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ relayToken: getRelayToken() }),
+      body: JSON.stringify({ relayToken: getRelayToken(), agentId: document.getElementById('agent-select')?.value }),
       signal: AbortSignal.timeout(180000),
     });
     const d = await r.json();
