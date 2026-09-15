@@ -207,6 +207,17 @@ tr:hover td{background:var(--bg3)}
         KV: SESSIONS (30 ngày)
       </div>
     </div>
+
+    <div id="backup-section" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:12px;display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700">💾 Sao lưu D1</div>
+        <button class="btn btn-ghost btn-sm" id="btn-backup-now" onclick="runBackupNow()">📦 Sao lưu ngay</button>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">
+        Tự động chạy hàng ngày (~02:00 sáng), giữ 14 bản gần nhất trên R2. Restore là thao tác tay.
+      </div>
+      <div id="backup-list" style="font-size:12px;color:var(--text2)">Đang tải...</div>
+    </div>
   </div>
 
 </div><!-- /content -->
@@ -565,6 +576,50 @@ async function loadOverview() {
   const link = document.getElementById('relay-url-link');
   link.href = RELAY_URL;
   link.textContent = RELAY_URL;
+
+  if (currentUser.role === 'admin') {
+    document.getElementById('backup-section').style.display = 'block';
+    loadBackups();
+  }
+}
+
+// ── BACKUP D1 (chỉ admin) ──
+function fmtBytes(n) {
+  if (n > 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
+  return (n / 1024).toFixed(1) + ' KB';
+}
+
+async function loadBackups() {
+  const el = document.getElementById('backup-list');
+  try {
+    const data = await api('/api/admin/backups');
+    const items = data.backups || [];
+    if (!items.length) { el.innerHTML = 'Chưa có bản sao lưu nào.'; return; }
+    el.innerHTML = items.map(b => `
+      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
+        <span>${esc(b.key.replace('backups/', ''))}</span>
+        <span>${fmtBytes(b.sizeBytes)} — ${new Date(b.uploaded).toLocaleString('vi-VN')}</span>
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = `<span style="color:var(--red)">Lỗi tải danh sách: ${esc(e.message)}</span>`;
+  }
+}
+
+async function runBackupNow() {
+  const btn = document.getElementById('btn-backup-now');
+  btn.disabled = true;
+  btn.textContent = '⏳ Đang sao lưu...';
+  try {
+    const r = await api('/api/admin/backups/run-now', { method: 'POST' });
+    if (r.ok) { toast('✅ Đã sao lưu D1 thành công', 'ok'); await loadBackups(); }
+    else toast('❌ ' + (r.error || 'Sao lưu thất bại'), 'err');
+  } catch (e) {
+    toast('❌ Lỗi: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📦 Sao lưu ngay';
+  }
 }
 
 // ── MODAL ──
