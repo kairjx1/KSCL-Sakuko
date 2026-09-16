@@ -838,7 +838,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.130</span>
+  <span class="version" id="app-version">v1.0.131</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -4216,6 +4216,28 @@ async function checkUpdate() {
     }
   } catch {}
 }
+// Dò cho tới khi server sống lại sau khi tự khởi động lại (thay .exe) rồi mới reload — xem
+// giải thích đầy đủ ở nơi gọi (doUpdate). Chờ tối đa ~2 phút (đủ dư cho máy chậm/mạng chậm tải
+// lại agents-config từ Cloudflare); quá hạn thì báo lỗi rõ ràng thay vì treo "Đang khởi động
+// lại..." mãi mãi không có phản hồi gì.
+function pollUntilBackUp(banner) {
+  const startedAt = Date.now();
+  const MAX_WAIT_MS = 120000;
+  const tick = async () => {
+    try {
+      // /version.json là file tĩnh nhẹ nhất, có ngay từ dòng đầu server.listen() — không cần
+      // đợi các bước đồng bộ Cloudflare/agents-config phía sau mới trả lời được.
+      const r = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
+      if (r.ok) { location.reload(true); return; }
+    } catch { /* server chưa lên kịp — thử lại, không phải lỗi thật */ }
+    if (Date.now() - startedAt > MAX_WAIT_MS) {
+      banner.textContent = '⚠ Cập nhật lâu hơn bình thường — thử bấm F5, hoặc tự mở lại KAgent.exe nếu vẫn không vào được.';
+      return;
+    }
+    setTimeout(tick, 1000);
+  };
+  setTimeout(tick, 1500); // đợi chút để tiến trình cũ chắc chắn đã thoát trước khi dò lần đầu
+}
 async function doUpdate() {
   const banner = document.getElementById('update-banner');
   banner.textContent = '⏳ Đang tải bản cập nhật...';
@@ -4228,7 +4250,17 @@ async function doUpdate() {
     const dFull = await rFull.json();
     if (dFull.ok) {
       banner.textContent = '✅ Đang khởi động lại KAgent...';
-      setTimeout(() => location.reload(true), 3000);
+      // BUG THẬT đã tìm ra (báo qua ảnh chụp thật — bấm Cập nhật xong bị "văng" ra thẳng
+      // trang lỗi ERR_CONNECTION_REFUSED của Chrome, không tự hồi phục): trước đây đợi CỐ ĐỊNH
+      // 3 giây rồi mới `location.reload()` — nhưng bước đổi file .exe + khởi động lại + tải lại
+      // HTML/agents-config từ Cloudflare hoàn toàn có thể mất LÂU HƠN 3 giây (đặc biệt máy chậm/
+      // mạng chậm), nên reload() bắn ra ĐÚNG LÚC server còn chưa kịp lên, gặp
+      // ERR_CONNECTION_REFUSED — và vì reload() chỉ thử ĐÚNG 1 LẦN, trình duyệt hiện màn hình
+      // lỗi riêng của nó, đứng yên luôn, không tự thử lại. Sửa: DÒ (poll) tới khi server thật sự
+      // đã sống lại rồi mới reload — không đoán 1 con số cố định. Giữ nguyên cả cửa sổ đang có
+      // (không để trình duyệt tự nhảy sang trang lỗi giữa chừng) — gần với trải nghiệm AGS: chỉ
+      // 1 màn hình chờ, tự chuyển sang bản mới khi sẵn sàng, không có bước "trang lỗi" ở giữa.
+      pollUntilBackUp(banner);
       return;
     }
     console.log('[update] full-update không dùng được, fallback HTML-only:', dFull.msg);
