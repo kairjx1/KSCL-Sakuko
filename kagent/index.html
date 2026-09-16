@@ -751,49 +751,73 @@ dialog.dlg header button:hover{color:var(--text)}
 .thinking-btn.active{background:rgba(139,92,246,.2);border-color:var(--accent);color:var(--accent)}
 .mp-divider{border:none;border-top:1px solid var(--border);margin:8px 0}
 
-/* ── LOGIN SCREEN — dùng thẳng ảnh minh họa thật (café/mascot KAgent) làm nền, thẻ đăng
-   nhập thật đặt chồng đúng vị trí thẻ minh họa trong ảnh, cộng lớp lấp lánh động phía trên. ── */
+/* ── LOGIN SCREEN v3 — ảnh nền thật rực rỡ (không dìm tối như bản trước), thẻ đăng nhập co
+   giãn theo % viewport để bám sát đúng tỉ lệ thẻ minh họa lúc ảnh phóng theo `cover`, cộng
+   thêm sóng nước + cực quang xoay + lấp lánh mạnh hơn hẳn cho "nổi" và "óng ánh" đúng ý. ── */
 #login-screen{overflow:hidden}
 .login-bg{position:absolute;inset:0;z-index:0;overflow:hidden;
   background-image:url('/login-bg.jpg');background-size:cover;background-position:center;
   animation:loginBgZoom 40s ease-in-out infinite alternate}
 @keyframes loginBgZoom{0%{transform:scale(1)}100%{transform:scale(1.06)}}
-/* Tối nhẹ + ám tím toàn cảnh để chữ/thẻ luôn đọc rõ dù ảnh nền sáng chỗ nào */
+/* Chỉ tối rất nhẹ 2 góc trên/dưới (chỗ dễ đặt chữ) — GIỮA giữ nguyên độ rực của ảnh gốc để
+   "nổi" lên đúng yêu cầu, không dìm cả khung hình như bản trước. */
 .login-bg::after{content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse at 50% 45%, rgba(11,16,32,.35) 0%, rgba(11,16,32,.6) 60%, rgba(11,16,32,.82) 100%)}
-/* Lấp lánh — các đốm sáng nhỏ nhấp nháy rải khắp màn, mô phỏng ánh nước/hạt bụi lung linh
-   trong ảnh — đây là phần "động" thật sự phủ lên trên ảnh tĩnh. */
+  background:linear-gradient(180deg, rgba(8,10,22,.38) 0%, rgba(8,10,22,.05) 22%, rgba(8,10,22,.05) 78%, rgba(8,10,22,.4) 100%)}
+/* Cực quang xoay chậm phía sau thẻ — thêm chiều sâu + cảm giác "óng ánh" đổi màu liên tục */
+.login-aura{position:absolute;left:50%;top:49%;width:min(70vw,900px);height:min(70vw,900px);
+  transform:translate(-50%,-50%);z-index:1;pointer-events:none;mix-blend-mode:screen;opacity:.6;
+  background:conic-gradient(from 0deg, #a78bfa, #67e8f9, #fb7185, #fbbf24, #a78bfa);
+  filter:blur(80px);border-radius:50%;animation:loginAuraSpin 18s linear infinite}
+@keyframes loginAuraSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+/* Sóng nước óng ánh — 2 lớp dải sáng lượn sóng chạy ngang liên tục phía dưới màn, tách biệt
+   khỏi ảnh (không chờ đúng hình sóng vẽ sẵn trong ảnh) để chắc chắn thấy "động" rõ ràng. */
+.login-waves{position:absolute;left:0;right:0;bottom:0;width:100%;height:220px;z-index:1;
+  opacity:.75;pointer-events:none}
+.login-wave-path{animation:loginWave 12s linear infinite}
+.login-wave-path.w2{animation-duration:18s;animation-direction:reverse;opacity:.7}
+@keyframes loginWave{from{transform:translateX(0)}to{transform:translateX(-1200px)}}
+/* Lấp lánh — tăng số lượng + kích thước + độ sáng so với bản trước để rõ hẳn hiệu ứng "động" */
 .login-sparkles{position:absolute;inset:0;z-index:1;pointer-events:none;
   background-image:
-    radial-gradient(1.5px 1.5px at 10% 20%, #fff, transparent),
-    radial-gradient(1.5px 1.5px at 80% 15%, #fff, transparent),
-    radial-gradient(2px 2px at 30% 70%, #fff, transparent),
-    radial-gradient(1.5px 1.5px at 60% 40%, #fff, transparent),
-    radial-gradient(2px 2px at 90% 65%, #fff, transparent),
-    radial-gradient(1.5px 1.5px at 45% 85%, #fff, transparent),
-    radial-gradient(1.5px 1.5px at 15% 55%, #fff, transparent),
-    radial-gradient(2px 2px at 70% 90%, #fff, transparent),
-    radial-gradient(2.5px 2.5px at 50% 12%, #c4b5fd, transparent),
-    radial-gradient(2px 2px at 25% 40%, #67e8f9, transparent);
-  opacity:.55;animation:loginTwinkle 3.5s ease-in-out infinite alternate}
-@keyframes loginTwinkle{0%{opacity:.25}100%{opacity:.8}}
+    radial-gradient(2px 2px at 10% 20%, #fff, transparent),
+    radial-gradient(2.5px 2.5px at 80% 15%, #fff, transparent),
+    radial-gradient(3px 3px at 30% 70%, #fff, transparent),
+    radial-gradient(2px 2px at 60% 40%, #fff, transparent),
+    radial-gradient(3px 3px at 90% 65%, #fff, transparent),
+    radial-gradient(2px 2px at 45% 85%, #fff, transparent),
+    radial-gradient(2px 2px at 15% 55%, #fff, transparent),
+    radial-gradient(3px 3px at 70% 90%, #fff, transparent),
+    radial-gradient(3.5px 3.5px at 50% 12%, #c4b5fd, transparent),
+    radial-gradient(3px 3px at 25% 40%, #67e8f9, transparent),
+    radial-gradient(3px 3px at 8% 80%, #fbbf24, transparent),
+    radial-gradient(2.5px 2.5px at 95% 30%, #fb7185, transparent),
+    radial-gradient(2px 2px at 38% 8%, #fff, transparent),
+    radial-gradient(2.5px 2.5px at 65% 60%, #67e8f9, transparent);
+  opacity:.7;animation:loginTwinkle 3s ease-in-out infinite alternate}
+@keyframes loginTwinkle{0%{opacity:.35}100%{opacity:1}}
 @media (prefers-reduced-motion: reduce){
-  .login-bg,.login-sparkles{animation:none}
+  .login-bg,.login-sparkles,.login-aura,.login-wave-path{animation:none}
 }
 
-/* Thẻ đăng nhập thật — đặt chồng lên ĐÚNG vị trí thẻ minh họa trong ảnh nền (ảnh gốc tỉ lệ
-   ~16:9 nên căn theo % vẫn khớp tốt ở màn hình rộng thường dùng; màn hẹp rơi về giữa). */
+/* Thẻ đăng nhập thật — RỘNG THEO % VIEWPORT (không cố định px) để co giãn cùng tỉ lệ với ảnh
+   nền khi trình duyệt phóng ảnh theo `cover` ở các độ rộng cửa sổ khác nhau — đây là nguyên
+   nhân chính khiến bản trước bị lệch/nhỏ hơn hẳn khung thẻ minh họa vẽ sẵn trong ảnh. Toạ độ
+   tâm đo trực tiếp từ ảnh gốc (thẻ minh họa nằm ở x:50.2%, y:48.9% của ảnh 1672×941). */
 .login-content{position:relative;z-index:2;width:100%;height:100%}
-.login-card{position:absolute;left:50.5%;top:47%;transform:translate(-50%,-50%);
-  background:rgba(10,14,28,.6);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:36px 32px;
-  width:360px;max-width:calc(100vw - 32px);display:flex;flex-direction:column;align-items:center;gap:16px;
-  box-shadow:0 30px 90px rgba(0,0,0,.6),0 0 40px rgba(124,58,237,.15),0 0 0 1px rgba(167,139,250,.1) inset}
+.login-card{position:absolute;left:50.2%;top:48.9%;transform:translate(-50%,-50%);
+  background:rgba(10,14,28,.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border:1px solid rgba(255,255,255,.16);border-radius:min(4vw,20px);
+  padding:clamp(24px,3.2vw,40px) clamp(20px,2.8vw,36px);
+  width:clamp(320px,28vw,540px);max-width:calc(100vw - 24px);
+  display:flex;flex-direction:column;align-items:center;gap:clamp(10px,1.4vw,18px);
+  box-shadow:0 30px 90px rgba(0,0,0,.6),0 0 50px rgba(124,58,237,.25),0 0 0 1px rgba(167,139,250,.12) inset}
 @media (max-width:760px){
-  .login-card{position:relative;left:auto;top:auto;transform:none;margin:24px auto}
+  .login-card{position:relative;left:auto;top:auto;transform:none;margin:24px auto;width:min(92vw,400px)}
   .login-content{display:flex;align-items:center;justify-content:center}
+  .login-aura{opacity:.4}
 }
-.login-mascot{filter:drop-shadow(0 0 18px rgba(167,139,250,.5));border-radius:10px}
+.login-mascot{filter:drop-shadow(0 0 18px rgba(167,139,250,.5));border-radius:10px;
+  width:clamp(44px,6vw,72px);height:auto}
 .login-hint{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);
   background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:8px 10px;width:100%}
 </style>
@@ -808,7 +832,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.119</span>
+  <span class="version" id="app-version">v1.0.120</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1049,6 +1073,15 @@ dialog.dlg header button:hover{color:var(--text)}
 <div id="login-screen" style="display:none;position:fixed;inset:0;z-index:9000;background:var(--bg)">
   <!-- Nền: ảnh minh họa thật (café Sakuko + mascot KAgent) + lớp lấp lánh động phủ trên -->
   <div class="login-bg"></div>
+  <div class="login-aura"></div>
+  <svg class="login-waves" viewBox="0 0 1200 220" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path class="login-wave-path" fill="none" stroke="#67e8f9" stroke-width="3" stroke-linecap="round"
+      d="M0,120 C150,180 350,60 600,120 C850,180 1050,60 1200,120
+         M1200,120 C1350,180 1550,60 1800,120 C2050,180 2250,60 2400,120"/>
+    <path class="login-wave-path w2" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round"
+      d="M0,160 C200,100 400,200 600,160 C800,100 1000,200 1200,160
+         M1200,160 C1400,100 1600,200 1800,160 C2000,100 2200,200 2400,160"/>
+  </svg>
   <div class="login-sparkles"></div>
 
   <div class="login-content">
