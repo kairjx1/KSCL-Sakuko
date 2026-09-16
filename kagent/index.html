@@ -762,7 +762,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.116</span>
+  <span class="version" id="app-version">v1.0.117</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -901,10 +901,10 @@ dialog.dlg header button:hover{color:var(--text)}
         <div id="input-row">
           <textarea id="prompt-input" placeholder="Prompt (Enter = gửi, Shift+Enter = xuống dòng)… | Paste ảnh hoặc đính kèm file để gửi kèm 📎" rows="1"
             onkeydown="handleKeydown(event)" oninput="autoResize(this)" onpaste="handlePaste(event)" ondragover="event.preventDefault()" ondrop="handleFileDrop(event)"></textarea>
-          <button id="btn-image" onclick="triggerImagePick()" title="Đính kèm ảnh hoặc file (PDF, Word, Excel, CSV, text, code...) — AI sẽ đọc nội dung" style="background:var(--bg3);color:var(--text2);border:1px solid var(--border);padding:10px 12px;border-radius:10px;cursor:pointer;font-size:16px">📎</button>
+          <button id="btn-image" onclick="triggerImagePick()" title="Đính kèm ảnh hoặc file (PDF, Word, Excel, PowerPoint, CSV, text, code...) — AI sẽ đọc nội dung" style="background:var(--bg3);color:var(--text2);border:1px solid var(--border);padding:10px 12px;border-radius:10px;cursor:pointer;font-size:16px">📎</button>
           <button id="btn-send" onclick="sendPrompt()" title="Gửi">↵</button>
         </div>
-        <input type="file" id="image-file-input" accept="image/*,.pdf,.docx,.xlsx,.xls,.csv,.txt,.md,.json,.js,.jsx,.ts,.tsx,.py,.java,.c,.cpp,.h,.cs,.go,.rs,.rb,.php,.sql,.sh,.html,.css,.xml,.yml,.yaml,.log" style="display:none" multiple onchange="handleImageFiles(this.files)">
+        <input type="file" id="image-file-input" accept="image/*,.pdf,.docx,.doc,.pptx,.ppt,.xlsx,.xls,.csv,.txt,.md,.json,.js,.jsx,.ts,.tsx,.py,.java,.c,.cpp,.h,.cs,.go,.rs,.rb,.php,.sql,.sh,.html,.css,.xml,.yml,.yaml,.log" style="display:none" multiple onchange="handleImageFiles(this.files)">
         <div id="kbd-row">
           <span class="kbd primary" onclick="sendKey('\t')">Tab</span>
           <span class="kbd" onclick="sendKey('1\r')">1</span>
@@ -1521,10 +1521,88 @@ function appendChatAI(markdownText, msgId) {
   el.className = 'chat-msg-ai';
   el.innerHTML = renderMarkdown(cleanText);
   if (choice) el.appendChild(renderChoiceWidget(choice));
+  addCodeBlockDownloadButtons(el);
+  el.appendChild(renderMsgActions(cleanText));
   const wrap = _wrapMsg(el, msgId);
   document.getElementById('chat-messages').appendChild(wrap);
   scrollChat();
   return wrap;
+}
+
+// ── NHẬN FILE: lưu nội dung AI trả lời thành file thật (KAgent không chỉ GỬI file cho AI đọc,
+// mà còn cho phép NHẬN lại kết quả dưới dạng file — đúng kiểu "đa chức năng" như các AI lớn) ──
+const LANG_EXT = {
+  python: 'py', py: 'py', javascript: 'js', js: 'js', jsx: 'jsx', typescript: 'ts', ts: 'ts',
+  tsx: 'tsx', json: 'json', html: 'html', xml: 'xml', css: 'css', scss: 'scss', java: 'java',
+  c: 'c', cpp: 'cpp', 'c++': 'cpp', csharp: 'cs', cs: 'cs', go: 'go', golang: 'go', rust: 'rs',
+  rs: 'rs', ruby: 'rb', rb: 'rb', php: 'php', sql: 'sql', bash: 'sh', sh: 'sh', shell: 'sh',
+  zsh: 'sh', powershell: 'ps1', ps1: 'ps1', batch: 'bat', bat: 'bat', yaml: 'yml', yml: 'yml',
+  markdown: 'md', md: 'md', text: 'txt', plaintext: 'txt', plain: 'txt', vue: 'vue',
+};
+
+function downloadTextAsFile(content, filename) {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  showToast('💾 Đã lưu ' + filename);
+}
+
+// Mỗi khối code (```lang ... ```) AI trả về đều có nút riêng để lưu ĐÚNG khối đó thành 1 file,
+// đoán đúng đuôi file theo ngôn ngữ khai báo trong fence — không cần copy-paste tay ra editor.
+function addCodeBlockDownloadButtons(container) {
+  const blocks = container.querySelectorAll('pre > code');
+  let idx = 0;
+  blocks.forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    if (pre.dataset.dlAdded) return;
+    pre.dataset.dlAdded = '1';
+    pre.style.position = 'relative';
+    const langMatch = (codeEl.className || '').match(/language-([\w+]+)/);
+    const lang = langMatch ? langMatch[1].toLowerCase() : '';
+    const ext = LANG_EXT[lang] || 'txt';
+    idx++;
+    const btn = document.createElement('button');
+    btn.textContent = '💾';
+    btn.title = `Lưu khối code này thành file .${ext}`;
+    btn.style.cssText = 'position:absolute;top:6px;right:6px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 7px;cursor:pointer;font-size:12px;opacity:.7;transition:opacity .15s';
+    btn.onmouseenter = () => btn.style.opacity = '1';
+    btn.onmouseleave = () => btn.style.opacity = '.7';
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      downloadTextAsFile(codeEl.textContent, `kagent_snippet_${idx}_${Date.now()}.${ext}`);
+    };
+    pre.appendChild(btn);
+  });
+}
+
+// Hàng nút nhỏ dưới mỗi tin nhắn AI: copy toàn văn + lưu toàn bộ phản hồi thành file .md
+// Dùng closure giữ nguyên `rawText` thay vì nhét vào data-attribute HTML — tránh vòng
+// encode/decode không cần thiết với tin nhắn dài/ký tự đặc biệt.
+function renderMsgActions(rawText) {
+  const row = document.createElement('div');
+  row.className = 'chat-msg-actions';
+  row.style.cssText = 'display:flex;gap:6px;margin-top:6px;opacity:.55;transition:opacity .15s';
+  row.onmouseenter = () => row.style.opacity = '1';
+  row.onmouseleave = () => row.style.opacity = '.55';
+
+  const btnCopy = document.createElement('button');
+  btnCopy.textContent = '📋';
+  btnCopy.title = 'Copy toàn văn';
+  btnCopy.style.cssText = 'background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px;padding:2px 4px';
+  btnCopy.onclick = () => navigator.clipboard.writeText(rawText).then(() => showToast('📋 Đã copy'));
+
+  const btnSave = document.createElement('button');
+  btnSave.textContent = '💾';
+  btnSave.title = 'Lưu toàn bộ phản hồi thành file .md';
+  btnSave.style.cssText = 'background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px;padding:2px 4px';
+  btnSave.onclick = () => downloadTextAsFile(rawText, `kagent_response_${Date.now()}.md`);
+
+  row.appendChild(btnCopy);
+  row.appendChild(btnSave);
+  return row;
 }
 
 // Streaming tool output in chat view (while claude is working)
@@ -2510,7 +2588,7 @@ function handleKeydown(e) {
 window._pendingImages = []; // [{dataUrl, name, isImage}] — giữ tên biến cũ để đỡ đổi chỗ khác
 
 const FILE_ICONS = {
-  pdf: '📕', doc: '📘', docx: '📘', xls: '📗', xlsx: '📗', csv: '📊',
+  pdf: '📕', doc: '📘', docx: '📘', ppt: '📙', pptx: '📙', xls: '📗', xlsx: '📗', csv: '📊',
   json: '🔧', js: '💻', jsx: '💻', ts: '💻', tsx: '💻', py: '💻', java: '💻',
   c: '💻', cpp: '💻', h: '💻', cs: '💻', go: '💻', rs: '💻', rb: '💻', php: '💻',
   sql: '🗄️', sh: '💻', html: '🌐', css: '🎨', xml: '📄', yml: '📄', yaml: '📄',
