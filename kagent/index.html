@@ -762,7 +762,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.114</span>
+  <span class="version" id="app-version">v1.0.115</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -3141,11 +3141,22 @@ function editMemoryFact(key, el, tags) {
 }
 
 async function deleteMemoryFact(key) {
-  document.querySelector(`[data-mem-key="${CSS.escape(key)}"]`)?.remove();
+  // BUG THẬT đã tìm ra (người dùng hỏi "đã thực sự xóa khỏi bộ nhớ bot chưa"): trước đây xóa
+  // khỏi UI ngay rồi LUÔN báo "Đã xóa" bất kể server trả về gì — chỉ bắt lỗi mạng (catch), không
+  // kiểm tra res.ok. Nếu xóa trên relay thất bại (server giờ trả 502 rõ ràng), người dùng vẫn
+  // thấy "Đã xóa" dù mục đó THẬT RA vẫn còn trong bộ nhớ bot. Giờ kiểm tra đúng kết quả, và nếu
+  // lỗi thì tải lại danh sách để mục đó hiện lại (không xóa nhầm khỏi UI khi thực ra chưa xóa).
+  const el = document.querySelector(`[data-mem-key="${CSS.escape(key)}"]`);
+  el?.remove();
   try {
-    await fetch(`/api/memory/${encodeURIComponent(key)}?relayToken=${encodeURIComponent(getRelayToken() || '')}`, { method: 'DELETE' });
+    const r = await fetch(`/api/memory/${encodeURIComponent(key)}?relayToken=${encodeURIComponent(getRelayToken() || '')}`, { method: 'DELETE' });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.ok === false) throw new Error(d.error || `HTTP ${r.status}`);
     showToast('🗑️ Đã xóa');
-  } catch { showToast('⚠️ Lỗi xóa — thử lại'); }
+  } catch (e) {
+    showToast('⚠️ ' + (e.message || 'Lỗi xóa — thử lại'));
+    renderSettingsMemory(); // tải lại — mục chưa xóa được thì hiện lại đúng trạng thái thật
+  }
 }
 
 async function addMemoryFact() {
