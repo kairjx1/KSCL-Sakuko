@@ -321,29 +321,39 @@ textarea.form-control { height: 180px; resize: vertical; line-height: 1.5; }
   <!-- TAB 4: EMPLOYEE PROFILES & MEMORY -->
   <div class="main-content hidden" id="profiles-tab">
     <div class="page-title">
-      <div>👥 Hồ sơ Nhân sự Tuyến Đầu & Bộ nhớ Dài hạn</div>
-      <button class="btn-primary" onclick="loadProfiles()">🔄 Tải lại Hồ sơ</button>
+      <div>👥 Hồ sơ Nhân sự Tuyến Đầu & Danh bạ Lark</div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn-primary" onclick="syncLarkProfiles()" style="background: linear-gradient(135deg, #0284c7, #0369a1); display: flex; align-items: center; gap: 6px;">
+          <span>🔄</span> Đồng bộ Lark Contact API
+        </button>
+        <button class="btn-secondary" onclick="loadProfiles()">Tải lại</button>
+      </div>
     </div>
-    <div class="page-desc">Danh sách nhân viên siêu thị tương tác với bot, cửa hàng công tác và sổ tay ca trực.</div>
+    <div class="page-desc">Thông tin nhân viên xác thực trực tiếp từ Danh bạ Lark (Họ tên, Mã NV, Phòng ban, Chức vụ) kết hợp Sổ tay ca trực dài hạn.</div>
 
     <div class="panel">
-      <div style="margin-bottom: 16px; display: flex; gap: 10px;">
-        <input type="text" id="profSearch" class="form-control" style="max-width: 320px;" placeholder="Tìm theo tên hoặc siêu thị (Thái Hà, Linh Đàm...)" oninput="filterProfiles()">
+      <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <input type="text" id="profSearch" class="form-control" style="max-width: 360px;" placeholder="Tìm theo tên, mã NV, phòng ban, siêu thị..." oninput="filterProfiles()">
+        <div id="profStatsBadge" style="font-size: 13px; color: #94a3b8;">Đang tải dữ liệu...</div>
       </div>
-      <table class="log-table">
-        <thead>
-          <tr>
-            <th width="160">Nhân viên</th>
-            <th width="160">Siêu thị Sakuko</th>
-            <th width="130">Chức vụ</th>
-            <th>Lưu ý Ca trực / Sổ tay</th>
-            <th width="140">Tương tác cuối</th>
-          </tr>
-        </thead>
-        <tbody id="profilesBody">
-          <tr><td colspan="5" style="text-align: center;">Đang tải danh sách nhân viên...</td></tr>
-        </tbody>
-      </table>
+      <div style="overflow-x: auto;">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th width="220">Nhân viên (Lark)</th>
+              <th width="110">Mã NV</th>
+              <th width="190">Phòng ban / Đơn vị</th>
+              <th width="160">Chức vụ / Vị trí</th>
+              <th width="160">Siêu thị công tác</th>
+              <th>Lưu ý & Sự cố</th>
+              <th width="140">Tương tác cuối</th>
+            </tr>
+          </thead>
+          <tbody id="profilesBody">
+            <tr><td colspan="7" style="text-align: center;">Đang tải danh sách nhân viên...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -781,7 +791,7 @@ async function resolveIncident(id, isTicket) {
 // --- Profiles ---
 async function loadProfiles() {
   const tbody = document.getElementById('profilesBody');
-  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Đang tải danh sách nhân sự...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Đang tải danh sách nhân sự...</td></tr>';
   try {
     const res = await fetch(`${API_URL}/qt/profiles`);
     const data = await res.json();
@@ -790,33 +800,99 @@ async function loadProfiles() {
       renderProfiles(_allProfiles);
     }
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="5" style="color:#ef4444;text-align:center;">Lỗi tải hồ sơ!</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="color:#ef4444;text-align:center;">Lỗi tải hồ sơ!</td></tr>';
+  }
+}
+
+async function syncLarkProfiles() {
+  const btn = event?.currentTarget;
+  const origHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.innerHTML = '<span>⏳</span> Đang đồng bộ...';
+    btn.disabled = true;
+  }
+  try {
+    const res = await fetch(`${API_URL}/qt/profiles/sync`, { method: "POST" });
+    const data = await res.json();
+    if (data.ok) {
+      _allProfiles = data.data || [];
+      renderProfiles(_allProfiles);
+      alert(`✅ Đã đồng bộ thành công ${data.count || _allProfiles.length} hồ sơ từ Lark Contact API!`);
+    } else {
+      alert("Lỗi khi đồng bộ: " + (data.msg || "Vui lòng thử lại sau"));
+    }
+  } catch(e) {
+    alert("Lỗi kết nối tới máy chủ khi đồng bộ Lark: " + e.message);
+  } finally {
+    if (btn) {
+      btn.innerHTML = origHtml;
+      btn.disabled = false;
+    }
   }
 }
 
 function renderProfiles(list) {
   const tbody = document.getElementById('profilesBody');
+  const badge = document.getElementById('profStatsBadge');
+  if (badge) {
+    const verifiedCount = list.filter(p => p.lark_verified).length;
+    badge.innerHTML = `Tổng: <strong style="color:#38bdf8;">${list.length}</strong> nhân sự (<strong style="color:#10b981;">${verifiedCount}</strong> đã xác thực Lark)`;
+  }
   let html = '';
   list.forEach(p => {
     const lastSeen = p.last_seen ? new Date(p.last_seen * 1000).toLocaleString('vi-VN') : 'Chưa rõ';
+    const isVerified = p.lark_verified;
+    const vBadge = isVerified 
+      ? `<span style="display:inline-flex;align-items:center;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);margin-left:4px;">✓ Lark</span>`
+      : `<span style="display:inline-flex;align-items:center;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);margin-left:4px;">Chưa xác thực</span>`;
+    
+    const avatarHtml = p.avatar 
+      ? `<img src="${p.avatar}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid #475569;flex-shrink:0;">`
+      : `<div style="width:30px;height:30px;border-radius:50%;background:#334155;color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${(p.name || 'U').charAt(0)}</div>`;
+    
+    const empNoHtml = p.employee_no 
+      ? `<span style="font-family:monospace;font-weight:700;color:#38bdf8;background:rgba(56,189,248,0.1);padding:2px 6px;border-radius:4px;border:1px solid rgba(56,189,248,0.2);">${p.employee_no}</span>`
+      : `<span style="color:#64748b;">---</span>`;
+
+    const incCount = (p.incident_history || []).length;
+    const incBadge = incCount > 0 
+      ? `<span style="color:#f43f5e;font-size:11px;font-weight:600;">(${incCount} sự cố)</span>`
+      : '';
+
     html += `
       <tr>
-        <td><strong>${p.name || 'Nhân viên'}</strong> <span style="font-size:11px;color:#64748b;">(${p.preferred_title || 'Bạn'})</span></td>
-        <td><span style="color:#14b8a6;font-weight:600;">${p.store || 'Chưa cập nhật'}</span></td>
-        <td>${p.role || 'Nhân viên bán lẻ'}</td>
-        <td><div style="font-size:12px;color:#cbd5e1;">${p.notes || 'Không có ghi chú'}</div></td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${avatarHtml}
+            <div>
+              <div style="font-weight:600;color:#f8fafc;">${p.name || 'Nhân viên'} ${vBadge}</div>
+              <div style="font-size:11px;color:#64748b;">${p.preferred_title ? 'Xưng hô: ' + p.preferred_title : p.user_id}</div>
+            </div>
+          </div>
+        </td>
+        <td>${empNoHtml}</td>
+        <td><strong style="color:#e2e8f0;font-size:12px;">${p.department || '---'}</strong></td>
+        <td><span style="color:#94a3b8;font-size:12px;">${p.role || p.job_title || 'Nhân viên'}</span></td>
+        <td><span style="color:#14b8a6;font-weight:600;font-size:12px;">${p.store || '---'}</span></td>
+        <td>
+          <div style="font-size:12px;color:#cbd5e1;">${p.notes || 'Không có lưu ý'} ${incBadge}</div>
+        </td>
         <td class="log-time">${lastSeen}</td>
       </tr>
     `;
   });
-  tbody.innerHTML = html || '<tr><td colspan="5" style="text-align:center;">Chưa có hồ sơ nhân viên nào.</td></tr>';
+  tbody.innerHTML = html || '<tr><td colspan="7" style="text-align:center;">Chưa có hồ sơ nhân viên nào.</td></tr>';
 }
 
 function filterProfiles() {
   const q = document.getElementById('profSearch').value.toLowerCase().trim();
   if (!q) return renderProfiles(_allProfiles);
   const filtered = _allProfiles.filter(p => {
-    return (p.name || '').toLowerCase().includes(q) || (p.store || '').toLowerCase().includes(q) || (p.role || '').toLowerCase().includes(q);
+    return (p.name || '').toLowerCase().includes(q) 
+      || (p.employee_no || '').toLowerCase().includes(q)
+      || (p.department || '').toLowerCase().includes(q)
+      || (p.store || '').toLowerCase().includes(q) 
+      || (p.role || '').toLowerCase().includes(q);
   });
   renderProfiles(filtered);
 }
