@@ -762,7 +762,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.115</span>
+  <span class="version" id="app-version">v1.0.116</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -896,15 +896,15 @@ dialog.dlg header button:hover{color:var(--text)}
       <!-- Input bar -->
       <div id="input-bar" style="position:relative">
         <div id="history-panel"></div>
-        <!-- Image preview strip (ảnh paste/drop sẽ hiện ở đây) -->
+        <!-- File preview strip (ảnh/tài liệu paste/drop sẽ hiện ở đây) -->
         <div id="image-strip" style="display:none;padding:6px 10px 0;display:flex;gap:6px;flex-wrap:wrap;"></div>
         <div id="input-row">
-          <textarea id="prompt-input" placeholder="Prompt (Enter = gửi, Shift+Enter = xuống dòng)… | Paste ảnh để gửi kèm 🖼️" rows="1"
-            onkeydown="handleKeydown(event)" oninput="autoResize(this)" onpaste="handlePaste(event)"></textarea>
-          <button id="btn-image" onclick="triggerImagePick()" title="Đính kèm ảnh 🖼️" style="background:var(--bg3);color:var(--text2);border:1px solid var(--border);padding:10px 12px;border-radius:10px;cursor:pointer;font-size:16px">🖼️</button>
+          <textarea id="prompt-input" placeholder="Prompt (Enter = gửi, Shift+Enter = xuống dòng)… | Paste ảnh hoặc đính kèm file để gửi kèm 📎" rows="1"
+            onkeydown="handleKeydown(event)" oninput="autoResize(this)" onpaste="handlePaste(event)" ondragover="event.preventDefault()" ondrop="handleFileDrop(event)"></textarea>
+          <button id="btn-image" onclick="triggerImagePick()" title="Đính kèm ảnh hoặc file (PDF, Word, Excel, CSV, text, code...) — AI sẽ đọc nội dung" style="background:var(--bg3);color:var(--text2);border:1px solid var(--border);padding:10px 12px;border-radius:10px;cursor:pointer;font-size:16px">📎</button>
           <button id="btn-send" onclick="sendPrompt()" title="Gửi">↵</button>
         </div>
-        <input type="file" id="image-file-input" accept="image/*" style="display:none" multiple onchange="handleImageFiles(this.files)">
+        <input type="file" id="image-file-input" accept="image/*,.pdf,.docx,.xlsx,.xls,.csv,.txt,.md,.json,.js,.jsx,.ts,.tsx,.py,.java,.c,.cpp,.h,.cs,.go,.rs,.rb,.php,.sql,.sh,.html,.css,.xml,.yml,.yaml,.log" style="display:none" multiple onchange="handleImageFiles(this.files)">
         <div id="kbd-row">
           <span class="kbd primary" onclick="sendKey('\t')">Tab</span>
           <span class="kbd" onclick="sendKey('1\r')">1</span>
@@ -2327,7 +2327,7 @@ function startInteractive() {
     send({ type: 'stop' });
     updateInteractiveUI(false);
     const inp = document.getElementById('prompt-input');
-    if (inp) inp.placeholder = 'Prompt (Enter = gửi, Shift+Enter = xuống dòng)… | Paste ảnh để gửi kèm 🖼️';
+    if (inp) inp.placeholder = 'Prompt (Enter = gửi, Shift+Enter = xuống dòng)… | Paste ảnh hoặc đính kèm file để gửi kèm 📎';
     return;
   }
 
@@ -2504,18 +2504,34 @@ function handleKeydown(e) {
   }
 }
 
-// ── IMAGE PASTE / UPLOAD ──────────────────────────────────────────────────────
-window._pendingImages = []; // [{dataUrl, name}]
+// ── FILE PASTE / UPLOAD (ảnh + tài liệu bất kỳ: PDF, Word, Excel, CSV, text, code...) ────────
+// Trước đây chỉ nhận ảnh (paste/click) — giờ nhận file bất kỳ, server tự trích nội dung text
+// từ PDF/Word/Excel/text/code rồi nhét vào prompt cho AI đọc (xem file-extract.js).
+window._pendingImages = []; // [{dataUrl, name, isImage}] — giữ tên biến cũ để đỡ đổi chỗ khác
+
+const FILE_ICONS = {
+  pdf: '📕', doc: '📘', docx: '📘', xls: '📗', xlsx: '📗', csv: '📊',
+  json: '🔧', js: '💻', jsx: '💻', ts: '💻', tsx: '💻', py: '💻', java: '💻',
+  c: '💻', cpp: '💻', h: '💻', cs: '💻', go: '💻', rs: '💻', rb: '💻', php: '💻',
+  sql: '🗄️', sh: '💻', html: '🌐', css: '🎨', xml: '📄', yml: '📄', yaml: '📄',
+  txt: '📄', md: '📄', log: '📄',
+};
 
 function handlePaste(e) {
   const items = e.clipboardData?.items || [];
   for (const item of items) {
-    if (item.type.startsWith('image/')) {
+    if (item.kind === 'file') {
       e.preventDefault();
       const file = item.getAsFile();
-      addImageFile(file);
+      if (file) addAttachedFile(file);
     }
   }
+}
+
+function handleFileDrop(e) {
+  e.preventDefault();
+  const dropped = e.dataTransfer?.files;
+  if (dropped?.length) for (const f of dropped) addAttachedFile(f);
 }
 
 function triggerImagePick() {
@@ -2523,16 +2539,22 @@ function triggerImagePick() {
 }
 
 function handleImageFiles(files) {
-  for (const f of files) addImageFile(f);
+  for (const f of files) addAttachedFile(f);
   document.getElementById('image-file-input').value = '';
 }
 
-function addImageFile(file) {
+const MAX_ATTACH_MB = 15; // giới hạn hợp lý — file quá lớn (PDF scan nặng, video lỡ kéo nhầm...) dễ treo lúc trích xuất
+
+function addAttachedFile(file) {
+  if (file.size > MAX_ATTACH_MB * 1024 * 1024) {
+    return showToast(`⚠️ "${file.name}" quá lớn (>${MAX_ATTACH_MB}MB) — chưa hỗ trợ file này`);
+  }
+  const isImage = file.type.startsWith('image/');
   const reader = new FileReader();
   reader.onload = (ev) => {
     const dataUrl = ev.target.result;
     const idx = window._pendingImages.length;
-    window._pendingImages.push({ dataUrl, name: file.name || `image_${idx}.png` });
+    window._pendingImages.push({ dataUrl, name: file.name || `file_${idx}`, isImage });
     renderImageStrip();
   };
   reader.readAsDataURL(file);
@@ -2547,33 +2569,45 @@ function renderImageStrip() {
   const strip = document.getElementById('image-strip');
   if (!window._pendingImages.length) { strip.style.display = 'none'; strip.innerHTML = ''; return; }
   strip.style.display = 'flex';
-  strip.innerHTML = window._pendingImages.map((img, i) => `
-    <div style="position:relative;display:inline-block">
-      <img src="${img.dataUrl}" style="height:60px;width:60px;object-fit:cover;border-radius:8px;border:2px solid var(--border)">
+  strip.innerHTML = window._pendingImages.map((f, i) => {
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    const preview = f.isImage
+      ? `<img src="${f.dataUrl}" style="height:60px;width:60px;object-fit:cover;border-radius:8px;border:2px solid var(--border)">`
+      : `<div style="height:60px;width:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;border:2px solid var(--border);background:var(--bg3);font-size:22px;gap:2px">
+           <span>${FILE_ICONS[ext] || '📎'}</span>
+           <span style="font-size:9px;color:var(--text2);max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(f.name)}">${esc(f.name)}</span>
+         </div>`;
+    return `<div style="position:relative;display:inline-block">
+      ${preview}
       <button onclick="removeImage(${i})" style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function sendPrompt() {
   const input = document.getElementById('prompt-input');
   const text = input.value.trim();
-  const hasImages = window._pendingImages.length > 0;
-  if (!text && !hasImages) return;
+  const hasFiles = window._pendingImages.length > 0;
+  if (!text && !hasFiles) return;
   if (!currentChatId) return showToast('Chọn cuộc chat trước');
 
-  const images = [...window._pendingImages];
+  const files = [...window._pendingImages];
   window._pendingImages = [];
   renderImageStrip();
 
-  const displayText = text || '(ảnh)';
+  const displayText = text || `(${files.length} file đính kèm)`;
   // appendOutput('[Bạn]') KHÔNG gọi ở đây — server sẽ broadcast lại qua type:'output'
   // nếu gọi cả 2 sẽ bị duplicate trong terminal
   // chat view bubble (client-only, không bị echo) — ID thật đến sau qua 'user_msg_id'
-  const _userWrap = appendChatUser(displayText + (images.length ? `<br>${images.map(img => `<img src="${img.dataUrl}" style="max-height:120px;border-radius:8px;margin-top:4px">`).join('')}` : ''));
+  const attachHtml = files.length ? '<br>' + files.map(f => f.isImage
+    ? `<img src="${f.dataUrl}" style="max-height:120px;border-radius:8px;margin-top:4px">`
+    : `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:12px;margin-top:4px">${FILE_ICONS[(f.name.split('.').pop()||'').toLowerCase()] || '📎'} ${esc(f.name)}</span>`
+  ).join(' ') : '';
+  const _userWrap = appendChatUser(displayText + attachHtml);
   _pendingUserWraps.push(_userWrap);
   if (_currentView === 'chat') showTyping(agents.find(a=>a.id===(document.getElementById('agent-select').value||'claude'))?.name || 'Agent');
   if (text) syncMessageToRelay(currentChatId, 'user', text);
-  send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', model: window._selectedModel || null, workDir: window._workDir || null, relayToken: getRelayToken(), images });
+  send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', model: window._selectedModel || null, workDir: window._workDir || null, relayToken: getRelayToken(), files });
 
   // Auto-đặt tên chat theo prompt đầu tiên nếu tên vẫn là mặc định
   const titleEl = document.getElementById('chat-title');
