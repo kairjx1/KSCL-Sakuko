@@ -809,10 +809,16 @@ dialog.dlg header button:hover{color:var(--text)}
   border:1px solid rgba(255,255,255,.16);border-radius:min(4vw,20px);
   padding:clamp(24px,3.2vw,40px) clamp(20px,2.8vw,36px);
   width:clamp(320px,28vw,540px);max-width:calc(100vw - 24px);
+  /* Khung minh họa trong ảnh nền CAO hơn thẻ HTML này khi chỉ để chiều cao tự theo nội dung
+     (đo lại: khung minh họa cao ~1.43 lần chiều rộng) — thiếu min-height làm lộ viền khung
+     minh họa thừa ra cả trên lẫn dưới thẻ thật, đúng như ảnh chụp người dùng khoanh đỏ.
+     Ép min-height theo cùng đơn vị vw với width để luôn tỉ lệ đúng, rồi dùng
+     justify-content:center để nội dung không bị dồn lên đầu để trống khoảng dưới. */
+  min-height:clamp(456px,40vw,770px);justify-content:center;
   display:flex;flex-direction:column;align-items:center;gap:clamp(10px,1.4vw,18px);
   box-shadow:0 30px 90px rgba(0,0,0,.6),0 0 50px rgba(124,58,237,.25),0 0 0 1px rgba(167,139,250,.12) inset}
 @media (max-width:760px){
-  .login-card{position:relative;left:auto;top:auto;transform:none;margin:24px auto;width:min(92vw,400px)}
+  .login-card{position:relative;left:auto;top:auto;transform:none;margin:24px auto;width:min(92vw,400px);min-height:0}
   .login-content{display:flex;align-items:center;justify-content:center}
   .login-aura{opacity:.4}
 }
@@ -832,7 +838,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.120</span>
+  <span class="version" id="app-version">v1.0.121</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
