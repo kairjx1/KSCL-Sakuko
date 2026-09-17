@@ -838,7 +838,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.132</span>
+  <span class="version" id="app-version">v1.0.133</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -4242,9 +4242,25 @@ async function doUpdate() {
   const banner = document.getElementById('update-banner');
   banner.textContent = '⏳ Đang tải bản cập nhật...';
   banner.style.cursor = 'default';
-  // Ưu tiên full-update (thay cả .exe — áp dụng khi có thay đổi backend như tính năng
-  // Bộ nhớ). Nếu chưa cấu hình nơi tải .exe (R2 chưa sẵn sàng) thì fallback về
-  // do-update cũ (chỉ vá HTML) để người dùng vẫn thấy giao diện mới nhất trong lúc chờ.
+  // ĐỔI KIẾN TRÚC (theo yêu cầu người dùng, học từ AGS): ưu tiên "core-update" — chỉ tải lại
+  // server.js/agent-runner.js/db.js/file-extract.js rồi NẠP LẠI NGAY TRONG CÙNG TIẾN TRÌNH,
+  // KHÔNG đụng tới file .exe, KHÔNG khởi động lại app/cửa sổ console. Chỉ khi bản đang chạy
+  // CHƯA CÓ cơ chế này (exe cũ, launcher.js chưa biết route `/api/do-core-update`) mới rơi
+  // xuống full-update (thay cả .exe — vẫn cần cho trường hợp CHÍNH launcher.js đổi, hiếm).
+  try {
+    const rCore = await fetch('/api/do-core-update', { method: 'POST' });
+    const dCore = await rCore.json();
+    if (dCore.ok) {
+      banner.textContent = '✅ Đang nạp lại (không cần khởi động lại app)...';
+      pollUntilBackUp(banner);
+      return;
+    }
+    console.log('[update] core-update không dùng được, fallback full-update:', dCore.msg);
+  } catch (e) { console.log('[update] core-update lỗi, fallback full-update:', e.message); }
+
+  // Full-update (thay cả .exe) — chỉ còn cần khi bản đang chạy chưa có cơ chế core-update ở
+  // trên, hoặc R2 chưa cấu hình. Nếu cả 2 đều không được thì fallback về do-update cũ (chỉ vá
+  // HTML) để người dùng vẫn thấy giao diện mới nhất trong lúc chờ.
   try {
     const rFull = await fetch('/api/do-full-update', { method: 'POST' });
     const dFull = await rFull.json();
