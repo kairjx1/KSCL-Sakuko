@@ -1794,11 +1794,16 @@ let CURRENT_VERSION = readCurrentVersion();
 // ĐÚNG mã nguồn thật sự đang chạy, dù local version.json (file rời, có thể bị hỏng/tự đồng bộ
 // sai) nói gì đi nữa. So online với CẢ HAI, banner hiện khi lệch với BẤT KỲ cái nào — máy nào
 // lỡ bị lệch local cũng không thể "trốn" banner nữa vì bundled không đời nào tự bị sửa.
+// BUG THẬT đã tìm ra (báo qua console DevTools thật — banner "có bản cập nhật" không bao giờ
+// tắt được dù đã ở đúng bản mới nhất): đọc trực tiếp qua `path.join(__dirname, 'public', ...)`
+// CHỈ đúng khi server.js còn nằm TRONG snapshot pkg — từ khi chạy từ CORE_DIR (đường dẫn THẬT
+// ngoài snapshot, xem launcher.js's CORE_DIR/CORE_FILES), `__dirname` của CHÍNH server.js giờ
+// LÀ `CORE_DIR`, không phải gốc snapshot nữa — path cũ luôn trỏ tới chỗ không tồn tại, âm thầm
+// rơi về mặc định '0.0.0' qua catch{}, khiến MỌI bản online bị coi là "mới hơn 0.0.0" mãi mãi.
+// Fix: launcher.js (vẫn chạy TRONG snapshot, `__dirname` đúng) tự đọc rồi truyền qua biến môi
+// trường `KAGENT_BUNDLED_VERSION` — server.js đọc lại từ đó, không tự dò đường dẫn nữa.
 function readBundledVersion() {
-  try {
-    const text = fs.readFileSync(path.join(__dirname, 'public', 'version.json'), 'utf8').replace(/^﻿/, '');
-    return JSON.parse(text).version || '0.0.0';
-  } catch { return '0.0.0'; }
+  return process.env.KAGENT_BUNDLED_VERSION || '0.0.0';
 }
 const BUNDLED_VERSION = readBundledVersion();
 
