@@ -1802,8 +1802,25 @@ let CURRENT_VERSION = readCurrentVersion();
 // rơi về mặc định '0.0.0' qua catch{}, khiến MỌI bản online bị coi là "mới hơn 0.0.0" mãi mãi.
 // Fix: launcher.js (vẫn chạy TRONG snapshot, `__dirname` đúng) tự đọc rồi truyền qua biến môi
 // trường `KAGENT_BUNDLED_VERSION` — server.js đọc lại từ đó, không tự dò đường dẫn nữa.
+// BUG THẬT NGHIÊM TRỌNG KHÁC đã tìm ra ngay sau khi vá bug ở trên (báo qua log console thật của
+// 1 máy đồng nghiệp — vòng lặp VÔ HẠN "Update available... Đang tải core mới... Đã nạp lại core
+// xong" lặp lại liên tục không dứt): biến `KAGENT_BUNDLED_VERSION` được ĐẶT bởi `launcher.js` —
+// mà `launcher.js` (vỏ khởi động, nén cứng trong CHÍNH file `.exe`) CHỈ đổi được khi thay CẢ
+// file `.exe` (`/api/do-full-update`) — `/api/do-core-update` (nhẹ, không đụng exe) KHÔNG BAO
+// GIỜ cập nhật được `launcher.js`. Máy nào đang chạy 1 `launcher.js` CŨ (từ trước khi có dòng
+// đặt biến này) sẽ ĐƯỢC core MỚI (có đọc biến này) nhưng launcher CŨ không hề đặt biến đó —
+// đọc về `undefined`, rơi về mặc định cũ `'0.0.0'` y hệt bug trước, khiến `checkForUpdate()` cứ
+// báo "có bản mới" mãi mãi dù core đã đúng bản mới nhất — người dùng bấm Cập nhật (hoặc trang tự
+// bấm qua polling) lặp lại vô tận mà không bao giờ hết. Bài học: SỬA Ở LAUNCHER.JS KHÔNG BAO GIỜ
+// đủ để "tự chữa" qua core-update — bất kỳ máy nào launcher chưa kịp cập nhật (qua
+// do-full-update) sẽ MÃI MÃI kẹt kiểu này cho tới khi có 1 lần thay exe thật.
+// Fix phòng thủ ở TẦNG NÀY (không phụ thuộc launcher có sửa đúng hay chưa): nếu biến môi trường
+// KHÔNG có (launcher cũ chưa biết đặt) — đừng mặc định về '0.0.0' (luôn kích hoạt false-positive
+// vĩnh viễn) — mặc định về CHÍNH `CURRENT_VERSION` (coi như "không có thông tin bundled đáng tin
+// cậy, tạm bỏ qua lớp kiểm tra chống-banner-kẹt này") — máy có launcher cũ MẤT lớp phòng thủ
+// "bundled" (chấp nhận được, ít quan trọng hơn nhiều so với "app không bao giờ hết báo lỗi").
 function readBundledVersion() {
-  return process.env.KAGENT_BUNDLED_VERSION || '0.0.0';
+  return process.env.KAGENT_BUNDLED_VERSION || CURRENT_VERSION;
 }
 const BUNDLED_VERSION = readBundledVersion();
 
