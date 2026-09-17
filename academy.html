@@ -5269,6 +5269,7 @@ ${kpi('SKU tồn âm',kkTonAm.toLocaleString(),'+'+kkPctTangTA+'% vs T.trước 
 function rDaoTao(){
   const t=S.tab||'hoclieu';
   if(t==='onboarding')return rOnboarding();
+  if(t==='kscl-quiz')return rKSCLQuiz();
   const adminNote=isAdmin()?`<div class="alert a-info" style="margin-bottom:16px"><span class="a-ic">💡</span><div class="a-bd"><strong>Chế độ Admin</strong><p>Bấm <b>📁 + Thư mục</b> hoặc <b>📄 + Mục</b> để thêm. Di chuột vào mỗi mục để thấy nút ✏️ đổi tên và 🗑 xóa.</p></div></div>`:'' ;
   return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › Đào tạo</div>
@@ -5276,6 +5277,7 @@ function rDaoTao(){
 <div class="tabs" style="margin-bottom:20px">
   <div class="tab ${t==='hoclieu'?'on':''}" onclick="go('daotao','hoclieu')">📁 Học liệu</div>
   <div class="tab ${t==='onboarding'?'on':''}" onclick="go('daotao','onboarding')">🗂️ Checklist Onboarding</div>
+  <div class="tab ${t==='kscl-quiz'?'on':''}" onclick="go('daotao','kscl-quiz')">🛡️ Đào tạo KSCL – Kiểm tra</div>
 </div>
 ${adminNote}
 <div class="g2">
@@ -5446,10 +5448,250 @@ return`
 <div class="tabs" style="margin-bottom:20px">
   <div class="tab" onclick="go('daotao','hoclieu')">📁 Học liệu</div>
   <div class="tab on">🗂️ Checklist Onboarding</div>
+  <div class="tab" onclick="go('daotao','kscl-quiz')">🛡️ Đào tạo KSCL – Kiểm tra</div>
 </div>
 <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
   <div style="display:flex;flex-direction:column;gap:8px;width:200px;flex-shrink:0" id="ob-roles"></div>
   <div style="flex:1;min-width:0" id="ob-content"></div>
+</div>`;}
+
+/* ══════════════════════════════════════════
+   ĐÀO TẠO KSCL – BÀI KIỂM TRA
+══════════════════════════════════════════ */
+function rKSCLQuiz(){
+const KSCL_MODULES=[
+{id:'m1',ic:'🏢',title:'Giới thiệu Phòng KSCL',color:'#7c3aed',bg:'#f5f3ff',
+ sections:[
+  {h:'Chức năng',body:'Phòng Kiểm soát Chất lượng là phòng ban <strong>độc lập</strong>, chịu trách nhiệm thiết lập tiêu chuẩn, giám sát và cải tiến toàn bộ hệ thống vận hành liên quan đến chất lượng sản phẩm, an toàn thực phẩm (ATTP) và trải nghiệm an tâm của khách hàng.'},
+  {h:'Cơ cấu 2 bộ phận',body:'<strong>Bộ phận Kiểm kê:</strong> Thực hiện kiểm kê định kỳ & đột xuất; đối soát số liệu hệ thống; phân tích rủi ro và phát hiện thất thoát; lập báo cáo kiểm kê chi tiết.<br><br><strong>Bộ phận QC:</strong> Giám sát tiêu chuẩn (vệ sinh, trưng bày, ca làm việc); kiểm soát hàng RTE ATTP; chuẩn hóa & Đào tạo; Audit & Báo cáo định kỳ.'},
+  {h:'Slogan định hướng',body:'<em>"Sạch tuyệt đối kiểu Nhật – Vũ khí cạnh tranh duy nhất"</em> — đây là tinh thần cốt lõi của Phòng KSCL CVS.'},
+ ]},
+{id:'m2',ic:'📋',title:'Các quy trình kiểm soát',color:'#0d9488',bg:'#f0fdfa',
+ sections:[
+  {h:'Kiểm kê check – Quy trình quan trọng',body:'<ul style="padding-left:18px;line-height:2"><li>Quy trình kiểm kê hàng hóa CVS</li><li>Quy trình tiếp nhận RTE</li><li>Quy trình xử lý hàng date</li><li>Quy trình kiểm kê hàng hóa đột xuất</li><li>Quy trình SOP: Giảm giá hàng chế biến trong ngày</li><li>Quy trình xử lý hàng lỗi – hỏng (Hàng khô)</li></ul>'},
+  {h:'QC check – Quy trình quan trọng',body:'<ul style="padding-left:18px;line-height:2"><li>Quy trình Vận hành ca (Mở cửa – Bàn giao ca – Đóng cửa)</li><li>Quy trình Vệ sinh định kỳ cửa hàng</li><li>Quy trình Kiểm soát vệ sinh cá nhân nhân viên</li><li>Quy trình Kiểm soát hình ảnh & Tác phong nhân viên</li><li>Quy trình Xử lý kỷ luật và vi phạm quy định</li><li>Quy trình Xử lý khiếu nại & đổi trả hàng</li></ul>'},
+  {h:'Một số quy trình khác',body:'<ul style="padding-left:18px;line-height:2"><li>Quy trình lên đơn TO/SO</li><li>Quy trình cấp phát tài sản</li><li>Quy trình thu hồi tài sản</li></ul>'},
+ ]},
+{id:'m3',ic:'🌡️',title:'Kiểm soát hàng RTE – Nhạy cảm nhất',color:'#dc2626',bg:'#fef2f2',
+ sections:[
+  {h:'⚠️ Cảnh báo quan trọng',body:'<div style="background:#fef2f2;border:2px solid #dc2626;border-radius:8px;padding:12px 16px;font-weight:700;color:#dc2626">Bán hàng hết date là VI PHẠM NGHIÊM TRỌNG – Phòng KSCL sẽ audit đột xuất bất kỳ lúc nào</div>'},
+  {h:'Nhận hàng',body:'<ul style="padding-left:18px;line-height:2"><li>Kiểm tra <strong>nhiệt độ giao nhận</strong></li><li>Đối chiếu PO – số lượng, date</li><li>Ký biên bản nhận hàng</li></ul>'},
+  {h:'Trưng bày',body:'<ul style="padding-left:18px;line-height:2"><li>Bổ sung kệ theo <strong>planogram</strong></li><li>Kiểm tra date trước khi đặt</li><li>Không lẫn hàng cận date & mới</li></ul>'},
+  {h:'Bảo quản',body:'<ul style="padding-left:18px;line-height:2"><li>Đưa ngay vào tủ lạnh <strong>≤ 5°C</strong></li><li>Sắp xếp <strong>FIFO</strong> (vào trước – ra trước)</li><li>Ghi nhãn ngày nhập kho</li></ul>'},
+  {h:'Giám sát',body:'<ul style="padding-left:18px;line-height:2"><li>Kiểm tra kệ <strong>2 lần / ca</strong></li><li>Scan date hàng tồn <strong>mỗi sáng</strong></li><li>Báo ngay khi có bất thường</li></ul>'},
+  {h:'Xử lý cận date',body:'<ul style="padding-left:18px;line-height:2"><li><strong>T-1 ngày:</strong> Giảm giá 30%</li><li><strong>T-0:</strong> Rút khỏi kệ trước 12:00</li><li><strong style="color:#dc2626">TUYỆT ĐỐI không bán hết date</strong></li></ul>'},
+ ]},
+{id:'m4',ic:'📊',title:'Quy trình kiểm kê',color:'#2563eb',bg:'#eff6ff',
+ sections:[
+  {h:'Các bước thực hiện',body:`
+<div style="display:flex;flex-direction:column;gap:10px">
+${[
+['1','In phiếu kiểm kê từ KSCL gửi'],
+['2','Check & nhận tồn vào phần mềm các đơn nhập xuất từ hôm trước'],
+['3','Với hàng RTE, siêu thị tự kiểm kê và gửi số liệu thực tế cho bên kiểm soát'],
+['4','Đếm từng SKU – ghi số lượng thực tế (KHÔNG dựa vào số tồn phần mềm)'],
+['5','Gửi kiểm kê lần 1 trước <strong>11:00</strong>'],
+['6','Kiểm lại lần 2 sau đối chiếu, trước <strong>13:00</strong> cùng ngày'],
+['7','Điền biên bản kiểm kê đầy đủ'],
+['8','Xác nhận BBKK từ bộ phận KSCL qua <strong>email</strong>'],
+['9','Lưu số liệu, tổng hợp để tính công nợ kỳ kiểm kê'],
+['10','Cập nhật số tồn thực tế trước <strong>11:00 ngày N+1</strong>'],
+].map(([n,t])=>`<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;border-radius:50%;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${n}</div><div style="font-size:13.5px;line-height:1.6;padding-top:3px">${t}</div></div>`).join('')}
+</div>`},
+ ]},
+{id:'m5',ic:'👔',title:'Tác phong & Kỷ luật nhân viên CVS',color:'#d97706',bg:'#fffbeb',
+ sections:[
+  {h:'Tiêu chuẩn tác phong',body:'<ul style="padding-left:18px;line-height:2"><li>Chào khách khi vào & ra: <strong>"Irasshaimase"</strong></li><li>Xử lý phàn nàn: <strong>lắng nghe → xin lỗi → giải quyết</strong></li><li>Đồng phục sạch, ủi phẳng, thẻ tên rõ ràng</li><li>Đến đúng giờ, bàn giao ca đầy đủ <strong>15 phút</strong> trước</li><li>Rửa tay trước khi tiếp xúc thực phẩm</li><li>Báo ngay sự cố cho trưởng ca, không tự xử lý</li></ul>'},
+  {h:'5 mức xử lý kỷ luật',body:`
+<div style="display:flex;flex-direction:column;gap:8px">
+${[
+['1','#16a34a','#dcfce7','Nhắc nhở miệng','Không ghi vào hồ sơ. Vi phạm lần đầu, nhẹ, không gây thiệt hại.'],
+['2','#d97706','#fef9c3','Ghi lỗi, trừ KPI','Lập BBVP + xem xét trừ KPI hiệu suất. Vi phạm lặp lại hoặc trung bình lần đầu.'],
+['3','#ea580c','#ffedd5','Hội đồng kỷ luật','Xem xét tạm ngừng làm việc (tối đa 15 ngày). Vi phạm nghiêm trọng cần xác minh.'],
+['4','#dc2626','#fee2e2','Sa thải','Theo Điều 125 Bộ luật Lao động. Vi phạm đặc biệt nghiêm trọng hoặc tái phạm sau cảnh cáo.'],
+['5','#7c3aed','#f5f3ff','Hình thức cao nhất','Chi tiết xem Bảng phân loại vi phạm & quy định xử lý chi tiết.'],
+].map(([n,fg,bg,name,desc])=>`<div style="display:flex;gap:10px;align-items:flex-start;background:${bg};border-radius:10px;padding:10px 12px"><div style="width:28px;height:28px;border-radius:50%;background:${fg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">M${n}</div><div><div style="font-weight:700;font-size:13.5px;color:${fg}">${name}</div><div style="font-size:12.5px;color:#374151;margin-top:2px">${desc}</div></div></div>`).join('')}
+</div>`},
+  {h:'Lưu ý quan trọng','body':'Tất cả hồ sơ vi phạm được lưu lại để làm cơ sở đánh giá năng lực KPI cá nhân hàng tháng và hàng năm.'},
+ ]},
+];
+
+const QUIZ=[
+{q:'Phòng KSCL gồm mấy bộ phận chính?',opts:['1 bộ phận','2 bộ phận','3 bộ phận','4 bộ phận'],ans:1},
+{q:'Bộ phận nào thực hiện kiểm kê định kỳ và đột xuất tại siêu thị?',opts:['Bộ phận QC','Bộ phận Kiểm kê','Cả hai bộ phận','Ban Giám đốc'],ans:1},
+{q:'Nhiệm vụ của Bộ phận QC KHÔNG bao gồm điều nào?',opts:['Giám sát tiêu chuẩn vệ sinh','Chuẩn hóa & Đào tạo','Thực hiện giao hàng cho cửa hàng','Audit & Báo cáo định kỳ'],ans:2},
+{q:'Slogan định hướng của Phòng KSCL là gì?',opts:['"Khách hàng là trung tâm"','"Sạch tuyệt đối kiểu Nhật – Vũ khí cạnh tranh duy nhất"','"Chất lượng là số 1"','"An toàn tuyệt đối"'],ans:1},
+{q:'Phòng KSCL có tính chất gì so với các phòng ban khác?',opts:['Trực thuộc bộ phận Kinh doanh','Phòng ban độc lập','Nằm dưới bộ phận Kế toán','Thuộc bộ phận Kho'],ans:1},
+{q:'Quy trình nào sau đây thuộc nhóm "Kiểm kê check"?',opts:['Quy trình vệ sinh định kỳ cửa hàng','Quy trình kiểm kê hàng hóa CVS','Quy trình vận hành ca','Quy trình xử lý khiếu nại'],ans:1},
+{q:'Quy trình xử lý khiếu nại & đổi trả hàng thuộc nhóm quy trình nào?',opts:['Kiểm kê check','Một số quy trình khác','QC check','Quy trình nhân sự'],ans:2},
+{q:'Theo quy trình kiểm kê, kết quả lần 1 phải gửi trước mấy giờ?',opts:['9:00','10:00','11:00','12:00'],ans:2},
+{q:'Sau khi kiểm soát đối chiếu, kiểm lại lần 2 phải hoàn thành trước:',opts:['11:00','12:00','13:00','14:00'],ans:2},
+{q:'Sau kiểm kê, cần cập nhật số tồn thực tế trước mấy giờ ngày N+1?',opts:['8:00','9:00','11:00','13:00'],ans:2},
+{q:'Nhiệt độ bảo quản hàng RTE tối đa là bao nhiêu?',opts:['0°C','3°C','5°C','8°C'],ans:2},
+{q:'FIFO trong bảo quản hàng RTE có nghĩa là:',opts:['Vào sau ra trước','Vào trước ra trước','Vào ngẫu nhiên ra trước','Ra sau vào sau'],ans:1},
+{q:'Hàng RTE phải được kiểm tra kệ bao nhiêu lần mỗi ca?',opts:['1 lần','2 lần','3 lần','4 lần'],ans:1},
+{q:'Hàng RTE cận date T-1 ngày được xử lý như thế nào?',opts:['Rút khỏi kệ ngay','Tiếp tục bán bình thường','Giảm giá 30%','Giảm giá 50%'],ans:2},
+{q:'Hàng RTE T-0 (hết date hôm nay) phải rút khỏi kệ trước mấy giờ?',opts:['8:00','10:00','11:00','12:00'],ans:3},
+{q:'Vi phạm nào bị xem là vi phạm NGHIÊM TRỌNG theo quy định KSCL?',opts:['Trưng bày không đúng planogram','Bán hàng hết date','Quên scan date buổi sáng','Đặt hàng cận date lẫn hàng mới'],ans:1},
+{q:'Khi nhận hàng RTE, bước đầu tiên cần kiểm tra là:',opts:['Số lượng theo PO','Nhiệt độ giao nhận','Hạn sử dụng','Barcode sản phẩm'],ans:1},
+{q:'Hàng RTE khi trưng bày lên kệ phải đảm bảo:',opts:['Xếp hàng mới lên trước','Kiểm tra date trước khi đặt','Không cần theo planogram','Bổ sung kệ bất kỳ lúc nào'],ans:1},
+{q:'Khi đếm hàng kiểm kê, nhân viên phải:',opts:['Dựa vào số tồn trong phần mềm','Đếm từng SKU và ghi số lượng thực tế','Chỉ đếm hàng có chênh lệch','Đếm theo lô hàng'],ans:1},
+{q:'Xác nhận BBKK cuối cùng từ bộ phận KSCL qua kênh nào?',opts:['Zalo','Điện thoại','Email','Lark message'],ans:2},
+{q:'Nhân viên CVS chào khách khi vào bằng câu nào?',opts:['Xin chào quý khách','Hello','Irasshaimase','Welcome'],ans:2},
+{q:'Khi xử lý phàn nàn của khách, thứ tự đúng là:',opts:['Xin lỗi → lắng nghe → giải quyết','Lắng nghe → xin lỗi → giải quyết','Giải quyết → lắng nghe → xin lỗi','Xin lỗi → giải quyết → lắng nghe'],ans:1},
+{q:'Khi bàn giao ca, nhân viên phải đến trước bao nhiêu phút?',opts:['5 phút','10 phút','15 phút','20 phút'],ans:2},
+{q:'Nhân viên phải rửa tay khi nào?',opts:['Sau khi tiếp xúc thực phẩm','Trước khi tiếp xúc thực phẩm','Chỉ khi tay bẩn nhìn thấy','Mỗi 2 giờ'],ans:1},
+{q:'Khi gặp sự cố tại cửa hàng, nhân viên cần:',opts:['Tự xử lý','Báo ngay cho trưởng ca','Báo cho khách hàng trước','Liên hệ Ban Giám đốc ngay'],ans:1},
+{q:'Vi phạm lần đầu, mức độ nhẹ, không gây thiệt hại bị xử lý ở mức nào?',opts:['Mức 1 – Nhắc nhở miệng','Mức 2 – Ghi lỗi trừ KPI','Mức 3 – Hội đồng kỷ luật','Mức 4 – Sa thải'],ans:0},
+{q:'Sa thải theo Điều 125 Bộ luật Lao động là mức xử lý thứ mấy?',opts:['Mức 2','Mức 3','Mức 4','Mức 5'],ans:2},
+{q:'Mức 2 kỷ luật áp dụng khi nào?',opts:['Vi phạm lần đầu nhẹ','Vi phạm lặp lại hoặc vi phạm trung bình lần đầu','Vi phạm nghiêm trọng cần xác minh','Vi phạm đặc biệt nghiêm trọng'],ans:1},
+{q:'Phòng KSCL audit cửa hàng như thế nào?',opts:['Theo lịch cố định hàng tháng','Chỉ khi có sự cố','Đột xuất bất kỳ lúc nào','Theo lịch hàng quý'],ans:2},
+{q:'Hồ sơ vi phạm của nhân viên được dùng để làm gì?',opts:['Chỉ lưu tham khảo','Đánh giá năng lực KPI hàng tháng và hàng năm','Báo cáo cơ quan nhà nước','Chia sẻ trong nhóm nội bộ'],ans:1},
+{q:'Bộ phận Kiểm kê có nhiệm vụ phân tích rủi ro nhằm mục đích gì?',opts:['Tăng doanh thu','Phát hiện sớm thất thoát và lỗ hổng vận hành','Kiểm soát nhân sự','Lập kế hoạch nhập hàng'],ans:1},
+];
+
+let qzState={started:false,done:false,answers:{},current:0};
+window._qzStart=function(){qzState={started:true,done:false,answers:{},current:0};_qzRender();};
+window._qzAnswer=function(qi,oi){
+  if(qzState.done)return;
+  qzState.answers[qi]=oi;
+  _qzRender();
+};
+window._qzSubmit=function(){
+  const total=QUIZ.length,answered=Object.keys(qzState.answers).length;
+  if(answered<total){const el=document.getElementById('qz-warn');if(el){el.style.display='block';el.textContent=`⚠️ Còn ${total-answered} câu chưa trả lời!`;}return;}
+  qzState.done=true;_qzRender();
+};
+window._qzRetry=function(){qzState={started:true,done:false,answers:{},current:0};_qzRender();};
+
+function _qzRender(){
+  const el=document.getElementById('kscl-quiz-body');
+  if(!el)return;
+  if(!qzState.started){el.innerHTML=_qzSplash();return;}
+  if(qzState.done){el.innerHTML=_qzResult();return;}
+  el.innerHTML=_qzForm();
+}
+
+function _qzSplash(){
+  return`<div style="text-align:center;padding:32px 20px">
+  <div style="font-size:56px;margin-bottom:16px">🛡️</div>
+  <h2 style="font-size:20px;font-weight:800;margin-bottom:8px">Bài kiểm tra KSCL – Nhân viên mới</h2>
+  <p style="color:var(--t2);font-size:13.5px;max-width:480px;margin:0 auto 24px">Gồm <strong>${QUIZ.length} câu hỏi</strong> bao phủ toàn bộ nội dung đào tạo Phòng Kiểm soát Chất lượng.<br>Trả lời đúng từ <strong>24/30 (80%)</strong> trở lên để đạt.</p>
+  <button onclick="_qzStart()" style="background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:13px 32px;font-size:15px;font-weight:700;cursor:pointer">Bắt đầu làm bài →</button>
+</div>`;
+}
+
+function _qzForm(){
+  const total=QUIZ.length,answered=Object.keys(qzState.answers).length;
+  const pct=Math.round(answered/total*100);
+  return`
+<div>
+<div style="background:#f1f5f9;border-radius:8px;padding:10px 14px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
+  <div style="flex:1;background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden">
+    <div style="width:${pct}%;height:100%;background:#7c3aed;border-radius:99px;transition:.3s"></div>
+  </div>
+  <span style="font-size:12px;font-weight:700;color:#7c3aed;white-space:nowrap">${answered}/${total} đã trả lời</span>
+</div>
+${QUIZ.map((q,qi)=>{
+  const sel=qzState.answers[qi];
+  return`<div style="background:#fff;border:1px solid ${sel!==undefined?'#7c3aed':'var(--border)'};border-radius:12px;padding:16px 18px;margin-bottom:12px">
+  <div style="font-weight:700;font-size:14px;margin-bottom:12px;line-height:1.5"><span style="background:#7c3aed;color:#fff;border-radius:6px;padding:2px 8px;font-size:11px;margin-right:8px">C${qi+1}</span>${q.q}</div>
+  <div style="display:flex;flex-direction:column;gap:7px">
+    ${q.opts.map((o,oi)=>`<label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 12px;border-radius:8px;border:1px solid ${sel===oi?'#7c3aed':'#e2e8f0'};background:${sel===oi?'#f5f3ff':'#fff'};transition:.15s" onclick="_qzAnswer(${qi},${oi})">
+      <div style="width:18px;height:18px;border-radius:50%;border:2px solid ${sel===oi?'#7c3aed':'#cbd5e1'};background:${sel===oi?'#7c3aed':'#fff'};flex-shrink:0;display:flex;align-items:center;justify-content:center">
+        ${sel===oi?'<div style="width:8px;height:8px;border-radius:50%;background:#fff"></div>':''}
+      </div>
+      <span style="font-size:13.5px;color:${sel===oi?'#5b21b6':'var(--t1)'}">${o}</span>
+    </label>`).join('')}
+  </div>
+</div>`;
+}).join('')}
+<div id="qz-warn" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;color:#dc2626;font-weight:600;font-size:13px;margin-bottom:12px"></div>
+<button onclick="_qzSubmit()" style="width:100%;background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">📝 Nộp bài</button>
+</div>`;
+}
+
+function _qzResult(){
+  let correct=0;
+  QUIZ.forEach((q,i)=>{if(qzState.answers[i]===q.ans)correct++;});
+  const pct=Math.round(correct/QUIZ.length*100);
+  const pass=pct>=80;
+  return`
+<div>
+<div style="text-align:center;padding:24px 20px;background:${pass?'#f0fdf4':'#fef2f2'};border-radius:14px;margin-bottom:20px;border:2px solid ${pass?'#86efac':'#fca5a5'}">
+  <div style="font-size:52px;margin-bottom:10px">${pass?'🏆':'📖'}</div>
+  <h2 style="font-size:22px;font-weight:800;color:${pass?'#15803d':'#dc2626'};margin-bottom:6px">${pass?'ĐẠT – Chúc mừng!':'CHƯA ĐẠT – Cần ôn lại'}</h2>
+  <div style="font-size:32px;font-weight:800;color:${pass?'#16a34a':'#dc2626'}">${correct}/${QUIZ.length}</div>
+  <div style="font-size:14px;color:var(--t2);margin-top:4px">(${pct}% — cần tối thiểu 80% để đạt)</div>
+</div>
+${QUIZ.map((q,qi)=>{
+  const sel=qzState.answers[qi],correct_a=q.ans,ok=sel===correct_a;
+  return`<div style="background:#fff;border:1px solid ${ok?'#86efac':'#fca5a5'};border-radius:12px;padding:14px 16px;margin-bottom:10px">
+  <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">
+    <span style="font-size:16px;flex-shrink:0;margin-top:1px">${ok?'✅':'❌'}</span>
+    <div style="font-weight:700;font-size:13.5px;line-height:1.5"><span style="background:${ok?'#16a34a':'#dc2626'};color:#fff;border-radius:6px;padding:2px 7px;font-size:11px;margin-right:7px">C${qi+1}</span>${q.q}</div>
+  </div>
+  ${q.opts.map((o,oi)=>{
+    const isCorrect=oi===correct_a,isWrong=oi===sel&&!ok;
+    return`<div style="padding:7px 11px;border-radius:7px;font-size:13px;margin-bottom:5px;border:1px solid ${isCorrect?'#86efac':isWrong?'#fca5a5':'#f1f5f9'};background:${isCorrect?'#f0fdf4':isWrong?'#fef2f2':'#f8fafc'};color:${isCorrect?'#15803d':isWrong?'#dc2626':'var(--t1)'}${isCorrect?';font-weight:700':''}">
+      ${isCorrect?'✓ ':''}${isWrong?'✗ ':''}${o}
+    </div>`;
+  }).join('')}
+</div>`;
+}).join('')}
+<button onclick="_qzRetry()" style="width:100%;background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">🔄 Làm lại bài</button>
+</div>`;
+}
+
+let _modOpen=-1;
+window._modToggle=function(i){_modOpen=_modOpen===i?-1:i;document.getElementById('kscl-mod-list').innerHTML=_modList();};
+function _modList(){return KSCL_MODULES.map((m,i)=>{const open=_modOpen===i;return`
+<div style="background:#fff;border:1px solid ${open?m.color+'60':'var(--border)'};border-radius:14px;overflow:hidden;margin-bottom:10px;box-shadow:${open?'0 4px 16px '+m.color+'22':'none'}">
+  <button onclick="_modToggle(${i})" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;background:none;border:none;cursor:pointer;text-align:left">
+    <div style="width:42px;height:42px;border-radius:11px;background:${m.bg};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${m.ic}</div>
+    <div style="flex:1"><div style="font-weight:700;font-size:14.5px;color:${open?m.color:'var(--t1)'}">${m.title}</div></div>
+    <span style="font-size:12px;color:var(--t2);transform:rotate(${open?180:0}deg);transition:.25s;display:inline-block">▼</span>
+  </button>
+  ${open?`<div style="border-top:1px solid ${m.color}20;padding:16px 18px;display:flex;flex-direction:column;gap:16px">
+    ${m.sections.map(s=>`<div><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:${m.color};margin-bottom:8px">${s.h}</div><div style="font-size:13.5px;line-height:1.7;color:var(--t1)">${s.body}</div></div>`).join('<hr style="border:none;border-top:1px solid #f1f5f9">')}
+  </div>`:''}
+</div>`;}).join('');}
+
+setTimeout(()=>{
+  const ml=document.getElementById('kscl-mod-list');
+  const qb=document.getElementById('kscl-quiz-body');
+  if(ml)ml.innerHTML=_modList();
+  if(qb)qb.innerHTML=_qzSplash();
+},30);
+
+return`
+<div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › <span onclick="go('daotao')">Đào tạo</span> › Đào tạo KSCL</div>
+<div class="sec-hdr"><h1>🛡️ Đào tạo KSCL – Phòng Kiểm Soát Chất Lượng</h1><p style="color:var(--t2);font-size:13px">Tài liệu đào tạo dành cho nhân viên mới CVS — đọc kỹ rồi làm bài kiểm tra</p></div>
+<div class="tabs" style="margin-bottom:20px">
+  <div class="tab" onclick="go('daotao','hoclieu')">📁 Học liệu</div>
+  <div class="tab" onclick="go('daotao','onboarding')">🗂️ Checklist Onboarding</div>
+  <div class="tab on">🛡️ Đào tạo KSCL – Kiểm tra</div>
+</div>
+<div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
+  <div style="flex:1;min-width:280px">
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="font-size:22px">📚</div>
+        <div style="font-weight:800;font-size:15px">Nội dung học liệu</div>
+      </div>
+      <p style="font-size:13px;color:var(--t2);margin-bottom:14px">Mở từng phần để đọc kỹ trước khi làm bài kiểm tra.</p>
+      <div id="kscl-mod-list">⏳ Đang tải...</div>
+    </div>
+  </div>
+  <div style="flex:1.4;min-width:300px">
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px 18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="font-size:22px">📝</div>
+        <div style="font-weight:800;font-size:15px">Bài kiểm tra (30 câu)</div>
+      </div>
+      <div id="kscl-quiz-body">⏳ Đang tải...</div>
+    </div>
+  </div>
 </div>`;}
 
 /* ══════════════════════════════════════════
