@@ -1863,10 +1863,27 @@ app.post('/api/do-core-update', async (req, res) => {
   try {
     const CORE_FILES = ['server.js', 'agent-runner.js', 'db.js', 'file-extract.js', 'setup-check.js'];
     console.log('[KAgent] Đang tải core mới từ Cloudflare...');
+    // BUG THẬT NGHIÊM TRỌNG đã tìm ra (báo qua console DevTools thật của người dùng — server
+    // biến mất hẳn, MỌI request ERR_CONNECTION_REFUSED sau khi bấm Cập nhật): trước đây GHI
+    // ĐÈ TRỰC TIẾP từng file lên CORE_DIR ngay khi tải xong — nếu 1 file bị tải cụt/hỏng do
+    // mạng chập chờn giữa chừng (chỉ kiểm tra độ dài > 10 byte, không kiểm tra NỘI DUNG có phải
+    // JS hợp lệ không), CORE_DIR bị để lại ở trạng thái NỬA CŨ NỬA MỚI/HỎNG — bước nạp lại
+    // (`require()`) sau đó ném lỗi cú pháp, mà lúc đó server CŨ đã bị tắt rồi (xem
+    // launcher.js's global.__kagentReloadCore) → không còn gì chạy cả. Fix: tải hết vào BỘ NHỚ
+    // trước, XÁC THỰC từng file là JS cú pháp hợp lệ (`vm.Script` chỉ PARSE không thực thi),
+    // CHỈ KHI TẤT CẢ đều hợp lệ mới ghi đè lên CORE_DIR (tất cả-hoặc-không-gì) — không bao giờ
+    // để CORE_DIR ở trạng thái dở dang nữa.
+    const vm = require('vm');
+    const downloaded = {};
     for (const f of CORE_FILES) {
       const buf = await httpsGetBuffer(`${UPDATE_BASE}/core/${f}?t=${Date.now()}`, 15000);
       if (!buf || buf.length < 10) throw new Error(`File core/${f} tải về rỗng/lỗi — huỷ để an toàn`);
-      fs.writeFileSync(path.join(coreDir, f), buf);
+      try { new vm.Script(buf.toString('utf8')); }
+      catch (e) { throw new Error(`File core/${f} tải về bị hỏng/cụt (lỗi cú pháp JS: ${e.message}) — huỷ để an toàn, giữ nguyên bản đang chạy`); }
+      downloaded[f] = buf;
+    }
+    for (const f of CORE_FILES) {
+      fs.writeFileSync(path.join(coreDir, f), downloaded[f]);
     }
     // QUAN TRỌNG: cũng phải cập nhật version.json — nếu không, `CURRENT_VERSION` (đọc lại từ
     // file này ngay khi module server.js được require() lại) vẫn là bản CŨ, khiến
