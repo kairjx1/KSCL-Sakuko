@@ -1210,7 +1210,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <div class="tb-robot">🤖</div>
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.152</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.153</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -2086,11 +2086,20 @@ function setAgentMode(mode) {
 
 async function pickWorkDir() {
   const cur = window._workDir || localStorage.getItem('kagent_workdir') || '';
+  // Cùng cơ chế "đợi 4s rồi tự đề nghị nhập tay" như pickProjDir() — xem giải thích ở đó.
+  let handled = false;
+  const escapeTimer = setTimeout(() => {
+    if (handled) return;
+    const input = prompt('Chưa thấy hộp thoại chọn thư mục hiện ra? Nhập đường dẫn trực tiếp (hoặc bấm Cancel để tiếp tục chờ):', cur || '');
+    if (input !== null) { handled = true; if (input.trim()) setWorkDir(input.trim()); }
+  }, 4000);
   try {
     const r = await fetch('/api/pick-folder', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ current: cur })
     });
+    clearTimeout(escapeTimer);
+    if (handled) return;
     const { path } = await r.json();
     if (path) {
       setWorkDir(path);
@@ -2100,6 +2109,8 @@ async function pickWorkDir() {
       if (input && input.trim()) setWorkDir(input.trim());
     }
   } catch {
+    clearTimeout(escapeTimer);
+    if (handled) return;
     const input = prompt('Nhập đường dẫn thư mục làm việc:', cur || '');
     if (input && input.trim()) setWorkDir(input.trim());
   }
@@ -2782,7 +2793,11 @@ function openProjModal(isNew) {
   const p = isNew ? null : projects.find(x => x.id === pid);
   document.getElementById('pm-title').textContent = isNew ? '＋ Thêm dự án' : '⚙️ Cài đặt dự án';
   document.getElementById('pm-name').value = p ? p.name : '';
-  document.getElementById('pm-dir').value = p ? (p.workDir || p.work_dir || '') : '';
+  // Thêm dự án mới: điền sẵn thư mục của dự án ĐANG chọn làm gợi ý — máy nào không mở được
+  // hộp thoại "Duyệt..." (PowerShell bị chặn) vẫn có sẵn 1 đường dẫn thật để sửa lại thay vì
+  // phải gõ tay từ đầu.
+  const curProj = projects.find(x => x.id === pid);
+  document.getElementById('pm-dir').value = p ? (p.workDir || p.work_dir || '') : (curProj ? (curProj.workDir || curProj.work_dir || '') : (window._workDir || ''));
   document.getElementById('pm-prefix').value = p ? (p.promptPrefix || p.prompt_prefix || '') : '';
   document.getElementById('pm-suffix').value = p ? (p.promptSuffix || p.prompt_suffix || '') : '';
   document.getElementById('pm-del-btn').style.display = isNew ? 'none' : '';
@@ -2799,11 +2814,28 @@ function toggleArea() {
   adv.style.display = adv.style.display === 'none' ? 'flex' : 'none';
 }
 
+// Một số máy chặn hẳn hộp thoại PowerShell (chính sách IT, không có desktop tương tác...) —
+// trước đây phải đợi tới 5 phút (timeout phía server) mới biết mà không làm gì được, dù bản
+// thân ô nhập vẫn gõ/dán tay bình thường. Giờ nếu sau vài giây vẫn chưa có phản hồi, tự đề
+// nghị nhập tay ngay — không huỷ yêu cầu gốc (máy nào dialog thật chỉ chậm khởi động vẫn chạy
+// tiếp bình thường, chỉ bỏ qua kết quả nếu người dùng đã tự gõ trong lúc chờ).
 async function pickProjDir() {
   const cur = document.getElementById('pm-dir').value || '';
+  const btn = document.querySelector('.pf-browse');
+  const original = btn ? btn.textContent : 'Duyệt...';
+  if (btn) btn.textContent = 'Đang mở...';
+  let handled = false;
+  const escapeTimer = setTimeout(() => {
+    if (handled) return;
+    const input = prompt('Chưa thấy hộp thoại chọn thư mục hiện ra? Nhập đường dẫn trực tiếp (hoặc bấm Cancel để tiếp tục chờ):', document.getElementById('pm-dir').value || '');
+    if (input !== null) { handled = true; if (input.trim()) document.getElementById('pm-dir').value = input.trim(); if (btn) btn.textContent = original; }
+  }, 4000);
   try {
     const r = await fetch('/api/pick-folder', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ current: cur }) });
+    clearTimeout(escapeTimer);
+    if (btn) btn.textContent = original;
+    if (handled) return;
     const { path } = await r.json();
     if (path) {
       document.getElementById('pm-dir').value = path;
@@ -2812,6 +2844,9 @@ async function pickProjDir() {
       if (input && input.trim()) document.getElementById('pm-dir').value = input.trim();
     }
   } catch (e) {
+    clearTimeout(escapeTimer);
+    if (btn) btn.textContent = original;
+    if (handled) return;
     const input = prompt('Nhập đường dẫn thư mục:', document.getElementById('pm-dir').value || '');
     if (input && input.trim()) document.getElementById('pm-dir').value = input.trim();
   }
