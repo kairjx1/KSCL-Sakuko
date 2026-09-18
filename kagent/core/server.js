@@ -1868,7 +1868,9 @@ async function checkForUpdate() {
     const text = stripBom(await httpsGetText(`${UPDATE_BASE}/version.json?t=${Date.now()}`));
     const data = JSON.parse(text);
     const behindLocal = data.version && semverGt(data.version, CURRENT_VERSION);
-    const behindBundled = data.version && semverGt(data.version, BUNDLED_VERSION);
+    // behindBundled chỉ có ý nghĩa khi LOCAL cũng đang lỗi thời — nếu local === online
+    // (đã core-update xong) thì không cần xét bundled nữa, tránh false-positive sau mỗi core-update
+    const behindBundled = behindLocal && data.version && semverGt(data.version, BUNDLED_VERSION);
     if (behindLocal || behindBundled) {
       updateState = { available: true, latestVersion: data.version };
       console.log(`[KAgent] Update available: local=${CURRENT_VERSION} bundled=${BUNDLED_VERSION} → ${data.version}`);
