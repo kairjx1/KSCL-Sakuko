@@ -172,9 +172,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 }
 .aip-quote .aq-icon{width:100%;max-width:260px;height:auto;object-fit:contain;display:block;margin:0 auto}
 .aip-quote .aip-quote-text{
-  font-family:'Dancing Script',cursive;font-weight:700;font-size:19px;line-height:1.35;
+  font-family:'Dancing Script',cursive;font-weight:700;font-size:16px;line-height:1.3;
   color:#c9a7ff;text-shadow:0 0 10px rgba(167,139,250,.65),0 0 24px rgba(96,165,250,.35);
-  padding:4px 16px;
+  padding:2px 16px 0;
 }
 .aip-footer{
   display:flex;align-items:center;justify-content:space-between;padding:10px 14px;
@@ -507,9 +507,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 }
 .sb-mascot .sbm-icon{width:100%;max-width:210px;height:auto;object-fit:contain;display:block;margin:0 auto}
 .sb-mascot .sbm-quote{
-  font-family:'Dancing Script',cursive;font-weight:700;font-size:17px;line-height:1.3;
+  font-family:'Dancing Script',cursive;font-weight:700;font-size:15px;line-height:1.25;
   color:#ff9ce6;text-shadow:0 0 10px rgba(255,110,230,.6),0 0 22px rgba(167,139,250,.35);
-  padding:4px 12px 14px;
+  padding:2px 12px 12px;
 }
 .sb-footer-ver{padding:8px 10px 10px;font-size:9.5px;color:var(--text3);text-align:center}
 
@@ -1220,7 +1220,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <img class="tb-robot" src="/kagent-mascot-face.png" alt="KAgent">
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.161</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.162</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -1364,7 +1364,7 @@ dialog.dlg,#pm-box{
 
     <div class="sb-mascot">
       <img class="sbm-icon" src="/kagent-mascot-full.png" alt="KAgent">
-      <div class="sbm-quote">"Hành động nhỏ tạo nên hiệu quả lớn!"</div>
+      <div class="sbm-quote">"Hành động nhỏ<br>tạo nên hiệu quả lớn!"</div>
     </div>
     <div class="sb-footer-ver">KAgent <span id="sb-version">v1.0.142</span> | KSCL Vietnam © 2026</div>
   </div>
@@ -4043,7 +4043,7 @@ function renderAgentInfoPanel() {
       </div>
       <div class="aip-quote">
         <img class="aq-icon" src="/kagent-mascot-full.png" alt="KAgent">
-        <div class="aip-quote-text">"Làm chủ AI - Kiến tạo tương lai"<br>— KAgent —</div>
+        <div class="aip-quote-text">"Làm chủ AI<br>Kiến tạo tương lai"<br>— KAgent —</div>
       </div>
     </div>
     <div class="aip-footer">
