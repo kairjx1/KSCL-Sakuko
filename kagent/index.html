@@ -838,7 +838,7 @@ dialog.dlg header button:hover{color:var(--text)}
 
 <div id="topbar">
   <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.138</span>
+  <span class="version" id="app-version">v1.0.139</span>
   <span class="tagline">AI Agent Manager</span>
   <div class="spacer"></div>
   <!-- Agent mode toggle -->
@@ -1174,6 +1174,12 @@ function connect() {
   ws = new WebSocket(`ws://${location.host}`);
 
   ws.onopen = () => {
+    // Nếu đang chờ core-update xong: WS kết nối lại = server mới đã sẵn sàng → reload ngay
+    if (sessionStorage.getItem('kagent-core-updating')) {
+      sessionStorage.removeItem('kagent-core-updating');
+      location.reload(true);
+      return;
+    }
     document.getElementById('ram-info').textContent = 'Đã kết nối';
     if (currentChatId) joinChat(currentChatId);
   };
@@ -4252,7 +4258,9 @@ async function doUpdate() {
     const dCore = await rCore.json();
     if (dCore.ok) {
       banner.textContent = '✅ Đang nạp lại (không cần khởi động lại app)...';
-      pollUntilBackUp(banner);
+      // Đánh dấu đang chờ core-update — khi WS kết nối lại được (server mới đã listen xong)
+      // thì ws.onopen sẽ tự reload, tránh reload quá sớm khi server cũ chưa tắt hẳn
+      sessionStorage.setItem('kagent-core-updating', '1');
       return;
     }
     console.log('[update] core-update không dùng được, fallback full-update:', dCore.msg);
