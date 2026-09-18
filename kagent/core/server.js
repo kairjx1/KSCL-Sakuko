@@ -186,10 +186,16 @@ async function relayGetMessageCount(chatId) {
     const res = await httpsRequest(`${RELAY_URL}/server/chats/${chatId}/messages/count`, {
       headers: { 'X-Server-Key': SERVER_SECRET },
     });
-    if (!res.ok) return 0;
+    if (!res.ok) {
+      console.error(`[KAgent] relayGetMessageCount: relay trả HTTP ${res.status} cho chat ${chatId} — auto-summarize sẽ không trigger được nếu mốc 20 tin bị lỡ vì lỗi này.`);
+      return 0;
+    }
     const d = await res.json();
     return d?.count || 0;
-  } catch { return 0; }
+  } catch (e) {
+    console.error(`[KAgent] relayGetMessageCount: lỗi kết nối relay cho chat ${chatId} —`, e.message, '— auto-summarize sẽ không trigger được nếu mốc 20 tin bị lỡ vì lỗi này.');
+    return 0;
+  }
 }
 
 // Phase 3: Load tóm tắt phiên trước (cross-machine memory)
@@ -464,6 +470,7 @@ Cuộc hội thoại${prevSummary && prevSummary.summary ? ' (phần mới)' : '
     // độ Local. Lỗi ở bước này KHÔNG được làm hỏng việc tóm tắt chat ở trên — best-effort.
     const token = relayToken || _relaySession.token;
     if (token) await extractPersonalFacts(historyForSummary, token).catch(e => console.error('[KAgent] extractPersonalFacts error:', e.message));
+    else console.log('[KAgent] extractPersonalFacts: bỏ qua — chưa đăng nhập Lark (không có token), bộ nhớ cá nhân cần đăng nhập.');
 
     return ok ? { ok: true } : { ok: false, reason };
   } catch (e) {
@@ -488,12 +495,13 @@ Cuộc hội thoại:
 ${historyText}`;
 
   const raw = await runPrintLLM(prompt);
-  if (!raw) return;
+  if (!raw) { console.error('[KAgent] extractPersonalFacts: không agent nào trả lời được — không có fact nào được ghi lần này.'); return; }
   const jsonMatch = raw.match(/\[[\s\S]*\]/); // phòng khi model bọc thêm ```json hoặc chữ thừa
-  if (!jsonMatch) return;
+  if (!jsonMatch) { console.error('[KAgent] extractPersonalFacts: model không trả về mảng JSON như yêu cầu, bỏ qua. Raw (200 ký tự đầu):', raw.slice(0, 200)); return; }
   let facts;
-  try { facts = JSON.parse(jsonMatch[0]); } catch { return; }
-  if (!Array.isArray(facts)) return;
+  try { facts = JSON.parse(jsonMatch[0]); } catch (e) { console.error('[KAgent] extractPersonalFacts: JSON.parse lỗi —', e.message, '— chuỗi model trả:', jsonMatch[0].slice(0, 300)); return; }
+  if (!Array.isArray(facts)) { console.error('[KAgent] extractPersonalFacts: kết quả parse không phải mảng, bỏ qua.'); return; }
+  if (!facts.length) { console.log('[KAgent] extractPersonalFacts: model xác nhận không có fact cá nhân mới nào trong đoạn hội thoại này (mảng rỗng — không phải lỗi).'); return; }
 
   for (const f of facts.slice(0, 5)) {
     if (!f || !f.key || f.value === undefined || f.value === null) continue;
@@ -1704,7 +1712,7 @@ app.post('/api/pick-folder', (req, res) => {
     // macOS: dùng osascript để mở folder picker
     const defaultPath = (current && !current.includes('C:\\') ? current : require('os').homedir()).replace(/"/g, '\\"');
     const script = `choose folder with prompt "Chọn thư mục làm việc cho KAgent" default location "${defaultPath}"`;
-    const proc = require('child_process').spawn('osascript', ['-e', `return POSIX path of (${script})`]);
+    const proc = require('child_process').spawn('osascript', ['-e', `return POSIX path of (${script})`], { cwd: require('os').tmpdir() });
     let out = '', err = '';
     proc.stdout.on('data', d => out += d.toString());
     proc.stderr.on('data', d => err += d.toString());
@@ -1727,12 +1735,36 @@ $d.ShowNewFolderButton = $true
 $d.RootFolder = [System.Environment+SpecialFolder]::MyComputer
 if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $d.SelectedPath }
 `.trim();
-    // Bỏ -NonInteractive để GUI dialog hiện được
-    const proc = require('child_process').spawn('powershell', ['-NoProfile', '-Command', ps], { windowsHide: false });
-    let out = '';
+    // Bỏ -NonInteractive để GUI dialog hiện được.
+    // BUG THẬT (người dùng báo "máy khác bấm chọn thư mục không lên gì cả"): thiếu `cwd` tường
+    // minh — xem ràng buộc đã chốt trong CLAUDE.md ("Mọi lệnh spawn PHẢI truyền cwd tường minh").
+    // Trong file .exe đóng gói bằng pkg, process.cwd() mặc định là đường dẫn ẢO bên trong
+    // snapshot (không tồn tại thật trên đĩa) — spawn PowerShell với cwd đó có thể treo/lỗi âm
+    // thầm tuỳ máy, dù chạy `node server.js` bình thường (cwd thật) không sao. Test qua
+    // localhost trên máy dev không lộ ra vì đang chạy đúng cwd thật; máy khác chạy y hệt file
+    // .exe thì trúng lỗi. Fix: luôn truyền cwd = os.tmpdir() (thư mục thật, luôn tồn tại).
+    const proc = require('child_process').spawn('powershell', ['-NoProfile', '-Command', ps], {
+      windowsHide: false, cwd: require('os').tmpdir(),
+    });
+    let out = '', err = '', responded = false;
+    const respondOnce = (payload) => { if (!responded) { responded = true; clearTimeout(safetyTimer); res.json(payload); } };
+    // An toàn phòng máy không có desktop tương tác (dialog GUI không bao giờ hiện ra được) —
+    // không để request treo vô thời hạn; 5 phút đủ rộng cho người dùng chọn thư mục bình thường.
+    const safetyTimer = setTimeout(() => {
+      try { proc.kill(); } catch {}
+      console.error('[KAgent] pick-folder timeout sau 5 phút — có thể máy không có desktop tương tác để hiện dialog.');
+      respondOnce({ path: null, error: 'timeout' });
+    }, 5 * 60 * 1000);
     proc.stdout.on('data', d => out += d.toString());
-    proc.on('close', () => res.json({ path: out.trim() || null }));
-    proc.on('error', () => res.json({ path: null }));
+    proc.stderr.on('data', d => err += d.toString());
+    proc.on('close', (code) => {
+      if (code !== 0 && err) console.error('[KAgent] pick-folder PowerShell lỗi:', err.trim());
+      respondOnce({ path: out.trim() || null });
+    });
+    proc.on('error', (e) => {
+      console.error('[KAgent] pick-folder spawn lỗi:', e.message);
+      respondOnce({ path: null, error: e.message });
+    });
   } else {
     // Linux: fallback — trả null (không có native dialog)
     res.json({ path: null });

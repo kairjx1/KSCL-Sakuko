@@ -997,10 +997,10 @@ dialog.dlg header button:hover{color:var(--text)}
 .model-pill:hover{border-color:var(--accent);color:var(--text)}
 /* Model picker popup */
 #model-picker{
-  position:absolute;top:calc(100% + 6px);left:0;z-index:200;
-  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
-  box-shadow:0 8px 24px rgba(0,0,0,.5);padding:10px;min-width:260px;
-  display:none;
+  position:fixed;z-index:20001;
+  background:#101830;border:1px solid rgba(167,139,250,.35);border-radius:12px;
+  box-shadow:0 16px 42px rgba(0,0,0,.6);padding:10px;min-width:260px;
+  display:none;max-height:70vh;overflow-y:auto;
 }
 #model-picker.open{display:block}
 .mp-section-title{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:2px 4px 6px;font-weight:600}
@@ -1210,7 +1210,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <div class="tb-robot">🤖</div>
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.151</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.152</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -1272,6 +1272,7 @@ dialog.dlg,#pm-box{
 </div>
 <div id="notif-menu" hidden></div>
 <div id="search-results"></div>
+<div id="model-picker"></div>
 
 <!-- Nút mở lại panel khi đã thu gọn — nằm ngoài panel vì panel.collapsed rộng 0, ẩn hết con -->
 <button class="panel-expand-btn" id="btn-expand-sidebar" onclick="toggleSidebarCollapse()" title="Mở rộng menu" style="left:8px">▶</button>
@@ -1516,7 +1517,6 @@ dialog.dlg,#pm-box{
             <span id="model-pill-name">Sonnet 4.6</span>
             <span style="font-size:9px;opacity:.5">▾</span>
           </div>
-          <div id="model-picker"></div>
         </div>
         <!-- hidden select để backward compat -->
         <select id="agent-select" style="display:none"></select>
@@ -1947,10 +1947,23 @@ function _renderModelPicker(agentId) {
   picker.innerHTML = html;
 }
 
+// #model-picker giờ là position:fixed ở cấp body (giống #user-menu/#notif-menu) — #content có
+// backdrop-filter nên tạo containing block mới, khiến dropdown position:absolute lồng bên trong
+// nó bị nhốt/hiện sai vị trí (kẹt phía sau nội dung chat) dù z-index cao. Phải tự tính toạ độ
+// bám theo đúng vị trí thật của #model-pill mỗi lần mở.
+function positionModelPicker() {
+  const picker = document.getElementById('model-picker');
+  const pill = document.getElementById('model-pill');
+  if (!picker || !pill) return;
+  const r = pill.getBoundingClientRect();
+  picker.style.left = r.left + 'px';
+  picker.style.top = (r.bottom + 6) + 'px';
+}
 function toggleModelPicker() {
   const picker = document.getElementById('model-picker');
   if (!picker) return;
   if (picker.classList.contains('open')) { picker.classList.remove('open'); return; }
+  positionModelPicker();
   const agentId = document.getElementById('agent-select').value || 'claude';
 
   // For claude: fetch cached live models (đồng bộ hàng ngày từ Anthropic API, xem
@@ -2022,6 +2035,10 @@ function closePicker(e) {
   const picker = document.getElementById('model-picker');
   if (picker && !picker.contains(e.target)) picker.classList.remove('open');
 }
+window.addEventListener('resize', () => {
+  const picker = document.getElementById('model-picker');
+  if (picker && picker.classList.contains('open')) positionModelPicker();
+});
 
 function selectModel(agentId, modelId) {
   window._selectedModel = modelId;
@@ -4098,7 +4115,11 @@ async function renderSettingsMemory() {
   el.innerHTML = '<div class="settings-row"><span class="sr-label">Đang tải...</span></div>';
   let mem = {};
   try { mem = await fetch(`/api/memory?relayUserId=${encodeURIComponent(getRelayUserId())}`).then(r => r.json()); } catch {}
-  const entries = Object.entries(mem).filter(([k]) => !k.startsWith('_'));
+  // Sắp xếp theo thời gian thêm/sửa gần nhất lên đầu — dễ thấy cái mới nhất và xoá bớt cái cũ
+  // không cần nữa, thay vì thứ tự chèn ngẫu nhiên trong file lưu.
+  const entries = Object.entries(mem)
+    .filter(([k]) => !k.startsWith('_'))
+    .sort(([, a], [, b]) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
   const listHtml = entries.length
     ? entries.map(([key, item]) => `
