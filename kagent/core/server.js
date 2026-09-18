@@ -1187,7 +1187,22 @@ app.delete('/api/modules/:id', (req, res) => {
 // Map chatId → Set<WebSocket>
 const chatClients = new Map();
 
+// Buffer streaming output mỗi chat (tối đa 50KB) để replay khi client reconnect
+const chatOutputBuffer = new Map();
+const CHAT_OUTPUT_BUFFER_MAX = 50000;
+
 function broadcast(chatId, msg) {
+  // Buffer output để replay khi client reconnect sau khi WS bị đứt
+  if (msg.type === 'output' && msg.data) {
+    const prev = chatOutputBuffer.get(chatId) || '';
+    const next = prev + msg.data;
+    chatOutputBuffer.set(chatId, next.length > CHAT_OUTPUT_BUFFER_MAX ? next.slice(-CHAT_OUTPUT_BUFFER_MAX) : next);
+  }
+  // Xoá buffer khi session kết thúc hẳn
+  if (msg.type === 'status' && msg.status === 'stopped') {
+    chatOutputBuffer.delete(chatId);
+  }
+
   const clients = chatClients.get(chatId);
   if (!clients) return;
   const data = JSON.stringify(msg);
@@ -1199,6 +1214,11 @@ function broadcast(chatId, msg) {
 wss.on('connection', (ws) => {
   let currentChatId = null;
   let clientRelayToken = null; // token từ client để gọi relay
+
+  // Ping từ server mỗi 25 giây để giữ WS sống khi browser throttle tab nền
+  const _wsPingInterval = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) ws.ping();
+  }, 25000);
 
   ws.on('message', async (raw) => {
     let msg;
@@ -1245,7 +1265,16 @@ wss.on('connection', (ws) => {
         ws.send(JSON.stringify({ type: 'history', messages }));
 
         // Gửi trạng thái session
-        ws.send(JSON.stringify({ type: 'status', status: runner.getSessionStatus(currentChatId) }));
+        const _sessionStatus = runner.getSessionStatus(currentChatId);
+        ws.send(JSON.stringify({ type: 'status', status: _sessionStatus }));
+
+        // Nếu agent đang chạy, replay output bị mất trong lúc WS đứt
+        if (_sessionStatus === 'running') {
+          const _buffered = chatOutputBuffer.get(currentChatId);
+          if (_buffered) {
+            ws.send(JSON.stringify({ type: 'output', data: `\x1b[2m[KAgent] ◀ Nội dung trong lúc mất kết nối:\x1b[0m\r\n` + _buffered }));
+          }
+        }
         break;
       }
 
@@ -1628,6 +1657,7 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
+    clearInterval(_wsPingInterval);
     if (currentChatId && chatClients.has(currentChatId)) {
       chatClients.get(currentChatId).delete(ws);
     }
