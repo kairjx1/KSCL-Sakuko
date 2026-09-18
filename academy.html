@@ -5460,221 +5460,297 @@ return`
 ══════════════════════════════════════════ */
 function rKSCLQuiz(){
 function _kQTList(items){
-  return `<div style="display:flex;flex-direction:column;gap:8px">${items.map(([name,url])=>
-    `<a href="${url}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:9px;background:#fff;border:1px solid #e2e8f0;text-decoration:none;color:var(--t1);font-size:13.5px;font-weight:600;transition:.15s" onmouseover="this.style.borderColor='#0d9488';this.style.background='#f0fdfa'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
-      <span style="flex:1">${name}</span><span style="color:#0d9488;font-size:12px;white-space:nowrap">Xem trên Wiki ↗</span>
+  return `<div style="display:flex;flex-direction:column;gap:8px">${items.map(([name,url,isRed])=>
+    `<a href="${url}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:${isRed?'#fff5f5':'#fff'};border:1px solid ${isRed?'#fca5a5':'#e2e8f0'};border-left:${isRed?'4px solid #dc2626':'1px solid #e2e8f0'};text-decoration:none;color:${isRed?'#991b1b':'var(--t1)'};font-size:13.5px;font-weight:${isRed?'700':'600'};transition:.15s" onmouseover="this.style.borderColor='${isRed?'#dc2626':'#0d9488'}';this.style.background='${isRed?'#fef2f2':'#f0fdfa'}'" onmouseout="this.style.borderColor='${isRed?'#fca5a5':'#e2e8f0'}';this.style.background='${isRed?'#fff5f5':'#fff'}'">
+      <span style="flex:1;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${isRed?`<span style="background:#fee2e2;color:#dc2626;font-size:11px;padding:2px 8px;border-radius:12px;font-weight:800;letter-spacing:.3px">🔴 QUAN TRỌNG</span>`:''}${name}</span><span style="color:${isRed?'#dc2626':'#0d9488'};font-size:12px;font-weight:700;white-space:nowrap">Xem trên Wiki ↗</span>
     </a>`).join('')}</div>`;
 }
 function _kNumCards(items,color,bg){
-  return `<div style="display:flex;flex-direction:column;gap:8px">${items.map(([n,title,desc])=>
+  return `<div style="display:flex;flex-direction:column;gap:9px">${items.map(([n,title,desc])=>
     `<div style="display:flex;gap:12px;align-items:flex-start;background:${bg};border-radius:10px;padding:12px 14px">
-      <div style="width:30px;height:30px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${n}</div>
-      <div><div style="font-weight:700;font-size:13.5px;color:${color}">${title}</div><div style="font-size:12.5px;color:#374151;margin-top:2px;line-height:1.6">${desc}</div></div>
+      <div style="width:32px;height:32px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${n}</div>
+      <div style="flex:1"><div style="font-weight:700;font-size:13.5px;color:${color}">${title}</div><div style="font-size:12.5px;color:#374151;margin-top:2px;line-height:1.65">${desc}</div></div>
     </div>`).join('')}</div>`;
 }
 function _kChecklistGrid(groups){
-  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">${groups.map(([title,color,items])=>
-    `<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">${groups.map(([title,color,items])=>
+    `<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;background:#fff">
       <div style="background:${color};color:#fff;font-weight:800;font-size:12.5px;padding:9px 14px;letter-spacing:.3px">${title}</div>
-      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:7px">${items.map(t=>`<div style="font-size:12.5px;color:var(--t1);display:flex;gap:7px;align-items:flex-start"><span style="color:${color};flex-shrink:0">☐</span><span>${t}</span></div>`).join('')}</div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:7px">${items.map(t=>`<div style="font-size:12.5px;color:var(--t1);display:flex;gap:7px;align-items:flex-start"><span style="color:${color};flex-shrink:0;font-size:13px">☑</span><span>${t}</span></div>`).join('')}</div>
     </div>`).join('')}</div>`;
 }
 function _kBadgeRows(rows){
   return `<div style="display:flex;flex-direction:column;gap:10px">${rows.map(([title,badge,color,crit])=>
-    `<div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px">
+    `<div style="border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;background:#fff">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px"><div style="font-weight:800;font-size:13.5px;color:var(--t1)">${title}</div><div style="background:${color};color:#fff;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap">${badge}</div></div>
       <div style="font-size:12.5px;color:#374151;line-height:1.7">${crit}</div>
     </div>`).join('')}</div>`;
 }
+
 const KSCL_MODULES=[
 {id:'m1',ic:'🏢',title:'Giới thiệu Phòng KSCL',color:'#7c3aed',bg:'#f5f3ff',
  sections:[
-  {h:'Chức năng',body:'Phòng Kiểm soát Chất lượng là phòng ban <strong>độc lập</strong>, chịu trách nhiệm thiết lập tiêu chuẩn, giám sát và cải tiến toàn bộ hệ thống vận hành liên quan đến chất lượng sản phẩm, an toàn thực phẩm (ATTP) và trải nghiệm an tâm của khách hàng.'},
-  {h:'Cơ cấu 2 bộ phận',body:'<strong>Bộ phận Kiểm kê:</strong> Thực hiện kiểm kê định kỳ & đột xuất (theo lịch hoặc khi có yêu cầu từ Ban Giám đốc); kiểm tra chuyên sâu nhóm hàng dễ thất thoát/giá trị cao; đối soát số liệu kiểm kê thực tế với hệ thống POS & quản lý kho bán lẻ; phân tích rủi ro, nhận diện sớm lỗ hổng vận hành (gian lận, lỗi quét mã, sai sót nhận hàng); lập báo cáo kiểm kê chi tiết gửi Quản lý cửa hàng & Ban Giám đốc.<br><br><strong>Bộ phận QC:</strong> Giám sát toàn diện quy trình vệ sinh, bố trí hàng hóa & tiêu chuẩn trưng bày theo từng ca làm việc; đảm bảo an toàn vệ sinh thực phẩm tuyệt đối cho nhóm hàng RTE (Bento, Onigiri, Matcha...); xây dựng tài liệu đào tạo & biểu mẫu checklist; Audit định kỳ tại cửa hàng, lập báo cáo chất lượng hàng tuần; kết nối dữ liệu POS & phản hồi khách hàng để cải tiến quy trình vận hành.'},
-  {h:'Slogan định hướng',body:'<em>"Sạch tuyệt đối kiểu Nhật – Vũ khí cạnh tranh duy nhất"</em> — đây là tinh thần cốt lõi của Phòng KSCL CVS.'},
+  {h:'Tài liệu đào tạo nhân viên mới (Slide 1)',body:'<div style="background:#f5f3ff;border-left:4px solid #7c3aed;padding:12px 16px;border-radius:0 10px 10px 0;margin:4px 0 12px"><div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px">Tôn chỉ cốt lõi (Slide 1)</div><div style="font-size:15px;font-weight:800;color:#5b21b6;margin-top:2px;font-style:italic">"Sạch tuyệt đối kiểu Nhật – Vũ khí cạnh tranh duy nhất"</div></div>Đây là tinh thần hành động xuyên suốt dành cho toàn bộ nhân viên mới của hệ thống cửa hàng tiện ích Sakuko CVS / Daily.'},
+  {h:'4 Nội dung đào tạo chính (Slide 2 - Mục lục)',body:_kNumCards([
+   ['01','Giới thiệu chung bộ phận KSCL','Chức năng phòng ban độc lập & cơ cấu 2 bộ phận chuyên trách (Kiểm kê và QC).'],
+   ['02','Nội dung giám sát','5 lĩnh vực giám sát cốt lõi: Hàng hóa, Biểu mẫu, Check cam, Kiểm kê và Chấm điểm thực địa.'],
+   ['03','Xử lý vi phạm','Quy trình xử lý kỷ luật 5 mức độ tăng dần từ nhắc nhở trực tiếp đến sa thải theo quy định Bộ luật Lao động.'],
+   ['04','Kỳ vọng trong vận hành','Tinh thần phối hợp chủ động, phản hồi thẳng thắn, khắc phục đến cùng và văn hóa cải tiến liên tục.'],
+  ],'#7c3aed','#f5f3ff')},
+  {h:'Chức năng phòng ban (Slide 3)',body:'Phòng Kiểm soát Chất lượng là phòng ban <strong>độc lập</strong>, chịu trách nhiệm thiết lập tiêu chuẩn, giám sát và cải tiến toàn bộ hệ thống vận hành liên quan đến chất lượng sản phẩm, an toàn thực phẩm (ATTP) và trải nghiệm an tâm của khách hàng.'},
+  {h:'Cơ cấu phòng ban – 2 bộ phận chuyên trách (Slide 3)',body:`
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+    <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;background:#fff">
+      <div style="background:#2563eb;color:#fff;font-weight:800;font-size:13px;padding:10px 14px;letter-spacing:.3px">📦 BỘ PHẬN KIỂM KÊ</div>
+      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:12.5px;line-height:1.6;color:#374151">
+        <div><strong style="color:#1e40af">• Thực hiện kiểm kê định kỳ và đột xuất:</strong><br>Tổ chức và tiến hành kiểm kê số lượng hàng hóa thực tế tại các cửa hàng theo lịch trình (hàng tuần, hàng tháng) hoặc đột xuất khi có yêu cầu từ Ban Giám đốc. Kiểm tra chuyên sâu các nhóm hàng dễ thất thoát hoặc có giá trị cao.</div>
+        <div><strong style="color:#1e40af">• Đối soát số liệu hệ thống:</strong><br>Kết nối và đối chiếu số liệu kiểm kê thực tế với dữ liệu từ hệ thống POS và quản lý kho bán lẻ. Xác định chính xác số lượng hàng thừa, hàng thiếu, hàng hư hỏng hoặc thất thoát trong quá trình vận hành.</div>
+        <div><strong style="color:#1e40af">• Phân tích rủi ro và phát hiện thất thoát:</strong><br>Nhận diện sớm các lỗ hổng trong quy trình vận hành tại cửa hàng dẫn đến việc chênh lệch hàng hóa (do gian lận, lỗi quét mã, hoặc sai sót khi nhận hàng). Đánh giá và phân loại các mặt hàng có tỷ lệ hao hụt cao để đưa ra cảnh báo.</div>
+        <div><strong style="color:#1e40af">• Báo cáo và đề xuất giải pháp cải tiến:</strong><br>Lập báo cáo kiểm kê chi tiết sau mỗi đợt đánh giá để gửi cho Quản lý cửa hàng và Ban Giám đốc.</div>
+      </div>
+    </div>
+    <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;background:#fff">
+      <div style="background:#0d9488;color:#fff;font-weight:800;font-size:13px;padding:10px 14px;letter-spacing:.3px">🛡️ BỘ PHẬN QC (QUALITY CONTROL)</div>
+      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:12.5px;line-height:1.6;color:#374151">
+        <div><strong style="color:#0f766e">• Giám sát tiêu chuẩn:</strong><br>Kiểm soát toàn diện quy trình vệ sinh (khu vực ăn uống, quầy kệ,...). Kiểm tra việc bố trí hàng hóa và tiêu chuẩn trưng bày đúng quy định. Thực hiện và giám sát việc kiểm tra theo từng ca làm việc.</div>
+        <div><strong style="color:#0f766e">• Kiểm soát hàng hóa:</strong><br>Đảm bảo an toàn vệ sinh thực phẩm tuyệt đối cho nhóm hàng ăn liền RTE (Ready-To-Eat) như Bento, Onigiri, Matcha...</div>
+        <div><strong style="color:#0f766e">• Chuẩn hóa & Đào tạo:</strong><br>Xây dựng hệ thống tài liệu đào tạo chất lượng chuyên sâu theo tiêu chuẩn. Thiết kế, cải tiến các biểu mẫu checklist kiểm tra định kỳ cho cửa hàng.</div>
+        <div><strong style="color:#0f766e">• Audit & Báo cáo:</strong><br>Tiến hành đánh giá (Audit) định kỳ trực tiếp tại cửa hàng và lập báo cáo chất lượng hàng tuần. Nhận diện sớm và ngăn chặn các rủi ro tiềm ẩn về an toàn thực phẩm. Kết nối dữ liệu từ hệ thống POS và phản hồi thực tế của khách hàng để cải tiến quy trình vận hành.</div>
+      </div>
+    </div>
+  </div>`},
  ]},
 {id:'m2',ic:'🎯',title:'5 lĩnh vực KSCL giám sát',color:'#0891b2',bg:'#ecfeff',
  sections:[
-  {h:'Vì sao cần biết cả 5 lĩnh vực này',body:'5 lĩnh vực dưới đây đều có tiêu chí, quy trình rõ ràng và ảnh hưởng <strong>trực tiếp</strong> đến điểm đánh giá hiệu quả hoạt động của cửa hàng.'},
-  {h:'5 lĩnh vực giám sát',body:_kNumCards([
-   ['01','Hàng hóa','Hàng trên kệ, date, nhiệt độ, quy chuẩn'],
-   ['02','Biểu mẫu','Checklist ca, báo cáo sự cố, phiếu bàn giao'],
-   ['03','Check cam','Hình ảnh cửa hàng, tác phong qua camera'],
-   ['04','Kiểm kê','Đối chiếu tồn kho thực tế vs hệ thống'],
-   ['05','Chấm điểm thực địa','Check tại chỗ theo bộ tiêu chí chuẩn'],
+  {h:'Tiêu chuẩn giám sát (Slide 4)',body:'<div style="background:#ecfeff;border-left:4px solid #0891b2;padding:12px 16px;border-radius:0 10px 10px 0;margin-bottom:12px"><div style="font-size:14px;font-weight:800;color:#0e7490">"TÔI SẼ GIÁM SÁT CÁC BẠN VỀ..."</div><div style="font-size:12.5px;color:#155e75;margin-top:2px">5 lĩnh vực – mỗi lĩnh vực đều có tiêu chí, quy trình rõ ràng ảnh hưởng <strong>trực tiếp</strong> đến điểm đánh giá hiệu quả hoạt động của cửa hàng.</div></div>'},
+  {h:'Chi tiết 5 lĩnh vực giám sát',body:_kNumCards([
+   ['01','HÀNG HÓA','Hàng trên kệ, date, nhiệt độ, quy chuẩn.'],
+   ['02','BIỂU MẪU','Checklist ca, báo cáo sự cố, phiếu bàn giao.'],
+   ['03','CHECK CAM','Hình ảnh cửa hàng, tác phong qua camera.'],
+   ['04','KIỂM KÊ','Đối chiếu tồn kho thực tế vs hệ thống.'],
+   ['05','CHẤM ĐIỂM THỰC ĐỊA','Check tại chỗ theo bộ tiêu chí chuẩn.'],
   ],'#0891b2','#ecfeff')},
  ]},
 {id:'m3',ic:'📋',title:'Các quy trình kiểm soát',color:'#0d9488',bg:'#f0fdfa',
  sections:[
-  {h:'Kiểm kê check – Quy trình quan trọng',body:_kQTList([
-   ['Quy trình kiểm kê hàng hóa CVS','https://sakukovn.sg.larksuite.com/wiki/D0JCwguwJikcYkk6YE8lQOQpgvb'],
-   ['Quy trình tiếp nhận RTE','https://sakukovn.sg.larksuite.com/wiki/Tc0SwjgW9iQAJ7k7xfYllsC5gvX'],
-   ['Quy trình xử lý hàng date','https://sakukovn.sg.larksuite.com/wiki/YisSwRBgFixexnk7C4IldBpCgDg'],
-   ['Quy trình kiểm kê hàng hóa (đột xuất)','https://sakukovn.sg.larksuite.com/wiki/XCVVw141iiYbeDkuttdllgbNgAh'],
-   ['Quy trình SOP: Giảm giá hàng chế biến trong ngày','https://sakukovn.sg.larksuite.com/wiki/X5lQwH3DPiyJG2kq5TEld32TgDh'],
-   ['Quy trình xử lý hàng lỗi – hỏng (Hàng khô)','https://sakukovn.sg.larksuite.com/wiki/AxU6wOqHOiCPxxkk9hFlzeBggah'],
+  {h:'Lưu ý đặc biệt (Slide 5 & 6)',body:'<div style="background:#fef2f2;border:1.5px solid #f87171;border-radius:9px;padding:11px 15px;color:#991b1b;font-weight:700;font-size:13px">📌 Note: Các quy trình tô đỏ là những quy trình quan trọng, nhân viên mới chú ý đọc và vận hành theo.</div>'},
+  {h:'CÁC QUY TRÌNH KIỂM SOÁT – Kiểm kê check (Slide 5)',body:_kQTList([
+   ['Quy trình kiểm kê hàng hóa CVS','https://sakukovn.sg.larksuite.com/wiki/D0JCwguwJikcYkk6YE8lQOQpgvb',true],
+   ['Quy trình tiếp nhận RTE','https://sakukovn.sg.larksuite.com/wiki/Tc0SwjgW9iQAJ7k7xfYllsC5gvX',false],
+   ['Quy trình xử lý hàng date','https://sakukovn.sg.larksuite.com/wiki/YisSwRBgFixexnk7C4IldBpCgDg',false],
+   ['Quy trình kiểm kê hàng hóa (đột xuất)','https://sakukovn.sg.larksuite.com/wiki/XCVVw141iiYbeDkuttdllgbNgAh',false],
+   ['Quy trình SOP: Giảm giá hàng chế biến trong ngày','https://sakukovn.sg.larksuite.com/wiki/X5lQwH3DPiyJG2kq5TEld32TgDh',true],
+   ['Quy trình xử lý hàng lỗi - hỏng (Hàng khô)','https://sakukovn.sg.larksuite.com/wiki/AxU6wOqHOiCPxxkk9hFlzeBggah',true],
   ])},
-  {h:'QC check – Quy trình quan trọng',body:_kQTList([
-   ['Quy trình Vận hành ca (Mở cửa – Bàn giao ca – Đóng cửa)','https://sakukovn.sg.larksuite.com/wiki/WBVfwaSZMieq8zk5IG1lPrI8gSc'],
-   ['Quy trình Vệ sinh định kỳ cửa hàng','https://sakukovn.sg.larksuite.com/wiki/MRz9wmK95its64kVWj7ljZ04gpT'],
-   ['Quy trình Kiểm soát vệ sinh cá nhân nhân viên','https://sakukovn.sg.larksuite.com/wiki/MtlSwxSBeik9UzkGEWXlz1PXgKg'],
-   ['Quy trình Kiểm soát hình ảnh & Tác phong nhân viên','https://sakukovn.sg.larksuite.com/wiki/Z6LFw19C3ioOlJkZsEAlgtArg4b'],
-   ['Quy trình Xử lý kỷ luật và vi phạm quy định','https://sakukovn.sg.larksuite.com/wiki/KFiHwlEbhiEWjWkxYjxllxCHgoh'],
-   ['Quy trình Xử lý khiếu nại & đổi trả hàng','https://sakukovn.sg.larksuite.com/wiki/TTR6wwvKqim52WkdDzQlMZ3dgIg'],
+  {h:'CÁC QUY TRÌNH KIỂM SOÁT – QC check (Slide 6)',body:_kQTList([
+   ['Quy trình Vận hành ca (Mở cửa – Bàn giao ca – Đóng cửa)','https://sakukovn.sg.larksuite.com/wiki/WBVfwaSZMieq8zk5IG1lPrI8gSc',true],
+   ['Quy trình Vệ sinh định kỳ cửa hàng','https://sakukovn.sg.larksuite.com/wiki/MRz9wmK95its64kVWj7ljZ04gpT',false],
+   ['Quy trình Kiểm soát vệ sinh cá nhân nhân viên','https://sakukovn.sg.larksuite.com/wiki/MtlSwxSBeik9UzkGEWXlz1PXgKg',false],
+   ['Quy trình Kiểm soát hình ảnh & Tác phong nhân viên','https://sakukovn.sg.larksuite.com/wiki/Z6LFw19C3ioOlJkZsEAlgtArg4b',true],
+   ['Quy trình Xử lý kỷ luật và vi phạm quy định','https://sakukovn.sg.larksuite.com/wiki/KFiHwlEbhiEWjWkxYjxllxCHgoh',true],
+   ['Xử lý khiếu nại & đổi trả hàng','https://sakukovn.sg.larksuite.com/wiki/TTR6wwvKqim52WkdDzQlMZ3dgIg',false],
   ])},
-  {h:'Một số quy trình khác',body:_kQTList([
-   ['Quy trình lên đơn TO/SO','https://sakukovn.sg.larksuite.com/wiki/UICXwMq7MinsoVkC1nol5Fhtgyc'],
-   ['Quy trình cấp phát tài sản','https://sakukovn.sg.larksuite.com/wiki/K3K0w5azRiRlgvks5gJlS4IAgZc'],
-   ['Quy trình thu hồi tài sản','https://sakukovn.sg.larksuite.com/wiki/MAV9wtJg5iloY7kKZB8lxG0lgkh'],
-  ])+'<div style="margin-top:10px;font-size:12px;color:var(--t2);font-style:italic">Ghi chú: các quy trình ở trên là quy trình quan trọng, nhân viên mới cần đọc kỹ và vận hành theo.</div>'},
+  {h:'MỘT SỐ QUY TRÌNH KHÁC (Slide 7)',body:_kQTList([
+   ['Quy trình lên đơn TO/SO','https://sakukovn.sg.larksuite.com/wiki/UICXwMq7MinsoVkC1nol5Fhtgyc',false],
+   ['Quy trình cấp phát tài sản','https://sakukovn.sg.larksuite.com/wiki/K3K0w5azRiRlgvks5gJlS4IAgZc',false],
+   ['Quy trình thu hồi tài sản','https://sakukovn.sg.larksuite.com/wiki/MAV9wtJg5iloY7kKZB8lxG0lgkh',false],
+  ])},
  ]},
-{id:'m4',ic:'🌡️',title:'Kiểm soát hàng RTE – Nhạy cảm nhất',color:'#dc2626',bg:'#fef2f2',
+{id:'m4',ic:'📝',title:'Checklist ca – Cái gì được kiểm tra?',color:'#4338ca',bg:'#eef2ff',
  sections:[
-  {h:'⚠️ Cảnh báo quan trọng',body:'<div style="background:#fef2f2;border:2px solid #dc2626;border-radius:8px;padding:12px 16px;font-weight:700;color:#dc2626">Bán hàng hết date là VI PHẠM NGHIÊM TRỌNG – Phòng KSCL sẽ audit đột xuất bất kỳ lúc nào</div>'},
-  {h:'Nhận hàng',body:'<ul style="padding-left:18px;line-height:2"><li>Kiểm tra <strong>nhiệt độ giao nhận</strong></li><li>Đối chiếu PO – số lượng, date</li><li>Ký biên bản nhận hàng</li></ul>'},
-  {h:'Trưng bày',body:'<ul style="padding-left:18px;line-height:2"><li>Bổ sung kệ theo <strong>planogram</strong></li><li>Kiểm tra date trước khi đặt</li><li>Không lẫn hàng cận date & mới</li></ul>'},
-  {h:'Bảo quản',body:'<ul style="padding-left:18px;line-height:2"><li>Đưa ngay vào tủ lạnh <strong>≤ 5°C</strong></li><li>Sắp xếp <strong>FIFO</strong> (vào trước – ra trước)</li><li>Ghi nhãn ngày nhập kho</li></ul>'},
-  {h:'Giám sát',body:'<ul style="padding-left:18px;line-height:2"><li>Kiểm tra kệ <strong>2 lần / ca</strong></li><li>Scan date hàng tồn <strong>mỗi sáng</strong></li><li>Báo ngay khi có bất thường</li></ul>'},
-  {h:'Xử lý cận date',body:'<ul style="padding-left:18px;line-height:2"><li><strong>T-1 ngày:</strong> Giảm giá 30%</li><li><strong>T-0:</strong> Rút khỏi kệ trước 12:00</li><li><strong style="color:#dc2626">TUYỆT ĐỐI không bán hết date</strong></li></ul>'},
- ]},
-{id:'m5',ic:'📝',title:'Checklist ca – Cái gì được kiểm tra?',color:'#4338ca',bg:'#eef2ff',
- sections:[
-  {h:'4 nhóm checklist mỗi ca',body:'Cuối mỗi ca, nhân viên tự kiểm 4 nhóm dưới đây trước khi bàn giao — đây cũng chính là nội dung QC/KSCL sẽ đối chiếu khi kiểm tra thực địa hoặc qua camera.'},
+  {h:'4 nhóm checklist ca bắt buộc (Slide 8 - Bóc tách từ ảnh gốc)',body:'Cuối mỗi ca làm việc, nhân viên tự kiểm tra toàn diện 4 nhóm hạng mục dưới đây trước khi bàn giao ca. Đây cũng chính là nội dung cốt lõi mà QC và KSCL sẽ kiểm tra, đối soát thực tế tại cửa hàng hoặc qua camera.'},
   {h:'',body:_kChecklistGrid([
-   ['VỆ SINH','#0d9488',['WC: không mùi, sàn khô, giấy đầy đủ','Khu ăn uống: bàn sạch &lt; 3 phút','Cửa kính: không vết tay, không bụi','Sàn: không rác, không đọng nước']],
-   ['RTE / THỰC PHẨM','#dc2626',['Nhiệt độ tủ lạnh ≤5°C, tủ đông ≤-18°C','Hàng RTE còn hạn sử dụng trong ngày','Khu chế biến: sạch, đủ dụng cụ bảo hộ','Hàng cận date: mark-down / xử lý đúng SOP']],
-   ['HÀNG HÓA','#2563eb',['Kệ đúng planogram – không thiếu hàng','Hàng quay nhãn ra ngoài 100%','Không hàng hết / cận date trên kệ','Giá bán đúng – tag giá không bị lệch']],
-   ['NHÂN SỰ & AN NINH','#4338ca',['Đồng phục đúng chuẩn, thẻ tên rõ ràng','Không dùng điện thoại tại quầy thanh toán','Camera hoạt động, lối thoát hiểm thông thoáng','Báo cáo sự cố đầy đủ trước khi bàn giao']],
+   ['VỆ SINH','#0d9488',['[ ] WC: không mùi, sàn khô, giấy đầy đủ','[ ] Khu ăn uống: bàn sạch < 3 phút','[ ] Cửa kính: không vết tay, không bụi','[ ] Sàn: không rác, không đọng nước']],
+   ['RTE / THỰC PHẨM','#dc2626',['[ ] Nhiệt độ tủ lạnh ≤ 5°C, tủ đông ≤ -18°C','[ ] Hàng RTE còn hạn sử dụng trong ngày','[ ] Khu chế biến: sạch, đủ dụng cụ bảo hộ','[ ] Hàng cận date: mark-down / xử lý đúng SOP']],
+   ['HÀNG HÓA','#2563eb',['[ ] Kệ đúng planogram – không thiếu hàng','[ ] Hàng quay nhãn ra ngoài 100%','[ ] Không hàng hết / cận date trên kệ','[ ] Giá bán đúng – tag giá không bị lệch']],
+   ['NHÂN SỰ & AN NINH','#4338ca',['[ ] Đồng phục đúng chuẩn, thẻ tên rõ ràng','[ ] Không dùng điện thoại tại quầy thanh toán','[ ] Camera hoạt động, lối thoát hiểm thông thoáng','[ ] Báo cáo sự cố đầy đủ trước khi bàn giao']],
   ])},
  ]},
-{id:'m6',ic:'🇯🇵',title:'Tiêu chuẩn "Sạch kiểu Nhật"',color:'#be123c',bg:'#fff1f2',
+{id:'m5',ic:'🇯🇵',title:'Tiêu chuẩn "Sạch kiểu Nhật"',color:'#be123c',bg:'#fff1f2',
  sections:[
-  {h:'Không chỉ là tiêu chí nội bộ',body:'<div style="background:#fff1f2;border:2px solid #be123c;border-radius:8px;padding:12px 16px;font-weight:700;color:#be123c">Đây là vũ khí cạnh tranh – không phải chỉ tiêu chí nội bộ</div>'},
-  {h:'5 khu vực & chuẩn "Sạch kiểu Nhật"',body:_kBadgeRows([
+  {h:'Vũ khí cạnh tranh duy nhất (Slide 9 - Bóc tách từ ảnh gốc)',body:'<div style="background:#fff1f2;border:2px solid #be123c;border-radius:10px;padding:12px 16px;font-weight:800;color:#be123c;font-size:14px;margin-bottom:12px">"Đây là vũ khí cạnh tranh – không phải chỉ tiêu chí nội bộ"</div>Chuẩn mực "Sạch kiểu Nhật" tại Sakuko đòi hỏi sự tỉ mỉ, kỷ luật và hành động tức thì trong từng khu vực vận hành:'},
+  {h:'5 khu vực & Chuẩn mực hành động',body:_kBadgeRows([
    ['WC & Khu Vệ Sinh','Kiểm tra mỗi 1 giờ','#be123c','Không mùi | Sàn khô | Gương sạch | Đầy đủ nước rửa tay'],
    ['Khu Ăn Uống','Dọn trong 3 phút','#0d9488','Bàn sạch ngay khi khách rời | Sàn không rác | Không mùi thức ăn cũ'],
    ['Quầy Kệ Hàng Hóa','Planogram 100%','#2563eb','Đúng vị trí | Quay nhãn ra | Không hàng cận/hết date | Không bụi'],
    ['Tác Phong Nhân Viên','Đồng phục chuẩn','#d97706','Tóc gọn | Móng tay cắt | Không trang sức khi chế biến | Đeo găng tay'],
-   ['Kho & Hậu Cần','5S Nhật Bản','#7c3aed','Seiri (Sàng lọc) → Seiton (Sắp xếp) → Seiso (Sạch sẽ) → Seiketsu (Săn sóc) → Shitsuke (Phân loại → Duy trì)'],
+   ['Kho & Hậu Cần','5S Nhật Bản','#7c3aed','Seiri (Sàng lọc) → Seiton (Sắp xếp) → Seiso (Sạch sẽ) → Seiketsu (Săn sóc) → Shitsuke (Sẵn sàng / Duy trì) — (Từ phân loại đến duy trì nền nếp)'],
   ])},
  ]},
-{id:'m7',ic:'📊',title:'Quy trình kiểm kê',color:'#2563eb',bg:'#eff6ff',
+{id:'m6',ic:'🌡️',title:'Kiểm soát hàng RTE – Nhạy cảm nhất',color:'#dc2626',bg:'#fef2f2',
  sections:[
-  {h:'Các bước thực hiện',body:`
-<div style="display:flex;flex-direction:column;gap:10px">
-${[
-['1','In phiếu kiểm kê từ KSCL gửi'],
-['2','Check & nhận tồn vào phần mềm các đơn nhập xuất từ hôm trước'],
-['3','Với hàng RTE, siêu thị tự kiểm kê và gửi số liệu thực tế cho bên kiểm soát'],
-['4','Đếm từng SKU – ghi số lượng thực tế (KHÔNG dựa vào số tồn phần mềm)'],
-['5','Gửi kiểm kê lần 1 trước <strong>11:00</strong>'],
-['6','Kiểm lại lần 2 sau đối chiếu, trước <strong>13:00</strong> cùng ngày'],
-['7','Điền biên bản kiểm kê đầy đủ'],
-['8','Xác nhận BBKK từ bộ phận KSCL qua <strong>email</strong>'],
-['9','Lưu số liệu, tổng hợp để tính công nợ kỳ kiểm kê'],
-['10','Cập nhật số tồn thực tế trước <strong>11:00 ngày N+1</strong>'],
-].map(([n,t])=>`<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:26px;height:26px;border-radius:50%;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${n}</div><div style="font-size:13.5px;line-height:1.6;padding-top:3px">${t}</div></div>`).join('')}
-</div>`},
-  {h:'Lưu ý',body:'<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:10px 14px;font-size:12.5px;color:#1e3a8a">Chênh lệch kiểm kê <strong>liên tục</strong> là dấu hiệu rủi ro – KSCL sẽ điều tra nguyên nhân và xử lý trách nhiệm.</div>'},
+  {h:'Cảnh báo nghiêm trọng (Slide 10)',body:'<div style="background:#fef2f2;border:2px solid #dc2626;border-radius:10px;padding:12px 16px;font-weight:800;color:#dc2626;font-size:14px;margin-bottom:12px">⚠️ Bán hàng hết date là vi phạm nghiêm trọng – Phòng KSCL sẽ audit đột xuất bất kỳ lúc nào</div>'},
+  {h:'Quy trình 5 bước kiểm soát hàng RTE',body:_kNumCards([
+   ['1','Nhận hàng','• Kiểm tra nhiệt độ giao nhận<br>• Đối chiếu PO – số lượng, date<br>• Ký biên bản nhận hàng'],
+   ['2','Trưng bày','• Bổ sung kệ theo planogram<br>• Kiểm tra date trước khi đặt<br>• Không lẫn hàng cận date & mới'],
+   ['3','Bảo quản','• Đưa ngay vào tủ lạnh ≤ 5°C<br>• Sắp xếp FIFO (vào trước – ra trước)<br>• Ghi nhãn ngày nhập kho'],
+   ['4','Giám sát','• Kiểm tra kệ 2 lần / ca<br>• Scan date hàng tồn mỗi sáng<br>• Báo ngay khi có bất thường'],
+   ['5','Xử lý cận date','• T-1 ngày: Giảm giá 30%<br>• T-0: Rút khỏi kệ trước 12:00<br>• <strong style="color:#dc2626">TUYỆT ĐỐI không bán hết date</strong>'],
+  ],'#dc2626','#fef2f2')},
+ ]},
+{id:'m7',ic:'📊',title:'Quy trình kiểm kê tồn kho (Hàng ngày)',color:'#2563eb',bg:'#eff6ff',
+ sections:[
+  {h:'4 giai đoạn kiểm kê hàng ngày (Slide 11)',body:`
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div style="border:1px solid #bfdbfe;background:#fff;border-radius:10px;padding:14px 16px">
+      <div style="font-weight:800;font-size:14px;color:#1d4ed8;margin-bottom:8px;display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;background:#2563eb;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px">1</span> 1. CHUẨN BỊ</div>
+      <ul style="margin:0;padding-left:22px;line-height:1.75;font-size:13px;color:#1e3a8a">
+        <li>In phiếu kiểm kê từ KSCL gửi.</li>
+        <li>Check & nhận tồn vào phần mềm các đơn nhập xuất từ hôm trước.</li>
+        <li>Với hàng RTE, siêu thị tự kiểm kê và gửi lại số liệu thực tế cho bên kiểm soát, kế toán điều chỉnh.</li>
+      </ul>
+    </div>
+    <div style="border:1px solid #bfdbfe;background:#fff;border-radius:10px;padding:14px 16px">
+      <div style="font-weight:800;font-size:14px;color:#1d4ed8;margin-bottom:8px;display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;background:#2563eb;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px">2</span> 2. ĐẾM THỰC TẾ</div>
+      <ul style="margin:0;padding-left:22px;line-height:1.75;font-size:13px;color:#1e3a8a">
+        <li>Đếm từng SKU – ghi số lượng thực tế.</li>
+        <li><strong>Không dựa vào con số trong tồn phần mềm.</strong></li>
+        <li>Gửi lại kiểm kê lần 1 trước <strong>11 giờ</strong> (11:00).</li>
+      </ul>
+    </div>
+    <div style="border:1px solid #bfdbfe;background:#fff;border-radius:10px;padding:14px 16px">
+      <div style="font-weight:800;font-size:14px;color:#1d4ed8;margin-bottom:8px;display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;background:#2563eb;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px">3</span> 3. ĐỐI CHIẾU</div>
+      <ul style="margin:0;padding-left:22px;line-height:1.75;font-size:13px;color:#1e3a8a">
+        <li>So sánh thực tế vs hệ thống.</li>
+        <li>Xác định chênh lệch từng mã hàng.</li>
+        <li>Phân loại: <strong>Thiếu / Dư / Lỗi nhập liệu</strong>.</li>
+        <li>Kiểm lại lần 2, sau khi kiểm soát đối chiếu với số tồn phần mềm, trước <strong>13 giờ</strong> (13:00) cùng ngày.</li>
+      </ul>
+    </div>
+    <div style="border:1px solid #bfdbfe;background:#fff;border-radius:10px;padding:14px 16px">
+      <div style="font-weight:800;font-size:14px;color:#1d4ed8;margin-bottom:8px;display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;background:#2563eb;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px">4</span> 4. BÁO CÁO</div>
+      <ul style="margin:0;padding-left:22px;line-height:1.75;font-size:13px;color:#1e3a8a">
+        <li>Điền biên bản kiểm kê đầy đủ.</li>
+        <li>Xác nhận lại BBKK từ bộ phận KSCL qua <strong>email</strong>.</li>
+        <li>Lưu số liệu và tổng hợp lại để tính công nợ vào kỳ kiểm kê ngành và kiểm kê tổng.</li>
+        <li>Cập nhật lại số liệu về số tồn thực tế trước <strong>11 giờ ngày N+1</strong>.</li>
+      </ul>
+    </div>
+  </div>`},
+  {h:'Lưu ý kiểm kê',body:'<div style="background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px;padding:12px 16px;color:#1e40af;font-size:13px;line-height:1.6"><strong>⚠️ Cảnh báo rủi ro:</strong> Chênh lệch kiểm kê liên tục là dấu hiệu rủi ro – KSCL sẽ điều tra nguyên nhân và xử lý trách nhiệm.</div>'},
  ]},
 {id:'m8',ic:'🔍',title:'Giám sát hàng hóa',color:'#9333ea',bg:'#faf5ff',
  sections:[
-  {h:'4 nội dung giám sát hàng hóa',body:_kBadgeRows([
-   ['Kiểm soát Date','Mỗi ca','#9333ea','Quét date toàn bộ hàng RTE trên kệ mỗi ca. <strong>TUYỆT ĐỐI</strong> không để hàng hết date lên kệ. Xử lý vật lý (hủy bỏ) với hàng hết date, lưu trữ chứng từ để đối soát.'],
-   ['Kiểm soát Nhiệt độ','Mỗi đầu ca','#dc2626','Tủ lạnh thực phẩm ≤ 5°C, tủ đông ≤ -18°C. Ghi nhiệt độ vào biểu mẫu mỗi đầu ca và các khung giờ quy định. Báo ngay nếu nhiệt độ lệch chuẩn.'],
-   ['Quy chuẩn Trưng bày','Liên tục','#2563eb','Hàng đúng vị trí theo sơ đồ kệ, nhãn hàng quay ra ngoài 100%. Không để kệ trống, hàng dồn trong kho. Tag giá khớp với POS – không lệch.'],
-   ['Hàng Nhập & Bảo quản','Khi nhận hàng','#16a34a','Ký biên bản nhận hàng đầy đủ, sắp xếp theo nguyên tắc FIFO (First In, First Out). Kho gọn, dán nhãn rõ ràng, không ẩm. Hàng hư hỏng: tách biệt, báo cáo ngay.'],
+  {h:'4 Trụ cột giám sát hàng hóa (Slide 12)',body:_kChecklistGrid([
+   ['KIỂM SOÁT DATE','#dc2626',['Quét date toàn bộ hàng RTE trên kệ mỗi ca','TUYỆT ĐỐI không để hàng hết date lên kệ','Xử lý vật lý (hủy bỏ với hàng hết date)','Lưu trữ chứng từ để đối soát']],
+   ['KIỂM SOÁT NHIỆT ĐỘ','#0891b2',['Tủ lạnh thực phẩm: ≤ 5°C','Tủ đông: ≤ -18°C','Ghi nhiệt độ vào biểu mẫu mỗi đầu ca và các khung giờ quy định','Báo ngay nếu nhiệt độ lệch chuẩn']],
+   ['QUY CHUẨN TRƯNG BÀY','#2563eb',['Hàng đúng vị trí theo sơ đồ kệ (planogram)','Nhãn hàng quay ra ngoài 100%','Không để kệ trống, hàng dồn trong kho','Tag giá khớp với POS – không lệch']],
+   ['HÀNG NHẬP & BẢO QUẢN','#16a34a',['Ký biên bản nhận hàng đầy đủ','Sắp xếp theo nguyên tắc FIFO (First In, First Out)','Kho gọn, dán nhãn rõ ràng, không ẩm','Hàng hư hỏng: tách biệt, báo cáo ngay']],
   ])},
  ]},
 {id:'m9',ic:'📷',title:'Kiểm tra hình ảnh bằng Check Cam',color:'#0f766e',bg:'#f0fdfa',
  sections:[
-  {h:'⚠️ Luôn hành động như có người quan sát',body:'<div style="background:#f0fdfa;border:2px solid #0f766e;border-radius:8px;padding:12px 16px;font-weight:700;color:#0f766e">KSCL (QC) sẽ xem lại camera bất kỳ lúc nào – hãy hành động như thể luôn có người quan sát.</div>'},
-  {h:'Tác phong Nhân viên',body:'<ul style="padding-left:18px;line-height:2"><li>Đồng phục đúng chuẩn, thẻ tên</li><li>Không dùng điện thoại tại quầy</li><li>Chủ động chào và phục vụ khách</li><li>Không ngồi/tựa kệ khi có khách</li></ul>'},
-  {h:'Vệ sinh & Hình ảnh',body:'<ul style="padding-left:18px;line-height:2"><li>Sàn, kệ, khu ăn uống sạch sẽ</li><li>Quầy thu ngân gọn gàng</li><li>Không để rác ở khu vực công cộng</li><li>Ánh sáng đủ, bảng hiệu không bị che</li></ul>'},
-  {h:'Vận hành & An ninh',body:'<ul style="padding-left:18px;line-height:2"><li>Nhân viên có mặt tại vị trí</li><li>Quy trình thanh toán đúng SOP</li><li>Kiểm soát ra vào kho hậu trường</li><li>Phát hiện hành vi bất thường</li></ul>'},
+  {h:'Nguyên tắc giám sát camera (Slide 13)',body:'<div style="background:#f0fdfa;border:2px solid #0f766e;border-radius:10px;padding:12px 16px;font-weight:800;color:#0f766e;font-size:14px;margin-bottom:12px">👁️ KSCL (QC) sẽ xem lại camera bất kỳ lúc nào – hãy hành động như thể luôn có người quan sát.</div>'},
+  {h:'3 Nhóm kiểm tra qua Check Cam',body:_kChecklistGrid([
+   ['TÁC PHONG NHÂN VIÊN','#d97706',['Đồng phục đúng chuẩn, thẻ tên','Không dùng điện thoại tại quầy','Chủ động chào và phục vụ khách','Không ngồi/tựa kệ khi có khách']],
+   ['VỆ SINH & HÌNH ẢNH','#0d9488',['Sàn, kệ, khu ăn uống sạch sẽ','Quầy thu ngân gọn gàng','Không để rác ở khu vực công cộng','Ánh sáng đủ, bảng hiệu không bị che']],
+   ['VẬN HÀNH & AN NINH','#4338ca',['Nhân viên có mặt tại vị trí','Quy trình thanh toán đúng SOP','Kiểm soát ra vào kho hậu trường','Phát hiện hành vi bất thường']],
+  ])},
  ]},
-{id:'m10',ic:'🏆',title:'Chấm điểm thực địa',color:'#16a34a',bg:'#f0fdf4',
+{id:'m10',ic:'🏆',title:'Chấm điểm thực địa & Thang điểm',color:'#16a34a',bg:'#f0fdf4',
  sections:[
-  {h:'4 nhóm tiêu chí chấm điểm',body:_kChecklistGrid([
+  {h:'4 Nhóm tiêu chí chấm điểm thực địa (Slide 14)',body:_kChecklistGrid([
    ['VỆ SINH & HÌNH ẢNH','#0d9488',['WC không mùi, sàn khô','Khu ăn uống sạch','Cửa kính, kệ không bụi']],
    ['HÀNG HÓA & QUẦY KỆ','#2563eb',['Quy chuẩn đúng 100%','Không hàng hết/cận date','Nhiệt độ đúng chuẩn']],
    ['NHÂN SỰ & TÁC PHONG','#d97706',['Đồng phục, thẻ tên đúng chuẩn','Không điện thoại tại quầy','Chào và phục vụ khách chủ động']],
-   ['BIỂU MẪU & HỒ SƠ','#7c3aed',['Checklist ca đầy đủ, đúng thực tế','Biên bản bàn giao đầy đủ','Báo cáo sự cố nộp đúng hạn']],
+   ['BIỂU MẪU & HỒ SƠ','#7c3aed',['Checklist ca đầy đủ, đúng với thực tế','Biên bản bàn giao đầy đủ','Báo cáo sự cố nộp đúng hạn']],
   ])},
-  {h:'Thang điểm (Tổng 100 điểm)',body:`<div style="display:flex;gap:8px;flex-wrap:wrap">
-<div style="flex:1;min-width:110px;background:#dcfce7;border-radius:8px;padding:10px;text-align:center"><div style="font-weight:800;color:#16a34a;font-size:13px">90–100</div><div style="font-size:11.5px;color:#166534">Xuất sắc</div></div>
-<div style="flex:1;min-width:110px;background:#dbeafe;border-radius:8px;padding:10px;text-align:center"><div style="font-weight:800;color:#2563eb;font-size:13px">80–89</div><div style="font-size:11.5px;color:#1e40af">Đạt</div></div>
-<div style="flex:1;min-width:110px;background:#fef9c3;border-radius:8px;padding:10px;text-align:center"><div style="font-weight:800;color:#ca8a04;font-size:13px">70–79</div><div style="font-size:11.5px;color:#854d0e">Cần cải thiện</div></div>
-<div style="flex:1;min-width:110px;background:#fee2e2;border-radius:8px;padding:10px;text-align:center"><div style="font-weight:800;color:#dc2626;font-size:13px">Dưới 70</div><div style="font-size:11.5px;color:#991b1b">Vi phạm – bắt buộc cải thiện</div></div>
-</div>`},
-  {h:'Quy chuẩn chi tiết',body:_kQTList([
-   ['Quy chuẩn chấm điểm cửa hàng (đọc kỹ phần hướng dẫn chi tiết)','https://sakukovn.sg.larksuite.com/wiki/WDjMwTu5DiC7xFkpP0zlwavjg1f'],
+  {h:'Thang điểm đánh giá (VD: Tổng 100 điểm)',body:`
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div style="flex:1;min-width:120px;background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:12px 10px;text-align:center"><div style="font-weight:800;color:#16a34a;font-size:15px">90–100</div><div style="font-size:12px;color:#166534;font-weight:700;margin-top:2px">Xuất sắc</div></div>
+    <div style="flex:1;min-width:120px;background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;padding:12px 10px;text-align:center"><div style="font-weight:800;color:#2563eb;font-size:15px">80–89</div><div style="font-size:12px;color:#1e40af;font-weight:700;margin-top:2px">Đạt</div></div>
+    <div style="flex:1;min-width:120px;background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:12px 10px;text-align:center"><div style="font-weight:800;color:#ca8a04;font-size:15px">70–79</div><div style="font-size:12px;color:#854d0e;font-weight:700;margin-top:2px">Cần cải thiện</div></div>
+    <div style="flex:1;min-width:120px;background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:12px 10px;text-align:center"><div style="font-weight:800;color:#dc2626;font-size:15px">Dưới 70</div><div style="font-size:12px;color:#991b1b;font-weight:700;margin-top:2px">Vi phạm – bắt buộc cải thiện</div></div>
+  </div>`},
+  {h:'Quy chuẩn chi tiết cửa hàng (Bóc tách từ Biểu mẫu gốc Slide 15)',body:`
+  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;font-size:12.5px;color:#374151;line-height:1.7">
+    <div style="font-weight:800;color:#15803d;font-size:13.5px;margin-bottom:6px">📋 Chi tiết hạng mục kiểm tra thực địa:</div>
+    <div><strong>• Khu vực bên ngoài:</strong> Biển hiệu/biển vẫy đèn sáng 100%, không nhấp nháy, bề mặt sạch không phai; Cửa kính & tay nắm trong suốt không vết tay/vệt nước; Vỉa hè & chỗ để xe không rác/tàn thuốc, xe xếp gọn gàng; Biển hướng dẫn để xe in sẵn đứng thẳng sạch sẽ; Decal/banner/poster treo đúng vị trí, còn hạn, không bẩn keo dính cũ; Bảo vệ trang phục đúng quy định, đứng đúng vị trí, chủ động chào khách.</div>
+    <div style="margin-top:6px"><strong>• Khu vực bán hàng:</strong> Sàn nhà & lối đi khô ráo, không đọng nước, không thùng carton cản trở; Trần & tường không mạng nhện/ố mốc, đèn sáng 100% không chớp; Giỏ đựng hàng sạch bụi, xếp ngay ngắn tại cửa đón khách.</div>
+    <div style="margin-top:6px"><strong>• Trưng bày hàng hóa:</strong> Hàng luôn kéo sát mép ngoài của kệ (face-up), không có khoảng trống sâu làm lộ mặt kệ; Mặt hàng khuyến mại trọng tâm trưng bày đúng vị trí.</div>
+  </div>`},
+  {h:'Link hướng dẫn chi tiết trên Wiki',body:_kQTList([
+   ['Quy chuẩn chấm điểm cửa hàng (đọc kỹ phần hướng dẫn chi tiết)','https://sakukovn.sg.larksuite.com/wiki/WDjMwTu5DiC7xFkpP0zlwavjg1f',true],
   ])},
  ]},
 {id:'m11',ic:'👔',title:'Tác phong & Kỷ luật nhân viên CVS',color:'#d97706',bg:'#fffbeb',
  sections:[
-  {h:'Tiêu chuẩn tác phong',body:'<ul style="padding-left:18px;line-height:2"><li>Chào khách khi vào & ra: <strong>"Irasshaimase"</strong></li><li>Xử lý phàn nàn: <strong>lắng nghe → xin lỗi → giải quyết</strong></li><li>Đồng phục sạch, ủi phẳng, thẻ tên rõ ràng</li><li>Đến đúng giờ, bàn giao ca đầy đủ <strong>15 phút</strong> trước</li><li>Rửa tay trước khi tiếp xúc thực phẩm</li><li>Báo ngay sự cố cho trưởng ca, không tự xử lý</li></ul>'},
-  {h:'5 mức xử lý kỷ luật',body:`
-<div style="display:flex;flex-direction:column;gap:8px">
-${[
-['1','#16a34a','#dcfce7','Nhắc nhở miệng','Không ghi vào hồ sơ. Vi phạm lần đầu, nhẹ, không gây thiệt hại.'],
-['2','#d97706','#fef9c3','Ghi lỗi, trừ KPI','Lập BBVP + xem xét trừ KPI hiệu suất. Vi phạm lặp lại hoặc trung bình lần đầu.'],
-['3','#ea580c','#ffedd5','Hội đồng kỷ luật','Xem xét tạm ngừng làm việc (tối đa 15 ngày). Vi phạm nghiêm trọng cần xác minh.'],
-['4','#dc2626','#fee2e2','Sa thải','Theo Điều 125 Bộ luật Lao động. Vi phạm đặc biệt nghiêm trọng hoặc tái phạm sau cảnh cáo.'],
-['5','#7c3aed','#f5f3ff','Hình thức cao nhất','Chi tiết xem Bảng phân loại vi phạm & quy định xử lý chi tiết.'],
-].map(([n,fg,bg,name,desc])=>`<div style="display:flex;gap:10px;align-items:flex-start;background:${bg};border-radius:10px;padding:10px 12px"><div style="width:28px;height:28px;border-radius:50%;background:${fg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">M${n}</div><div><div style="font-weight:700;font-size:13.5px;color:${fg}">${name}</div><div style="font-size:12.5px;color:#374151;margin-top:2px">${desc}</div></div></div>`).join('')}
-</div>`},
-  {h:'Lưu ý quan trọng','body':'Tất cả hồ sơ vi phạm được lưu lại để làm cơ sở đánh giá năng lực KPI cá nhân hàng tháng và hàng năm.'},
+  {h:'Tiêu chuẩn tác phong nhân viên (Slide 15)',body:`
+  <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:12px">
+    <div style="font-size:12px;font-weight:700;color:#b45309;margin-bottom:6px;font-style:italic">Đánh giá tác phong hàng ngày – Có sự tham gia của phòng KSCL:</div>
+    <ul style="margin:0;padding-left:20px;line-height:2;font-size:13.5px;color:#78350f">
+      <li>Chào khách khi vào & ra: <strong>'Irasshaimase</strong></li>
+      <li>Xử lý phàn nàn: <strong>lắng nghe → xin lỗi → giải quyết</strong></li>
+      <li>Đồng phục sạch, ủi phẳng, thẻ tên rõ ràng</li>
+      <li>Đến đúng giờ, bàn giao ca đầy đủ <strong>15 phút</strong></li>
+      <li>Rửa tay trước khi tiếp xúc thực phẩm</li>
+      <li>Báo ngay sự cố cho trưởng ca, không tự xử lý</li>
+    </ul>
+  </div>`},
+  {h:'Quy trình xử lý kỷ luật 5 mức (Slide 16 - Giữ trọn 100% nội dung)',body:`
+  <div style="font-size:13px;color:#374151;line-height:1.65;margin-bottom:12px">Quy trình xử lý kỷ luật gồm <strong>5 mức độ tăng dần</strong>, từ nhắc nhở miệng đến sa thải. Mỗi mức được áp dụng tùy theo mức độ vi phạm, đảm bảo tính công bằng, minh bạch và tuân thủ đúng quy định pháp luật lao động hiện hành.</div>
+  <div style="display:flex;flex-direction:column;gap:9px">
+    ${[
+    ['1','#16a34a','#dcfce7','Mức 1: Nhắc nhở trực tiếp','Hình thức nhắc nhở trực tiếp, không ghi vào hồ sơ nhân sự, yêu cầu sửa đổi ngay. Áp dụng cho vi phạm lần đầu, mức độ nhẹ, không gây thiệt hại.'],
+    ['2','#d97706','#fef9c3','Mức 2: Ghi lỗi & Trừ KPI hiệu suất','Ghi lỗi, đánh giá KPI cửa hàng. Áp dụng cho vi phạm lặp lại hoặc vi phạm trung bình lần đầu. Lập BBVP + xem xét trừ KPI hiệu suất theo quy định.'],
+    ['3','#ea580c','#ffedd5','Mức 3: Lập hội đồng kỷ luật & Tạm ngừng làm việc','Lập hội đồng xử lý kỷ luật, Xem xét tạm ngừng làm việc trong thời gian điều tra (tối đa 15 ngày theo Bộ luật Lao động). Áp dụng cho vi phạm nghiêm trọng cần xác minh.'],
+    ['4','#dc2626','#fee2e2','Mức 4: Sa thải theo Điều 125 BLLĐ','Sa thải theo quy định tại Điều 125 Bộ luật Lao động. Áp dụng cho vi phạm đặc biệt nghiêm trọng hoặc vi phạm lặp lại sau cảnh cáo.'],
+    ['5','#7c3aed','#f5f3ff','Mức 5: Áp dụng bảng phân loại vi phạm chi tiết','Chi tiết từng trường hợp có trong Bảng phân loại vi phạm & quy định xử lý chi tiết.'],
+    ].map(([n,fg,bg,name,desc])=>`<div style="display:flex;gap:12px;align-items:flex-start;background:${bg};border-radius:10px;padding:12px 14px"><div style="width:32px;height:32px;border-radius:50%;background:${fg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">M${n}</div><div><div style="font-weight:700;font-size:13.5px;color:${fg}">${name}</div><div style="font-size:12.5px;color:#374151;margin-top:3px;line-height:1.6">${desc}</div></div></div>`).join('')}
+  </div>
+  <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:11px 15px;color:#92400e;font-size:12.5px;font-weight:700;margin-top:10px">📌 Lưu ý: Tất cả hồ sơ vi phạm sẽ được lưu lại để làm cơ sở đánh giá năng lực KPI cá nhân nhân viên theo tháng và theo năm.</div>`},
  ]},
 {id:'m12',ic:'🤝',title:'Kỳ vọng phối hợp cùng KSCL',color:'#059669',bg:'#ecfdf5',
  sections:[
-  {h:'4 điều cửa hàng nên chủ động cùng KSCL',body:_kNumCards([
+  {h:'4 Điều cửa hàng chủ động phối hợp cùng KSCL (Slide 17)',body:_kNumCards([
    ['01','Chủ động phối hợp','Cung cấp số liệu trung thực, hồ sơ đầy đủ; cùng KSCL xác minh và xử lý vấn đề.'],
    ['02','Phản hồi thẳng thắn','Báo sớm sự cố, nêu rõ khó khăn. KSCL lắng nghe và hướng dẫn cách thực hiện.'],
    ['03','Khắc phục đến cùng','Thống nhất người phụ trách, thời hạn khắc phục và gửi kết quả để KSCL kiểm tra lại.'],
-   ['04','Ghi nhận cải thiện','Ghi nhận tiến bộ và kết quả thực tế. Chia sẻ cách làm tốt để cả cửa hàng cùng áp dụng.'],
-  ],'#059669','#ecfdf5')+'<div style="margin-top:10px;font-size:12.5px;font-style:italic;color:#047857">"Cùng giữ chuẩn mỗi ca, cùng nâng chất lượng Sakuko Daily."</div>'},
-  {h:'Mong muốn & kỳ vọng từ KSCL',body:_kNumCards([
+   ['04','Ghi nhận cải thiện','Ghi nhận tiến bộ và kết quả thực tế. Chia sẻ cách làm tốt để cả cửa hàng cùng áp dụng.']],'#059669','#ecfdf5')+`<div style="background:#ecfdf5;border-left:4px solid #059669;border-radius:0 10px 10px 0;padding:10px 14px;margin-top:10px;font-style:italic;font-weight:700;color:#065f46">"Cùng giữ chuẩn mỗi ca, cùng nâng chất lượng Sakuko Daily."</div>`},
+  {h:'Mong muốn & Kỳ vọng từ KSCL (Slide 18)',body:_kNumCards([
    ['01','Phối hợp – không đối lập','KSCL không phải "soi lỗi" cửa hàng. Chúng ta cùng mục tiêu: khách hàng hài lòng, cửa hàng phát triển.'],
    ['02','Phản hồi thẳng thắn','Nếu tiêu chuẩn chưa hợp lý hoặc bạn gặp khó khăn thực hiện – hãy nói thẳng. KSCL lắng nghe và điều chỉnh.'],
    ['03','Cải thiện liên tục','Không ai hoàn hảo từ đầu. Điều KSCL kỳ vọng là khi mắc lỗi, bạn nhận ra, sửa và không lặp lại.'],
-   ['04','Ghi nhận xuất sắc','Nhân viên và cửa hàng đạt điểm cao sẽ được ghi nhận công khai. Cơ hội thăng tiến đến từ con số thực tế.'],
-  ],'#0d9488','#f0fdfa')+'<div style="margin-top:10px;font-size:12.5px;font-style:italic;color:#0f766e">"Sạch không phải việc của một người – đó là văn hóa của cả cửa hàng."</div>'},
+   ['04','Ghi nhận xuất sắc','Nhân viên và cửa hàng đạt điểm cao sẽ được ghi nhận công khai. Cơ hội thăng tiến đến từ con số thực tế.']],'#0d9488','#f0fdfa')+`<div style="background:#f0fdfa;border-left:4px solid #0d9488;border-radius:0 10px 10px 0;padding:10px 14px;margin-top:10px;font-style:italic;font-weight:700;color:#115e59">"Sạch không phải việc của một người – đó là văn hóa của cả cửa hàng"</div>`},
  ]},
 ];
 
 const QUIZ=[
 {q:'Phòng KSCL gồm mấy bộ phận chính?',opts:['1 bộ phận','2 bộ phận','3 bộ phận','4 bộ phận'],ans:1},
 {q:'Bộ phận nào thực hiện kiểm kê định kỳ và đột xuất tại siêu thị?',opts:['Bộ phận QC','Bộ phận Kiểm kê','Cả hai bộ phận','Ban Giám đốc'],ans:1},
-{q:'Nhiệm vụ của Bộ phận QC KHÔNG bao gồm điều nào?',opts:['Giám sát tiêu chuẩn vệ sinh','Chuẩn hóa & Đào tạo','Thực hiện giao hàng cho cửa hàng','Audit & Báo cáo định kỳ'],ans:2},
-{q:'Slogan định hướng của Phòng KSCL là gì?',opts:['"Khách hàng là trung tâm"','"Sạch tuyệt đối kiểu Nhật – Vũ khí cạnh tranh duy nhất"','"Chất lượng là số 1"','"An toàn tuyệt đối"'],ans:1},
-{q:'Phòng KSCL có tính chất gì so với các phòng ban khác?',opts:['Trực thuộc bộ phận Kinh doanh','Phòng ban độc lập','Nằm dưới bộ phận Kế toán','Thuộc bộ phận Kho'],ans:1},
-{q:'Quy trình nào sau đây thuộc nhóm "Kiểm kê check"?',opts:['Quy trình vệ sinh định kỳ cửa hàng','Quy trình kiểm kê hàng hóa CVS','Quy trình vận hành ca','Quy trình xử lý khiếu nại'],ans:1},
-{q:'Quy trình xử lý khiếu nại & đổi trả hàng thuộc nhóm quy trình nào?',opts:['Kiểm kê check','Một số quy trình khác','QC check','Quy trình nhân sự'],ans:2},
-{q:'Theo quy trình kiểm kê, kết quả lần 1 phải gửi trước mấy giờ?',opts:['9:00','10:00','11:00','12:00'],ans:2},
-{q:'Sau khi kiểm soát đối chiếu, kiểm lại lần 2 phải hoàn thành trước:',opts:['11:00','12:00','13:00','14:00'],ans:2},
-{q:'Sau kiểm kê, cần cập nhật số tồn thực tế trước mấy giờ ngày N+1?',opts:['8:00','9:00','11:00','13:00'],ans:2},
-{q:'Nhiệt độ bảo quản hàng RTE tối đa là bao nhiêu?',opts:['0°C','3°C','5°C','8°C'],ans:2},
-{q:'FIFO trong bảo quản hàng RTE có nghĩa là:',opts:['Vào sau ra trước','Vào trước ra trước','Vào ngẫu nhiên ra trước','Ra sau vào sau'],ans:1},
-{q:'Hàng RTE phải được kiểm tra kệ bao nhiêu lần mỗi ca?',opts:['1 lần','2 lần','3 lần','4 lần'],ans:1},
-{q:'Hàng RTE cận date T-1 ngày được xử lý như thế nào?',opts:['Rút khỏi kệ ngay','Tiếp tục bán bình thường','Giảm giá 30%','Giảm giá 50%'],ans:2},
-{q:'Hàng RTE T-0 (hết date hôm nay) phải rút khỏi kệ trước mấy giờ?',opts:['8:00','10:00','11:00','12:00'],ans:3},
-{q:'Vi phạm nào bị xem là vi phạm NGHIÊM TRỌNG theo quy định KSCL?',opts:['Trưng bày không đúng planogram','Bán hàng hết date','Quên scan date buổi sáng','Đặt hàng cận date lẫn hàng mới'],ans:1},
-{q:'Khi nhận hàng RTE, bước đầu tiên cần kiểm tra là:',opts:['Số lượng theo PO','Nhiệt độ giao nhận','Hạn sử dụng','Barcode sản phẩm'],ans:1},
-{q:'Hàng RTE khi trưng bày lên kệ phải đảm bảo:',opts:['Xếp hàng mới lên trước','Kiểm tra date trước khi đặt','Không cần theo planogram','Bổ sung kệ bất kỳ lúc nào'],ans:1},
-{q:'Khi đếm hàng kiểm kê, nhân viên phải:',opts:['Dựa vào số tồn trong phần mềm','Đếm từng SKU và ghi số lượng thực tế','Chỉ đếm hàng có chênh lệch','Đếm theo lô hàng'],ans:1},
-{q:'Xác nhận BBKK cuối cùng từ bộ phận KSCL qua kênh nào?',opts:['Zalo','Điện thoại','Email','Lark message'],ans:2},
-{q:'Nhân viên CVS chào khách khi vào bằng câu nào?',opts:['Xin chào quý khách','Hello','Irasshaimase','Welcome'],ans:2},
-{q:'Khi xử lý phàn nàn của khách, thứ tự đúng là:',opts:['Xin lỗi → lắng nghe → giải quyết','Lắng nghe → xin lỗi → giải quyết','Giải quyết → lắng nghe → xin lỗi','Xin lỗi → giải quyết → lắng nghe'],ans:1},
-{q:'Khi bàn giao ca, nhân viên phải đến trước bao nhiêu phút?',opts:['5 phút','10 phút','15 phút','20 phút'],ans:2},
-{q:'Nhân viên phải rửa tay khi nào?',opts:['Sau khi tiếp xúc thực phẩm','Trước khi tiếp xúc thực phẩm','Chỉ khi tay bẩn nhìn thấy','Mỗi 2 giờ'],ans:1},
-{q:'Khi gặp sự cố tại cửa hàng, nhân viên cần:',opts:['Tự xử lý','Báo ngay cho trưởng ca','Báo cho khách hàng trước','Liên hệ Ban Giám đốc ngay'],ans:1},
-{q:'Vi phạm lần đầu, mức độ nhẹ, không gây thiệt hại bị xử lý ở mức nào?',opts:['Mức 1 – Nhắc nhở miệng','Mức 2 – Ghi lỗi trừ KPI','Mức 3 – Hội đồng kỷ luật','Mức 4 – Sa thải'],ans:0},
+{q:'Nhiệm vụ của Bộ phận QC KHÔNG bao gồm điều nào?',opts:['Giám sát quy trình vệ sinh','Kiểm soát chất lượng hàng RTE','Thực hiện giao hàng cho cửa hàng','Audit định kỳ tại cửa hàng'],ans:2},
+{q:'Slogan định hướng của Phòng KSCL là gì?',opts:['"Khách hàng là số 1"','"Sạch tuyệt đối kiểu Nhật – Vũ khí cạnh tranh duy nhất"','"Nhanh chóng – Tiện lợi – Thân thiện"','"Giá rẻ mỗi ngày"'],ans:1},
+{q:'Phòng KSCL có tính chất gì so với các phòng ban khác?',opts:['Phòng ban độc lập','Phòng ban phụ thuộc vận hành','Bộ phận trực thuộc khối marketing','Đơn vị kiểm toán bên ngoài'],ans:0},
+{q:'Phòng KSCL giám sát cửa hàng dựa trên bao nhiêu lĩnh vực trọng yếu?',opts:['3 lĩnh vực','4 lĩnh vực','5 lĩnh vực','6 lĩnh vực'],ans:2},
+{q:'Quy trình nào sau đây thuộc nhóm "Kiểm kê check"?',opts:['Quy trình Vệ sinh định kỳ','Quy trình kiểm kê hàng hóa CVS','Quy trình Kiểm soát vệ sinh cá nhân','Quy trình Xử lý kỷ luật'],ans:1},
+{q:'Quy trình xử lý khiếu nại & đổi trả hàng thuộc nhóm quy trình nào?',opts:['Kiểm kê check','QC check','Một số quy trình khác','Quy trình nhân sự'],ans:1},
+{q:'Theo tiêu chuẩn Checklist ca, khu vực ăn uống phải được lau dọn sạch trong vòng bao lâu sau khi khách rời?',opts:['Dưới 3 phút (< 3 phút)','Dưới 10 phút','Dưới 15 phút','Chỉ cần dọn cuối ca'],ans:0},
+{q:'Theo quy trình kiểm kê, kết quả lần 1 phải gửi trước mấy giờ?',opts:['10:00','11:00','12:00','13:00'],ans:1},
+{q:'Sau khi kiểm soát đối chiếu, kiểm lại lần 2 phải hoàn thành trước:',opts:['12:00 cùng ngày','13:00 cùng ngày','15:00 cùng ngày','11:00 ngày hôm sau'],ans:1},
+{q:'Sau kiểm kê, cần cập nhật số tồn thực tế trước mấy giờ ngày N+1?',opts:['09:00','10:00','11:00','12:00'],ans:2},
+{q:'Nhiệt độ bảo quản chuẩn đối với tủ lạnh thực phẩm / hàng RTE tối đa là bao nhiêu?',opts:['≤ 0°C','≤ 5°C','≤ 10°C','≤ 15°C'],ans:1},
+{q:'Nhiệt độ bảo quản chuẩn đối với tủ đông chứa thực phẩm là bao nhiêu?',opts:['≤ -5°C','≤ -10°C','≤ -15°C','≤ -18°C'],ans:3},
+{q:'FIFO trong bảo quản hàng RTE có nghĩa là:',opts:['Vào trước ra trước','Vào sau ra trước','Bán hàng đắt trước','Hàng mới xếp lên trên'],ans:0},
+{q:'Hàng RTE phải được kiểm tra kệ bao nhiêu lần mỗi ca?',opts:['1 lần','2 lần','3 lần','Không cần kiểm tra'],ans:1},
+{q:'Hàng RTE cận date T-1 ngày được xử lý như thế nào?',opts:['Hủy bỏ ngay','Giảm giá 30%','Bán bình thường','Trả lại nhà cung cấp'],ans:1},
+{q:'Hàng RTE T-0 (hết date hôm nay) phải rút khỏi kệ trước mấy giờ?',opts:['10:00','11:00','12:00','14:00'],ans:2},
+{q:'Vi phạm nào bị xem là vi phạm NGHIÊM TRỌNG theo quy định KSCL?',opts:['Đến muộn 5 phút','Bán hàng hết date','Quên đeo thẻ tên','Xếp hàng chưa thẳng'],ans:1},
+{q:'Khi nhận hàng RTE, bước đầu tiên cần kiểm tra là:',opts:['Ký biên bản','Nhiệt độ giao nhận','Bổ sung kệ','Báo cáo nhóm chat'],ans:1},
+{q:'Hàng RTE khi trưng bày lên kệ phải đảm bảo:',opts:['Xếp lẫn cận date và mới','Kiểm tra date trước khi đặt','Đặt kệ nào cũng được','Không cần planogram'],ans:1},
+{q:'Khi đếm hàng kiểm kê, nhân viên phải:',opts:['Nhìn số trên phần mềm rồi ghi','Đếm từng SKU và ghi số lượng thực tế','Ước lượng số lượng','Chỉ đếm hàng đắt tiền'],ans:1},
+{q:'Xác nhận BBKK cuối cùng từ bộ phận KSCL qua kênh nào?',opts:['Tin nhắn Zalo','Gọi điện thoại','Email','Gặp trực tiếp'],ans:2},
+{q:'Nhân viên CVS chào khách khi vào bằng câu nào?',opts:['Konnichiwa','Arigatou gozaimasu','Irasshaimase','Sayonara'],ans:2},
+{q:'Khi xử lý phàn nàn của khách, thứ tự đúng là:',opts:['Xin lỗi → tranh luận → báo quản lý','Lắng nghe → xin lỗi → giải quyết','Báo bảo vệ → xin lỗi → hoàn tiền','Giải thích → từ chối → xin lỗi'],ans:1},
+{q:'Khi bàn giao ca, nhân viên phải đến trước bao nhiêu phút?',opts:['5 phút','10 phút','15 phút','30 phút'],ans:2},
+{q:'Nhân viên phải rửa tay khi nào?',opts:['Đầu giờ làm việc duy nhất 1 lần','Trước khi tiếp xúc thực phẩm','Khi bị nhắc nhở','Cuối ca làm việc'],ans:1},
+{q:'Khi gặp sự cố tại cửa hàng, nhân viên cần:',opts:['Tự ý giải quyết theo ý mình','Báo ngay cho trưởng ca','Bỏ qua nếu không nghiêm trọng','Đăng lên mạng xã hội'],ans:1},
+{q:'Theo thang điểm chấm thực địa 100 điểm, mức điểm từ 90 đến 100 được xếp loại gì?',opts:['Xuất sắc','Đạt','Cần cải thiện','Vi phạm'],ans:0},
+{q:'Vi phạm lần đầu, mức độ nhẹ, không gây thiệt hại bị xử lý ở mức nào?',opts:['Mức 1 – Nhắc nhở trực tiếp','Mức 2 – Ghi lỗi, trừ KPI','Mức 3 – Hội đồng kỷ luật','Mức 4 – Sa thải'],ans:0},
 {q:'Sa thải theo Điều 125 Bộ luật Lao động là mức xử lý thứ mấy?',opts:['Mức 2','Mức 3','Mức 4','Mức 5'],ans:2},
-{q:'Mức 2 kỷ luật áp dụng khi nào?',opts:['Vi phạm lần đầu nhẹ','Vi phạm lặp lại hoặc vi phạm trung bình lần đầu','Vi phạm nghiêm trọng cần xác minh','Vi phạm đặc biệt nghiêm trọng'],ans:1},
-{q:'Phòng KSCL audit cửa hàng như thế nào?',opts:['Theo lịch cố định hàng tháng','Chỉ khi có sự cố','Đột xuất bất kỳ lúc nào','Theo lịch hàng quý'],ans:2},
-{q:'Hồ sơ vi phạm của nhân viên được dùng để làm gì?',opts:['Chỉ lưu tham khảo','Đánh giá năng lực KPI hàng tháng và hàng năm','Báo cáo cơ quan nhà nước','Chia sẻ trong nhóm nội bộ'],ans:1},
-{q:'Bộ phận Kiểm kê có nhiệm vụ phân tích rủi ro nhằm mục đích gì?',opts:['Tăng doanh thu','Phát hiện sớm thất thoát và lỗ hổng vận hành','Kiểm soát nhân sự','Lập kế hoạch nhập hàng'],ans:1},
+{q:'Mức 2 kỷ luật áp dụng khi nào?',opts:['Vi phạm đặc biệt nghiêm trọng','Vi phạm lần đầu nhẹ','Vi phạm lặp lại hoặc vi phạm trung bình lần đầu','Không bao giờ áp dụng'],ans:2},
+{q:'Phòng KSCL (QC) kiểm tra camera (Check Cam) và audit cửa hàng như thế nào?',opts:['Báo trước 1 ngày','Có lịch cố định hàng tuần','Xem camera và audit đột xuất bất kỳ lúc nào','Chỉ kiểm tra khi có khiếu nại'],ans:2},
+{q:'Hồ sơ vi phạm của nhân viên được dùng để làm gì?',opts:['Lưu giữ nội bộ không dùng đến','Đánh giá năng lực KPI cá nhân theo tháng và theo năm','Trừ lương ngay lập tức','Công khai trên mạng'],ans:1},
+{q:'Bộ phận Kiểm kê có nhiệm vụ phân tích rủi ro nhằm mục đích gì?',opts:['Tìm lỗi để phạt nhân viên','Phát hiện sớm thất thoát và lỗ hổng vận hành','Kiểm soát nhân sự','Lập kế hoạch nhập hàng'],ans:1},
 ];
 
 let qzState={started:false,done:false,answers:{},current:0};
@@ -5682,14 +5758,26 @@ window._qzStart=function(){qzState={started:true,done:false,answers:{},current:0
 window._qzAnswer=function(qi,oi){
   if(qzState.done)return;
   qzState.answers[qi]=oi;
+  const warn=document.getElementById('qz-warn');
+  if(warn)warn.style.display='none';
   _qzRender();
 };
 window._qzSubmit=function(){
   const total=QUIZ.length,answered=Object.keys(qzState.answers).length;
-  if(answered<total){const el=document.getElementById('qz-warn');if(el){el.style.display='block';el.textContent=`⚠️ Còn ${total-answered} câu chưa trả lời!`;}return;}
-  qzState.done=true;_qzRender();
+  if(answered<total){
+    const warn=document.getElementById('qz-warn');
+    if(warn){warn.textContent=`⚠️ Bạn còn ${total-answered} câu chưa trả lời. Vui lòng hoàn thành tất cả các câu trước khi nộp bài!`;warn.style.display='block';}
+    return;
+  }
+  qzState.done=true;
+  _qzRender();
+  _kScrollTop();
 };
-window._qzRetry=function(){qzState={started:true,done:false,answers:{},current:0};_qzRender();};
+window._qzRetry=function(){
+  qzState={started:true,done:false,answers:{},current:0};
+  _qzRender();
+  _kScrollTop();
+};
 
 function _qzRender(){
   const el=document.getElementById('kscl-quiz-body');
@@ -5700,42 +5788,43 @@ function _qzRender(){
 }
 
 function _qzSplash(){
+  const passScore = Math.ceil(QUIZ.length * 0.8);
   return`<div style="text-align:center;padding:32px 20px">
-  <div style="font-size:56px;margin-bottom:16px">🛡️</div>
-  <h2 style="font-size:20px;font-weight:800;margin-bottom:8px">Bài kiểm tra KSCL – Nhân viên mới</h2>
-  <p style="color:var(--t2);font-size:13.5px;max-width:480px;margin:0 auto 24px">Gồm <strong>${QUIZ.length} câu hỏi</strong> bao phủ toàn bộ nội dung đào tạo Phòng Kiểm soát Chất lượng.<br>Trả lời đúng từ <strong>24/30 (80%)</strong> trở lên để đạt.</p>
-  <button onclick="_qzStart()" style="background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:13px 32px;font-size:15px;font-weight:700;cursor:pointer">Bắt đầu làm bài →</button>
-</div>`;
+    <div style="font-size:56px;margin-bottom:16px">🛡️</div>
+    <h2 style="font-size:20px;font-weight:800;margin-bottom:8px">Bài kiểm tra KSCL – Nhân viên mới</h2>
+    <p style="color:var(--t2);font-size:13.5px;max-width:480px;margin:0 auto 24px">Gồm <strong>${QUIZ.length} câu hỏi</strong> bao phủ toàn bộ 18 slide nội dung đào tạo Phòng Kiểm soát Chất lượng.<br>Trả lời đúng từ <strong>${passScore}/${QUIZ.length} (80%)</strong> trở lên để đạt.</p>
+    <button onclick="_qzStart()" style="background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:13px 32px;font-size:15px;font-weight:700;cursor:pointer">Bắt đầu làm bài →</button>
+  </div>`;
 }
 
 function _qzForm(){
   const total=QUIZ.length,answered=Object.keys(qzState.answers).length;
   const pct=Math.round(answered/total*100);
   return`
-<div>
-<div style="background:#f1f5f9;border-radius:8px;padding:10px 14px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
-  <div style="flex:1;background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden">
-    <div style="width:${pct}%;height:100%;background:#7c3aed;border-radius:99px;transition:.3s"></div>
-  </div>
-  <span style="font-size:12px;font-weight:700;color:#7c3aed;white-space:nowrap">${answered}/${total} đã trả lời</span>
-</div>
-${QUIZ.map((q,qi)=>{
-  const sel=qzState.answers[qi];
-  return`<div style="background:#fff;border:1px solid ${sel!==undefined?'#7c3aed':'var(--border)'};border-radius:12px;padding:16px 18px;margin-bottom:12px">
-  <div style="font-weight:700;font-size:14px;margin-bottom:12px;line-height:1.5"><span style="background:#7c3aed;color:#fff;border-radius:6px;padding:2px 8px;font-size:11px;margin-right:8px">C${qi+1}</span>${q.q}</div>
-  <div style="display:flex;flex-direction:column;gap:7px">
-    ${q.opts.map((o,oi)=>`<label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 12px;border-radius:8px;border:1px solid ${sel===oi?'#7c3aed':'#e2e8f0'};background:${sel===oi?'#f5f3ff':'#fff'};transition:.15s" onclick="_qzAnswer(${qi},${oi})">
-      <div style="width:18px;height:18px;border-radius:50%;border:2px solid ${sel===oi?'#7c3aed':'#cbd5e1'};background:${sel===oi?'#7c3aed':'#fff'};flex-shrink:0;display:flex;align-items:center;justify-content:center">
-        ${sel===oi?'<div style="width:8px;height:8px;border-radius:50%;background:#fff"></div>':''}
+  <div>
+    <div style="background:#f1f5f9;border-radius:8px;padding:10px 14px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
+      <div style="flex:1;background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:#7c3aed;border-radius:99px;transition:.3s"></div>
       </div>
-      <span style="font-size:13.5px;color:${sel===oi?'#5b21b6':'var(--t1)'}">${o}</span>
-    </label>`).join('')}
-  </div>
-</div>`;
-}).join('')}
-<div id="qz-warn" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;color:#dc2626;font-weight:600;font-size:13px;margin-bottom:12px"></div>
-<button onclick="_qzSubmit()" style="width:100%;background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">📝 Nộp bài</button>
-</div>`;
+      <span style="font-size:12px;font-weight:700;color:#7c3aed;white-space:nowrap">${answered}/${total} đã trả lời</span>
+    </div>
+    ${QUIZ.map((q,qi)=>{
+      const sel=qzState.answers[qi];
+      return`<div style="background:#fff;border:1px solid ${sel!==undefined?'#7c3aed':'var(--border)'};border-radius:12px;padding:16px 18px;margin-bottom:12px">
+        <div style="font-weight:700;font-size:14px;margin-bottom:12px;line-height:1.5"><span style="background:#7c3aed;color:#fff;border-radius:6px;padding:2px 8px;font-size:11px;margin-right:8px">C${qi+1}</span>${q.q}</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          ${q.opts.map((o,oi)=>`<label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 12px;border-radius:8px;border:1px solid ${sel===oi?'#7c3aed':'#e2e8f0'};background:${sel===oi?'#f5f3ff':'#fff'};transition:.15s" onclick="_qzAnswer(${qi},${oi})">
+            <div style="width:18px;height:18px;border-radius:50%;border:2px solid ${sel===oi?'#7c3aed':'#cbd5e1'};background:${sel===oi?'#7c3aed':'#fff'};flex-shrink:0;display:flex;align-items:center;justify-content:center">
+              ${sel===oi?'<div style="width:8px;height:8px;border-radius:50%;background:#fff"></div>':''}
+            </div>
+            <span style="font-size:13.5px;color:${sel===oi?'#5b21b6':'var(--t1)'}">${o}</span>
+          </label>`).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+    <div id="qz-warn" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;color:#dc2626;font-weight:600;font-size:13px;margin-bottom:12px"></div>
+    <button onclick="_qzSubmit()" style="width:100%;background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">📝 Nộp bài</button>
+  </div>`;
 }
 
 function _qzResult(){
@@ -5743,31 +5832,30 @@ function _qzResult(){
   QUIZ.forEach((q,i)=>{if(qzState.answers[i]===q.ans)correct++;});
   const pct=Math.round(correct/QUIZ.length*100);
   const pass=pct>=80;
+  const passScore = Math.ceil(QUIZ.length * 0.8);
   return`
-<div>
-<div style="text-align:center;padding:24px 20px;background:${pass?'#f0fdf4':'#fef2f2'};border-radius:14px;margin-bottom:20px;border:2px solid ${pass?'#86efac':'#fca5a5'}">
-  <div style="font-size:52px;margin-bottom:10px">${pass?'🏆':'📖'}</div>
-  <h2 style="font-size:22px;font-weight:800;color:${pass?'#15803d':'#dc2626'};margin-bottom:6px">${pass?'ĐẠT – Chúc mừng!':'CHƯA ĐẠT – Cần ôn lại'}</h2>
-  <div style="font-size:32px;font-weight:800;color:${pass?'#16a34a':'#dc2626'}">${correct}/${QUIZ.length}</div>
-  <div style="font-size:14px;color:var(--t2);margin-top:4px">(${pct}% — cần tối thiểu 80% để đạt)</div>
-</div>
-${QUIZ.map((q,qi)=>{
-  const sel=qzState.answers[qi],correct_a=q.ans,ok=sel===correct_a;
-  return`<div style="background:#fff;border:1px solid ${ok?'#86efac':'#fca5a5'};border-radius:12px;padding:14px 16px;margin-bottom:10px">
-  <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">
-    <span style="font-size:16px;flex-shrink:0;margin-top:1px">${ok?'✅':'❌'}</span>
-    <div style="font-weight:700;font-size:13.5px;line-height:1.5"><span style="background:${ok?'#16a34a':'#dc2626'};color:#fff;border-radius:6px;padding:2px 7px;font-size:11px;margin-right:7px">C${qi+1}</span>${q.q}</div>
+  <div style="text-align:center;padding:24px 16px;background:#fff;border:1px solid var(--border);border-radius:14px;margin-bottom:20px">
+    <div style="font-size:48px;margin-bottom:8px">${pass?'🎉':'⚠️'}</div>
+    <h2 style="font-size:20px;font-weight:800;color:${pass?'#16a34a':'#dc2626'};margin-bottom:4px">${pass?'ĐÃ ĐẠT CHỨNG CHỈ':'CHƯA ĐẠT'}</h2>
+    <div style="font-size:36px;font-weight:900;color:${pass?'#16a34a':'#dc2626'}">${correct}/${QUIZ.length}</div>
+    <div style="font-size:14px;color:var(--t2);margin-top:4px">Đúng ${pct}% (Yêu cầu tối thiểu ${passScore}/${QUIZ.length} ~ 80% để đạt)</div>
   </div>
-  ${q.opts.map((o,oi)=>{
-    const isCorrect=oi===correct_a,isWrong=oi===sel&&!ok;
-    return`<div style="padding:7px 11px;border-radius:7px;font-size:13px;margin-bottom:5px;border:1px solid ${isCorrect?'#86efac':isWrong?'#fca5a5':'#f1f5f9'};background:${isCorrect?'#f0fdf4':isWrong?'#fef2f2':'#f8fafc'};color:${isCorrect?'#15803d':isWrong?'#dc2626':'var(--t1)'}${isCorrect?';font-weight:700':''}">
-      ${isCorrect?'✓ ':''}${isWrong?'✗ ':''}${o}
+  ${QUIZ.map((q,qi)=>{
+    const sel=qzState.answers[qi],correct_a=q.ans,ok=sel===correct_a;
+    return`<div style="background:#fff;border:1px solid ${ok?'#86efac':'#fca5a5'};border-radius:10px;padding:12px 14px;margin-bottom:8px">
+      <div style="font-weight:700;font-size:13.5px;color:${ok?'#15803d':'#dc2626'};margin-bottom:8px;line-height:1.5">
+        <span style="background:${ok?'#dcfce7':'#fee2e2'};color:${ok?'#15803d':'#dc2626'};border-radius:4px;padding:1px 6px;font-size:11px;margin-right:6px">C${qi+1}</span>${q.q}
+      </div>
+      ${q.opts.map((o,oi)=>{
+        const isCorrect=oi===correct_a,isWrong=oi===sel&&!ok;
+        return`<div style="padding:7px 11px;border-radius:7px;font-size:13px;margin-bottom:5px;border:1px solid ${isCorrect?'#86efac':isWrong?'#fca5a5':'#f1f5f9'};background:${isCorrect?'#f0fdf4':isWrong?'#fef2f2':'#f8fafc'};color:${isCorrect?'#15803d':isWrong?'#dc2626':'var(--t1)'}${isCorrect?';font-weight:700':''}">
+          ${isCorrect?'✓ ':''}${isWrong?'✗ ':''}${o}
+        </div>`;
+      }).join('')}
     </div>`;
   }).join('')}
-</div>`;
-}).join('')}
-<button onclick="_qzRetry()" style="width:100%;background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">🔄 Làm lại bài</button>
-</div>`;
+  <button onclick="_qzRetry()" style="width:100%;background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px">🔄 Làm lại bài</button>
+  </div>`;
 }
 
 let _kCur=0,_kDone=new Set(),_kPhase='lesson';
@@ -5792,7 +5880,7 @@ function _kQuizBtnHtml(){
   return`<div onclick="_kGoQuiz()" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;cursor:pointer;background:${active?'#7c3aed15':'transparent'};border:1px solid ${active?'#7c3aed50':'transparent'}">
     <div style="width:26px;height:26px;border-radius:50%;background:${active?'#7c3aed':'#e2e8f0'};color:${active?'#fff':'#64748b'};display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">📝</div>
     <div style="flex:1;min-width:0">
-      <div style="font-size:13px;font-weight:${active?'700':'600'};color:${active?'#7c3aed':'var(--t1)'}">Bài kiểm tra (30 câu)</div>
+      <div style="font-size:13px;font-weight:${active?'700':'600'};color:${active?'#7c3aed':'var(--t1)'}">Bài kiểm tra (${QUIZ.length} câu)</div>
       ${!allDone?`<div style="font-size:10.5px;color:var(--t2)">Học hết ${KSCL_MODULES.length} bài trước khi thi</div>`:''}
     </div>
   </div>`;
@@ -5838,7 +5926,7 @@ setTimeout(_kRenderAll,30);
 
 return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › <span onclick="go('daotao')">Đào tạo</span> › Đào tạo KSCL</div>
-<div class="sec-hdr"><h1>🛡️ Đào tạo KSCL – Phòng Kiểm Soát Chất Lượng</h1><p style="color:var(--t2);font-size:13px">Học từng bài theo thứ tự, có thể nhảy bài bất kỳ — xong ${KSCL_MODULES.length} bài thì làm bài kiểm tra</p></div>
+<div class="sec-hdr"><h1>🛡️ Đào tạo KSCL – Phòng Kiểm Soát Chất Lượng</h1><p style="color:var(--t2);font-size:13px">Học tuần tự 12 bài theo chuẩn 18 slide PPTX — hoàn thành tất cả để mở khóa bài kiểm tra ${QUIZ.length} câu</p></div>
 <div class="tabs" style="margin-bottom:20px">
   <div class="tab" onclick="go('daotao','hoclieu')">📁 Học liệu</div>
   <div class="tab" onclick="go('daotao','onboarding')">🗂️ Checklist Onboarding</div>
