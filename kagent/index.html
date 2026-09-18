@@ -1210,7 +1210,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <div class="tb-robot">🤖</div>
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.150</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.151</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -3912,6 +3912,16 @@ function renderAgentInfoPanel() {
   const agentIcon = agent.includes('anti') ? '🔵' : agent.includes('gemini') ? '♊' : agent.includes('opencode') ? '💚' : '&lt;/&gt;';
   const relayOn = typeof useRelay === 'function' && useRelay();
   const modelName = (document.getElementById('model-pill-name') || {}).textContent || '—';
+  // Trạng thái kết nối THẬT của WS (#ram-info do onopen/onclose set) — trước đây hardcode cứng
+  // "🟢 Online" ở đây bất kể có thật sự kết nối hay không, đúng kiểu "làm cho đẹp" bị nhắc.
+  const wsConnected = (document.getElementById('ram-info')?.textContent || '').includes('Đã kết nối');
+  // Trạng thái Kim Tiêm THẬT — đọc từ _ktModules (mảng thật do loadKimTiemModules() nạp từ
+  // server), không phải số bịa. Chưa load lần nào (mảng rỗng vì người dùng chưa mở Kim Tiêm)
+  // thì nói rõ "chưa kiểm tra" thay vì đoán 0 module đang bật.
+  const ktLoaded = typeof _ktModules !== 'undefined' && _ktModules.length > 0;
+  const kimTiemActiveCount = ktLoaded ? _ktModules.filter(m => m.enabled).length : 0;
+  const kimTiemOn = ktLoaded && kimTiemActiveCount > 0;
+  const kimTiemDesc = ktLoaded ? 'Module chèn vào ngữ cảnh chat' : 'Bấm để xem danh sách module thật';
 
   const taskHtml = isRunning
     ? `<div class="aip-task-card">
@@ -3946,19 +3956,19 @@ function renderAgentInfoPanel() {
           <div class="ai-badge ${relayOn ? 'on' : 'off'}">${relayOn ? '● Đã kết nối' : 'Chưa đăng nhập'}</div>
         </div>
         <div class="aip-integ">
-          <div class="ai-icon">🐙</div>
-          <div class="ai-body"><div class="ai-name">GitHub</div><div class="ai-desc">Quản lý code (sắp ra mắt)</div></div>
-          <div class="ai-badge off">Chưa kết nối</div>
-        </div>
-        <div class="aip-integ">
           <div class="ai-icon">📑</div>
-          <div class="ai-body"><div class="ai-name">Excel / CSV</div><div class="ai-desc">Đọc file qua đính kèm 📎</div></div>
+          <div class="ai-body"><div class="ai-name">Excel / CSV</div><div class="ai-desc">Đọc file qua đính kèm 📎 (file-extract.js)</div></div>
           <div class="ai-badge on">● Sẵn sàng</div>
         </div>
         <div class="aip-integ">
           <div class="ai-icon">👁️</div>
-          <div class="ai-body"><div class="ai-name">Vision AI</div><div class="ai-desc">Nhận diện ảnh qua đính kèm 📎</div></div>
+          <div class="ai-body"><div class="ai-name">Vision AI</div><div class="ai-desc">Model đọc ảnh đính kèm qua base64</div></div>
           <div class="ai-badge on">● Sẵn sàng</div>
+        </div>
+        <div class="aip-integ">
+          <div class="ai-icon">💉</div>
+          <div class="ai-body"><div class="ai-name">Kim Tiêm</div><div class="ai-desc">${kimTiemDesc}</div></div>
+          <div class="ai-badge ${kimTiemOn ? 'on' : 'off'}">${!ktLoaded ? 'Chưa kiểm tra' : kimTiemOn ? `● ${kimTiemActiveCount} module bật` : 'Chưa bật module nào'}</div>
         </div>
       </div>
       <div class="aip-quote">
@@ -3969,7 +3979,7 @@ function renderAgentInfoPanel() {
     <div class="aip-footer">
       <span>${agentIcon} ${agentName}</span>
       <span>${escapeHtml(modelName)}</span>
-      <span>🟢 Online</span>
+      <span>${wsConnected ? '🟢 Online' : '🔴 Mất kết nối'}</span>
     </div>`;
 }
 
