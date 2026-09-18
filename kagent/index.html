@@ -1229,7 +1229,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <img class="tb-robot" src="/kagent-mascot-face.png" alt="KAgent">
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.166</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.167</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -4639,6 +4639,16 @@ fetch('/version.json').then(r=>r.json()).then(v=>{
   if (el && v.version) el.textContent = 'v' + v.version;
   const sbEl = document.getElementById('sb-version');
   if (sbEl && v.version) sbEl.textContent = 'v' + v.version;
+  // Phá cache trình duyệt cho ảnh mascot — máy nào đã lỡ cache lại lỗi 404 từ TRƯỚC lúc ảnh
+  // tồn tại trên đĩa (đúng tình huống người dùng báo: máy mới chạy do-core-update xong ảnh vẫn
+  // vỡ dù file server đã có) sẽ không tự hết hạn cache đó chỉ bằng cách tải lại HTML — phải đổi
+  // hẳn URL ảnh (?v=...) để trình duyệt coi là tài nguyên MỚI, không dùng lại bản 404 đã nhớ.
+  if (v.version) {
+    document.querySelectorAll('img[src^="/kagent-"]').forEach(img => {
+      const base = img.getAttribute('src').split('?')[0];
+      img.src = base + '?v=' + v.version;
+    });
+  }
 }).catch(()=>{});
 
 initRelay().then(() => init());

@@ -2043,7 +2043,10 @@ app.post('/api/do-core-update', async (req, res) => {
     const ASSET_FILES = ['kagent-logo.png', 'login-bg.jpg', 'kagent-mascot-face.png', 'kagent-mascot-full.png', 'kagent-mascot-sitting.png'];
     for (const f of ASSET_FILES) {
       const dest = path.join(PUBLIC_DIR, f);
-      if (fs.existsSync(dest)) continue;
+      // Không chỉ kiểm tra TỒN TẠI — nếu lần tải trước bị ngắt giữa chừng (mất mạng, tắt app...)
+      // có thể để lại file 0 byte/quá nhỏ trên đĩa, khiến fs.existsSync() báo "đã có" và code BỎ
+      // QUA MÃI MÃI không bao giờ tải lại, dù ảnh vẫn vỡ. Coi file < 100 byte là hỏng, tải lại.
+      try { if (fs.existsSync(dest) && fs.statSync(dest).size >= 100) continue; } catch {}
       try {
         const buf = await httpsGetBuffer(`${UPDATE_BASE}/${f}?t=${Date.now()}`, 15000);
         if (!buf || buf.length < 100) throw new Error('nội dung tải về quá nhỏ, có thể lỗi');
