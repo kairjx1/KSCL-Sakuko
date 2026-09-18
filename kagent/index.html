@@ -1210,7 +1210,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <div class="tb-robot">🤖</div>
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.149</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.150</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -4807,28 +4807,6 @@ function updateAgentPill(agentId) {
 <style>
 #bk-wrap{position:fixed;bottom:22px;right:22px;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;gap:10px;font-family:'Segoe UI',system-ui,sans-serif;cursor:grab}
 
-/* ── ZOOM CONTROL (góc dưới trái) ── */
-#zoom-corner{position:fixed;bottom:22px;left:22px;z-index:9998}
-#zoom-btn{
-  width:34px;height:34px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);
-  color:var(--text2);cursor:pointer;font-size:16px;font-weight:800;letter-spacing:1px;
-  display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.4);
-  transition:all .15s;
-}
-#zoom-btn:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
-#zoom-menu{
-  display:none;position:absolute;bottom:42px;left:0;min-width:170px;
-  background:#101830;border:1px solid rgba(167,139,250,.35);border-radius:10px;
-  box-shadow:0 16px 42px rgba(0,0,0,.6);padding:6px;
-}
-#zoom-menu.open{display:block}
-#zoom-menu button{
-  width:100%;text-align:left;background:none;border:none;color:var(--text);
-  padding:8px 10px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;
-  display:flex;align-items:center;justify-content:space-between;
-}
-#zoom-menu button:hover{background:var(--bg3)}
-#zoom-level{padding:6px 10px;font-size:11px;color:var(--text3);text-align:center}
 #bk-wrap:active{cursor:grabbing}
 #bk-tip{
   background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;font-size:11px;
@@ -4903,15 +4881,6 @@ function updateAgentPill(agentId) {
 #bk-send:disabled{opacity:.4;cursor:not-allowed}
 </style>
 
-<div id="zoom-corner">
-  <div id="zoom-menu">
-    <div id="zoom-level">Thu phóng: 100%</div>
-    <button onclick="setZoom(zoomStep(1))"><span>🔍➕ Phóng to</span></button>
-    <button onclick="setZoom(zoomStep(-1))"><span>🔍➖ Thu nhỏ</span></button>
-    <button onclick="setZoom(1)"><span>↺ Đặt lại 100%</span></button>
-  </div>
-  <button id="zoom-btn" title="Thu phóng giao diện" onclick="toggleZoomMenu()">⋮</button>
-</div>
 <div id="bk-wrap">
   <div id="bk-tip" onclick="bkToggle()">Hỏi Bé KAgent nhé! 🤖</div>
   <div id="bk-btn" onclick="bkToggle()">🤖</div>
@@ -5111,35 +5080,13 @@ function bkKey(e){
   }
 })();
 
-// ── ZOOM CONTROL (nút ⋮ góc dưới trái) ──────────────────────────────────────
-const ZOOM_STEPS = [0.75, 0.85, 0.9, 1, 1.1, 1.25, 1.4, 1.5];
-function zoomStep(dir) {
-  const cur = parseFloat(localStorage.getItem('kagent.zoom') || '1');
-  let idx = ZOOM_STEPS.reduce((best, v, i) => Math.abs(v - cur) < Math.abs(ZOOM_STEPS[best] - cur) ? i : best, 0);
-  idx = Math.min(ZOOM_STEPS.length - 1, Math.max(0, idx + dir));
-  return ZOOM_STEPS[idx];
-}
-function setZoom(level) {
-  document.body.style.zoom = level;
-  localStorage.setItem('kagent.zoom', level);
-  const lvlEl = document.getElementById('zoom-level');
-  if (lvlEl) lvlEl.textContent = `Thu phóng: ${Math.round(level * 100)}%`;
-}
-function toggleZoomMenu() {
-  const m = document.getElementById('zoom-menu');
-  m.classList.toggle('open');
-  if (m.classList.contains('open')) {
-    const cur = parseFloat(localStorage.getItem('kagent.zoom') || '1');
-    document.getElementById('zoom-level').textContent = `Thu phóng: ${Math.round(cur * 100)}%`;
+// Đã bỏ nút thu phóng "⋮" góc dưới trái theo yêu cầu (vướng UI) — dọn luôn giá trị zoom đã lưu
+// từ trước để máy nào từng bấm chỉnh zoom không bị kẹt vĩnh viễn ở mức cũ không còn cách nào sửa.
+(function cleanupOldZoom() {
+  if (localStorage.getItem('kagent.zoom')) {
+    document.body.style.zoom = '';
+    localStorage.removeItem('kagent.zoom');
   }
-}
-document.addEventListener('click', e => {
-  const m = document.getElementById('zoom-menu');
-  if (m && m.classList.contains('open') && !e.target.closest('#zoom-corner')) m.classList.remove('open');
-}, true);
-(function initZoom() {
-  const saved = parseFloat(localStorage.getItem('kagent.zoom') || '1');
-  if (saved && saved !== 1) document.body.style.zoom = saved;
 })();
 
 // ── Auto-update check ────────────────────────────────────────────────────────
