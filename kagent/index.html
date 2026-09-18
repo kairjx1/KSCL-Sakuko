@@ -1212,7 +1212,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <img class="tb-robot" src="/kagent-mascot-face.png" alt="KAgent">
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.159</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.160</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -2725,11 +2725,16 @@ async function init() {
     window._agentsConfigCache = cfg.agents || {};
   } catch {}
   renderAgentSelect();
-  // Restore agent mode from localStorage
-  const savedMode = localStorage.getItem('kagent_mode') || 'safe';
-  setAgentMode(savedMode); // dùng setAgentMode để cập nhật cả UI lẫn state
   projects = await apiGetProjects();
   renderProjects();
+  // Restore agent mode from localStorage — PHẢI làm SAU khi projects đã tải xong và sp-select
+  // đã có option/value thật (renderProjects ở trên). BUG THẬT đã tìm ra (người dùng báo "cứ tải
+  // lại trang là về C:\ dù trước đó đã chọn đúng dự án"): trước đây gọi setAgentMode() ở ĐÂY
+  // nhưng projects lúc đó vẫn là mảng rỗng []` (chưa await xong) — logic tự lấy thư mục theo dự
+  // án đang chọn (thêm ở bản vá "1 nguồn thư mục duy nhất") luôn tìm KHÔNG RA project nào, rơi
+  // về mặc định 'C:\\' — không phải do dự án bị mất, mà do đọc dự án SỚM HƠN lúc nó tồn tại.
+  const savedMode = localStorage.getItem('kagent_mode') || 'safe';
+  setAgentMode(savedMode); // dùng setAgentMode để cập nhật cả UI lẫn state
   await loadChats();
   promptHistory = await fetch('/api/prompt-history').then(r => r.json()).catch(() => []);
   // Migrate the desktop shell once to the four-pane layout. Afterwards the
@@ -2751,6 +2756,10 @@ function renderProjects() {
     return;
   }
   sel.innerHTML = projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  // Khôi phục đúng dự án đã chọn lần trước (nếu vẫn còn tồn tại) — mặc định trình duyệt sẽ tự
+  // chọn option ĐẦU TIÊN nếu không set gì, không phải dự án người dùng thực sự đang dùng dở.
+  const savedPid = localStorage.getItem('kagent_last_project');
+  if (savedPid && projects.some(p => p.id === savedPid)) sel.value = savedPid;
   updateSpDir();
 }
 
@@ -2761,6 +2770,11 @@ function onProjChange() {
     window._workDir = p.workDir || p.work_dir || null;
     if (window._workDir) document.getElementById('workdir-label') && (document.getElementById('workdir-label').textContent = window._workDir);
   }
+  // Nhớ dự án đang chọn qua các lần tải lại trang — trước đây KHÔNG lưu gì cả, nên mỗi lần
+  // F5/mở lại app, <select> luôn về dự án ĐẦU TIÊN trong danh sách (mặc định của trình duyệt),
+  // bất kể trước đó đã chọn dự án nào khác. Đây là nguyên nhân sâu xa của việc "thư mục cứ về
+  // sai" — không phải do thư mục, mà do chọn sai dự án ngay từ đầu.
+  if (pid) localStorage.setItem('kagent_last_project', pid);
   updateSpDir();
   loadChats();
 }
@@ -2998,6 +3012,7 @@ async function jumpToChat(projectId, chatId) {
   const sel = document.getElementById('sp-select');
   if (sel.value !== projectId && projects.find(p => p.id === projectId)) {
     sel.value = projectId;
+    localStorage.setItem('kagent_last_project', projectId); // đồng bộ với onProjChange()
     const p = projects.find(x => x.id === projectId);
     if (p) window._workDir = p.workDir || p.work_dir || null;
     updateSpDir();
