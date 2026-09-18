@@ -1866,6 +1866,35 @@ async function syncAgentsConfig() {
 }
 syncAgentsConfig();
 
+// Tự tải bù ảnh tĩnh (mascot, logo...) còn thiếu trên đĩa — BUG THẬT NGHIÊM TRỌNG đã tìm ra
+// (log thật của máy người dùng, bundled=1.0.133): launcher.js đóng CỨNG bên trong file .exe có
+// 1 danh sách file cố định để tự tải mỗi lần mở app — trước đây thiếu 3 file ảnh mascot mới
+// trong chính danh sách đó. Sửa launcher.js chỉ có tác dụng với file .exe BUILD LẠI SAU NÀY —
+// máy nào đang chạy .exe CŨ (rất phổ biến, vì thay .exe hiếm khi xảy ra) thì dù server.js/
+// index.html đã cập nhật đúng bản mới nhất qua core-update, launcher.js của nó VẪN MÃI MÃI
+// không biết tải 3 file này — 2 cơ chế cập nhật (core-update vs .exe tự sync) hoàn toàn tách
+// biệt, sửa bên này không chạm được bên kia. Fix triệt để: đặt việc tải bù NGAY TRONG server.js
+// (phần core, hot-reload được) và tự chạy mỗi khi server khởi động — không cần đợi ai bấm "Cập
+// nhật", không phụ thuộc launcher.js biết gì hay không.
+async function syncMissingAssets() {
+  const ASSET_FILES = ['kagent-logo.png', 'login-bg.jpg', 'kagent-mascot-face.png', 'kagent-mascot-full.png', 'kagent-mascot-sitting.png'];
+  for (const f of ASSET_FILES) {
+    const dest = path.join(PUBLIC_DIR, f);
+    // Không chỉ kiểm tra TỒN TẠI — file 0 byte/quá nhỏ do lần tải trước bị đứt giữa chừng vẫn
+    // "tồn tại" theo fs.existsSync(), sẽ bị bỏ qua mãi mãi nếu không kiểm tra thêm kích thước.
+    try { if (fs.existsSync(dest) && fs.statSync(dest).size >= 100) continue; } catch {}
+    try {
+      const buf = await httpsGetBuffer(`${UPDATE_BASE}/${f}?t=${Date.now()}`, 15000);
+      if (!buf || buf.length < 100) throw new Error('nội dung tải về quá nhỏ, có thể lỗi');
+      fs.writeFileSync(dest, buf);
+      console.log(`[KAgent] Đã tải bù ảnh còn thiếu: ${f}`);
+    } catch (e) {
+      console.error(`[KAgent] ⚠ Tải ảnh ${f} thất bại:`, e.message);
+    }
+  }
+}
+syncMissingAssets();
+
 // Đọc version từ local version.json (đã được update) thay vì hardcode
 function readCurrentVersion() {
   try {
@@ -2036,26 +2065,7 @@ app.post('/api/do-core-update', async (req, res) => {
         console.error(`[KAgent] ⚠ Tải ${f} mới thất bại (core vẫn nạp lại bình thường):`, e.message);
       }
     }
-    // Ảnh tĩnh (mascot, logo...) mà index.html mới có thể tham chiếu tới nhưng máy này (cài từ
-    // trước khi ảnh đó tồn tại) chưa từng có trên đĩa — nếu không tải, ảnh sẽ vỡ (404) dù HTML
-    // đã đúng. Chỉ tải khi CHƯA CÓ sẵn (ảnh tĩnh hiếm khi đổi nội dung sau khi thêm, không cần
-    // tải lại mỗi lần update như HTML).
-    const ASSET_FILES = ['kagent-logo.png', 'login-bg.jpg', 'kagent-mascot-face.png', 'kagent-mascot-full.png', 'kagent-mascot-sitting.png'];
-    for (const f of ASSET_FILES) {
-      const dest = path.join(PUBLIC_DIR, f);
-      // Không chỉ kiểm tra TỒN TẠI — nếu lần tải trước bị ngắt giữa chừng (mất mạng, tắt app...)
-      // có thể để lại file 0 byte/quá nhỏ trên đĩa, khiến fs.existsSync() báo "đã có" và code BỎ
-      // QUA MÃI MÃI không bao giờ tải lại, dù ảnh vẫn vỡ. Coi file < 100 byte là hỏng, tải lại.
-      try { if (fs.existsSync(dest) && fs.statSync(dest).size >= 100) continue; } catch {}
-      try {
-        const buf = await httpsGetBuffer(`${UPDATE_BASE}/${f}?t=${Date.now()}`, 15000);
-        if (!buf || buf.length < 100) throw new Error('nội dung tải về quá nhỏ, có thể lỗi');
-        fs.writeFileSync(dest, buf);
-        console.log(`[KAgent] Đã tải ảnh mới: ${f}`);
-      } catch (e) {
-        console.error(`[KAgent] ⚠ Tải ảnh ${f} thất bại (không chặn update):`, e.message);
-      }
-    }
+    await syncMissingAssets();
     console.log('[KAgent] Đã tải xong core + giao diện mới, chuẩn bị nạp lại...');
     res.json({ ok: true, msg: 'Đang nạp lại core...' });
     // Đợi 1 nhịp ngắn để response kịp gửi về client trước khi tắt server hiện tại.
