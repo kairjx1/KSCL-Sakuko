@@ -1185,7 +1185,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <div class="tb-robot">🤖</div>
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.147</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.148</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -4438,6 +4438,8 @@ async function toggleAllModules(enabled) {
 fetch('/version.json').then(r=>r.json()).then(v=>{
   const el = document.getElementById('app-version');
   if (el && v.version) el.textContent = 'v' + v.version;
+  const sbEl = document.getElementById('sb-version');
+  if (sbEl && v.version) sbEl.textContent = 'v' + v.version;
 }).catch(()=>{});
 
 initRelay().then(() => init());

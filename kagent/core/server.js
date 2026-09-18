@@ -1980,7 +1980,31 @@ app.post('/api/do-core-update', async (req, res) => {
     } catch (e) {
       console.error('[KAgent] ⚠ Tải version.json mới thất bại (core vẫn nạp lại bình thường, nhưng banner có thể hiện lại):', e.message);
     }
-    console.log('[KAgent] Đã tải xong core mới, chuẩn bị nạp lại...');
+    // BUG THẬT NGHIÊM TRỌNG đã tìm ra (người dùng báo "máy khác update rồi mà giao diện vẫn
+    // không đổi"): route này trước đây CHỈ tải 5 file JS lõi — KHÔNG đụng tới index.html/
+    // admin.html/agents.html. Vì client-side (doUpdate() trong index.html) gọi route này TRƯỚC
+    // TIÊN và return ngay khi ok:true, route /api/do-update (route DUY NHẤT tải lại HTML) không
+    // bao giờ được gọi tới nữa. Kết quả: version.json + server.js/agent-runner.js được cập nhật
+    // thật (nên badge version — đọc động từ version.json — hiện đúng số mới), nhưng TOÀN BỘ giao
+    // diện (HTML/CSS/JS trong index.html) vẫn là bản CŨ mãi mãi trên mọi máy chỉ bấm "Cập nhật"
+    // thường, khiến các máy nhìn thấy phiên bản UI khác nhau dù báo cùng version. Fix: nạp lại
+    // core giờ tải LUÔN cả HTML — một lần bấm "Cập nhật" là đồng bộ hết, không cần phân biệt
+    // "core" với "HTML" nữa từ góc nhìn người dùng.
+    const HTML_FILES = ['index.html', 'admin.html', 'agents.html'];
+    for (const f of HTML_FILES) {
+      try {
+        const html = await httpsGetText(`${UPDATE_BASE}/${f}?t=${Date.now()}`, 15000);
+        if (!html || html.length < 100 || !/<html/i.test(html)) {
+          throw new Error('nội dung tải về không giống file HTML hợp lệ');
+        }
+        fs.writeFileSync(path.join(PUBLIC_DIR, f), html, 'utf8');
+      } catch (e) {
+        // Không huỷ toàn bộ update vì lỗi ở 1 file HTML — core JS quan trọng hơn và đã nạp
+        // xong ở trên; chỉ log rõ để biết mà kiểm tra, giữ nguyên HTML cũ cho file đó.
+        console.error(`[KAgent] ⚠ Tải ${f} mới thất bại (core vẫn nạp lại bình thường):`, e.message);
+      }
+    }
+    console.log('[KAgent] Đã tải xong core + giao diện mới, chuẩn bị nạp lại...');
     res.json({ ok: true, msg: 'Đang nạp lại core...' });
     // Đợi 1 nhịp ngắn để response kịp gửi về client trước khi tắt server hiện tại.
     setTimeout(() => {
