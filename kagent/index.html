@@ -126,12 +126,80 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 .rb-handle{display:none;width:6px;flex-shrink:0;cursor:col-resize;background:transparent;touch-action:none}
 #main.has-right .rb-handle{display:block}
 .rb-handle:hover,.rb-handle.dragging{background:var(--accent-dim)}
+
+/* ── AGENT INFO PANEL (rightbar mặc định) ── */
+.aip-wrap{padding:16px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;flex:1}
+.aip-head{display:flex;align-items:center;gap:10px}
+.aip-avatar{
+  width:38px;height:38px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+  background:linear-gradient(135deg,rgba(124,58,237,.3),rgba(79,70,229,.3));
+  border:1px solid rgba(167,139,250,.25);
+}
+.aip-head .aip-name{font-size:13px;font-weight:700;color:var(--text)}
+.aip-head .aip-status{font-size:10.5px;color:var(--text3);display:flex;align-items:center;gap:5px;margin-top:2px}
+.aip-head .aip-status .dot{width:6px;height:6px;border-radius:50%;background:var(--text3)}
+.aip-head .aip-status.active .dot{background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2s infinite}
+.aip-head .aip-status.active{color:var(--green)}
+.aip-section h4{font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600}
+.aip-task-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px}
+.aip-task-card .atc-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;line-height:1.4}
+.aip-progress-track{height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.aip-progress-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:3px;transition:width .3s}
+.aip-progress-fill.indeterminate{width:40%!important;animation:aip-indeterminate 1.4s infinite ease-in-out}
+@keyframes aip-indeterminate{0%{margin-left:-40%}100%{margin-left:100%}}
+.aip-task-meta{display:flex;align-items:center;justify-content:space-between;margin-top:7px;font-size:10px;color:var(--text3)}
+.aip-detail-btn{
+  width:100%;margin-top:10px;background:var(--bg4);border:1px solid var(--border);color:var(--text2);
+  padding:7px;border-radius:7px;font-size:11px;cursor:pointer;font-weight:600;transition:all .12s;
+}
+.aip-detail-btn:hover{border-color:var(--accent);color:var(--accent)}
+.aip-integ{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;
+  background:var(--bg3);border:1px solid var(--border);margin-bottom:6px;
+}
+.aip-integ .ai-icon{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--bg4)}
+.aip-integ .ai-body{flex:1;min-width:0}
+.aip-integ .ai-name{font-size:11.5px;font-weight:600;color:var(--text)}
+.aip-integ .ai-desc{font-size:9.5px;color:var(--text3);margin-top:1px}
+.aip-integ .ai-badge{font-size:9px;padding:2px 7px;border-radius:8px;font-weight:600;flex-shrink:0;white-space:nowrap}
+.aip-integ .ai-badge.on{color:var(--green);background:var(--green-bg)}
+.aip-integ .ai-badge.off{color:var(--text3);background:var(--bg4)}
+.aip-quote{
+  margin-top:auto;text-align:center;padding:14px;background:var(--accent-dim);
+  border-radius:12px;font-size:11px;color:var(--text2);font-style:italic;line-height:1.5;
+}
+.aip-quote .aq-icon{font-size:22px;display:block;margin-bottom:6px;font-style:normal}
+.aip-footer{
+  display:flex;align-items:center;justify-content:space-between;padding:10px 14px;
+  border-top:1px solid var(--border);font-size:10px;color:var(--text3);flex-shrink:0;
+}
 .icon-btn{
   background:var(--bg3);border:1px solid var(--border);color:var(--text2);
   width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s;
 }
 .icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── TASK PANEL (cột giữa cố định) ── */
+#task-panel{
+  width:270px;min-width:270px;background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;padding:14px 12px;gap:16px;
+}
+#task-panel .dash-section-hdr{margin-bottom:8px}
+#task-panel .dash-section-hdr h3{font-size:11.5px}
+#task-panel .task-cards{gap:5px}
+#task-panel .task-card{padding:9px 10px;gap:9px}
+#task-panel .tc-avatar{width:28px;height:28px;font-size:13px;border-radius:8px}
+#task-panel .tc-title{font-size:11.5px}
+#task-panel .tc-meta{font-size:9.5px}
+#task-panel .status-pill{font-size:9px;padding:1px 6px}
+#task-panel .quick-tools{grid-template-columns:repeat(2,1fr)}
+#task-panel .quick-tool{padding:11px 6px}
+#task-panel .qt-icon-wrap{width:32px;height:32px;font-size:15px;border-radius:8px}
+#task-panel .qt-label{font-size:9.5px}
+#task-panel .dash-tip{padding:10px 12px;font-size:11px}
+#task-panel .dash-tip .tip-icon{font-size:14px}
 
 /* ── SIDEBAR NAV ITEMS ── */
 .nav-items{padding:10px 8px 6px;border-bottom:1px solid var(--border)}
@@ -401,6 +469,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
   display:flex;align-items:center;justify-content:center;
   font-size:11px;font-weight:700;color:#fff;flex-shrink:0;
 }
+.sb-mascot{
+  margin:10px 10px 0;padding:14px 10px;border-radius:12px;text-align:center;
+  background:linear-gradient(160deg,rgba(124,58,237,.15),rgba(30,20,60,.3));
+  border:1px solid rgba(167,139,250,.15);
+}
+.sb-mascot .sbm-icon{font-size:32px;line-height:1;margin-bottom:6px}
+.sb-mascot .sbm-quote{font-size:10.5px;color:var(--text2);font-style:italic;line-height:1.5}
+.sb-footer-ver{padding:8px 10px 10px;font-size:9.5px;color:var(--text3);text-align:center}
 
 /* ── MAIN CONTENT ── */
 #content{flex:1;display:flex;flex-direction:column;overflow:hidden}
@@ -617,11 +693,28 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 }
 #empty-state .btn-start-big:hover{background:var(--accent2)}
 
+/* Quick action chips (chat welcome) */
+.qa-chips{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:6px;width:100%;max-width:420px}
+.qa-chip{
+  display:flex;align-items:center;gap:8px;padding:10px 12px;
+  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  cursor:pointer;transition:all .12s;font-size:12px;color:var(--text2);text-align:left;
+}
+.qa-chip:hover{border-color:rgba(167,139,250,.4);background:var(--accent-dim);color:var(--text)}
+.qa-chip .qc-icon{font-size:15px;flex-shrink:0}
+
 /* ── INPUT BAR ── */
 #input-bar{
   background:var(--bg2);border-top:1px solid var(--border);
   padding:10px 12px 8px;flex-shrink:0;
 }
+#input-shortcuts{display:flex;gap:6px;margin-bottom:7px;flex-wrap:wrap}
+.input-shortcut{
+  display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);
+  color:var(--text2);padding:4px 10px;border-radius:7px;font-size:11px;cursor:pointer;
+  transition:all .12s;
+}
+.input-shortcut:hover{border-color:rgba(167,139,250,.4);color:var(--accent);background:var(--accent-dim)}
 #input-row{display:flex;gap:8px;align-items:flex-end}
 #prompt-input{
   flex:1;background:var(--bg3);color:var(--text);
@@ -981,7 +1074,7 @@ dialog.dlg header button:hover{color:var(--text)}
   <div class="topbar-logo">
     <div class="tb-robot">🤖</div>
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.142</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.144</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -1045,12 +1138,28 @@ dialog.dlg header button:hover{color:var(--text)}
       </div>
       <div class="nav-item" id="nav-chat" onclick="openNewChatModal()">
         <span class="ni-icon">💬</span>
-        <span class="ni-label">Chat mới với KAgent</span>
-        <span class="ni-badge">+</span>
+        <span class="ni-label">Chat với KAgent</span>
+      </div>
+      <div class="nav-item" id="nav-claude" onclick="quickStartAgent('claude')" title="Tạo/mở chat dùng Claude Code">
+        <span class="ni-icon">&lt;/&gt;</span>
+        <span class="ni-label">Claude Code</span>
+        <span class="ni-badge">Hot</span>
+      </div>
+      <div class="nav-item" onclick="comingSoon('Nhiệm vụ tự động')" title="Sắp ra mắt">
+        <span class="ni-icon">⚡</span>
+        <span class="ni-label">Nhiệm vụ tự động</span>
+      </div>
+      <div class="nav-item" onclick="comingSoon('Kho dữ liệu')" title="Sắp ra mắt">
+        <span class="ni-icon">🗂️</span>
+        <span class="ni-label">Kho dữ liệu</span>
+      </div>
+      <div class="nav-item" onclick="comingSoon('Tài liệu &amp; Hướng dẫn')" title="Sắp ra mắt">
+        <span class="ni-icon">📚</span>
+        <span class="ni-label">Tài liệu &amp; Hướng dẫn</span>
       </div>
       <div class="nav-item" id="nav-kt" onclick="toggleKimTiem()" title="Kim Tiêm — bật/tắt AI modules">
         <span class="ni-icon">💉</span>
-        <span class="ni-label">Kim Tiêm</span>
+        <span class="ni-label">Công cụ AI</span>
       </div>
       <div class="nav-item" id="nav-settings" onclick="openSettingsDialog()">
         <span class="ni-icon">⚙️</span>
@@ -1090,6 +1199,60 @@ dialog.dlg header button:hover{color:var(--text)}
           <div style="font-size:10px;color:var(--text2)" id="sb-role">Local</div>
         </div>
       </div>
+    </div>
+
+    <div class="sb-mascot">
+      <div class="sbm-icon">🤖</div>
+      <div class="sbm-quote">"Hành động nhỏ tạo nên hiệu quả lớn!"</div>
+    </div>
+    <div class="sb-footer-ver">KAgent <span id="sb-version">v1.0.142</span> | KSCL Vietnam © 2026</div>
+  </div>
+
+  <!-- TASK PANEL (cột nhiệm vụ + công cụ nhanh, luôn hiển thị) -->
+  <div id="task-panel">
+    <div>
+      <div class="dash-section-hdr">
+        <h3>📋 Nhiệm vụ gần đây</h3>
+        <a onclick="showDashboard()">Xem tất cả</a>
+      </div>
+      <div class="task-cards" id="tp-recent-tasks">
+        <div style="font-size:11px;color:var(--text3);padding:12px 0;text-align:center">Đang tải...</div>
+      </div>
+    </div>
+    <div>
+      <div class="dash-section-hdr">
+        <h3>⚡ Công cụ nhanh</h3>
+      </div>
+      <div class="quick-tools">
+        <div class="quick-tool" onclick="quickPrompt('Tạo báo cáo tổng hợp giúp tôi về: ')">
+          <div class="qt-icon-wrap">📊</div>
+          <span class="qt-label">Tạo báo cáo</span>
+        </div>
+        <div class="quick-tool" onclick="quickPrompt('Phân tích dữ liệu sau giúp tôi: ')">
+          <div class="qt-icon-wrap">📈</div>
+          <span class="qt-label">Phân tích dữ liệu</span>
+        </div>
+        <div class="quick-tool" onclick="quickPrompt('Tạo hình ảnh minh hoạ cho: ')">
+          <div class="qt-icon-wrap">🖼️</div>
+          <span class="qt-label">Tạo hình ảnh</span>
+        </div>
+        <div class="quick-tool" onclick="quickPrompt('Tìm thông tin nội bộ về: ')">
+          <div class="qt-icon-wrap">🔍</div>
+          <span class="qt-label">Tìm kiếm nội bộ</span>
+        </div>
+        <div class="quick-tool" onclick="quickPrompt('Đọc/xử lý file Excel, CSV: ')">
+          <div class="qt-icon-wrap">📑</div>
+          <span class="qt-label">Excel / CSV</span>
+        </div>
+        <div class="quick-tool" onclick="quickPrompt('Đồng bộ/cập nhật dữ liệu vào Lark Base: ')">
+          <div class="qt-icon-wrap">🗃️</div>
+          <span class="qt-label">Lark Base</span>
+        </div>
+      </div>
+    </div>
+    <div class="dash-tip">
+      <span class="tip-icon">💡</span>
+      <span>Bạn có thể nhờ KAgent hỗ trợ bất cứ lúc nào!</span>
     </div>
   </div>
 
@@ -1136,30 +1299,12 @@ dialog.dlg header button:hover{color:var(--text)}
 
       <!-- Body -->
       <div class="dash-body">
-
-        <!-- Nhiệm vụ gần đây -->
+        <!-- Cài đặt & tài khoản nhanh -->
         <div>
           <div class="dash-section-hdr">
-            <h3>Nhiệm vụ gần đây</h3>
-            <a onclick="openNewChatModal()">＋ Tạo mới</a>
-          </div>
-          <div class="task-cards" id="dash-recent-tasks">
-            <div style="font-size:12px;color:var(--text3);padding:16px 0;text-align:center">
-              Đang tải...
-            </div>
-          </div>
-        </div>
-
-        <!-- Công cụ nhanh -->
-        <div>
-          <div class="dash-section-hdr">
-            <h3>Công cụ nhanh</h3>
+            <h3>Lối tắt</h3>
           </div>
           <div class="quick-tools">
-            <div class="quick-tool" onclick="openNewChatModal()">
-              <div class="qt-icon-wrap">💬</div>
-              <span class="qt-label">Chat mới</span>
-            </div>
             <div class="quick-tool" onclick="toggleKimTiem()">
               <div class="qt-icon-wrap">💉</div>
               <span class="qt-label">Kim Tiêm</span>
@@ -1188,6 +1333,10 @@ dialog.dlg header button:hover{color:var(--text)}
               <div class="qt-icon-wrap">🛡️</div>
               <span class="qt-label">Admin Panel</span>
             </div>
+            <div class="quick-tool" onclick="toggleRightbar()">
+              <div class="qt-icon-wrap">▥</div>
+              <span class="qt-label">Bảng phải</span>
+            </div>
           </div>
         </div>
 
@@ -1196,7 +1345,6 @@ dialog.dlg header button:hover{color:var(--text)}
           <span class="tip-icon">💡</span>
           <span>Dùng <strong>⚡ Live</strong> để chat trực tiếp như terminal, hoặc <strong>▶ Khởi động</strong> để dùng markdown. Nhấn <kbd style="background:var(--bg4);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:10px">Ctrl+K</kbd> để tìm kiếm nhanh trong toàn bộ lịch sử chat.</span>
         </div>
-
       </div>
     </div>
 
@@ -1239,12 +1387,26 @@ dialog.dlg header button:hover{color:var(--text)}
         <div id="chat-messages" style="display:none"></div>
         <button id="btn-scroll-bottom" class="scroll-bottom-btn" onclick="scrollToBottomNow()" title="Xuống tin mới nhất">▼</button>
         <div id="empty-state">
-          <div class="big-icon">⚡</div>
-          <h3>Sẵn sàng</h3>
-          <p>Bấm <strong>⚡ Live</strong> để chat trực tiếp (như AGS), hoặc <strong>▶ Khởi động</strong> để dùng chat có markdown.</p>
-          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <div class="big-icon">🤖</div>
+          <h3>Xin chào! Tôi là KAgent 👋</h3>
+          <p>Trợ lý AI của phòng Kiểm soát chất lượng Sakuko. Bạn cần tôi hỗ trợ gì hôm nay?</p>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:4px">
             <button class="btn-start-big" onclick="startInteractive()" style="background:linear-gradient(135deg,#22c55e,#16a34a)">⚡ Live — Chạy trực tiếp</button>
             <button class="btn-start-big" onclick="toggleAgent()" style="background:var(--accent2)">▶ Chat có markdown</button>
+          </div>
+          <div class="qa-chips">
+            <div class="qa-chip" onclick="quickPrompt('Viết code / dùng Claude Code để: ')">
+              <span class="qc-icon">&lt;/&gt;</span><span>Viết code / Claude Code</span>
+            </div>
+            <div class="qa-chip" onclick="quickPrompt('Phân tích dữ liệu sau giúp tôi: ')">
+              <span class="qc-icon">📊</span><span>Phân tích dữ liệu</span>
+            </div>
+            <div class="qa-chip" onclick="quickPrompt('Tạo báo cáo giúp tôi về: ')">
+              <span class="qc-icon">📋</span><span>Tạo báo cáo</span>
+            </div>
+            <div class="qa-chip" onclick="quickPrompt('Tìm thông tin nội bộ về: ')">
+              <span class="qc-icon">🔎</span><span>Tìm thông tin nội bộ</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1254,6 +1416,13 @@ dialog.dlg header button:hover{color:var(--text)}
         <div id="history-panel"></div>
         <!-- File preview strip (ảnh/tài liệu paste/drop sẽ hiện ở đây) -->
         <div id="image-strip" style="display:none;padding:6px 10px 0;display:flex;gap:6px;flex-wrap:wrap;"></div>
+        <div id="input-shortcuts">
+          <div class="input-shortcut" onclick="triggerImagePick()" title="Đính kèm ảnh">🖼️ Ảnh</div>
+          <div class="input-shortcut" onclick="triggerImagePick()" title="Đính kèm tài liệu">📄 Tài liệu</div>
+          <div class="input-shortcut" onclick="quickPrompt('Đọc/xử lý file Excel sau giúp tôi: ')" title="Nhắc KAgent xử lý Excel/CSV">📑 Excel</div>
+          <div class="input-shortcut" onclick="quickPrompt('Đồng bộ/cập nhật vào Lark Base: ')" title="Nhắc KAgent thao tác Lark Base">🗃️ Lark Base</div>
+          <div class="input-shortcut" onclick="quickPrompt('Dùng Claude Code để: ')" title="Nhắc dùng Claude Code">&lt;/&gt; Claude Code</div>
+        </div>
         <div id="input-row">
           <textarea id="prompt-input" placeholder="Prompt (Enter = gửi, Shift+Enter = xuống dòng)… | Paste ảnh hoặc đính kèm file để gửi kèm 📎" rows="1"
             onkeydown="handleKeydown(event)" oninput="autoResize(this)" onpaste="handlePaste(event)" ondragover="event.preventDefault()" ondrop="handleFileDrop(event)"></textarea>
@@ -2103,6 +2272,7 @@ function handleWsMessage(msg) {
         setView('terminal');
       }
       if (msg.status === 'stopped') { finalizeToolBlock(); removeTyping(); _interactiveMode = false; updateInteractiveUI(false); }
+      if (typeof renderRecentTasks === 'function') renderRecentTasks();
       break;
     case 'exit':
       removeTyping();
@@ -2539,7 +2709,8 @@ async function loadChats() {
     chats = await apiGetChats(pid);
   }
   renderChatList();
-  // Update dashboard if visible
+  renderRecentTasks();
+  // Update dashboard hero/stats if visible
   if (document.getElementById('no-chat').classList.contains('visible')) showDashboard();
 }
 
@@ -3541,10 +3712,114 @@ const RightPanel = (() => {
   return { open, close, toggle, isOpen };
 })();
 
-// Nút ▥ trên topbar: nếu chưa có nội dung nào mở, mặc định mở Kim Tiêm.
+// ── AGENT INFO PANEL (nội dung mặc định của rightbar) ──────────────────────
+let _aipOpen = false;
+
+function renderAgentInfoPanel() {
+  const chat = (typeof chats !== 'undefined' && currentChatId) ? chats.find(c => c.id === currentChatId) : null;
+  const isRunning = !!(currentChatId && typeof runner !== 'undefined' && runner.getSessionStatus && runner.getSessionStatus(currentChatId) === 'running');
+  const agent = (chat && chat.agent) || 'claude';
+  const agentName = agent.includes('anti') ? 'AntiGravity' : agent.includes('gemini') ? 'Gemini' : agent.includes('opencode') ? 'OpenCode' : 'Claude Code';
+  const agentIcon = agent.includes('anti') ? '🔵' : agent.includes('gemini') ? '♊' : agent.includes('opencode') ? '💚' : '&lt;/&gt;';
+  const relayOn = typeof useRelay === 'function' && useRelay();
+  const modelName = (document.getElementById('model-pill-name') || {}).textContent || '—';
+
+  const taskHtml = isRunning
+    ? `<div class="aip-task-card">
+        <div class="atc-title">${escapeHtml((chat && chat.name) || 'Đang xử lý...')}</div>
+        <div class="aip-progress-track"><div class="aip-progress-fill indeterminate"></div></div>
+        <div class="aip-task-meta"><span>⚡ Đang chạy</span><span>${escapeHtml(modelName)}</span></div>
+        <button class="aip-detail-btn" onclick="selectChat('${chat.id}')">Xem chi tiết</button>
+      </div>`
+    : `<div class="aip-task-card">
+        <div class="atc-title" style="color:var(--text3);font-weight:500">Không có tác vụ nào đang chạy</div>
+        <div class="aip-task-meta"><span>Sẵn sàng nhận yêu cầu mới</span></div>
+      </div>`;
+
+  return `
+    <div class="aip-wrap">
+      <div class="aip-head">
+        <div class="aip-avatar">${agentIcon}</div>
+        <div>
+          <div class="aip-name">${agentName}</div>
+          <div class="aip-status ${isRunning ? 'active' : ''}"><span class="dot"></span>${isRunning ? 'Đang hoạt động' : 'Sẵn sàng'}</div>
+        </div>
+      </div>
+      <div class="aip-section">
+        <h4>Tác vụ hiện tại</h4>
+        ${taskHtml}
+      </div>
+      <div class="aip-section">
+        <h4>Công cụ tích hợp</h4>
+        <div class="aip-integ">
+          <div class="ai-icon">🗃️</div>
+          <div class="ai-body"><div class="ai-name">Lark Base</div><div class="ai-desc">Kết nối &amp; đồng bộ dữ liệu</div></div>
+          <div class="ai-badge ${relayOn ? 'on' : 'off'}">${relayOn ? '● Đã kết nối' : 'Chưa đăng nhập'}</div>
+        </div>
+        <div class="aip-integ">
+          <div class="ai-icon">🐙</div>
+          <div class="ai-body"><div class="ai-name">GitHub</div><div class="ai-desc">Quản lý code (sắp ra mắt)</div></div>
+          <div class="ai-badge off">Chưa kết nối</div>
+        </div>
+        <div class="aip-integ">
+          <div class="ai-icon">📑</div>
+          <div class="ai-body"><div class="ai-name">Excel / CSV</div><div class="ai-desc">Đọc file qua đính kèm 📎</div></div>
+          <div class="ai-badge on">● Sẵn sàng</div>
+        </div>
+        <div class="aip-integ">
+          <div class="ai-icon">👁️</div>
+          <div class="ai-body"><div class="ai-name">Vision AI</div><div class="ai-desc">Nhận diện ảnh qua đính kèm 📎</div></div>
+          <div class="ai-badge on">● Sẵn sàng</div>
+        </div>
+      </div>
+      <div class="aip-quote">
+        <span class="aq-icon">🤖</span>
+        "Làm chủ AI - Kiến tạo tương lai"<br>— KAgent —
+      </div>
+    </div>
+    <div class="aip-footer">
+      <span>${agentIcon} ${agentName}</span>
+      <span>${escapeHtml(modelName)}</span>
+      <span>🟢 Online</span>
+    </div>`;
+}
+
+function showAgentInfoPanel() {
+  _aipOpen = true;
+  RightPanel.open({ title: '🤖 Agent hiện tại', html: renderAgentInfoPanel(), onClose: () => { _aipOpen = false; } });
+}
+setInterval(() => { if (_aipOpen && RightPanel.isOpen()) showAgentInfoPanel(); }, 4000);
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Nút ▥ trên topbar: nếu chưa có nội dung nào mở, mặc định mở Agent hiện tại.
 function toggleRightbar() {
-  if (RightPanel.isOpen()) { RightPanel.close(); _ktOpen = false; return; }
-  toggleKimTiem();
+  if (RightPanel.isOpen()) { RightPanel.close(); _ktOpen = false; _aipOpen = false; return; }
+  showAgentInfoPanel();
+}
+
+// Điền sẵn văn bản gợi ý vào ô prompt và focus (dùng cho quick tools / chips)
+function quickPrompt(text) {
+  const input = document.getElementById('prompt-input');
+  if (!input) return;
+  input.value = text;
+  input.focus();
+  input.setSelectionRange(text.length, text.length);
+  if (typeof autoResize === 'function') autoResize(input);
+}
+
+// Toast báo tính năng chưa có backend thật — tránh giả vờ đã xong
+function comingSoon(name) {
+  if (typeof showToast === 'function') showToast(`"${name}" đang được phát triển — sắp ra mắt!`);
+  else alert(`"${name}" đang được phát triển — sắp ra mắt!`);
+}
+
+// Nav "Claude Code": mở modal tạo chat mới, chọn sẵn agent tương ứng
+async function quickStartAgent(agentId) {
+  await openNewChatModal();
+  if (typeof selectAgent === 'function') selectAgent(agentId, true);
 }
 
 // ── SETTINGS DIALOG (Kim Tiêm / Tài khoản / Hệ thống) ───────────────────────
@@ -3758,8 +4033,12 @@ function showDashboard() {
   set('ds-running', runningCount || '0');
   set('ds-project', projName || '—');
 
-  // Recent chats
-  const taskEl = document.getElementById('dash-recent-tasks');
+  renderRecentTasks();
+}
+
+// Danh sách "Nhiệm vụ gần đây" trong cột task-panel (luôn hiển thị, không riêng dashboard)
+function renderRecentTasks() {
+  const taskEl = document.getElementById('tp-recent-tasks');
   if (!taskEl) return;
   if (typeof chats !== 'undefined' && chats.length) {
     const recent = chats.slice(0, 8);
@@ -3767,23 +4046,23 @@ function showDashboard() {
       const isRunning = typeof runner !== 'undefined' && runner.getSessionStatus && runner.getSessionStatus(c.id) === 'running';
       const cls = isRunning ? 'tc-running' : 'tc-idle';
       const pill = isRunning
-        ? '<span class="status-pill running">⚡ Đang chạy</span>'
+        ? '<span class="status-pill running">⚡ Chạy</span>'
         : '<span class="status-pill idle">Idle</span>';
       const ts = c.updatedAt ? new Date(c.updatedAt).toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'}) : '';
       const agent = c.agent || 'claude';
       const agentIcon = agent.includes('anti') ? '🔵' : agent.includes('gemini') ? '♊' : agent.includes('opencode') ? '💚' : '🤖';
       const agentShort = agent.includes('anti') ? 'AntiGravity' : agent.includes('gemini') ? 'Gemini' : agent.includes('opencode') ? 'OpenCode' : 'Claude';
-      return `<div class="task-card ${cls}" onclick="selectChat('${c.id}')">
+      return `<div class="task-card ${cls}" onclick="selectChat('${c.id}')" title="${escapeHtml(c.name || '')}">
         <div class="tc-avatar">${agentIcon}</div>
         <div class="tc-body">
-          <div class="tc-title">${c.name || 'Cuộc chat'}</div>
+          <div class="tc-title">${escapeHtml(c.name || 'Cuộc chat')}</div>
           <div class="tc-meta"><span>${agentShort}</span>${ts ? '<span>•</span><span>' + ts + '</span>' : ''}</div>
         </div>
         <div class="tc-status">${pill}</div>
       </div>`;
     }).join('');
   } else {
-    taskEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:20px 0;text-align:center;line-height:1.8">Chưa có cuộc chat nào<br><span style="color:var(--accent);cursor:pointer" onclick="openNewChatModal()">Tạo chat mới →</span></div>';
+    taskEl.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:16px 0;text-align:center;line-height:1.8">Chưa có cuộc chat nào<br><span style="color:var(--accent);cursor:pointer" onclick="openNewChatModal()">Tạo chat mới →</span></div>';
   }
 }
 
@@ -3795,6 +4074,7 @@ async function toggleKimTiem() {
   const panel = document.getElementById('kim-tiem-panel');
   _ktOpen = !_ktOpen;
   if (_ktOpen) {
+    _aipOpen = false;
     // Bỏ dáng bảng nổi (position:fixed), cho nó lấp đầy rightbar thay vào đó.
     panel.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%';
     RightPanel.open({ title: '💉 Kim Tiêm', node: panel, onClose: () => { _ktOpen = false; } });
@@ -3825,6 +4105,7 @@ async function toggleMemoryPanel() {
   const panel = document.getElementById('memory-panel');
   _memOpen = !_memOpen;
   if (_memOpen) {
+    _aipOpen = false;
     panel.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%';
     RightPanel.open({ title: '🧠 Bộ nhớ', node: panel, onClose: () => { _memOpen = false; } });
     await loadMemoryPrompt();
