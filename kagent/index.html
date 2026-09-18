@@ -197,7 +197,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 #task-panel.collapsed>*{display:none}
 #task-panel .dash-section-hdr{margin-bottom:8px}
 #task-panel .dash-section-hdr h3{font-size:11.5px}
-#task-panel .task-cards{gap:5px;max-height:290px;overflow-y:auto}
+#task-panel .task-cards{gap:5px;max-height:330px;overflow-y:auto}
 #task-panel .task-card{padding:9px 10px;gap:9px}
 #task-panel .tc-avatar{width:28px;height:28px;font-size:13px;border-radius:8px}
 #task-panel .tc-title{font-size:11.5px}
@@ -211,7 +211,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 #task-panel .dash-tip .tip-icon{font-size:14px}
 
 /* ── SIDEBAR NAV ITEMS ── */
-.nav-items{padding:10px 8px 6px;border-bottom:1px solid var(--border)}
+.nav-items{padding:10px 8px 6px;border-bottom:1px solid var(--border);flex-shrink:0}
 .nav-item{
   display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;
   cursor:pointer;font-size:12.5px;color:var(--text2);transition:all .12s;margin-bottom:2px;
@@ -280,6 +280,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
   display:flex;align-items:center;gap:12px;padding:11px 14px;
   background:var(--bg2);border:1px solid var(--border);border-radius:10px;
   cursor:pointer;transition:all .12s;position:relative;overflow:hidden;
+  flex-shrink:0;
+  /* Cùng lỗi flexbox vừa sửa ở .sb-mascot: thiếu flex-shrink:0 khiến các thẻ tự bóp nhỏ lại
+     để nhét vừa trong max-height thay vì giữ nguyên cỡ thật và cuộn — nhìn như "6 ô thành bé
+     xíu" thay vì "hiện 6 ô, cuộn xuống xem tiếp" như trước. */
 }
 .task-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--border)}
 .task-card.tc-running::before{background:var(--yellow)}
@@ -357,7 +361,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 .panel-expand-btn:hover{border-color:var(--accent);color:var(--accent)}
 .panel-expand-btn.show{display:flex}
 /* ── PROJECT SECTION ── */
-#sp-section{padding:10px 10px 6px;border-bottom:1px solid var(--border)}
+#sp-section{padding:10px 10px 6px;border-bottom:1px solid var(--border);flex-shrink:0}
 #sp-row{display:flex;align-items:center;gap:4px;margin-bottom:4px}
 #sp-select{
   flex:1;background:var(--bg3);color:var(--text);border:1px solid var(--border);
@@ -377,7 +381,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
   text-decoration:none;padding:2px 2px;border-radius:4px;
 }
 #sp-addproj:hover{text-decoration:underline}
-#search-box-wrap{position:relative;padding:6px 8px 2px}
+#search-box-wrap{position:relative;padding:6px 8px 2px;flex-shrink:0}
 #search-box{
   width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;
   color:var(--text);font-size:12px;padding:7px 10px;outline:none;transition:border-color .12s;
@@ -491,7 +495,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 
 #sidebar-bottom{
   padding:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text2);
-  background:var(--bg2);
+  background:var(--bg2);flex-shrink:0;
 }
 #sidebar-bottom .user-info{display:flex;align-items:center;gap:8px}
 #sidebar-bottom .avatar{
@@ -504,14 +508,19 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
   margin:10px 10px 0;padding:0;border-radius:12px;text-align:center;
   background:linear-gradient(160deg,rgba(124,58,237,.15),rgba(30,20,60,.3));
   border:1px solid rgba(167,139,250,.15);overflow:hidden;position:relative;
+  flex-shrink:0;
+  /* BUG THẬT vừa tìm ra: .sb-mascot không có flex-shrink:0 nên khi #sidebar (flex column)
+     thiếu chỗ, flexbox tự BÓP co nó lại theo mặc định (flex-shrink:1) — phần ảnh chiếm hết chỗ
+     còn lại, đẩy câu quote text ra ngoài vùng overflow:hidden, cắt mất luôn không báo lỗi gì.
+     flex-shrink:0 buộc nó giữ nguyên kích thước thật, không bao giờ bị bóp ngầm nữa. */
 }
-.sb-mascot .sbm-icon{width:100%;max-width:210px;aspect-ratio:340/400;object-fit:cover;display:block;margin:0 auto;border-radius:12px 12px 0 0}
+.sb-mascot .sbm-icon{width:100%;max-width:130px;aspect-ratio:340/400;object-fit:cover;display:block;margin:0 auto;border-radius:12px 12px 0 0}
 .sb-mascot .sbm-quote{
   font-family:'Dancing Script',cursive;font-weight:700;font-size:15px;line-height:1.25;
   color:#ff9ce6;text-shadow:0 0 10px rgba(255,110,230,.6),0 0 22px rgba(167,139,250,.35);
   padding:2px 12px 12px;
 }
-.sb-footer-ver{padding:8px 10px 10px;font-size:9.5px;color:var(--text3);text-align:center}
+.sb-footer-ver{padding:8px 10px 10px;font-size:9.5px;color:var(--text3);text-align:center;flex-shrink:0}
 
 /* ── MAIN CONTENT ── */
 #content{flex:1;display:flex;flex-direction:column;overflow:hidden}
@@ -1220,7 +1229,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <img class="tb-robot" src="/kagent-mascot-face.png" alt="KAgent">
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.164</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.165</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
