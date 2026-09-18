@@ -5459,6 +5459,12 @@ return`
    ĐÀO TẠO KSCL – BÀI KIỂM TRA
 ══════════════════════════════════════════ */
 function rKSCLQuiz(){
+function _kQTList(items){
+  return `<div style="display:flex;flex-direction:column;gap:8px">${items.map(([name,url])=>
+    `<a href="${url}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:9px;background:#fff;border:1px solid #e2e8f0;text-decoration:none;color:var(--t1);font-size:13.5px;font-weight:600;transition:.15s" onmouseover="this.style.borderColor='#0d9488';this.style.background='#f0fdfa'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
+      <span style="flex:1">${name}</span><span style="color:#0d9488;font-size:12px;white-space:nowrap">Xem trên Wiki ↗</span>
+    </a>`).join('')}</div>`;
+}
 const KSCL_MODULES=[
 {id:'m1',ic:'🏢',title:'Giới thiệu Phòng KSCL',color:'#7c3aed',bg:'#f5f3ff',
  sections:[
@@ -5468,9 +5474,27 @@ const KSCL_MODULES=[
  ]},
 {id:'m2',ic:'📋',title:'Các quy trình kiểm soát',color:'#0d9488',bg:'#f0fdfa',
  sections:[
-  {h:'Kiểm kê check – Quy trình quan trọng',body:'<ul style="padding-left:18px;line-height:2"><li>Quy trình kiểm kê hàng hóa CVS</li><li>Quy trình tiếp nhận RTE</li><li>Quy trình xử lý hàng date</li><li>Quy trình kiểm kê hàng hóa đột xuất</li><li>Quy trình SOP: Giảm giá hàng chế biến trong ngày</li><li>Quy trình xử lý hàng lỗi – hỏng (Hàng khô)</li></ul>'},
-  {h:'QC check – Quy trình quan trọng',body:'<ul style="padding-left:18px;line-height:2"><li>Quy trình Vận hành ca (Mở cửa – Bàn giao ca – Đóng cửa)</li><li>Quy trình Vệ sinh định kỳ cửa hàng</li><li>Quy trình Kiểm soát vệ sinh cá nhân nhân viên</li><li>Quy trình Kiểm soát hình ảnh & Tác phong nhân viên</li><li>Quy trình Xử lý kỷ luật và vi phạm quy định</li><li>Quy trình Xử lý khiếu nại & đổi trả hàng</li></ul>'},
-  {h:'Một số quy trình khác',body:'<ul style="padding-left:18px;line-height:2"><li>Quy trình lên đơn TO/SO</li><li>Quy trình cấp phát tài sản</li><li>Quy trình thu hồi tài sản</li></ul>'},
+  {h:'Kiểm kê check – Quy trình quan trọng',body:_kQTList([
+   ['Quy trình kiểm kê hàng hóa CVS','https://sakukovn.sg.larksuite.com/wiki/D0JCwguwJikcYkk6YE8lQOQpgvb'],
+   ['Quy trình tiếp nhận RTE','https://sakukovn.sg.larksuite.com/wiki/Tc0SwjgW9iQAJ7k7xfYllsC5gvX'],
+   ['Quy trình xử lý hàng date','https://sakukovn.sg.larksuite.com/wiki/YisSwRBgFixexnk7C4IldBpCgDg'],
+   ['Quy trình kiểm kê hàng hóa (đột xuất)','https://sakukovn.sg.larksuite.com/wiki/XCVVw141iiYbeDkuttdllgbNgAh'],
+   ['Quy trình SOP: Giảm giá hàng chế biến trong ngày','https://sakukovn.sg.larksuite.com/wiki/X5lQwH3DPiyJG2kq5TEld32TgDh'],
+   ['Quy trình xử lý hàng lỗi – hỏng (Hàng khô)','https://sakukovn.sg.larksuite.com/wiki/AxU6wOqHOiCPxxkk9hFlzeBggah'],
+  ])},
+  {h:'QC check – Quy trình quan trọng',body:_kQTList([
+   ['Quy trình Vận hành ca (Mở cửa – Bàn giao ca – Đóng cửa)','https://sakukovn.sg.larksuite.com/wiki/WBVfwaSZMieq8zk5IG1lPrI8gSc'],
+   ['Quy trình Vệ sinh định kỳ cửa hàng','https://sakukovn.sg.larksuite.com/wiki/MRz9wmK95its64kVWj7ljZ04gpT'],
+   ['Quy trình Kiểm soát vệ sinh cá nhân nhân viên','https://sakukovn.sg.larksuite.com/wiki/MtlSwxSBeik9UzkGEWXlz1PXgKg'],
+   ['Quy trình Kiểm soát hình ảnh & Tác phong nhân viên','https://sakukovn.sg.larksuite.com/wiki/Z6LFw19C3ioOlJkZsEAlgtArg4b'],
+   ['Quy trình Xử lý kỷ luật và vi phạm quy định','https://sakukovn.sg.larksuite.com/wiki/KFiHwlEbhiEWjWkxYjxllxCHgoh'],
+   ['Quy trình Xử lý khiếu nại & đổi trả hàng','https://sakukovn.sg.larksuite.com/wiki/TTR6wwvKqim52WkdDzQlMZ3dgIg'],
+  ])},
+  {h:'Một số quy trình khác',body:_kQTList([
+   ['Quy trình lên đơn TO/SO','https://sakukovn.sg.larksuite.com/wiki/UICXwMq7MinsoVkC1nol5Fhtgyc'],
+   ['Quy trình cấp phát tài sản','https://sakukovn.sg.larksuite.com/wiki/K3K0w5azRiRlgvks5gJlS4IAgZc'],
+   ['Quy trình thu hồi tài sản','https://sakukovn.sg.larksuite.com/wiki/MAV9wtJg5iloY7kKZB8lxG0lgkh'],
+  ])+'<div style="margin-top:10px;font-size:12px;color:var(--t2);font-style:italic">Ghi chú: các quy trình ở trên là quy trình quan trọng, nhân viên mới cần đọc kỹ và vận hành theo.</div>'},
  ]},
 {id:'m3',ic:'🌡️',title:'Kiểm soát hàng RTE – Nhạy cảm nhất',color:'#dc2626',bg:'#fef2f2',
  sections:[
