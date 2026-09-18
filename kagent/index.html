@@ -2129,6 +2129,9 @@ let _toolBlock = null; // current streaming tool output block
 // Hàng đợi các bong bóng tin nhắn user vừa gửi (optimistic UI) còn thiếu ID thật —
 // nhận ID qua case 'user_msg_id' (xem handleWsMessage), theo đúng thứ tự gửi.
 let _pendingUserWraps = [];
+// Dò cảnh báo timeout 20 phút của chính CLI AntiGravity — xem chỗ dùng ở case 'output'.
+let _outputTailBuf = '';
+let _agyTimeoutWarned = false;
 
 function _wrapMsg(el, msgId) {
   const wrap = document.createElement('div');
@@ -2402,6 +2405,15 @@ function handleWsMessage(msg) {
       appendOutput(msg.data); // luôn append vào terminal
       // Chat view: hiện tool output trong tool block
       if (_currentView === 'chat') appendChatTool(msg.data);
+      // Phát hiện lỗi THẬT của chính CLI AntiGravity (không phải lỗi KAgent): nó tự giới hạn
+      // 1 lượt xử lý tối đa 20 phút rồi trả về kết quả DỞ DANG nhưng exit code vẫn là 0 — nhìn
+      // như hoàn thành bình thường, dễ làm người dùng tưởng AI đã làm xong hẳn. Message có thể
+      // bị cắt giữa 2 chunk stream nên dò trên một cửa sổ đệm gần nhất thay vì từng chunk riêng.
+      _outputTailBuf = (_outputTailBuf + msg.data).slice(-500);
+      if (!_agyTimeoutWarned && /print timeout after \d+m\d+s/.test(_outputTailBuf)) {
+        _agyTimeoutWarned = true;
+        appendChatError('AntiGravity đã tự dừng giữa chừng vì quá 20 phút cho 1 lượt xử lý (giới hạn của chính CLI AntiGravity, không phải lỗi KAgent) — kết quả có thể CHƯA ĐẦY ĐỦ. Có thể nhắn "tiếp tục" để nó làm nốt phần còn dở.');
+      }
       break;
     case 'ai_response':
       // Response hoàn chỉnh từ server → render markdown
@@ -3451,6 +3463,7 @@ function sendPrompt() {
   const files = [...window._pendingImages];
   window._pendingImages = [];
   renderImageStrip();
+  _agyTimeoutWarned = false; // lượt mới — cho phép cảnh báo timeout AntiGravity hiện lại nếu tái diễn
 
   const displayText = text || `(${files.length} file đính kèm)`;
   // appendOutput('[Bạn]') KHÔNG gọi ở đây — server sẽ broadcast lại qua type:'output'
