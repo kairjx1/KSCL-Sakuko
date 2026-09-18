@@ -166,10 +166,12 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 .aip-integ .ai-badge.on{color:var(--green);background:var(--green-bg)}
 .aip-integ .ai-badge.off{color:var(--text3);background:var(--bg4)}
 .aip-quote{
-  margin-top:auto;text-align:center;padding:14px;background:var(--accent-dim);
+  margin-top:auto;text-align:center;padding:0 0 14px;background:var(--accent-dim);
   border-radius:12px;font-size:11px;color:var(--text2);font-style:italic;line-height:1.5;
+  overflow:hidden;
 }
-.aip-quote .aq-icon{width:40px;height:40px;border-radius:11px;object-fit:cover;display:block;margin:0 auto 8px;box-shadow:0 4px 12px rgba(167,139,250,.3)}
+.aip-quote .aq-icon{width:100%;max-width:260px;height:auto;object-fit:contain;display:block;margin:0 auto}
+.aip-quote .aip-quote-text{padding:0 14px}
 .aip-footer{
   display:flex;align-items:center;justify-content:space-between;padding:10px 14px;
   border-top:1px solid var(--border);font-size:10px;color:var(--text3);flex-shrink:0;
@@ -495,12 +497,12 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
   font-size:11px;font-weight:700;color:#fff;flex-shrink:0;
 }
 .sb-mascot{
-  margin:10px 10px 0;padding:14px 10px;border-radius:12px;text-align:center;
+  margin:10px 10px 0;padding:0;border-radius:12px;text-align:center;
   background:linear-gradient(160deg,rgba(124,58,237,.15),rgba(30,20,60,.3));
-  border:1px solid rgba(167,139,250,.15);
+  border:1px solid rgba(167,139,250,.15);overflow:hidden;position:relative;
 }
-.sb-mascot .sbm-icon{width:52px;height:52px;border-radius:14px;object-fit:cover;margin-bottom:8px;box-shadow:0 4px 14px rgba(167,139,250,.3)}
-.sb-mascot .sbm-quote{font-size:10.5px;color:var(--text2);font-style:italic;line-height:1.5}
+.sb-mascot .sbm-icon{width:100%;max-width:210px;height:auto;object-fit:contain;display:block;margin:0 auto}
+.sb-mascot .sbm-quote{font-size:10.5px;color:var(--text2);font-style:italic;line-height:1.5;padding:2px 10px 12px}
 .sb-footer-ver{padding:8px 10px 10px;font-size:9.5px;color:var(--text3);text-align:center}
 
 /* ── MAIN CONTENT ── */
@@ -1208,9 +1210,9 @@ dialog.dlg,#pm-box{
 <div id="topbar">
   <!-- LEFT: Logo -->
   <div class="topbar-logo">
-    <img class="tb-robot" src="/kagent-logo.png" alt="KAgent">
+    <img class="tb-robot" src="/kagent-mascot-face.png" alt="KAgent">
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.156</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.157</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -1353,7 +1355,7 @@ dialog.dlg,#pm-box{
     </div>
 
     <div class="sb-mascot">
-      <img class="sbm-icon" src="/kagent-logo.png" alt="KAgent">
+      <img class="sbm-icon" src="/kagent-mascot-full.png" alt="KAgent">
       <div class="sbm-quote">"Hành động nhỏ tạo nên hiệu quả lớn!"</div>
     </div>
     <div class="sb-footer-ver">KAgent <span id="sb-version">v1.0.142</span> | KSCL Vietnam © 2026</div>
@@ -1538,7 +1540,7 @@ dialog.dlg,#pm-box{
         <div id="chat-messages" style="display:none"></div>
         <button id="btn-scroll-bottom" class="scroll-bottom-btn" onclick="scrollToBottomNow()" title="Xuống tin mới nhất">▼</button>
         <div id="empty-state">
-          <img class="big-icon" src="/kagent-logo.png" alt="KAgent">
+          <img class="big-icon" src="/kagent-mascot-face.png" alt="KAgent">
           <h3>Xin chào! Tôi là KAgent 👋</h3>
           <p>Trợ lý AI của phòng Kiểm soát chất lượng Sakuko. Bạn cần tôi hỗ trợ gì hôm nay?</p>
           <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:4px">
@@ -4017,8 +4019,8 @@ function renderAgentInfoPanel() {
         </div>
       </div>
       <div class="aip-quote">
-        <img class="aq-icon" src="/kagent-logo.png" alt="KAgent">
-        "Làm chủ AI - Kiến tạo tương lai"<br>— KAgent —
+        <img class="aq-icon" src="/kagent-mascot-full.png" alt="KAgent">
+        <div class="aip-quote-text">"Làm chủ AI - Kiến tạo tương lai"<br>— KAgent —</div>
       </div>
     </div>
     <div class="aip-footer">
@@ -4943,12 +4945,12 @@ function updateAgentPill(agentId) {
 
 <div id="bk-wrap">
   <div id="bk-tip" onclick="bkToggle()">Hỏi Bé KAgent nhé! 🤖</div>
-  <div id="bk-btn" onclick="bkToggle()"><img src="/kagent-logo.png" alt="Bé KAgent"></div>
+  <div id="bk-btn" onclick="bkToggle()"><img src="/kagent-mascot-face.png" alt="Bé KAgent"></div>
 </div>
 
 <div id="bk-popup">
   <div id="bk-header" onmousedown="bkDragStart(event)">
-    <img id="bk-avatar" src="/kagent-logo.png" alt="KAgent">
+    <img id="bk-avatar" src="/kagent-mascot-face.png" alt="KAgent">
     <div id="bk-title">
       <strong>Bé KAgent</strong>
       <span>AI trợ lý · luôn sẵn sàng</span>
