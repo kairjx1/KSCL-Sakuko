@@ -2036,6 +2036,23 @@ app.post('/api/do-core-update', async (req, res) => {
         console.error(`[KAgent] ⚠ Tải ${f} mới thất bại (core vẫn nạp lại bình thường):`, e.message);
       }
     }
+    // Ảnh tĩnh (mascot, logo...) mà index.html mới có thể tham chiếu tới nhưng máy này (cài từ
+    // trước khi ảnh đó tồn tại) chưa từng có trên đĩa — nếu không tải, ảnh sẽ vỡ (404) dù HTML
+    // đã đúng. Chỉ tải khi CHƯA CÓ sẵn (ảnh tĩnh hiếm khi đổi nội dung sau khi thêm, không cần
+    // tải lại mỗi lần update như HTML).
+    const ASSET_FILES = ['kagent-logo.png', 'login-bg.jpg', 'kagent-mascot-face.png', 'kagent-mascot-full.png'];
+    for (const f of ASSET_FILES) {
+      const dest = path.join(PUBLIC_DIR, f);
+      if (fs.existsSync(dest)) continue;
+      try {
+        const buf = await httpsGetBuffer(`${UPDATE_BASE}/${f}?t=${Date.now()}`, 15000);
+        if (!buf || buf.length < 100) throw new Error('nội dung tải về quá nhỏ, có thể lỗi');
+        fs.writeFileSync(dest, buf);
+        console.log(`[KAgent] Đã tải ảnh mới: ${f}`);
+      } catch (e) {
+        console.error(`[KAgent] ⚠ Tải ảnh ${f} thất bại (không chặn update):`, e.message);
+      }
+    }
     console.log('[KAgent] Đã tải xong core + giao diện mới, chuẩn bị nạp lại...');
     res.json({ ok: true, msg: 'Đang nạp lại core...' });
     // Đợi 1 nhịp ngắn để response kịp gửi về client trước khi tắt server hiện tại.
