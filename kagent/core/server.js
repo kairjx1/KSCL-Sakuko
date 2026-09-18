@@ -2040,7 +2040,7 @@ app.post('/api/do-core-update', async (req, res) => {
     // trước khi ảnh đó tồn tại) chưa từng có trên đĩa — nếu không tải, ảnh sẽ vỡ (404) dù HTML
     // đã đúng. Chỉ tải khi CHƯA CÓ sẵn (ảnh tĩnh hiếm khi đổi nội dung sau khi thêm, không cần
     // tải lại mỗi lần update như HTML).
-    const ASSET_FILES = ['kagent-logo.png', 'login-bg.jpg', 'kagent-mascot-face.png', 'kagent-mascot-full.png'];
+    const ASSET_FILES = ['kagent-logo.png', 'login-bg.jpg', 'kagent-mascot-face.png', 'kagent-mascot-full.png', 'kagent-mascot-sitting.png'];
     for (const f of ASSET_FILES) {
       const dest = path.join(PUBLIC_DIR, f);
       if (fs.existsSync(dest)) continue;
