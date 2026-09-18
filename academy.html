@@ -5643,55 +5643,90 @@ ${QUIZ.map((q,qi)=>{
 </div>`;
 }
 
-let _modOpen=-1;
-window._modToggle=function(i){_modOpen=_modOpen===i?-1:i;document.getElementById('kscl-mod-list').innerHTML=_modList();};
-function _modList(){return KSCL_MODULES.map((m,i)=>{const open=_modOpen===i;return`
-<div style="background:#fff;border:1px solid ${open?m.color+'60':'var(--border)'};border-radius:14px;overflow:hidden;margin-bottom:10px;box-shadow:${open?'0 4px 16px '+m.color+'22':'none'}">
-  <button onclick="_modToggle(${i})" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;background:none;border:none;cursor:pointer;text-align:left">
-    <div style="width:42px;height:42px;border-radius:11px;background:${m.bg};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${m.ic}</div>
-    <div style="flex:1"><div style="font-weight:700;font-size:14.5px;color:${open?m.color:'var(--t1)'}">${m.title}</div></div>
-    <span style="font-size:12px;color:var(--t2);transform:rotate(${open?180:0}deg);transition:.25s;display:inline-block">▼</span>
-  </button>
-  ${open?`<div style="border-top:1px solid ${m.color}20;padding:16px 18px;display:flex;flex-direction:column;gap:16px">
-    ${m.sections.map(s=>`<div><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:${m.color};margin-bottom:8px">${s.h}</div><div style="font-size:13.5px;line-height:1.7;color:var(--t1)">${s.body}</div></div>`).join('<hr style="border:none;border-top:1px solid #f1f5f9">')}
-  </div>`:''}
-</div>`;}).join('');}
+let _kCur=0,_kDone=new Set(),_kPhase='lesson';
+window._kGoLesson=function(i){_kCur=i;_kPhase='lesson';_kRenderAll();_kScrollTop();};
+window._kNext=function(){_kDone.add(_kCur);if(_kCur<KSCL_MODULES.length-1){_kCur++;_kPhase='lesson';}else{KSCL_MODULES.forEach((_,i)=>_kDone.add(i));_kPhase='quiz';}_kRenderAll();_kScrollTop();};
+window._kPrev=function(){if(_kCur>0){_kCur--;_kPhase='lesson';_kRenderAll();_kScrollTop();}};
+window._kGoQuiz=function(){KSCL_MODULES.forEach((_,i)=>_kDone.add(i));_kPhase='quiz';_kRenderAll();_kScrollTop();};
+window._kBackToLessons=function(){_kPhase='lesson';_kRenderAll();_kScrollTop();};
+function _kScrollTop(){const c=document.querySelector('.content')||document.querySelector('main');if(c&&c.scrollTo)c.scrollTo({top:0,behavior:'smooth'});}
 
-setTimeout(()=>{
-  const ml=document.getElementById('kscl-mod-list');
-  const qb=document.getElementById('kscl-quiz-body');
-  if(ml)ml.innerHTML=_modList();
-  if(qb)qb.innerHTML=_qzSplash();
-},30);
+function _kLessonListHtml(){return KSCL_MODULES.map((m,i)=>{
+  const done=_kDone.has(i);
+  const active=_kPhase==='lesson'&&_kCur===i;
+  return`<div onclick="_kGoLesson(${i})" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;cursor:pointer;margin-bottom:4px;background:${active?m.color+'15':'transparent'};border:1px solid ${active?m.color+'50':'transparent'}">
+    <div style="width:26px;height:26px;border-radius:50%;background:${done?'#16a34a':active?m.color:'#e2e8f0'};color:${done||active?'#fff':'#64748b'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${done?'✓':(i+1)}</div>
+    <div style="flex:1;min-width:0;font-size:13px;font-weight:${active?'700':'600'};color:${active?m.color:'var(--t1)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.ic} ${m.title}</div>
+  </div>`;}).join('');}
+
+function _kQuizBtnHtml(){
+  const allDone=_kDone.size>=KSCL_MODULES.length;
+  const active=_kPhase==='quiz';
+  return`<div onclick="_kGoQuiz()" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;cursor:pointer;background:${active?'#7c3aed15':'transparent'};border:1px solid ${active?'#7c3aed50':'transparent'}">
+    <div style="width:26px;height:26px;border-radius:50%;background:${active?'#7c3aed':'#e2e8f0'};color:${active?'#fff':'#64748b'};display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">📝</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:${active?'700':'600'};color:${active?'#7c3aed':'var(--t1)'}">Bài kiểm tra (30 câu)</div>
+      ${!allDone?'<div style="font-size:10.5px;color:var(--t2)">Học hết 5 bài trước khi thi</div>':''}
+    </div>
+  </div>`;
+}
+
+function _kLessonContentHtml(){
+  const m=KSCL_MODULES[_kCur],isLast=_kCur===KSCL_MODULES.length-1;
+  return`
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:20px 22px">
+    <div style="font-size:11.5px;font-weight:700;color:${m.color};text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Bài ${_kCur+1}/${KSCL_MODULES.length}</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div style="width:44px;height:44px;border-radius:12px;background:${m.bg};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${m.ic}</div>
+      <div style="font-weight:800;font-size:18px;color:var(--t1)">${m.title}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      ${m.sections.map(s=>`<div><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:${m.color};margin-bottom:8px">${s.h}</div><div style="font-size:13.5px;line-height:1.7;color:var(--t1)">${s.body}</div></div>`).join('<hr style="border:none;border-top:1px solid #f1f5f9">')}
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;gap:10px;margin-top:14px">
+    <button onclick="_kPrev()" ${_kCur===0?'disabled':''} style="padding:11px 20px;border-radius:10px;border:1px solid var(--border);background:#fff;color:${_kCur===0?'#cbd5e1':'var(--t1)'};font-weight:700;font-size:13.5px;cursor:${_kCur===0?'default':'pointer'}">← Bài trước</button>
+    <button onclick="_kNext()" style="padding:11px 24px;border-radius:10px;border:none;background:${m.color};color:#fff;font-weight:700;font-size:13.5px;cursor:pointer">${isLast?'Hoàn thành – Vào bài kiểm tra 📝':'Bài tiếp theo →'}</button>
+  </div>`;
+}
+
+function _kRenderAll(){
+  const listEl=document.getElementById('kscl-lesson-list');
+  const quizBtnEl=document.getElementById('kscl-quiz-btn-wrap');
+  const cntEl=document.getElementById('kscl-done-count');
+  if(listEl)listEl.innerHTML=_kLessonListHtml();
+  if(quizBtnEl)quizBtnEl.innerHTML=_kQuizBtnHtml();
+  if(cntEl)cntEl.textContent=`${_kDone.size}/${KSCL_MODULES.length} bài đã học`;
+  const main=document.getElementById('kscl-main');
+  if(!main)return;
+  if(_kPhase==='quiz'){
+    main.innerHTML=`<div style="margin-bottom:10px"><button onclick="_kBackToLessons()" style="background:none;border:none;color:var(--t2);font-size:12.5px;cursor:pointer;padding:0">← Quay lại bài học</button></div><div id="kscl-quiz-body"></div>`;
+    _qzRender();
+  }else{
+    main.innerHTML=_kLessonContentHtml();
+  }
+}
+
+setTimeout(_kRenderAll,30);
 
 return`
 <div class="breadcrumb"><span onclick="go('dashboard')">Trang chủ</span> › <span onclick="go('daotao')">Đào tạo</span> › Đào tạo KSCL</div>
-<div class="sec-hdr"><h1>🛡️ Đào tạo KSCL – Phòng Kiểm Soát Chất Lượng</h1><p style="color:var(--t2);font-size:13px">Tài liệu đào tạo dành cho nhân viên mới CVS — đọc kỹ rồi làm bài kiểm tra</p></div>
+<div class="sec-hdr"><h1>🛡️ Đào tạo KSCL – Phòng Kiểm Soát Chất Lượng</h1><p style="color:var(--t2);font-size:13px">Học từng bài theo thứ tự, có thể nhảy bài bất kỳ — xong 5 bài thì làm bài kiểm tra</p></div>
 <div class="tabs" style="margin-bottom:20px">
   <div class="tab" onclick="go('daotao','hoclieu')">📁 Học liệu</div>
   <div class="tab" onclick="go('daotao','onboarding')">🗂️ Checklist Onboarding</div>
   <div class="tab on">🛡️ Đào tạo KSCL – Kiểm tra</div>
 </div>
 <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
-  <div style="flex:1;min-width:280px">
-    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:14px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <div style="font-size:22px">📚</div>
-        <div style="font-weight:800;font-size:15px">Nội dung học liệu</div>
-      </div>
-      <p style="font-size:13px;color:var(--t2);margin-bottom:14px">Mở từng phần để đọc kỹ trước khi làm bài kiểm tra.</p>
-      <div id="kscl-mod-list">⏳ Đang tải...</div>
+  <div style="width:260px;flex-shrink:0">
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px;position:sticky;top:14px">
+      <div style="font-weight:800;font-size:14px;margin-bottom:2px">📚 Nội dung khóa học</div>
+      <div id="kscl-done-count" style="font-size:11.5px;color:var(--t2);margin-bottom:12px">0/${KSCL_MODULES.length} bài đã học</div>
+      <div id="kscl-lesson-list">⏳ Đang tải...</div>
+      <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px" id="kscl-quiz-btn-wrap"></div>
     </div>
   </div>
-  <div style="flex:1.4;min-width:300px">
-    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px 18px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-        <div style="font-size:22px">📝</div>
-        <div style="font-weight:800;font-size:15px">Bài kiểm tra (30 câu)</div>
-      </div>
-      <div id="kscl-quiz-body">⏳ Đang tải...</div>
-    </div>
-  </div>
+  <div style="flex:1;min-width:300px" id="kscl-main">⏳ Đang tải...</div>
 </div>`;}
 
 /* ══════════════════════════════════════════
