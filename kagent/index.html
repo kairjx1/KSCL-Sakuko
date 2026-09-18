@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>KAgent</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -32,24 +34,49 @@
   --cyan:  #57e3ff;
   /* Layout */
   --sidebar-w: 260px;
-  --top-h: 46px;
+  --top-h: 58px;
 }
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
 /* ── TOP BAR ── */
 #topbar{
-  background:var(--bg2);border-bottom:1px solid var(--border);
-  padding:0 14px;height:var(--top-h);display:flex;align-items:center;gap:10px;flex-shrink:0;
+  background:linear-gradient(90deg,#0d1428 0%,#0e1628 60%,#0f1830 100%);
+  border-bottom:1px solid rgba(167,139,250,.15);
+  padding:0 16px;height:var(--top-h);display:flex;align-items:center;gap:12px;flex-shrink:0;
   user-select:none;
 }
+.topbar-logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.topbar-logo .tb-robot{font-size:24px;line-height:1}
+.topbar-logo .tb-brand{display:flex;flex-direction:column;gap:0px}
 #topbar .logo{
-  font-weight:800;font-size:15px;
+  font-weight:800;font-size:16px;
   background:linear-gradient(135deg,#a78bfa,#60a5fa);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  letter-spacing:.5px;
+  letter-spacing:.5px;line-height:1.2;
 }
-#topbar .version{font-size:10px;color:var(--text3);margin-top:1px}
-#topbar .tagline{font-size:11px;color:var(--text2);margin-left:2px;font-style:italic}
+#topbar .tagline{font-size:10px;color:var(--text3);line-height:1.2;letter-spacing:.2px}
+#topbar .version{font-size:10px;color:rgba(167,139,250,.5);margin-left:4px}
+.topbar-search{
+  flex:1;max-width:480px;margin:0 auto;
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;padding:7px 12px;cursor:text;
+  transition:border-color .15s,background .15s;
+}
+.topbar-search:hover{border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.05)}
+.topbar-search input{
+  flex:1;background:none;border:none;outline:none;color:var(--text);
+  font-size:12.5px;font-family:inherit;
+}
+.topbar-search input::placeholder{color:var(--text3)}
+.topbar-search .search-icon{font-size:13px;color:var(--text3);flex-shrink:0}
+.topbar-search .search-kbd{
+  font-size:10px;color:var(--text3);background:var(--bg4);
+  border:1px solid var(--border);border-radius:4px;padding:1px 5px;flex-shrink:0;
+}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.online-dot-wrap{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);background:var(--bg3);padding:3px 10px;border-radius:12px;border:1px solid var(--border)}
+.online-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0}
 #topbar .spacer{flex:1}
 #topbar .ram-badge{
   font-size:11px;color:var(--text2);background:var(--bg3);
@@ -101,10 +128,73 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .rb-handle:hover,.rb-handle.dragging{background:var(--accent-dim)}
 .icon-btn{
   background:var(--bg3);border:1px solid var(--border);color:var(--text2);
-  width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:13px;
+  width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s;
 }
 .icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── SIDEBAR NAV ITEMS ── */
+.nav-items{padding:10px 8px 6px;border-bottom:1px solid var(--border)}
+.nav-item{
+  display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;
+  cursor:pointer;font-size:12.5px;color:var(--text2);transition:all .12s;margin-bottom:2px;
+  text-decoration:none;
+}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);font-weight:600}
+.nav-item .ni-icon{font-size:14px;line-height:1;width:18px;text-align:center;flex-shrink:0}
+.nav-item .ni-label{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-item .ni-badge{font-size:9px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:8px;font-weight:700}
+.nav-section-hdr{
+  padding:6px 10px 4px;font-size:9.5px;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.7px;font-weight:600;
+}
+
+/* ── DASHBOARD HOME ── */
+#no-chat{
+  flex:1;overflow-y:auto;padding:24px 28px;
+  display:none;flex-direction:column;gap:24px;
+  background:var(--bg);
+}
+#no-chat.visible{display:flex}
+.dash-greeting{display:flex;flex-direction:column;gap:4px}
+.dash-greeting h2{font-size:20px;font-weight:700;color:var(--text);letter-spacing:-.2px}
+.dash-greeting p{font-size:13px;color:var(--text2)}
+.dash-section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.dash-section-hdr h3{font-size:13px;font-weight:700;color:var(--text)}
+.dash-section-hdr a{font-size:11px;color:var(--accent);cursor:pointer;text-decoration:none}
+.dash-section-hdr a:hover{text-decoration:underline}
+.task-cards{display:flex;flex-direction:column;gap:8px}
+.task-card{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  cursor:pointer;transition:all .12s;
+}
+.task-card:hover{border-color:rgba(167,139,250,.3);background:var(--bg3)}
+.task-card .tc-icon{font-size:18px;line-height:1;flex-shrink:0}
+.task-card .tc-body{flex:1;min-width:0}
+.task-card .tc-title{font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.task-card .tc-meta{font-size:10.5px;color:var(--text3);margin-top:2px}
+.task-card .tc-status{flex-shrink:0}
+.status-pill{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;border:1px solid}
+.status-pill.done{color:#4ade80;background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.25)}
+.status-pill.running{color:#fbbf24;background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.25);animation:pulse 2s infinite}
+.status-pill.idle{color:var(--text3);background:var(--bg4);border-color:var(--border)}
+.quick-tools{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.quick-tool{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  padding:14px 10px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:10px;cursor:pointer;transition:all .12s;text-align:center;
+}
+.quick-tool:hover{border-color:rgba(167,139,250,.3);background:var(--bg3);transform:translateY(-1px)}
+.quick-tool .qt-icon{font-size:22px;line-height:1}
+.quick-tool .qt-label{font-size:11px;color:var(--text2);font-weight:500}
+.dash-tip{
+  display:flex;align-items:flex-start;gap:10px;padding:12px 14px;
+  background:var(--accent-dim);border:1px solid rgba(167,139,250,.2);border-radius:10px;
+  font-size:12px;color:var(--text2);
+}
+.dash-tip .tip-icon{font-size:16px;flex-shrink:0;margin-top:1px}
 
 /* ── SIDEBAR ── */
 #sidebar{
@@ -543,12 +633,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 }
 #toast.show{opacity:1}
 
-/* ── NO CHAT SELECTED ── */
-#no-chat{
-  flex:1;display:flex;align-items:center;justify-content:center;
-  flex-direction:column;gap:10px;color:var(--text2);
-}
-#no-chat .icon{font-size:40px;opacity:.25}
+/* ── NO CHAT SELECTED (old — replaced by dashboard CSS above) ── */
 
 /* scrollbar global */
 ::-webkit-scrollbar{width:4px;height:4px}
@@ -837,40 +922,59 @@ dialog.dlg header button:hover{color:var(--text)}
 </div>
 
 <div id="topbar">
-  <span class="logo">KAgent</span>
-  <span class="version" id="app-version">v1.0.139</span>
-  <span class="tagline">AI Agent Manager</span>
-  <div class="spacer"></div>
-  <!-- Agent mode toggle -->
-  <div id="agent-mode-toggle" title="Chế độ chạy agent">
-    <div class="mode-opt active-safe" id="mode-safe" onclick="setAgentMode('safe')">🔒 Hỏi lại</div>
-    <div class="mode-opt" id="mode-auto" onclick="setAgentMode('auto')">⚡ Tự động</div>
-  </div>
-  <!-- Working dir (hiện khi auto mode) -->
-  <div id="workdir-wrap" style="display:none;align-items:center;gap:4px;background:var(--bg3);border:1px solid rgba(248,113,113,.3);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text2);cursor:pointer;max-width:160px;overflow:hidden" title="Thư mục làm việc — click để đổi" onclick="pickWorkDir()">
-    <span style="flex-shrink:0">📁</span>
-    <span id="workdir-label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">C:\</span>
-  </div>
-  <span class="ram-badge" id="ram-info">Đang kết nối...</span>
-  <button id="btn-rightbar" class="icon-btn" title="Bảng phải" onclick="toggleRightbar()">▥</button>
-  <button id="btn-settings" class="icon-btn" title="Cấu hình" onclick="openSettingsDialog()">⚙️</button>
-  <!-- Auth area -->
-  <a id="btn-admin" href="/admin.html" style="display:none;background:var(--bg3);border:1px solid var(--border);color:var(--yellow);padding:4px 10px;border-radius:5px;font-size:11px;text-decoration:none;font-weight:600">⚙️ Admin</a>
-  <button id="btn-login" onclick="loginLark()" style="display:none">🔑 Đăng nhập Lark</button>
-  <div class="user-area">
-    <div id="user-badge" style="display:none" onclick="toggleUserMenu()">
-      <div class="uavatar" id="user-avatar">?</div>
-      <span id="user-name">...</span>
-      <span style="font-size:9px;opacity:.5">▾</span>
+  <!-- LEFT: Logo -->
+  <div class="topbar-logo">
+    <div class="tb-robot">🤖</div>
+    <div class="tb-brand">
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.141</span></span>
+      <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
-    <div id="user-menu" hidden>
-      <div class="um-info">
-        <span id="um-name"></span>
-        <span id="um-email" class="muted"></span>
+  </div>
+
+  <!-- CENTER: Search -->
+  <div class="topbar-search" onclick="document.getElementById('topbar-search-input').focus()">
+    <span class="search-icon">🔍</span>
+    <input id="topbar-search-input" placeholder="Tìm kiếm chat, nhiệm vụ..." autocomplete="off"
+      onfocus="onSearchInput(''); document.getElementById('search-box').value=''" oninput="onSearchInput(this.value)">
+    <span class="search-kbd">Ctrl+K</span>
+  </div>
+
+  <!-- RIGHT: Controls -->
+  <div class="topbar-right">
+    <!-- Agent mode toggle -->
+    <div id="agent-mode-toggle" title="Chế độ chạy agent">
+      <div class="mode-opt active-safe" id="mode-safe" onclick="setAgentMode('safe')">🔒 Hỏi lại</div>
+      <div class="mode-opt" id="mode-auto" onclick="setAgentMode('auto')">⚡ Tự động</div>
+    </div>
+    <!-- Working dir -->
+    <div id="workdir-wrap" style="display:none;align-items:center;gap:4px;background:var(--bg3);border:1px solid rgba(248,113,113,.3);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text2);cursor:pointer;max-width:140px;overflow:hidden" title="Thư mục làm việc — click để đổi" onclick="pickWorkDir()">
+      <span style="flex-shrink:0">📁</span>
+      <span id="workdir-label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">C:\</span>
+    </div>
+    <!-- Online status -->
+    <div class="online-dot-wrap" id="ram-info">
+      <span class="online-dot"></span>Đang kết nối...
+    </div>
+    <button id="btn-rightbar" class="icon-btn" title="Bảng phải" onclick="toggleRightbar()">▥</button>
+    <button id="btn-settings" class="icon-btn" title="Cấu hình" onclick="openSettingsDialog()">⚙️</button>
+    <!-- Auth area -->
+    <a id="btn-admin" href="/admin.html" style="display:none;background:var(--bg3);border:1px solid var(--border);color:var(--yellow);padding:4px 10px;border-radius:5px;font-size:11px;text-decoration:none;font-weight:600">⚙️ Admin</a>
+    <button id="btn-login" onclick="loginLark()" style="display:none">🔑 Đăng nhập Lark</button>
+    <div class="user-area">
+      <div id="user-badge" style="display:none" onclick="toggleUserMenu()">
+        <div class="uavatar" id="user-avatar">?</div>
+        <span id="user-name">...</span>
+        <span style="font-size:9px;opacity:.5">▾</span>
       </div>
-      <div class="um-divider"></div>
-      <button onclick="closeUserMenuAnd(() => openSettingsDialog('account'))">⚙️ Cấu hình</button>
-      <button class="danger" onclick="closeUserMenuAnd(logoutRelay)">🚪 Đăng xuất</button>
+      <div id="user-menu" hidden>
+        <div class="um-info">
+          <span id="um-name"></span>
+          <span id="um-email" class="muted"></span>
+        </div>
+        <div class="um-divider"></div>
+        <button onclick="closeUserMenuAnd(() => openSettingsDialog('account'))">⚙️ Cấu hình</button>
+        <button class="danger" onclick="closeUserMenuAnd(logoutRelay)">🚪 Đăng xuất</button>
+      </div>
     </div>
   </div>
 </div>
@@ -878,6 +982,29 @@ dialog.dlg header button:hover{color:var(--text)}
 <div id="main" style="display:none">
   <!-- SIDEBAR -->
   <div id="sidebar">
+    <!-- NAV ITEMS -->
+    <div class="nav-items">
+      <div class="nav-item active" id="nav-home" onclick="showDashboard()">
+        <span class="ni-icon">🏠</span>
+        <span class="ni-label">Trang chủ</span>
+      </div>
+      <div class="nav-item" id="nav-chat" onclick="openNewChatModal()">
+        <span class="ni-icon">💬</span>
+        <span class="ni-label">Chat mới với KAgent</span>
+        <span class="ni-badge">+</span>
+      </div>
+      <div class="nav-item" id="nav-kt" onclick="toggleKimTiem()" title="Kim Tiêm — bật/tắt AI modules">
+        <span class="ni-icon">💉</span>
+        <span class="ni-label">Kim Tiêm</span>
+      </div>
+      <div class="nav-item" id="nav-settings" onclick="openSettingsDialog()">
+        <span class="ni-icon">⚙️</span>
+        <span class="ni-label">Cài đặt</span>
+      </div>
+    </div>
+
+    <!-- DỰ ÁN & NHÓM -->
+    <div class="nav-section-hdr">Dự án & Nhóm</div>
     <!-- PROJECT SECTION -->
     <div id="sp-section">
       <div id="sp-row">
@@ -913,11 +1040,73 @@ dialog.dlg header button:hover{color:var(--text)}
 
   <!-- CONTENT -->
   <div id="content">
-    <!-- No chat selected -->
-    <div id="no-chat" style="display:flex">
-      <div class="icon">🤖</div>
-      <div style="font-size:14px;font-weight:600">Chọn hoặc tạo cuộc chat</div>
-      <div style="font-size:12px">Bấm "Thêm cuộc chat" để bắt đầu</div>
+    <!-- Dashboard home -->
+    <div id="no-chat" class="visible">
+      <!-- Greeting -->
+      <div class="dash-greeting">
+        <h2 id="dash-greet">Chào buổi sáng! ☀️</h2>
+        <p>KAgent sẵn sàng — chọn một cuộc chat hoặc tạo mới để bắt đầu</p>
+      </div>
+
+      <!-- Nhiệm vụ gần đây -->
+      <div>
+        <div class="dash-section-hdr">
+          <h3>📋 Nhiệm vụ gần đây</h3>
+          <a onclick="document.getElementById('nav-chat').click()">Tạo mới →</a>
+        </div>
+        <div class="task-cards" id="dash-recent-tasks">
+          <div style="font-size:12px;color:var(--text3);padding:12px 0;text-align:center">
+            Đang tải danh sách chat...
+          </div>
+        </div>
+      </div>
+
+      <!-- Công cụ nhanh -->
+      <div>
+        <div class="dash-section-hdr">
+          <h3>⚡ Công cụ nhanh</h3>
+        </div>
+        <div class="quick-tools">
+          <div class="quick-tool" onclick="openNewChatModal()">
+            <span class="qt-icon">💬</span>
+            <span class="qt-label">Chat mới</span>
+          </div>
+          <div class="quick-tool" onclick="toggleKimTiem()">
+            <span class="qt-icon">💉</span>
+            <span class="qt-label">Kim Tiêm</span>
+          </div>
+          <div class="quick-tool" onclick="openSettingsDialog()">
+            <span class="qt-icon">⚙️</span>
+            <span class="qt-label">Cài đặt</span>
+          </div>
+          <div class="quick-tool" onclick="openProjModal(true)">
+            <span class="qt-icon">📁</span>
+            <span class="qt-label">Thêm dự án</span>
+          </div>
+          <div class="quick-tool" onclick="checkUpdate()">
+            <span class="qt-icon">🔄</span>
+            <span class="qt-label">Kiểm tra CĐ</span>
+          </div>
+          <div class="quick-tool" onclick="openSettingsDialog('account')">
+            <span class="qt-icon">👤</span>
+            <span class="qt-label">Tài khoản</span>
+          </div>
+          <div class="quick-tool" onclick="if(typeof loginLark==='function')loginLark()">
+            <span class="qt-icon">🔑</span>
+            <span class="qt-label">Đăng nhập Lark</span>
+          </div>
+          <div class="quick-tool" onclick="document.getElementById('btn-admin').click()">
+            <span class="qt-icon">🛡️</span>
+            <span class="qt-label">Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tip -->
+      <div class="dash-tip">
+        <span class="tip-icon">💡</span>
+        <span>Dùng <strong>⚡ Live</strong> để chat trực tiếp như terminal, hoặc <strong>▶ Khởi động</strong> để dùng markdown. Nhấn <kbd style="background:var(--bg4);border:1px solid var(--border);border-radius:3px;padding:1px 4px;font-size:10px">Ctrl+K</kbd> để tìm kiếm nhanh.</span>
+      </div>
     </div>
 
     <!-- Chat view (hidden by default) -->
@@ -1778,6 +1967,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const out = document.getElementById('terminal-out');
   if (cm) cm.addEventListener('scroll', _updateScrollBottomBtn);
   if (out) out.addEventListener('scroll', _updateScrollBottomBtn);
+  // Ctrl+K → focus topbar search
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'k') {
+      e.preventDefault();
+      const si = document.getElementById('topbar-search-input');
+      if (si) { si.focus(); si.select(); }
+    }
+  });
 });
 
 function handleWsMessage(msg) {
@@ -2251,6 +2448,8 @@ async function loadChats() {
     chats = await apiGetChats(pid);
   }
   renderChatList();
+  // Update dashboard if visible
+  if (document.getElementById('no-chat').classList.contains('visible')) showDashboard();
 }
 
 // ── TÌM KIẾM LỊCH SỬ CHAT ──────────────────────────────────────────────────
@@ -2375,8 +2574,10 @@ function selectChat(chatId) {
   if (!chat) return;
 
   // Update UI
-  document.getElementById('no-chat').style.display = 'none';
+  document.getElementById('no-chat').classList.remove('visible');
   document.getElementById('chat-view').style.display = 'flex';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('nav-chat') && document.getElementById('nav-chat').classList.add('active');
   document.getElementById('chat-title').textContent = chat.name;
   document.getElementById('agent-select').value = chat.agent || 'claude';
   updateAgentPill(chat.agent || 'claude');
@@ -2459,8 +2660,11 @@ async function deleteChat(e, chatId) {
   await apiDeleteChat(chatId);
   if (currentChatId === chatId) {
     currentChatId = null;
-    document.getElementById('no-chat').style.display = 'flex';
+    document.getElementById('no-chat').classList.add('visible');
     document.getElementById('chat-view').style.display = 'none';
+    showDashboard();
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('nav-home') && document.getElementById('nav-home').classList.add('active');
   }
   await loadChats();
 }
@@ -3061,6 +3265,8 @@ function showUserLoggedIn(user) {
   sbAvatar.textContent = (user.name || 'U')[0].toUpperCase();
   if (user.role === 'admin') sbAvatar.style.background = '#f59e0b';
   else if (user.role === 'manager') sbAvatar.style.background = '#38bdf8';
+  // Show dashboard greeting
+  setTimeout(showDashboard, 100);
 }
 
 async function doEmailLogin() {
@@ -3428,6 +3634,43 @@ function renderSettingsSystem() {
 }
 
 // ── START ──
+// ── DASHBOARD HOME ────────────────────────────────────────────────────────────
+function showDashboard() {
+  // Greeting
+  const h = new Date().getHours();
+  const greet = h < 12 ? 'buổi sáng' : h < 18 ? 'buổi chiều' : 'buổi tối';
+  const icon = h < 12 ? '☀️' : h < 18 ? '🌤️' : '🌙';
+  const el = document.getElementById('dash-greet');
+  if (el) {
+    const name = (document.getElementById('sb-name') || {}).textContent || '';
+    el.textContent = `Chào ${greet}${name && name !== 'KAgent Local' ? ', ' + name.split(' ').pop() : ''}! ${icon}`;
+  }
+  // Recent chats
+  const taskEl = document.getElementById('dash-recent-tasks');
+  if (taskEl && typeof chats !== 'undefined' && chats.length) {
+    const recent = chats.slice(0, 6);
+    taskEl.innerHTML = recent.map(c => {
+      const isRunning = typeof runner !== 'undefined' && runner.getSessionStatus && runner.getSessionStatus(c.id) === 'running';
+      const pill = isRunning
+        ? '<span class="status-pill running">Đang chạy</span>'
+        : '<span class="status-pill idle">Idle</span>';
+      const ts = c.updatedAt ? new Date(c.updatedAt).toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'}) : '';
+      const agent = c.agent || 'claude';
+      const agentIcon = agent.includes('anti') ? '🔵' : agent.includes('gemini') ? '♊' : '🤖';
+      return `<div class="task-card" onclick="selectChat('${c.id}')">
+        <span class="tc-icon">${agentIcon}</span>
+        <div class="tc-body">
+          <div class="tc-title">${c.name || 'Cuộc chat'}</div>
+          <div class="tc-meta">${agent} ${ts ? '• ' + ts : ''}</div>
+        </div>
+        <div class="tc-status">${pill}</div>
+      </div>`;
+    }).join('');
+  } else if (taskEl) {
+    taskEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:12px 0;text-align:center">Chưa có cuộc chat nào — bấm "Chat mới" để bắt đầu</div>';
+  }
+}
+
 // ── KIM TIÊM PANEL ──────────────────────────────────────────────────────────
 let _ktModules = [];
 let _ktOpen = false;
