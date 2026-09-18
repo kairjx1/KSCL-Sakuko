@@ -1185,7 +1185,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <div class="tb-robot">🤖</div>
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.145</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.146</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -1219,7 +1219,6 @@ dialog.dlg,#pm-box{
     </button>
     <button id="btn-rightbar" class="icon-btn panel-toggle" title="Thu/gọi bảng Agent" aria-label="Thu/gọi bảng Agent" onclick="toggleRightbar()">•••</button>
     <button id="btn-settings" class="icon-btn" title="Cấu hình" onclick="openSettingsDialog()">⚙️</button>
-    <div id="notif-menu" hidden></div>
     <!-- Auth area -->
     <a id="btn-admin" href="/admin.html" style="display:none;background:var(--bg3);border:1px solid var(--border);color:var(--yellow);padding:4px 10px;border-radius:5px;font-size:11px;text-decoration:none;font-weight:600">⚙️ Admin</a>
     <button id="btn-login" onclick="loginLark()" style="display:none">🔑 Đăng nhập Lark</button>
@@ -1229,18 +1228,24 @@ dialog.dlg,#pm-box{
         <span id="user-name">...</span>
         <span style="font-size:9px;opacity:.5">▾</span>
       </div>
-      <div id="user-menu" hidden>
-        <div class="um-info">
-          <span id="um-name"></span>
-          <span id="um-email" class="muted"></span>
-        </div>
-        <div class="um-divider"></div>
-        <button onclick="closeUserMenuAnd(() => openSettingsDialog('account'))">⚙️ Cấu hình</button>
-        <button class="danger" onclick="closeUserMenuAnd(logoutRelay)">🚪 Đăng xuất</button>
-      </div>
     </div>
   </div>
 </div>
+
+<!-- Dropdowns của topbar được đặt NGOÀI #topbar (con trực tiếp của body) —
+     #topbar có backdrop-filter nên tạo containing block mới cho mọi phần tử
+     position:fixed bên trong nó, khiến dropdown bị nhốt lại và bị #rightbar
+     đè lên dù z-index cao. Đặt ở ngoài để position:fixed neo đúng theo viewport. -->
+<div id="user-menu" hidden>
+  <div class="um-info">
+    <span id="um-name"></span>
+    <span id="um-email" class="muted"></span>
+  </div>
+  <div class="um-divider"></div>
+  <button onclick="closeUserMenuAnd(() => openSettingsDialog('account'))">⚙️ Cấu hình</button>
+  <button class="danger" onclick="closeUserMenuAnd(logoutRelay)">🚪 Đăng xuất</button>
+</div>
+<div id="notif-menu" hidden></div>
 
 <div id="main" style="display:none">
   <!-- SIDEBAR -->
@@ -3722,7 +3727,7 @@ function closeUserMenuAnd(fn) {
 }
 document.addEventListener('click', e => {
   const m = document.getElementById('user-menu');
-  if (m && !m.hidden && !e.target.closest('.user-area')) m.hidden = true;
+  if (m && !m.hidden && !e.target.closest('.user-area') && !e.target.closest('#user-menu')) m.hidden = true;
 }, true);
 
 async function logoutRelay() {
