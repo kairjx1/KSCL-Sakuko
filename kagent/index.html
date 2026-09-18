@@ -1185,7 +1185,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <div class="tb-robot">🤖</div>
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.146</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.147</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -3377,7 +3377,7 @@ function sendPrompt() {
   _pendingUserWraps.push(_userWrap);
   if (_currentView === 'chat') showTyping(agents.find(a=>a.id===(document.getElementById('agent-select').value||'claude'))?.name || 'Agent');
   if (text) syncMessageToRelay(currentChatId, 'user', text);
-  send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', model: window._selectedModel || null, workDir: window._workDir || null, relayToken: getRelayToken(), files });
+  send({ type: 'prompt', text, agentMode: window._agentMode || 'safe', model: window._selectedModel || null, workDir: window._workDir || null, relayToken: getRelayToken(), relayUserId: getRelayUserId(), files });
 
   // Auto-đặt tên chat theo prompt đầu tiên nếu tên vẫn là mặc định
   const titleEl = document.getElementById('chat-title');
@@ -3455,6 +3455,13 @@ function useRelay() { return !!relayUser && !!RELAY_URL; }
 
 function getRelayToken() {
   return localStorage.getItem('kagent_relay_token') || '';
+}
+
+// Bộ nhớ (Kim Tiêm/Bộ nhớ cá nhân) phải tách riêng theo từng tài khoản đăng nhập — không thì
+// nhiều người dùng chung máy/app sẽ thấy chung 1 kho bộ nhớ, AI trộn thông tin của người khác
+// vào context của mình. Server dùng ID này để xác định "namespace" nào trong memory.json local.
+function getRelayUserId() {
+  return relayUser?.id || '';
 }
 
 async function relayFetch(path, opts = {}) {
@@ -3615,7 +3622,7 @@ async function pullRelayMemory(token) {
     const r = await fetch('/api/memory/pull-relay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ relayToken: token || getRelayToken() })
+      body: JSON.stringify({ relayToken: token || getRelayToken(), relayUserId: getRelayUserId() })
     });
     const data = await r.json();
     if (data.ok && data.pulled > 0) {
@@ -3988,7 +3995,7 @@ async function renderSettingsMemory() {
   const el = document.getElementById('settings-panel-memory');
   el.innerHTML = '<div class="settings-row"><span class="sr-label">Đang tải...</span></div>';
   let mem = {};
-  try { mem = await fetch('/api/memory').then(r => r.json()); } catch {}
+  try { mem = await fetch(`/api/memory?relayUserId=${encodeURIComponent(getRelayUserId())}`).then(r => r.json()); } catch {}
   const entries = Object.entries(mem).filter(([k]) => !k.startsWith('_'));
 
   const listHtml = entries.length
@@ -4036,7 +4043,7 @@ function editMemoryFact(key, el, tags) {
         // Giữ nguyên tags cũ (kể cả "auto") — thiếu dòng này sẽ mất badge 🤖 sau khi sửa
         await fetch('/api/memory', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key, value: newValue, tags: tags || [], relayToken: getRelayToken() }),
+          body: JSON.stringify({ key, value: newValue, tags: tags || [], relayToken: getRelayToken(), relayUserId: getRelayUserId() }),
         });
         showToast('✅ Đã lưu');
       } catch { showToast('⚠️ Lỗi lưu — thử lại'); }
@@ -4059,7 +4066,7 @@ async function deleteMemoryFact(key) {
   const el = document.querySelector(`[data-mem-key="${CSS.escape(key)}"]`);
   el?.remove();
   try {
-    const r = await fetch(`/api/memory/${encodeURIComponent(key)}?relayToken=${encodeURIComponent(getRelayToken() || '')}`, { method: 'DELETE' });
+    const r = await fetch(`/api/memory/${encodeURIComponent(key)}?relayToken=${encodeURIComponent(getRelayToken() || '')}&relayUserId=${encodeURIComponent(getRelayUserId())}`, { method: 'DELETE' });
     const d = await r.json().catch(() => ({}));
     if (!r.ok || d.ok === false) throw new Error(d.error || `HTTP ${r.status}`);
     showToast('🗑️ Đã xóa');
@@ -4076,7 +4083,7 @@ async function addMemoryFact() {
   try {
     await fetch('/api/memory', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, value, tags: [], relayToken: getRelayToken() }),
+      body: JSON.stringify({ key, value, tags: [], relayToken: getRelayToken(), relayUserId: getRelayUserId() }),
     });
     showToast('✅ Đã thêm');
     renderSettingsMemory();
@@ -4251,7 +4258,7 @@ async function fetchDefaultSummaryPrompt() {
 async function loadMemoryPrompt() {
   const box = document.getElementById('memory-prompt-box');
   try {
-    const r = await fetch(`/api/memory/${MEMORY_PROMPT_KEY}`);
+    const r = await fetch(`/api/memory/${MEMORY_PROMPT_KEY}?relayUserId=${encodeURIComponent(getRelayUserId())}`);
     if (r.ok) { const d = await r.json(); if (d.value) { box.value = d.value; return; } }
   } catch {}
   // Chưa lưu hướng dẫn riêng — điền sẵn mặc định để người dùng biết mặc định là gì, sửa trực tiếp từ đây.
@@ -4263,7 +4270,7 @@ async function saveMemoryPrompt() {
   try {
     await fetch('/api/memory', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: MEMORY_PROMPT_KEY, value: box.value.trim(), tags: ['system'] })
+      body: JSON.stringify({ key: MEMORY_PROMPT_KEY, value: box.value.trim(), tags: ['system'], relayUserId: getRelayUserId() })
     });
     showToast('✅ Đã lưu hướng dẫn chắt lọc');
   } catch { showToast('⚠️ Lưu thất bại — kiểm tra kết nối'); }
@@ -4290,7 +4297,7 @@ async function loadMemorySummaryView() {
 }
 
 async function resetMemoryPrompt() {
-  try { await fetch(`/api/memory/${MEMORY_PROMPT_KEY}`, { method: 'DELETE' }); } catch {}
+  try { await fetch(`/api/memory/${MEMORY_PROMPT_KEY}?relayUserId=${encodeURIComponent(getRelayUserId())}`, { method: 'DELETE' }); } catch {}
   document.getElementById('memory-prompt-box').value = await fetchDefaultSummaryPrompt();
   showToast('↺ Đã về mặc định');
 }

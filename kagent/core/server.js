@@ -436,7 +436,7 @@ async function autoSummarizeChat(chatId, recentHistory, lastAssistantMsg, relayT
     // Chặn tận gốc: coi bất kỳ placeholder `{{...}}` CHƯA ĐƯỢC ĐIỀN nào trong hướng dẫn đã lưu là
     // dữ liệu hỏng — tự động bỏ qua, dùng lại DEFAULT_SUMMARY_INSTRUCTION thay vì gửi rác cho
     // model, đồng thời log rõ để biết mà vào sửa lại ô nhập.
-    let instruction = readMemory()[MEMORY_PROMPT_KEY]?.value?.trim() || DEFAULT_SUMMARY_INSTRUCTION;
+    let instruction = readMemory(_relaySession.userId || MEMORY_LOCAL_NS)[MEMORY_PROMPT_KEY]?.value?.trim() || DEFAULT_SUMMARY_INSTRUCTION;
     if (/\{\{[A-Z_]+\}\}/.test(instruction)) {
       console.error(`[KAgent] ⚠ Hướng dẫn chắt lọc đã lưu (panel Bộ nhớ) chứa placeholder chưa điền (vd {{CWD}}) — dữ liệu hỏng, tạm dùng lại mặc định. Vào Cấu hình > Bộ nhớ sửa lại ô "Cách chất lọc".`);
       instruction = DEFAULT_SUMMARY_INSTRUCTION;
@@ -606,18 +606,44 @@ app.post('/api/auth/reset-password', async (req, res) => {
 // ─── REST API ───────────────────────────────────────────────────────────────
 
 // ── MEMORY API ──────────────────────────────────────────────────────────────
+// Bộ nhớ local PHẢI tách riêng theo từng tài khoản relay đăng nhập — trước đây file phẳng
+// {key:{value,tags,updatedAt}} dùng CHUNG cho mọi người đăng nhập trên cùng máy/app, nên
+// người dùng A chắt lọc xong thì người dùng B mở "Bộ nhớ" lên cũng thấy y hệt fact của A (và
+// khi chat, AI có thể trộn dữ kiện của người khác vào context của mình). File giờ namespace
+// theo userId ở top-level: { __v:2, users: { [userId]: {key:{value,tags,updatedAt}} } }.
+// userId rỗng/chưa đăng nhập dùng chung 1 khoang "_local" (máy cá nhân, không có ai khác).
 const MEMORY_FILE = path.join(DATA_DIR, 'memory.json');
-function readMemory() {
-  try { return JSON.parse(fs.readFileSync(MEMORY_FILE, 'utf8')); } catch { return {}; }
+const MEMORY_LOCAL_NS = '_local';
+
+function readMemoryFile() {
+  let raw;
+  try { raw = JSON.parse(fs.readFileSync(MEMORY_FILE, 'utf8')); } catch { return { __v: 2, users: {} }; }
+  if (raw && raw.__v === 2 && raw.users && typeof raw.users === 'object') return raw;
+  // Dữ liệu cũ (bản phẳng, trước khi tách theo user) — không suy đoán nó thuộc tài khoản nào,
+  // gộp hết vào khoang "_local" để không mất dữ liệu, thay vì gán bừa cho user hiện tại.
+  const migrated = { __v: 2, users: { [MEMORY_LOCAL_NS]: (raw && typeof raw === 'object') ? raw : {} } };
+  writeMemoryFile(migrated);
+  return migrated;
 }
-function writeMemory(data) {
+function writeMemoryFile(all) {
   const dir = path.dirname(MEMORY_FILE);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(MEMORY_FILE, JSON.stringify(data, null, 2));
+  fs.writeFileSync(MEMORY_FILE, JSON.stringify(all, null, 2));
+}
+function memNamespace(req) {
+  return req.body?.relayUserId || req.query?.relayUserId || req.headers['x-relay-user-id'] || _relaySession.userId || MEMORY_LOCAL_NS;
+}
+function readMemory(ns) {
+  return readMemoryFile().users[ns] || {};
+}
+function writeMemory(ns, userMem) {
+  const all = readMemoryFile();
+  all.users[ns] = userMem;
+  writeMemoryFile(all);
 }
 
 app.get('/api/memory', (req, res) => {
-  const mem = readMemory();
+  const mem = readMemory(memNamespace(req));
   const { tag } = req.query;
   if (tag) {
     const filtered = Object.fromEntries(
@@ -629,7 +655,7 @@ app.get('/api/memory', (req, res) => {
 });
 
 app.get('/api/memory/:key', (req, res) => {
-  const mem = readMemory();
+  const mem = readMemory(memNamespace(req));
   const item = mem[req.params.key];
   if (!item) return res.status(404).json({ error: 'Không tìm thấy' });
   res.json(item);
@@ -649,10 +675,12 @@ app.post('/api/memory', (req, res) => {
       error: 'Nội dung chứa placeholder chưa điền (vd {{CWD}}, {{FILE_VAO}}) — có vẻ bạn dán nhầm nội dung template khác vào đây. Vui lòng kiểm tra lại và dán đúng nội dung mong muốn.',
     });
   }
-  const mem = readMemory();
+  const ns = memNamespace(req);
+  const mem = readMemory(ns);
   mem[key] = { value, tags, updatedAt: Date.now() };
-  writeMemory(mem);
-  // Sync lên relay — dùng token từ request hoặc cached session
+  writeMemory(ns, mem);
+  // Sync lên relay — dùng token từ request hoặc cached session (relay đã tự scope theo user_id
+  // thật của token, không cần truyền ns sang đó)
   const token = req.body.relayToken || req.headers['x-relay-token'] || _relaySession.token;
   if (token && RELAY_URL) {
     httpsRequest(`${RELAY_URL}/api/memory`, {
@@ -665,9 +693,10 @@ app.post('/api/memory', (req, res) => {
 });
 
 app.delete('/api/memory/:key', async (req, res) => {
-  const mem = readMemory();
+  const ns = memNamespace(req);
+  const mem = readMemory(ns);
   delete mem[req.params.key];
-  writeMemory(mem);
+  writeMemory(ns, mem);
   // BUG THẬT đã tìm ra khi người dùng hỏi "đã thực sự xóa khỏi bộ nhớ của bot chưa" — trước đây
   // gọi xóa trên relay kiểu "bắn rồi quên" (không await, .catch nuốt lỗi im lặng) rồi LUÔN báo
   // {ok:true} ngay, kể cả khi relay lỗi/mất mạng đúng lúc đó. Cache local (readMemory/writeMemory)
@@ -690,7 +719,8 @@ app.delete('/api/memory/:key', async (req, res) => {
   res.json({ ok: true });
 });
 
-// Pull memory từ relay về local (gọi khi mở máy mới lần đầu)
+// Pull memory từ relay về local (gọi khi mở máy mới lần đầu) — ghi vào ĐÚNG khoang của user
+// đang đăng nhập, không phải khoang dùng chung.
 app.post('/api/memory/pull-relay', async (req, res) => {
   const token = req.body?.relayToken || req.headers['x-relay-token'] || _relaySession.token;
   if (!token || !RELAY_URL) return res.json({ ok: false, reason: 'no_token' });
@@ -700,7 +730,8 @@ app.post('/api/memory/pull-relay', async (req, res) => {
     });
     if (!r.ok) return res.json({ ok: false, reason: 'relay_error' });
     const relayMem = (await r.json()) || {};
-    const mem = readMemory();
+    const ns = memNamespace(req);
+    const mem = readMemory(ns);
     let count = 0;
     for (const [key, item] of Object.entries(relayMem)) {
       // Relay thắng nếu mới hơn local
@@ -709,7 +740,7 @@ app.post('/api/memory/pull-relay', async (req, res) => {
         count++;
       }
     }
-    writeMemory(mem);
+    writeMemory(ns, mem);
     res.json({ ok: true, pulled: count, total: Object.keys(mem).length });
   } catch (e) {
     res.json({ ok: false, reason: e.message });
