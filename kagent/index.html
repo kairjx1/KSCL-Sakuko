@@ -6,7 +6,7 @@
 <title>KAgent</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -171,7 +171,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
   overflow:hidden;
 }
 .aip-quote .aq-icon{width:100%;max-width:260px;height:auto;object-fit:contain;display:block;margin:0 auto}
-.aip-quote .aip-quote-text{padding:0 14px}
+.aip-quote .aip-quote-text{
+  font-family:'Dancing Script',cursive;font-weight:700;font-size:19px;line-height:1.35;
+  color:#c9a7ff;text-shadow:0 0 10px rgba(167,139,250,.65),0 0 24px rgba(96,165,250,.35);
+  padding:4px 16px;
+}
 .aip-footer{
   display:flex;align-items:center;justify-content:space-between;padding:10px 14px;
   border-top:1px solid var(--border);font-size:10px;color:var(--text3);flex-shrink:0;
@@ -502,7 +506,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
   border:1px solid rgba(167,139,250,.15);overflow:hidden;position:relative;
 }
 .sb-mascot .sbm-icon{width:100%;max-width:210px;height:auto;object-fit:contain;display:block;margin:0 auto}
-.sb-mascot .sbm-quote{font-size:10.5px;color:var(--text2);font-style:italic;line-height:1.5;padding:2px 10px 12px}
+.sb-mascot .sbm-quote{
+  font-family:'Dancing Script',cursive;font-weight:700;font-size:17px;line-height:1.3;
+  color:#ff9ce6;text-shadow:0 0 10px rgba(255,110,230,.6),0 0 22px rgba(167,139,250,.35);
+  padding:4px 12px 14px;
+}
 .sb-footer-ver{padding:8px 10px 10px;font-size:9.5px;color:var(--text3);text-align:center}
 
 /* ── MAIN CONTENT ── */
@@ -1212,7 +1220,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <img class="tb-robot" src="/kagent-mascot-face.png" alt="KAgent">
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.160</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.161</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
