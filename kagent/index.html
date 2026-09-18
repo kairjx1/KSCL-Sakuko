@@ -185,7 +185,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 #task-panel{
   width:270px;min-width:270px;background:var(--bg2);border-right:1px solid var(--border);
   display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;padding:14px 12px;gap:16px;
+  position:relative;transition:width .18s ease,min-width .18s ease;
 }
+#task-panel.collapsed{width:0!important;min-width:0!important;padding:0;border-right:none;overflow:hidden}
+#task-panel.collapsed>*{display:none}
 #task-panel .dash-section-hdr{margin-bottom:8px}
 #task-panel .dash-section-hdr h3{font-size:11.5px}
 #task-panel .task-cards{gap:5px}
@@ -323,8 +326,30 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 #sidebar{
   width:var(--sidebar-w);min-width:var(--sidebar-w);
   background:var(--bg2);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;overflow:hidden;
+  display:flex;flex-direction:column;overflow:hidden;position:relative;
+  transition:width .18s ease,min-width .18s ease;
 }
+#sidebar.collapsed{width:0!important;min-width:0!important;border-right:none}
+#sidebar.collapsed>*{display:none}
+
+/* ── Nút thu/mở gọn panel (giống Lark: icon nằm ngay mép panel, bấm để ẩn/hiện) ── */
+.panel-collapse-btn{
+  position:absolute;top:8px;right:-13px;z-index:30;
+  width:26px;height:26px;border-radius:50%;
+  background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+  display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;
+  transition:all .12s;flex-shrink:0;
+}
+.panel-collapse-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--bg4)}
+.panel-expand-btn{
+  display:none;position:fixed;top:calc(var(--top-h) + 12px);z-index:30;
+  width:26px;height:26px;border-radius:50%;
+  background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+  align-items:center;justify-content:center;font-size:11px;cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.4);transition:all .12s;
+}
+.panel-expand-btn:hover{border-color:var(--accent);color:var(--accent)}
+.panel-expand-btn.show{display:flex}
 /* ── PROJECT SECTION ── */
 #sp-section{padding:10px 10px 6px;border-bottom:1px solid var(--border)}
 #sp-row{display:flex;align-items:center;gap:4px;margin-bottom:4px}
@@ -353,9 +378,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 }
 #search-box:focus{border-color:var(--accent)}
 #search-results{
-  display:none;position:absolute;left:8px;right:8px;top:calc(100% - 2px);z-index:50;
-  background:var(--bg2);border:1px solid var(--border);border-radius:8px;
-  max-height:360px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);
+  display:none;position:fixed;z-index:20001;
+  background:#101830;border:1px solid rgba(167,139,250,.35);border-radius:8px;
+  max-height:360px;overflow-y:auto;box-shadow:0 16px 42px rgba(0,0,0,.6);
 }
 #search-results.open{display:block}
 .sr-item{
@@ -1185,7 +1210,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <div class="tb-robot">🤖</div>
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.148</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.149</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -1194,7 +1219,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-search" onclick="document.getElementById('topbar-search-input').focus()">
     <span class="search-icon">🔍</span>
     <input id="topbar-search-input" placeholder="Tìm kiếm chat, nhiệm vụ..." autocomplete="off"
-      onfocus="onSearchInput(''); document.getElementById('search-box').value=''" oninput="onSearchInput(this.value)">
+      onfocus="onSearchInput(this.value,'topbar-search-input')" oninput="onSearchInput(this.value,'topbar-search-input')">
     <span class="search-kbd">Ctrl+K</span>
   </div>
 
@@ -1246,10 +1271,16 @@ dialog.dlg,#pm-box{
   <button class="danger" onclick="closeUserMenuAnd(logoutRelay)">🚪 Đăng xuất</button>
 </div>
 <div id="notif-menu" hidden></div>
+<div id="search-results"></div>
+
+<!-- Nút mở lại panel khi đã thu gọn — nằm ngoài panel vì panel.collapsed rộng 0, ẩn hết con -->
+<button class="panel-expand-btn" id="btn-expand-sidebar" onclick="toggleSidebarCollapse()" title="Mở rộng menu" style="left:8px">▶</button>
+<button class="panel-expand-btn" id="btn-expand-taskpanel" onclick="toggleTaskPanelCollapse()" title="Mở rộng Nhiệm vụ gần đây" style="left:276px">▶</button>
 
 <div id="main" style="display:none">
   <!-- SIDEBAR -->
   <div id="sidebar">
+    <button class="panel-collapse-btn" id="btn-collapse-sidebar" onclick="toggleSidebarCollapse()" title="Thu gọn menu">◀</button>
     <!-- NAV ITEMS -->
     <div class="nav-items">
       <div class="nav-item active" id="nav-home" onclick="showDashboard()">
@@ -1300,8 +1331,7 @@ dialog.dlg,#pm-box{
     </div>
 
     <div id="search-box-wrap">
-      <input id="search-box" type="text" placeholder="🔍 Tìm trong lịch sử chat..." oninput="onSearchInput(this.value)" onfocus="onSearchInput(this.value)">
-      <div id="search-results"></div>
+      <input id="search-box" type="text" placeholder="🔍 Tìm trong lịch sử chat..." oninput="onSearchInput(this.value,'search-box')" onfocus="onSearchInput(this.value,'search-box')">
     </div>
 
     <div id="sp-chat-hdr">
@@ -1330,6 +1360,7 @@ dialog.dlg,#pm-box{
 
   <!-- TASK PANEL (cột nhiệm vụ + công cụ nhanh, luôn hiển thị) -->
   <div id="task-panel">
+    <button class="panel-collapse-btn" id="btn-collapse-taskpanel" onclick="toggleTaskPanelCollapse()" title="Thu gọn Nhiệm vụ gần đây">◀</button>
     <div>
       <div class="dash-section-hdr">
         <h3>📋 Nhiệm vụ gần đây</h3>
@@ -2846,11 +2877,28 @@ async function loadChats() {
 // khi D1 chạm 4GB, vì tóm tắt vẫn giữ lại) — chỉ hoạt động khi đã đăng nhập Lark
 // (dữ liệu nằm trên relay D1); chế độ Local chưa có kho trung tâm để tìm xuyên project.
 let _searchDebounce = null;
-function onSearchInput(q) {
+// Dropdown kết quả (#search-results) giờ là 1 phần tử DUY NHẤT ở cấp body (position:fixed) —
+// dùng chung cho cả 2 ô tìm kiếm (sidebar #search-box và topbar #topbar-search-input). Phải tự
+// định vị lại NGAY DƯỚI đúng ô người dùng đang gõ mỗi lần mở, nếu không nó luôn hiện cố định ở
+// chỗ cũ (kẹt tại vị trí ô sidebar) bất kể gõ ở đâu — đúng lỗi người dùng báo "gõ ở trên nhưng
+// hiện ở góc dưới".
+function positionSearchResults(sourceId) {
+  const box = document.getElementById('search-results');
+  const input = document.getElementById(sourceId);
+  if (!box || !input) return;
+  const r = input.getBoundingClientRect();
+  box.style.left = r.left + 'px';
+  box.style.top = (r.bottom + 6) + 'px';
+  box.style.width = Math.max(r.width, 280) + 'px';
+}
+function onSearchInput(q, sourceId) {
   clearTimeout(_searchDebounce);
+  sourceId = sourceId || _lastSearchSource || 'search-box';
+  _lastSearchSource = sourceId;
   const box = document.getElementById('search-results');
   q = q.trim();
   if (!q) { box.classList.remove('open'); box.innerHTML = ''; return; }
+  positionSearchResults(sourceId);
   if (!useRelay()) {
     box.innerHTML = '<div class="sr-empty">Tìm kiếm cần đăng nhập Lark (chưa hỗ trợ ở chế độ Local)</div>';
     box.classList.add('open');
@@ -2861,6 +2909,7 @@ function onSearchInput(q) {
   box.classList.add('open');
   _searchDebounce = setTimeout(() => runSearch(q), 300);
 }
+let _lastSearchSource = 'search-box';
 
 function highlightMatch(text, q) {
   const idx = text.toLowerCase().indexOf(q.toLowerCase());
@@ -2898,6 +2947,8 @@ async function runSearch(q) {
 async function jumpToChat(projectId, chatId) {
   document.getElementById('search-results').classList.remove('open');
   document.getElementById('search-box').value = '';
+  const tsi = document.getElementById('topbar-search-input');
+  if (tsi) tsi.value = '';
   const sel = document.getElementById('sp-select');
   if (sel.value !== projectId && projects.find(p => p.id === projectId)) {
     sel.value = projectId;
@@ -2911,9 +2962,13 @@ async function jumpToChat(projectId, chatId) {
 }
 
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('#search-box-wrap')) {
+  if (!e.target.closest('#search-box-wrap') && !e.target.closest('.topbar-search') && !e.target.closest('#search-results')) {
     document.getElementById('search-results')?.classList.remove('open');
   }
+});
+window.addEventListener('resize', () => {
+  const box = document.getElementById('search-results');
+  if (box && box.classList.contains('open')) positionSearchResults(_lastSearchSource);
 });
 
 // ── CHATS ──
@@ -3933,6 +3988,43 @@ function toggleRightbar() {
   if (RightPanel.isOpen()) { RightPanel.close(); _ktOpen = false; _aipOpen = false; return; }
   showAgentInfoPanel();
 }
+
+// ── THU/MỞ PANEL TRÁI (giống Lark: icon ngay mép panel, Ctrl+] cũng bấm được) ───────────────
+function toggleSidebarCollapse(force) {
+  const sb = document.getElementById('sidebar');
+  const collapsed = typeof force === 'boolean' ? force : !sb.classList.contains('collapsed');
+  sb.classList.toggle('collapsed', collapsed);
+  document.getElementById('btn-expand-sidebar').classList.toggle('show', collapsed);
+  localStorage.setItem('kagent.sidebar.collapsed', collapsed ? '1' : '0');
+  requestAnimationFrame(repositionPanelExpandButtons);
+}
+function toggleTaskPanelCollapse(force) {
+  const tp = document.getElementById('task-panel');
+  const collapsed = typeof force === 'boolean' ? force : !tp.classList.contains('collapsed');
+  tp.classList.toggle('collapsed', collapsed);
+  document.getElementById('btn-expand-taskpanel').classList.toggle('show', collapsed);
+  localStorage.setItem('kagent.taskpanel.collapsed', collapsed ? '1' : '0');
+  requestAnimationFrame(repositionPanelExpandButtons);
+}
+// Nút "mở lại" của task-panel phải bám theo mép PHẢI của sidebar hiện tại — sidebar có thể
+// đang mở (260px) hoặc đã bị thu gọn (0px), nếu để cứng 1 con số thì 2 nút chồng lên nhau
+// hoặc hở khoảng trống khi người dùng thu cả 2 panel cùng lúc.
+function repositionPanelExpandButtons() {
+  const sb = document.getElementById('sidebar');
+  const btn = document.getElementById('btn-expand-taskpanel');
+  if (!sb || !btn) return;
+  const r = sb.getBoundingClientRect();
+  btn.style.left = (r.right + 8) + 'px';
+}
+window.addEventListener('resize', repositionPanelExpandButtons);
+(function initPanelCollapse() {
+  if (localStorage.getItem('kagent.sidebar.collapsed') === '1') toggleSidebarCollapse(true);
+  if (localStorage.getItem('kagent.taskpanel.collapsed') === '1') toggleTaskPanelCollapse(true);
+  requestAnimationFrame(repositionPanelExpandButtons);
+})();
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === ']') { e.preventDefault(); toggleSidebarCollapse(); }
+});
 
 // Điền sẵn văn bản gợi ý vào ô prompt và focus (dùng cho quick tools / chips)
 function quickPrompt(text) {
