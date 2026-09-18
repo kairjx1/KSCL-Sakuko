@@ -818,9 +818,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 /* ── User menu dropdown ── */
 .user-area{position:relative}
 #user-menu{
-  position:absolute;top:calc(100% + 6px);right:0;min-width:200px;
-  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
-  box-shadow:0 12px 40px rgba(0,0,0,.5);padding:6px;z-index:900;
+  position:fixed;top:calc(var(--top-h) + 6px);right:12px;min-width:224px;
+  background:#101830;border:1px solid rgba(167,139,250,.35);border-radius:10px;
+  box-shadow:0 16px 42px rgba(0,0,0,.6);padding:6px;z-index:20001;
 }
 #user-menu .um-info{padding:8px 10px;display:flex;flex-direction:column;gap:2px}
 #user-menu .um-info span{font-size:12px;color:var(--text)}
@@ -833,6 +833,20 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 #user-menu button:hover{background:var(--bg3)}
 #user-menu button.danger{color:var(--red)}
 #user-menu button.danger:hover{background:var(--red-bg)}
+
+/* ── Notification dropdown ── */
+#notif-menu{
+  position:fixed;top:calc(var(--top-h) + 6px);min-width:260px;max-width:320px;
+  background:#101830;border:1px solid rgba(167,139,250,.35);border-radius:10px;
+  box-shadow:0 16px 42px rgba(0,0,0,.6);padding:6px;z-index:20001;
+}
+#notif-menu .nm-hdr{padding:8px 10px 6px;font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.4px}
+#notif-menu .nm-item{display:flex;gap:9px;align-items:flex-start;padding:9px 10px;border-radius:7px;cursor:pointer}
+#notif-menu .nm-item:hover{background:var(--bg3)}
+#notif-menu .nm-item .nm-icon{font-size:15px;flex-shrink:0}
+#notif-menu .nm-item .nm-title{font-size:12px;color:var(--text);font-weight:600}
+#notif-menu .nm-item .nm-desc{font-size:10.5px;color:var(--text2);margin-top:2px}
+#notif-menu .nm-empty{padding:20px 10px;text-align:center;font-size:11.5px;color:var(--text3)}
 
 /* ── Settings dialog ── */
 dialog.dlg{
@@ -1059,6 +1073,103 @@ dialog.dlg header button:hover{color:var(--text)}
   width:clamp(44px,6vw,72px);height:auto}
 .login-hint{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);
   background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:8px 10px;width:100%}
+/* ── SAKUKO AI STUDIO LAYOUT ───────────────────────────────────────────────
+   A clean application shell: the supplied mock-up is a layout reference, not
+   a wallpaper. Existing IDs, event handlers, APIs and data are unchanged. */
+body{
+  background:#070d20;
+}
+body::after{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.32;
+  background:
+    radial-gradient(circle at 51% -10%,rgba(77,157,255,.18),transparent 30%),
+    radial-gradient(circle at 86% 110%,rgba(233,74,255,.10),transparent 25%),
+    linear-gradient(180deg,rgba(4,7,30,.08),rgba(3,7,22,.56));
+}
+#topbar,#main{position:relative;z-index:1}
+#topbar{
+  background:linear-gradient(90deg,rgba(5,12,39,.91),rgba(8,16,51,.76),rgba(6,11,38,.90));
+  border-bottom-color:rgba(154,105,255,.42);backdrop-filter:blur(16px);
+  box-shadow:0 5px 28px rgba(2,4,22,.34);
+}
+#sidebar,#task-panel,#rightbar{
+  background:linear-gradient(180deg,rgba(8,17,52,.96),rgba(5,12,38,.96));
+  border-color:rgba(134,111,247,.24);backdrop-filter:blur(14px);
+}
+#content{
+  background:linear-gradient(180deg,rgba(7,16,49,.82),rgba(4,10,31,.93));
+  backdrop-filter:blur(4px)
+}
+#agent-bar,#input-bar{
+  background:linear-gradient(90deg,rgba(7,15,48,.88),rgba(10,19,59,.74));
+  border-color:rgba(129,112,246,.28);backdrop-filter:blur(14px);
+}
+#chat-messages{
+  background:
+    radial-gradient(circle at 50% 0%,rgba(41,84,179,.25),transparent 38%),
+    linear-gradient(180deg,rgba(5,13,43,.80),rgba(3,9,31,.94));
+}
+.topbar-search,.online-dot-wrap,#topbar .ram-badge,#user-badge,
+.icon-btn,#btn-remote,#agent-mode-toggle .mode-opt{
+  background-color:rgba(17,29,76,.68);border-color:rgba(145,131,255,.26);
+}
+.topbar-search{box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.nav-items{border-color:rgba(142,125,249,.22)}
+.nav-item{border:1px solid transparent}
+.nav-item:hover{background:rgba(77,73,183,.20);border-color:rgba(148,119,255,.22)}
+.nav-item.active{
+  background:linear-gradient(90deg,rgba(125,75,255,.47),rgba(71,66,197,.23));
+  color:#efe8ff;border-color:rgba(171,124,255,.58);
+  box-shadow:0 0 20px rgba(117,75,255,.14),inset 3px 0 #a970ff;
+}
+.task-card,.quick-tool,.aip-task-card,.aip-integ,.stat-card,.dash-tip,
+.chat-msg-ai,.qa-chip,.input-shortcut,.kagent-choice-btn{
+  background:linear-gradient(145deg,rgba(18,35,91,.76),rgba(10,22,65,.72));
+  border-color:rgba(130,130,245,.26);box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+.task-card:hover,.quick-tool:hover,.qa-chip:hover{
+  background:linear-gradient(145deg,rgba(44,50,129,.78),rgba(16,30,83,.76));
+  border-color:rgba(178,111,255,.58);box-shadow:0 9px 25px rgba(6,6,40,.34),0 0 17px rgba(137,77,255,.13);
+}
+.chat-msg-ai{border-radius:8px 18px 18px 18px}
+.chat-msg-user{
+  background:linear-gradient(135deg,#9b54ff,#7444e8 54%,#4d77ef);
+  box-shadow:0 8px 22px rgba(104,64,237,.30);border:1px solid rgba(202,165,255,.35);
+}
+#prompt-input{
+  background:rgba(9,22,69,.76);border-color:rgba(126,139,255,.48);
+  box-shadow:inset 0 0 18px rgba(46,91,205,.12),0 0 0 1px rgba(65,110,255,.08);
+}
+#prompt-input:focus{border-color:#9f7aff;box-shadow:0 0 0 3px rgba(139,91,246,.18),0 0 19px rgba(65,140,255,.18)}
+#btn-send,.dash-new-btn{background:linear-gradient(135deg,#a556ff,#7639e9 54%,#4d6ff2);box-shadow:0 5px 18px rgba(117,62,242,.42)}
+#btn-send:hover,.dash-new-btn:hover{box-shadow:0 7px 25px rgba(168,75,255,.52),0 0 12px rgba(65,141,255,.25)}
+.sb-mascot,.aip-quote{
+  background:linear-gradient(145deg,rgba(42,26,102,.66),rgba(7,22,69,.54));
+  border-color:rgba(186,118,255,.30);box-shadow:inset 0 1px 0 rgba(255,255,255,.07);
+}
+dialog.dlg,#pm-box{
+  background:linear-gradient(145deg,rgba(13,26,74,.97),rgba(6,14,44,.97));
+  border-color:rgba(163,123,255,.44);backdrop-filter:blur(18px);
+}
+/* Real desktop structure: navigation | recent work | chat | agent context. */
+ #main,#content,#chat-view{min-width:0}
+.panel-toggle{width:34px;font-size:14px;letter-spacing:1px;font-weight:800;line-height:1}
+@media (min-width:1440px){
+  :root{--sidebar-w:246px;--rightbar-w:300px}
+  #task-panel{width:278px;min-width:278px;padding:14px 12px;gap:18px}
+  #main.has-right #rightbar{width:min(var(--rightbar-w),320px)}
+  #agent-bar{gap:6px;padding:8px 10px}
+  #agent-bar .chat-title{max-width:160px;min-width:0}
+  .agent-pill,.model-pill,.status-badge{min-width:0;flex-shrink:1}
+  #ap-name,#model-pill-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:118px}
+  #rightbar-head{background:rgba(13,28,77,.68);border-bottom-color:rgba(139,121,255,.25)}
+  .aip-wrap{gap:16px}
+}
+/* Reduced transparency keeps text readable when a staff member uses a small screen. */
+@media (max-width:900px){
+  #sidebar,#task-panel,#rightbar,#agent-bar,#input-bar{background:rgba(6,14,45,.95)}
+  body::after{opacity:.58}
+}
 </style>
 </head>
 <body>
@@ -1074,7 +1185,7 @@ dialog.dlg header button:hover{color:var(--text)}
   <div class="topbar-logo">
     <div class="tb-robot">🤖</div>
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.144</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.145</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -1103,8 +1214,12 @@ dialog.dlg header button:hover{color:var(--text)}
     <div class="online-dot-wrap" id="ram-info">
       <span class="online-dot"></span>Đang kết nối...
     </div>
-    <button id="btn-rightbar" class="icon-btn" title="Bảng phải" onclick="toggleRightbar()">▥</button>
+    <button id="btn-notif" class="icon-btn" title="Thông báo" onclick="toggleNotifPanel()" style="position:relative">
+      🔔<span id="notif-dot" style="display:none;position:absolute;top:3px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 4px var(--red)"></span>
+    </button>
+    <button id="btn-rightbar" class="icon-btn panel-toggle" title="Thu/gọi bảng Agent" aria-label="Thu/gọi bảng Agent" onclick="toggleRightbar()">•••</button>
     <button id="btn-settings" class="icon-btn" title="Cấu hình" onclick="openSettingsDialog()">⚙️</button>
+    <div id="notif-menu" hidden></div>
     <!-- Auth area -->
     <a id="btn-admin" href="/admin.html" style="display:none;background:var(--bg3);border:1px solid var(--border);color:var(--yellow);padding:4px 10px;border-radius:5px;font-size:11px;text-decoration:none;font-weight:600">⚙️ Admin</a>
     <button id="btn-login" onclick="loginLark()" style="display:none">🔑 Đăng nhập Lark</button>
@@ -2563,6 +2678,13 @@ async function init() {
   renderProjects();
   await loadChats();
   promptHistory = await fetch('/api/prompt-history').then(r => r.json()).catch(() => []);
+  // Migrate the desktop shell once to the four-pane layout. Afterwards the
+  // normal close/open preference continues to be respected.
+  const layoutV2Seen = localStorage.getItem('kagent.layout.v2') === '1';
+  if (window.innerWidth >= 1440 && (!layoutV2Seen || localStorage.getItem('kagent.rightbar.open') !== '0')) {
+    showAgentInfoPanel();
+  }
+  localStorage.setItem('kagent.layout.v2', '1');
 }
 
 // ── PROJECTS ──
@@ -4578,6 +4700,29 @@ function updateAgentPill(agentId) {
 <!-- ── BÉ KAGENT WIDGET ── -->
 <style>
 #bk-wrap{position:fixed;bottom:22px;right:22px;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;gap:10px;font-family:'Segoe UI',system-ui,sans-serif;cursor:grab}
+
+/* ── ZOOM CONTROL (góc dưới trái) ── */
+#zoom-corner{position:fixed;bottom:22px;left:22px;z-index:9998}
+#zoom-btn{
+  width:34px;height:34px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);
+  color:var(--text2);cursor:pointer;font-size:16px;font-weight:800;letter-spacing:1px;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.4);
+  transition:all .15s;
+}
+#zoom-btn:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+#zoom-menu{
+  display:none;position:absolute;bottom:42px;left:0;min-width:170px;
+  background:#101830;border:1px solid rgba(167,139,250,.35);border-radius:10px;
+  box-shadow:0 16px 42px rgba(0,0,0,.6);padding:6px;
+}
+#zoom-menu.open{display:block}
+#zoom-menu button{
+  width:100%;text-align:left;background:none;border:none;color:var(--text);
+  padding:8px 10px;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;justify-content:space-between;
+}
+#zoom-menu button:hover{background:var(--bg3)}
+#zoom-level{padding:6px 10px;font-size:11px;color:var(--text3);text-align:center}
 #bk-wrap:active{cursor:grabbing}
 #bk-tip{
   background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;font-size:11px;
@@ -4652,6 +4797,15 @@ function updateAgentPill(agentId) {
 #bk-send:disabled{opacity:.4;cursor:not-allowed}
 </style>
 
+<div id="zoom-corner">
+  <div id="zoom-menu">
+    <div id="zoom-level">Thu phóng: 100%</div>
+    <button onclick="setZoom(zoomStep(1))"><span>🔍➕ Phóng to</span></button>
+    <button onclick="setZoom(zoomStep(-1))"><span>🔍➖ Thu nhỏ</span></button>
+    <button onclick="setZoom(1)"><span>↺ Đặt lại 100%</span></button>
+  </div>
+  <button id="zoom-btn" title="Thu phóng giao diện" onclick="toggleZoomMenu()">⋮</button>
+</div>
 <div id="bk-wrap">
   <div id="bk-tip" onclick="bkToggle()">Hỏi Bé KAgent nhé! 🤖</div>
   <div id="bk-btn" onclick="bkToggle()">🤖</div>
@@ -4851,6 +5005,37 @@ function bkKey(e){
   }
 })();
 
+// ── ZOOM CONTROL (nút ⋮ góc dưới trái) ──────────────────────────────────────
+const ZOOM_STEPS = [0.75, 0.85, 0.9, 1, 1.1, 1.25, 1.4, 1.5];
+function zoomStep(dir) {
+  const cur = parseFloat(localStorage.getItem('kagent.zoom') || '1');
+  let idx = ZOOM_STEPS.reduce((best, v, i) => Math.abs(v - cur) < Math.abs(ZOOM_STEPS[best] - cur) ? i : best, 0);
+  idx = Math.min(ZOOM_STEPS.length - 1, Math.max(0, idx + dir));
+  return ZOOM_STEPS[idx];
+}
+function setZoom(level) {
+  document.body.style.zoom = level;
+  localStorage.setItem('kagent.zoom', level);
+  const lvlEl = document.getElementById('zoom-level');
+  if (lvlEl) lvlEl.textContent = `Thu phóng: ${Math.round(level * 100)}%`;
+}
+function toggleZoomMenu() {
+  const m = document.getElementById('zoom-menu');
+  m.classList.toggle('open');
+  if (m.classList.contains('open')) {
+    const cur = parseFloat(localStorage.getItem('kagent.zoom') || '1');
+    document.getElementById('zoom-level').textContent = `Thu phóng: ${Math.round(cur * 100)}%`;
+  }
+}
+document.addEventListener('click', e => {
+  const m = document.getElementById('zoom-menu');
+  if (m && m.classList.contains('open') && !e.target.closest('#zoom-corner')) m.classList.remove('open');
+}, true);
+(function initZoom() {
+  const saved = parseFloat(localStorage.getItem('kagent.zoom') || '1');
+  if (saved && saved !== 1) document.body.style.zoom = saved;
+})();
+
 // ── Auto-update check ────────────────────────────────────────────────────────
 async function checkUpdate() {
   try {
@@ -4861,7 +5046,39 @@ async function checkUpdate() {
       document.getElementById('update-banner').style.display = 'block';
     }
   } catch {}
+  refreshNotifBadge();
 }
+
+// ── Chuông thông báo — chỉ hiện thông báo THẬT (bản cập nhật), không bịa dữ liệu ──
+function refreshNotifBadge() {
+  const dot = document.getElementById('notif-dot');
+  if (!dot) return;
+  const updateAvailable = document.getElementById('update-banner')?.style.display === 'block';
+  dot.style.display = updateAvailable ? 'block' : 'none';
+}
+function toggleNotifPanel() {
+  const m = document.getElementById('notif-menu');
+  const btn = document.getElementById('btn-notif');
+  const willOpen = m.hidden;
+  document.getElementById('user-menu').hidden = true;
+  m.hidden = !willOpen;
+  if (!willOpen) return;
+  const r = btn.getBoundingClientRect();
+  m.style.right = (window.innerWidth - r.right) + 'px';
+  const updateAvailable = document.getElementById('update-banner')?.style.display === 'block';
+  const ver = document.getElementById('update-ver')?.textContent || '';
+  m.innerHTML = updateAvailable
+    ? `<div class="nm-hdr">Thông báo</div>
+       <div class="nm-item" onclick="document.getElementById('notif-menu').hidden=true;doUpdate()">
+         <span class="nm-icon">⬆️</span>
+         <div><div class="nm-title">Có bản cập nhật ${ver}</div><div class="nm-desc">Bấm để cập nhật ngay</div></div>
+       </div>`
+    : `<div class="nm-hdr">Thông báo</div><div class="nm-empty">Không có thông báo mới</div>`;
+}
+document.addEventListener('click', e => {
+  const m = document.getElementById('notif-menu');
+  if (m && !m.hidden && !e.target.closest('#btn-notif') && !e.target.closest('#notif-menu')) m.hidden = true;
+}, true);
 // Dò cho tới khi server sống lại sau khi tự khởi động lại (thay .exe) rồi mới reload — xem
 // giải thích đầy đủ ở nơi gọi (doUpdate). Chờ tối đa ~2 phút (đủ dư cho máy chậm/mạng chậm tải
 // lại agents-config từ Cloudflare); quá hạn thì báo lỗi rõ ràng thay vì treo "Đang khởi động
