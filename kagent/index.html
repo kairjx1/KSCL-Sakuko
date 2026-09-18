@@ -1210,7 +1210,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <div class="tb-robot">🤖</div>
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.153</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.154</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -1231,7 +1231,7 @@ dialog.dlg,#pm-box{
       <div class="mode-opt" id="mode-auto" onclick="setAgentMode('auto')">⚡ Tự động</div>
     </div>
     <!-- Working dir -->
-    <div id="workdir-wrap" style="display:none;align-items:center;gap:4px;background:var(--bg3);border:1px solid rgba(248,113,113,.3);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text2);cursor:pointer;max-width:140px;overflow:hidden" title="Thư mục làm việc — click để đổi" onclick="pickWorkDir()">
+    <div id="workdir-wrap" style="display:none;align-items:center;gap:4px;background:var(--bg3);border:1px solid rgba(248,113,113,.3);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text2);cursor:pointer;max-width:140px;overflow:hidden" title="Thư mục làm việc của dự án — sửa trong Cài đặt dự án" onclick="openProjModal(false)">
       <span style="flex-shrink:0">📁</span>
       <span id="workdir-label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">C:\</span>
     </div>
@@ -2074,51 +2074,27 @@ function setAgentMode(mode) {
   const ww = document.getElementById('workdir-wrap');
   if (mode === 'auto') {
     ww.style.display = 'flex';
-    // Restore từ localStorage, fallback về project workDir hoặc C:\
-    if (!window._workDir) window._workDir = localStorage.getItem('kagent_workdir') || 'C:\\';
+    // Luôn lấy theo thư mục của dự án ĐANG chọn — không dùng localStorage cũ nữa để tránh
+    // lệch với dự án thật (đúng ý người dùng: "1 nguồn duy nhất, sửa ở Cài đặt dự án thôi").
+    if (!window._workDir) {
+      const pid = document.getElementById('sp-select')?.value;
+      const p = (typeof projects !== 'undefined') ? projects.find(x => x.id === pid) : null;
+      window._workDir = (p && (p.workDir || p.work_dir)) || 'C:\\';
+    }
     document.getElementById('workdir-label').textContent = window._workDir;
-    showToast('⚡ Tự động bật — Claude sẽ tự edit file, chạy lệnh trong thư mục đã chọn');
+    showToast('⚡ Tự động bật — Claude sẽ tự edit file, chạy lệnh trong thư mục dự án đang chọn');
   } else {
     ww.style.display = 'none';
     showToast('🔒 Hỏi lại — chỉ chat, không tự sửa file');
   }
 }
 
-async function pickWorkDir() {
-  const cur = window._workDir || localStorage.getItem('kagent_workdir') || '';
-  // Cùng cơ chế "đợi 4s rồi tự đề nghị nhập tay" như pickProjDir() — xem giải thích ở đó.
-  let handled = false;
-  const escapeTimer = setTimeout(() => {
-    if (handled) return;
-    const input = prompt('Chưa thấy hộp thoại chọn thư mục hiện ra? Nhập đường dẫn trực tiếp (hoặc bấm Cancel để tiếp tục chờ):', cur || '');
-    if (input !== null) { handled = true; if (input.trim()) setWorkDir(input.trim()); }
-  }, 4000);
-  try {
-    const r = await fetch('/api/pick-folder', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ current: cur })
-    });
-    clearTimeout(escapeTimer);
-    if (handled) return;
-    const { path } = await r.json();
-    if (path) {
-      setWorkDir(path);
-    } else {
-      // Picker không hoạt động → gõ tay
-      const input = prompt('Nhập đường dẫn thư mục làm việc:', cur || '');
-      if (input && input.trim()) setWorkDir(input.trim());
-    }
-  } catch {
-    clearTimeout(escapeTimer);
-    if (handled) return;
-    const input = prompt('Nhập đường dẫn thư mục làm việc:', cur || '');
-    if (input && input.trim()) setWorkDir(input.trim());
-  }
-}
-
+// Trước đây bấm trực tiếp vào workdir-wrap ở topbar để "Duyệt..." thư mục riêng — gây ra đúng
+// vấn đề người dùng chỉ ra: 2 nguồn thư mục khác nhau (dự án vs. topbar) dễ lệch nhau. Giờ
+// topbar chỉ HIỂN THỊ, bấm vào mở thẳng Cài đặt dự án (openProjModal) — sửa ở đúng 1 chỗ.
+// setWorkDir() vẫn giữ lại vì saveProjModal() gọi để đồng bộ hiển thị + báo cho agent qua WS.
 function setWorkDir(path) {
   window._workDir = path;
-  localStorage.setItem('kagent_workdir', path); // lưu để nhớ qua các lần mở
   const lbl = document.getElementById('workdir-label');
   if (lbl) lbl.textContent = path;
   send({ type: 'setWorkDir', path });
@@ -2867,6 +2843,10 @@ async function saveProjModal() {
       await apiUpdateProject(pid, name, workDir, promptPrefix, promptSuffix);
       const idx = projects.findIndex(x => x.id === pid);
       if (idx >= 0) projects[idx] = { ...projects[idx], name, workDir, promptPrefix, promptSuffix };
+      // Modal Cài đặt dự án luôn sửa ĐÚNG dự án đang chọn (pid lấy từ sp-select ở trên) →
+      // đồng bộ ngay thư mục hiển thị ở topbar (chế độ Tự động), tránh lệch giữa "thư mục dự
+      // án" và "thư mục topbar" như trước (2 nguồn khác nhau, dễ nhầm).
+      if (workDir) setWorkDir(workDir);
     }
     renderProjects();
     closeProjModal();
