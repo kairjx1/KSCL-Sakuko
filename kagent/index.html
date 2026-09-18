@@ -166,15 +166,15 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 .aip-integ .ai-badge.on{color:var(--green);background:var(--green-bg)}
 .aip-integ .ai-badge.off{color:var(--text3);background:var(--bg4)}
 .aip-quote{
-  margin-top:auto;text-align:center;padding:0 0 14px;background:var(--accent-dim);
+  margin-top:auto;text-align:center;padding:14px 14px 14px;background:var(--accent-dim);
   border-radius:12px;font-size:11px;color:var(--text2);font-style:italic;line-height:1.5;
   overflow:hidden;
 }
-.aip-quote .aq-icon{width:100%;max-width:260px;height:auto;object-fit:contain;display:block;margin:0 auto}
+.aip-quote .aq-icon{width:100%;max-width:200px;height:auto;object-fit:contain;display:block;margin:0 auto}
 .aip-quote .aip-quote-text{
   font-family:'Dancing Script',cursive;font-weight:700;font-size:16px;line-height:1.3;
   color:#c9a7ff;text-shadow:0 0 10px rgba(167,139,250,.65),0 0 24px rgba(96,165,250,.35);
-  padding:2px 16px 0;
+  padding-top:8px;
 }
 .aip-footer{
   display:flex;align-items:center;justify-content:space-between;padding:10px 14px;
@@ -197,7 +197,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 #task-panel.collapsed>*{display:none}
 #task-panel .dash-section-hdr{margin-bottom:8px}
 #task-panel .dash-section-hdr h3{font-size:11.5px}
-#task-panel .task-cards{gap:5px}
+#task-panel .task-cards{gap:5px;max-height:290px;overflow-y:auto}
 #task-panel .task-card{padding:9px 10px;gap:9px}
 #task-panel .tc-avatar{width:28px;height:28px;font-size:13px;border-radius:8px}
 #task-panel .tc-title{font-size:11.5px}
@@ -332,7 +332,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 #sidebar{
   width:var(--sidebar-w);min-width:var(--sidebar-w);
   background:var(--bg2);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;overflow:hidden;position:relative;
+  display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;position:relative;
   transition:width .18s ease,min-width .18s ease;
 }
 #sidebar.collapsed{width:0!important;min-width:0!important;border-right:none}
@@ -457,7 +457,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',syste
 .pm-save:hover{opacity:.9}
 .pm-del{background:none;border:1px solid var(--border);color:var(--red);padding:6px 12px;border-radius:8px;font-size:11px;cursor:pointer}
 .pm-del:hover{background:var(--red-bg);border-color:var(--red)}
-#chat-list{flex:1;overflow-y:auto;padding:4px 6px}
+#chat-list{flex:1;min-height:180px;overflow-y:auto;padding:4px 6px}
 .chat-item{
   display:flex;align-items:center;gap:8px;padding:8px 8px;border-radius:8px;
   cursor:pointer;font-size:12px;color:var(--text2);transition:all .12s;margin-bottom:2px;
@@ -1220,7 +1220,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <img class="tb-robot" src="/kagent-mascot-face.png" alt="KAgent">
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.163</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.164</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -3490,6 +3490,12 @@ function sendPrompt() {
   renderImageStrip();
   _agyTimeoutWarned = false; // lượt mới — cho phép cảnh báo timeout AntiGravity hiện lại nếu tái diễn
 
+  // Cập nhật ngay updatedAt cục bộ của chat này — trước đây chỉ server ghi vào DB
+  // (db.touchChat), còn mảng `chats` phía client giữ nguyên timestamp cũ cho tới lần
+  // loadChats() kế tiếp, khiến "Nhiệm vụ gần đây" không tự nhảy lên đầu ngay khi vừa nhắn.
+  const _activeChat = (typeof chats !== 'undefined') ? chats.find(c => c.id === currentChatId) : null;
+  if (_activeChat) { _activeChat.updatedAt = Date.now(); if (typeof renderRecentTasks === 'function') renderRecentTasks(); }
+
   const displayText = text || `(${files.length} file đính kèm)`;
   // appendOutput('[Bạn]') KHÔNG gọi ở đây — server sẽ broadcast lại qua type:'output'
   // nếu gọi cả 2 sẽ bị duplicate trong terminal
@@ -4351,7 +4357,15 @@ function renderRecentTasks() {
   const taskEl = document.getElementById('tp-recent-tasks');
   if (!taskEl) return;
   if (typeof chats !== 'undefined' && chats.length) {
-    const recent = chats.slice(0, 8);
+    // Sắp xếp theo hoạt động gần nhất — trước đây dùng nguyên thứ tự mảng `chats` (API trả về
+    // không đảm bảo theo thời gian), nên chat mới nhắn/tạo không tự nhảy lên đầu "Nhiệm vụ gần
+    // đây" như tên gọi của nó. Chat đang CHẠY luôn ưu tiên lên đầu bất kể thời gian.
+    const recent = [...chats].sort((a, b) => {
+      const aRun = typeof runner !== 'undefined' && runner.getSessionStatus && runner.getSessionStatus(a.id) === 'running';
+      const bRun = typeof runner !== 'undefined' && runner.getSessionStatus && runner.getSessionStatus(b.id) === 'running';
+      if (aRun !== bRun) return aRun ? -1 : 1;
+      return (b.updatedAt || 0) - (a.updatedAt || 0);
+    });
     taskEl.innerHTML = recent.map(c => {
       const isRunning = typeof runner !== 'undefined' && runner.getSessionStatus && runner.getSessionStatus(c.id) === 'running';
       const cls = isRunning ? 'tc-running' : 'tc-idle';
