@@ -1,1 +1,1 @@
-﻿{"version":"1.0.173","released":"2026-09-19","notes":"Restore correct UI v1.0.171"}
+{"version":"1.0.174","released":"2026-09-19","notes":"Token saving: skip KimTiem+rawHistory on turns 2-19, reinject every 20 turns"}
