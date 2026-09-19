@@ -1551,6 +1551,12 @@ wss.on('connection', (ws) => {
 
           let systemParts = [];
 
+          // Token saving: lượt 0 và mỗi 20 lượt inject đầy đủ; các lượt giữa bỏ modules + raw history
+          const injectTurn = currentSession ? (currentSession.injectTurnCount || 0) : 0;
+          const REINJECT_EVERY = 20;
+          const isFullInject = injectTurn === 0 || (injectTurn % REINJECT_EVERY === 0);
+          if (currentSession) currentSession.injectTurnCount = injectTurn + 1;
+
           // Kim Tiêm modules: mặc định CHỈ inject cho claude (có tool ecosystem phù hợp) —
           // agent khác (gemini, codex, opencode...) nhận Kim Tiêm dễ tự spawn subagent/tool
           // theo nội dung module → treo, vì chúng không đi qua wrapper <kagent_context>
@@ -1561,11 +1567,13 @@ wss.on('connection', (ws) => {
           // là hướng dẫn trình bày, không yêu cầu gọi tool nào nên an toàn.
           const allowKimTiem = isClaudeAgent || sessionAgentId === 'antigravity';
           if (relayMods.length > 0) {
-            if (allowKimTiem) {
+            if (allowKimTiem && isFullInject) {
               const modText = relayMods.map(m => m.system_prompt?.trim()).filter(Boolean).join('\n\n---\n\n');
               if (modText) systemParts.push(modText);
             }
-            broadcast(currentChatId, { type: 'output', data: `\x1b[36m[KAgent] 💉 Đã nạp ${relayMods.length} Kim Tiêm module(s)\x1b[0m\r\n` });
+            if (isFullInject) {
+              broadcast(currentChatId, { type: 'output', data: `\x1b[36m[KAgent] 💉 Đã nạp ${relayMods.length} Kim Tiêm module(s)\x1b[0m\r\n` });
+            }
           }
 
           // Phase 4: Cloud Memory — inject cho MỌI agent (chỉ là data, không phải instructions)
@@ -1582,9 +1590,10 @@ wss.on('connection', (ws) => {
             broadcast(currentChatId, { type: 'output', data: `\x1b[35m[KAgent] 📜 Đã tải lịch sử ${relaySummary.msg_count || '?'} tin nhắn\x1b[0m\r\n` });
           }
 
-          // Raw history gần nhất — inject cho MỌI agent
+          // Raw history gần nhất — chỉ inject lượt đầu/mỗi 20 lượt; nếu có summary thì bỏ để tiết kiệm
           const historyMsgs = relayHistory.filter(m => m.role === 'user' || m.role === 'assistant');
-          if (historyMsgs.length > 1) {
+          const skipRawHistory = !isFullInject && relaySummary?.summary;
+          if (!skipRawHistory && historyMsgs.length > 1) {
             const historyText = historyMsgs.slice(0, -1)
               .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
               .join('\n\n');
@@ -1592,6 +1601,9 @@ wss.on('connection', (ws) => {
           }
 
           const systemPrompt = systemParts.join('\n\n===\n\n') || undefined;
+          if (!isFullInject) {
+            broadcast(currentChatId, { type: 'output', data: `\x1b[90m[KAgent] ⚡ Tiết kiệm token (lượt ${injectTurn}/${REINJECT_EVERY})\x1b[0m\r\n` });
+          }
 
           // Gửi tới agent
           const agentMode = msg.agentMode || 'safe'; // 'safe' | 'auto'

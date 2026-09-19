@@ -99,6 +99,7 @@ function startSession(chatId, agentId, workDir, onData, onExit) {
     isFirst: true,
     running: false,
     currentProc: null,
+    injectTurnCount: 0,
   });
 
   const agentName = (_agentsConfig[agentId] || _agentsConfig['claude'] || {}).name || agentId;
