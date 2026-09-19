@@ -1543,73 +1543,86 @@ wss.on('connection', (ws) => {
 
         // Cập nhật token từ message nếu có
         if (msg.relayToken) clientRelayToken = msg.relayToken;
+        // Xác định agent + turn count TRƯỚC khi fetch relay (để quyết định có cần fetch không)
+        const currentSession = runner.getSession(currentChatId);
+        const sessionAgentId = currentSession?.agentId || (db.getChatById ? db.getChatById(currentChatId)?.agent : null) || 'claude';
+        const isClaudeAgent = sessionAgentId === 'claude';
+        const injectTurn = currentSession ? (currentSession.injectTurnCount || 0) : 0;
+        if (currentSession) currentSession.injectTurnCount = injectTurn + 1;
+
+        // ── Token saving cực đoan: 3 mức inject ────────────────────────────────
+        // FULL  (lượt 0, 10, 20...): modules + memory + summary(tối đa 1200c) + 3 raw msgs
+        // MID   (lượt 5, 15, 25...): memory + summary ngắn (tối đa 600c) — nhắc lại giữa kỳ
+        // SKIP  (tất cả còn lại):   không inject gì — context trong cuộc trò chuyện đã đủ
+        const CYCLE = 10;
+        const isFullInject = injectTurn % CYCLE === 0;
+        const isMidInject  = !isFullInject && injectTurn % CYCLE === 5;
+        const isAnyInject  = isFullInject || isMidInject;
+
+        // Chỉ fetch relay khi thực sự cần (bỏ qua toàn bộ nếu là SKIP turn)
+        const fetchMods    = isFullInject;
+        const fetchHistory = isFullInject;
+        const fetchSummary = isAnyInject;
+        const fetchMemory  = isAnyInject;
+
         // Lấy active modules + lịch sử relay + summary + memory để build system prompt
         Promise.all([
-          getRelayModules(clientRelayToken),
-          relayGetHistory(currentChatId, 10), // 10 tin nhắn raw gần nhất
-          relayGetSummary(currentChatId),     // Phase 3: tóm tắt phiên trước
-          relayGetMemory(relayUserId),        // Phase 4: memory cá nhân của user
+          fetchMods    ? getRelayModules(clientRelayToken) : Promise.resolve([]),
+          fetchHistory ? relayGetHistory(currentChatId, 3) : Promise.resolve([]), // giảm 10→3
+          fetchSummary ? relayGetSummary(currentChatId)    : Promise.resolve(null),
+          fetchMemory  ? relayGetMemory(relayUserId)       : Promise.resolve({}),
         ]).then(([relayMods, relayHistory, relaySummary, relayMemory]) => {
-          // Xác định agent để build systemPrompt phù hợp
-          const currentSession = runner.getSession(currentChatId);
-          const sessionAgentId = currentSession?.agentId || (db.getChatById ? db.getChatById(currentChatId)?.agent : null) || 'claude';
-          const isClaudeAgent = sessionAgentId === 'claude';
 
           let systemParts = [];
 
-          // Token saving: lượt 0 và mỗi 20 lượt inject đầy đủ; các lượt giữa bỏ modules + raw history
-          const injectTurn = currentSession ? (currentSession.injectTurnCount || 0) : 0;
-          const REINJECT_EVERY = 20;
-          const isFullInject = injectTurn === 0 || (injectTurn % REINJECT_EVERY === 0);
-          if (currentSession) currentSession.injectTurnCount = injectTurn + 1;
+          if (!isAnyInject) {
+            // SKIP turn: inject rỗng, AI dùng context hội thoại hiện tại
+            broadcast(currentChatId, { type: 'output', data: `\x1b[90m[KAgent] ⚡ Skip inject (lượt ${injectTurn})\x1b[0m\r\n` });
+          } else {
+            // FULL hoặc MID inject
+            const summaryMaxLen = isFullInject ? 1200 : 600;
 
-          // Kim Tiêm modules: mặc định CHỈ inject cho claude (có tool ecosystem phù hợp) —
-          // agent khác (gemini, codex, opencode...) nhận Kim Tiêm dễ tự spawn subagent/tool
-          // theo nội dung module → treo, vì chúng không đi qua wrapper <kagent_context>
-          // read-only bên dưới với model đủ mạnh để tôn trọng ranh giới "chỉ đọc".
-          // Ngoại lệ: AntiGravity (isClaudeAgent === false nhưng agentId === 'antigravity')
-          // được BẬT THEO YÊU CẦU — dùng model Gemini đủ tôn trọng chỉ dẫn "chỉ đọc, không
-          // tự hành động" ở agent-runner.js, và module hiện có (định dạng câu trả lời) chỉ
-          // là hướng dẫn trình bày, không yêu cầu gọi tool nào nên an toàn.
-          const allowKimTiem = isClaudeAgent || sessionAgentId === 'antigravity';
-          if (relayMods.length > 0) {
-            if (allowKimTiem && isFullInject) {
+            // Kim Tiêm modules — chỉ FULL, chỉ claude/antigravity
+            const allowKimTiem = isClaudeAgent || sessionAgentId === 'antigravity';
+            if (isFullInject && relayMods.length > 0 && allowKimTiem) {
               const modText = relayMods.map(m => m.system_prompt?.trim()).filter(Boolean).join('\n\n---\n\n');
               if (modText) systemParts.push(modText);
-            }
-            if (isFullInject) {
               broadcast(currentChatId, { type: 'output', data: `\x1b[36m[KAgent] 💉 Đã nạp ${relayMods.length} Kim Tiêm module(s)\x1b[0m\r\n` });
             }
-          }
 
-          // Phase 4: Cloud Memory — inject cho MỌI agent (chỉ là data, không phải instructions)
-          const memEntries = Object.entries(relayMemory || {});
-          if (memEntries.length > 0) {
-            const memText = memEntries.map(([k, v]) => `- ${k}: ${v.value}`).join('\n');
-            systemParts.push(`[Bộ nhớ cá nhân (${memEntries.length} mục):]\n${memText}`);
-            broadcast(currentChatId, { type: 'output', data: `\x1b[36m[KAgent] 🧠 Đã nạp ${memEntries.length} memory\x1b[0m\r\n` });
-          }
+            // Memory cá nhân
+            const memEntries = Object.entries(relayMemory || {});
+            if (memEntries.length > 0) {
+              const memText = memEntries.map(([k, v]) => `- ${k}: ${v.value}`).join('\n');
+              systemParts.push(`[Bộ nhớ cá nhân (${memEntries.length} mục):]\n${memText}`);
+              broadcast(currentChatId, { type: 'output', data: `\x1b[36m[KAgent] 🧠 Đã nạp ${memEntries.length} memory\x1b[0m\r\n` });
+            }
 
-          // Phase 3: Tóm tắt phiên trước — inject cho MỌI agent
-          if (relaySummary && relaySummary.summary) {
-            systemParts.push(`[Tóm tắt lịch sử cuộc hội thoại này (${relaySummary.msg_count || '?'} tin nhắn trước đó):]\n${relaySummary.summary}`);
-            broadcast(currentChatId, { type: 'output', data: `\x1b[35m[KAgent] 📜 Đã tải lịch sử ${relaySummary.msg_count || '?'} tin nhắn\x1b[0m\r\n` });
-          }
+            // Tóm tắt lịch sử — cắt bớt để tiết kiệm token
+            if (relaySummary?.summary) {
+              const raw = relaySummary.summary;
+              const trimmed = raw.length > summaryMaxLen ? raw.slice(0, summaryMaxLen) + '…' : raw;
+              systemParts.push(`[Tóm tắt ${relaySummary.msg_count || '?'} tin nhắn trước:]\n${trimmed}`);
+              broadcast(currentChatId, { type: 'output', data: `\x1b[35m[KAgent] 📜 Lịch sử ${relaySummary.msg_count || '?'} tin (${trimmed.length}c)\x1b[0m\r\n` });
+            }
 
-          // Raw history gần nhất — chỉ inject lượt đầu/mỗi 20 lượt; nếu có summary thì bỏ để tiết kiệm
-          const historyMsgs = relayHistory.filter(m => m.role === 'user' || m.role === 'assistant');
-          const skipRawHistory = !isFullInject && relaySummary?.summary;
-          if (!skipRawHistory && historyMsgs.length > 1) {
-            const historyText = historyMsgs.slice(0, -1)
-              .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-              .join('\n\n');
-            systemParts.push(`[${historyMsgs.length - 1} tin nhắn gần nhất:]\n${historyText}`);
+            // Raw history — chỉ FULL, chỉ khi chưa có summary
+            if (isFullInject && !relaySummary?.summary) {
+              const historyMsgs = relayHistory.filter(m => m.role === 'user' || m.role === 'assistant');
+              if (historyMsgs.length > 1) {
+                const historyText = historyMsgs.slice(0, -1)
+                  .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+                  .join('\n\n');
+                systemParts.push(`[${historyMsgs.length - 1} tin nhắn gần nhất:]\n${historyText}`);
+              }
+            }
+
+            if (isMidInject) {
+              broadcast(currentChatId, { type: 'output', data: `\x1b[90m[KAgent] ⚡ Mid inject (lượt ${injectTurn})\x1b[0m\r\n` });
+            }
           }
 
           const systemPrompt = systemParts.join('\n\n===\n\n') || undefined;
-          if (!isFullInject) {
-            broadcast(currentChatId, { type: 'output', data: `\x1b[90m[KAgent] ⚡ Tiết kiệm token (lượt ${injectTurn}/${REINJECT_EVERY})\x1b[0m\r\n` });
-          }
 
           // Gửi tới agent
           const agentMode = msg.agentMode || 'safe'; // 'safe' | 'auto'
