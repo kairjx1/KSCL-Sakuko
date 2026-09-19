@@ -518,22 +518,25 @@ ${historyText}`;
 }
 
 // ─── RELAY MODULE CACHE ─────────────────────────────────────────────────────
-let _moduleCache = null;
-let _moduleCacheAt = 0;
+// Map<token, { data, at }> — cache riêng per-user-token, tránh user A thấy module state của user B
+const _moduleCacheMap = new Map();
 
 async function getRelayModules(token) {
-  // Cache 60 giây (per token)
   const cacheKey = token || 'anon';
-  if (_moduleCache && _moduleCache._token === cacheKey && Date.now() - _moduleCacheAt < 60000) return _moduleCache._data;
+  const cached = _moduleCacheMap.get(cacheKey);
+  if (cached && Date.now() - cached.at < 60000) return cached.data;
   try {
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    const res = await httpsRequest(`${RELAY_URL}/api/modules`, { headers, timeoutMs: 6000 }); // xem giải thích ở relayGetHistory
+    const res = await httpsRequest(`${RELAY_URL}/api/modules`, { headers, timeoutMs: 6000 });
     const data = await res.json();
-    const list = Array.isArray(data) ? data.filter(m => m.enabled) : [];
-    _moduleCache = { _token: cacheKey, _data: list };
-    _moduleCacheAt = Date.now();
+    const list = Array.isArray(data) ? data : [];
+    _moduleCacheMap.set(cacheKey, { data: list, at: Date.now() });
     return list;
   } catch { return []; }
+}
+
+function invalidateModuleCache(token) {
+  _moduleCacheMap.delete(token || 'anon');
 }
 
 // ─── SETUP API ──────────────────────────────────────────────────────────────
@@ -1214,7 +1217,10 @@ app.post('/api/modules', (req, res) => {
   res.json({ id, name });
 });
 app.patch('/api/modules/:id', (req, res) => {
-  db.toggleModule(req.params.id, req.body.enabled ? 1 : 0);
+  // Toggle qua relay (per-user); xóa cache để lần inject tiếp lấy state mới
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  invalidateModuleCache(token);
+  db.toggleModule(req.params.id, req.body.enabled ? 1 : 0); // giữ local db sync
   res.json({ ok: true });
 });
 app.delete('/api/modules/:id', (req, res) => {

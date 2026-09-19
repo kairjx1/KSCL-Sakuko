@@ -4623,7 +4623,11 @@ async function loadKimTiemModules() {
     if (!mods) {
       mods = await relayFetch('/api/modules');
     }
-    _ktModules = Array.isArray(mods) ? mods : [];
+    // Normalize: relay mới trả user_enabled (trạng thái riêng của user), dùng nó thay enabled global
+    _ktModules = (Array.isArray(mods) ? mods : []).map(m => ({
+      ...m,
+      enabled: typeof m.user_enabled !== 'undefined' ? !!m.user_enabled : !!m.enabled
+    }));
     if (!_ktModules.length) {
       list.innerHTML = '<div style="text-align:center;padding:16px;color:#9a9a9a;font-size:12px">Chưa có module nào<br><a href="/admin.html" style="color:#7c3aed">Vào Admin để thêm</a></div>';
       return;
