@@ -2177,7 +2177,7 @@ app.post('/api/do-full-update', async (req, res) => {
     // khi cả process thoát hẳn).
     setTimeout(() => {
       server.close(() => console.log('[KAgent] Đã đóng cổng cũ.'));
-      const ps = `Start-Process -FilePath '${exePath.replace(/'/g, "''")}' -WindowStyle Minimized`;
+      const ps = `Start-Process -FilePath '${exePath.replace(/'/g, "''")}' -WindowStyle Normal`;
       require('cross-spawn').spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', ps], {
         cwd: exeDir, detached: true, stdio: 'ignore', windowsHide: true,
       }).unref();
