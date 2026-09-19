@@ -346,6 +346,12 @@ ${promptText}`;
       else if (!stdinData) args = ['--print', finalPrompt, '--output-format', 'text']; // không có gì để gửi qua stdin — giữ hành vi cũ
       if (!s.isFirst) args.push('--continue');
     }
+    // Cho Claude Code dùng được TRÌNH DUYỆT thật của người dùng (Claude in Chrome: mở tab, đọc
+    // trang, bấm, xem console...). Trước đây lượt chat chạy `claude --print` KHÔNG có cờ này nên
+    // Claude trong KAgent trả lời "không có Chrome extension" dù tiện ích + cầu nối đã cài. Có
+    // công tắc tắt từ xa qua agents-config.json ("chromeBridge": false) phòng máy nào gặp sự cố.
+    // Máy chưa cài tiện ích thì cờ này vô hại: chỉ là không có công cụ trình duyệt.
+    if (agentCfg.chromeBridge !== false) args.push('--chrome');
     // Model + thinking level
     const modelId = selectedModel || agentCfg.defaultModel;
     if (modelId && agentCfg.modelFlag) args.push(agentCfg.modelFlag, modelId);

@@ -1229,7 +1229,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <img class="tb-robot" src="/kagent-mascot-face.png" alt="KAgent">
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.169</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.170</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -4017,6 +4017,36 @@ async function refreshRunningChats() {
 }
 setInterval(refreshRunningChats, 3000);
 
+// Trạng thái TRÌNH DUYỆT của agent — đo thật ở server (/api/browser/status: registry cầu nối Claude in
+// Chrome, `agy mcp list`, npx). Cache 60s vì mỗi lần hỏi server phải chạy vài tiến trình con, mà panel
+// "Agent hiện tại" tự vẽ lại mỗi 4 giây — không được gọi lại mỗi lần vẽ.
+let _browserStatus = null, _browserStatusAt = 0, _browserBusy = false;
+async function loadBrowserStatus(force) {
+  if (!force && _browserStatus && Date.now() - _browserStatusAt < 60000) return;
+  _browserStatusAt = Date.now(); // đặt trước để các lần vẽ lại trong lúc chờ không gọi chồng
+  try {
+    _browserStatus = await fetch('/api/browser/status').then(r => r.json());
+  } catch {}
+  if (_aipOpen && RightPanel.isOpen()) showAgentInfoPanel();
+}
+async function toggleAgyBrowser(enable) {
+  if (_browserBusy) return;
+  _browserBusy = true;
+  showToast(enable ? '⏳ Đang bật trình duyệt cho AntiGravity...' : '⏳ Đang tắt...');
+  if (_aipOpen && RightPanel.isOpen()) showAgentInfoPanel();
+  try {
+    const r = await fetch(enable ? '/api/browser/enable-agy' : '/api/browser/disable-agy', { method: 'POST' });
+    const d = await r.json();
+    if (!r.ok || d.ok === false) throw new Error(d.error || ('HTTP ' + r.status));
+    _browserStatus = d.status || _browserStatus;
+    showToast(enable ? '✅ AntiGravity đã có trình duyệt — chạy chế độ ⚡ Tự động để dùng' : '✅ Đã tắt trình duyệt của AntiGravity');
+  } catch (e) {
+    showToast('⚠️ ' + (e.message || 'Không bật được'));
+  }
+  _browserBusy = false;
+  loadBrowserStatus(true);
+}
+
 function renderAgentInfoPanel() {
   const chat = (typeof chats !== 'undefined' && currentChatId) ? chats.find(c => c.id === currentChatId) : null;
   const isRunning = !!(currentChatId && isChatRunning(currentChatId));
@@ -4025,6 +4055,23 @@ function renderAgentInfoPanel() {
   const agentIcon = agent.includes('anti') ? '🔵' : agent.includes('gemini') ? '♊' : agent.includes('opencode') ? '💚' : '&lt;/&gt;';
   const relayOn = typeof useRelay === 'function' && useRelay();
   const modelName = (document.getElementById('model-pill-name') || {}).textContent || '—';
+  loadBrowserStatus();
+  const bs = _browserStatus;
+  let browserRow;
+  if (!bs) {
+    browserRow = `<div class="aip-integ"><div class="ai-icon">🌐</div><div class="ai-body"><div class="ai-name">Trình duyệt</div><div class="ai-desc">Đang kiểm tra...</div></div><div class="ai-badge off">…</div></div>`;
+  } else {
+    const c = bs.claude || {}, a = bs.antigravity || {};
+    const claudeTxt = c.bridge === true ? 'Claude: dùng được Chrome của bạn' : c.bridge === false ? 'Claude: chưa cài tiện ích "Claude in Chrome"' : 'Claude: dùng cờ --chrome';
+    let agyTxt = '', agyBtn = '';
+    if (a.installed) {
+      if (a.mcp) { agyTxt = 'AntiGravity: đã bật (MCP trình duyệt)'; agyBtn = `<button class="aip-detail-btn" ${_browserBusy ? 'disabled' : ''} onclick="toggleAgyBrowser(false)">Tắt cho AntiGravity</button>`; }
+      else if (!a.npx) { agyTxt = 'AntiGravity: cần cài Node.js (npx) để có trình duyệt'; }
+      else { agyTxt = 'AntiGravity: chưa bật'; agyBtn = `<button class="aip-detail-btn" ${_browserBusy ? 'disabled' : ''} onclick="toggleAgyBrowser(true)">${_browserBusy ? 'Đang bật...' : 'Bật trình duyệt cho AntiGravity'}</button>`; }
+    }
+    const anyOn = c.bridge === true || a.mcp;
+    browserRow = `<div class="aip-integ" style="flex-wrap:wrap"><div class="ai-icon">🌐</div><div class="ai-body"><div class="ai-name">Trình duyệt</div><div class="ai-desc">${escapeHtml(claudeTxt)}${agyTxt ? '<br>' + escapeHtml(agyTxt) : ''}</div></div><div class="ai-badge ${anyOn ? 'on' : 'off'}">${anyOn ? '● Sẵn sàng' : 'Chưa bật'}</div>${agyBtn ? '<div style="width:100%">' + agyBtn + '</div>' : ''}</div>`;
+  }
   // Trạng thái kết nối THẬT của WS (#ram-info do onopen/onclose set) — trước đây hardcode cứng
   // "🟢 Online" ở đây bất kể có thật sự kết nối hay không, đúng kiểu "làm cho đẹp" bị nhắc.
   const wsConnected = (document.getElementById('ram-info')?.textContent || '').includes('Đã kết nối');
@@ -4078,6 +4125,7 @@ function renderAgentInfoPanel() {
           <div class="ai-body"><div class="ai-name">Vision AI</div><div class="ai-desc">Model đọc ảnh đính kèm qua base64</div></div>
           <div class="ai-badge on">● Sẵn sàng</div>
         </div>
+        ${browserRow}
         <div class="aip-integ">
           <div class="ai-icon">💉</div>
           <div class="ai-body"><div class="ai-name">Kim Tiêm</div><div class="ai-desc">${kimTiemDesc}</div></div>

@@ -1771,6 +1771,54 @@ if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output 
   }
 });
 
+// ─── TRÌNH DUYỆT cho agent (giống các AI code khác truy cập được browser) ────────────────────
+// - Claude Code: dùng "Claude in Chrome" qua cờ --chrome (agent-runner.js) — cần tiện ích Chrome +
+//   cầu nối native messaging đã cài; ở đây chỉ KIỂM TRA THẬT xem cầu nối đó có trên máy không.
+// - AntiGravity (agy): không có sẵn trình duyệt → đăng ký 1 MCP server "browser" (Playwright MCP,
+//   điều khiển Chrome cài sẵn trên máy) vào cấu hình của chính agy qua `agy mcp add`. Cần Node/npx.
+// Mọi trạng thái trả về đều đo thật (registry / agy mcp list / npx --version), không giả định.
+const BROWSER_MCP_NAME = 'browser';
+async function getBrowserStatus() {
+  const st = { claude: { bridge: null }, antigravity: { installed: false, mcp: false, npx: false } };
+  if (require('os').platform() === 'win32') {
+    try {
+      await spawnCapture('reg', ['query', 'HKCU\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.anthropic.claude_code_browser_extension'], { timeout: 8000 });
+      st.claude.bridge = true;
+    } catch { st.claude.bridge = false; }
+  }
+  try {
+    const agy = runner.getAvailableAgents().find(a => a.id === 'antigravity');
+    st.antigravity.installed = !!(agy && agy.installed);
+    if (st.antigravity.installed) {
+      const cmd = runner.resolveAgentCmdPublic('antigravity');
+      const { stdout } = await spawnCapture(cmd, ['mcp', 'list'], { timeout: 15000 });
+      st.antigravity.mcp = new RegExp('^\\s*[-*•]?\\s*' + BROWSER_MCP_NAME + '\\b', 'im').test(stdout);
+    }
+  } catch { /* agy không đọc được cấu hình → giữ mcp:false */ }
+  try { await spawnCapture('npx', ['--version'], { timeout: 15000 }); st.antigravity.npx = true; } catch {}
+  return st;
+}
+app.get('/api/browser/status', async (req, res) => {
+  try { res.json(await getBrowserStatus()); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/browser/enable-agy', async (req, res) => {
+  try {
+    const cur = await getBrowserStatus();
+    if (!cur.antigravity.installed) return res.status(400).json({ ok: false, error: 'Chưa cài AntiGravity (agy) trên máy này' });
+    if (!cur.antigravity.npx) return res.status(400).json({ ok: false, error: 'Máy chưa có Node.js/npx — cài Node.js (https://nodejs.org) rồi thử lại, MCP trình duyệt cần npx để chạy' });
+    const cmd = runner.resolveAgentCmdPublic('antigravity');
+    await spawnCapture(cmd, ['mcp', 'add', BROWSER_MCP_NAME, '--', 'npx', '-y', '@playwright/mcp@latest', '--browser', 'chrome'], { timeout: 60000 });
+    res.json({ ok: true, status: await getBrowserStatus() });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+app.post('/api/browser/disable-agy', async (req, res) => {
+  try {
+    const cmd = runner.resolveAgentCmdPublic('antigravity');
+    await spawnCapture(cmd, ['mcp', 'remove', BROWSER_MCP_NAME], { timeout: 30000 });
+    res.json({ ok: true, status: await getBrowserStatus() });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // ─── Bé KAgent — public endpoint (không cần auth) ───────────────────────────
 const { spawn } = require('cross-spawn');
 const BK_SYSTEM = 'Bạn là Bé KAgent — trợ lý AI thông minh, thân thiện của KAgent (KSCL Vietnam). Trả lời ngắn gọn, súc tích bằng tiếng Việt. Giúp người dùng về code, KAgent, AI tools và mọi câu hỏi. Đừng dùng markdown quá nhiều — hãy tự nhiên như đang chat.';

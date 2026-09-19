@@ -18,7 +18,8 @@
         { "id": "claude-haiku-4-5-20251001", "name": "Haiku 4.5",  "note": "Nhanh, ít token nhất" }
       ],
       "thinkingLevels": [],
-      "interactiveArgs": [],
+      "interactiveArgs": ["--chrome"],
+      "chromeBridge": true,
       "safeArgs": ["--print", "{prompt}", "--output-format", "text"],
       "safeArgsWithStdin": ["--output-format", "stream-json", "--verbose", "--input-format", "stream-json"],
       "autoArgs": ["{prompt}", "--dangerously-skip-permissions", "--output-format", "stream-json", "--verbose"],
