@@ -685,7 +685,10 @@ function getSessionStatus(chatId) {
 
 function getAllSessions() {
   return Array.from(sessions.entries()).map(([chatId, s]) => ({
-    chatId, agentId: s.agentId, pid: s.currentProc?.pid || null
+    chatId, agentId: s.agentId, pid: s.currentProc?.pid || null,
+    // Client (panel "Agent hiện tại", "Nhiệm vụ gần đây") cần biết chat nào đang chạy thật — cùng
+    // định nghĩa với getSessionStatus(): đang xử lý 1 lượt (print mode) hoặc đang ở chế độ live.
+    running: !!(s.running || s.interactiveMode),
   }));
 }
 

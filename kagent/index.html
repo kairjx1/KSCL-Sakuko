@@ -1229,7 +1229,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <img class="tb-robot" src="/kagent-mascot-face.png" alt="KAgent">
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.168</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.169</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -2435,6 +2435,7 @@ function handleWsMessage(msg) {
       }
       break;
     case 'ai_response':
+      setTimeout(() => { if (typeof refreshRunningChats === 'function') refreshRunningChats(); }, 300);
       // Response hoàn chỉnh từ server → render markdown
       removeTyping();
       finalizeToolBlock();
@@ -2459,8 +2460,10 @@ function handleWsMessage(msg) {
       }
       if (msg.status === 'stopped') { finalizeToolBlock(); removeTyping(); _interactiveMode = false; updateInteractiveUI(false); }
       if (typeof renderRecentTasks === 'function') renderRecentTasks();
+      if (typeof refreshRunningChats === 'function') refreshRunningChats();
       break;
     case 'exit':
+      setTimeout(() => { if (typeof refreshRunningChats === 'function') refreshRunningChats(); }, 300);
       removeTyping();
       appendOutput(`\r\n\x1b[33m[KAgent] Agent đã thoát (code: ${msg.exitCode})\x1b[0m\r\n`);
       if (msg.exitCode && msg.exitCode !== 0 && _currentView === 'chat') {
@@ -3504,6 +3507,7 @@ function sendPrompt() {
   // loadChats() kế tiếp, khiến "Nhiệm vụ gần đây" không tự nhảy lên đầu ngay khi vừa nhắn.
   const _activeChat = (typeof chats !== 'undefined') ? chats.find(c => c.id === currentChatId) : null;
   if (_activeChat) { _activeChat.updatedAt = Date.now(); if (typeof renderRecentTasks === 'function') renderRecentTasks(); }
+  setTimeout(() => { if (typeof refreshRunningChats === 'function') refreshRunningChats(); }, 600);
 
   const displayText = text || `(${files.length} file đính kèm)`;
   // appendOutput('[Bạn]') KHÔNG gọi ở đây — server sẽ broadcast lại qua type:'output'
@@ -3989,9 +3993,33 @@ const RightPanel = (() => {
 // ── AGENT INFO PANEL (nội dung mặc định của rightbar) ──────────────────────
 let _aipOpen = false;
 
+// Trạng thái "đang chạy" THẬT phía client. BUG THẬT (người dùng báo: "tác vụ vẫn đang làm mà panel
+// báo không có tác vụ"): trước đây code gọi runner.getSessionStatus() — nhưng `runner` là đối
+// tượng của SERVER (agent-runner.js), trình duyệt không có biến này nên điều kiện luôn sai, panel
+// "Agent hiện tại", thẻ "Nhiệm vụ gần đây" và ô "Đang chạy" ở trang chủ KHÔNG BAO GIỜ hiện đang
+// chạy. Giờ lấy từ 2 nguồn thật: (1) /api/sessions của server (mọi chat, kể cả chat khác đang
+// chạy nền), (2) chat đang mở: status WS + khung "..." đang hiện.
+let _runningChats = new Set();
+function isChatRunning(id) {
+  if (!id) return false;
+  if (_runningChats.has(id)) return true;
+  return id === currentChatId && (currentStatus === 'running' || !!_typingEl);
+}
+async function refreshRunningChats() {
+  try {
+    const list = await fetch('/api/sessions').then(r => r.json());
+    _runningChats = new Set((Array.isArray(list) ? list : []).filter(s => s.running).map(s => s.chatId));
+  } catch {}
+  if (typeof renderRecentTasks === 'function') renderRecentTasks();
+  if (_aipOpen && RightPanel.isOpen()) showAgentInfoPanel();
+  const nc = document.getElementById('no-chat');
+  if (nc && nc.classList.contains('visible') && typeof showDashboard === 'function') showDashboard();
+}
+setInterval(refreshRunningChats, 3000);
+
 function renderAgentInfoPanel() {
   const chat = (typeof chats !== 'undefined' && currentChatId) ? chats.find(c => c.id === currentChatId) : null;
-  const isRunning = !!(currentChatId && typeof runner !== 'undefined' && runner.getSessionStatus && runner.getSessionStatus(currentChatId) === 'running');
+  const isRunning = !!(currentChatId && isChatRunning(currentChatId));
   const agent = (chat && chat.agent) || 'claude';
   const agentName = agent.includes('anti') ? 'AntiGravity' : agent.includes('gemini') ? 'Gemini' : agent.includes('opencode') ? 'OpenCode' : 'Claude Code';
   const agentIcon = agent.includes('anti') ? '🔵' : agent.includes('gemini') ? '♊' : agent.includes('opencode') ? '💚' : '&lt;/&gt;';
@@ -4350,8 +4378,7 @@ function showDashboard() {
 
   // Stats
   const chatCount = typeof chats !== 'undefined' ? chats.length : 0;
-  const runningCount = typeof chats !== 'undefined' && typeof runner !== 'undefined' && runner.getSessionStatus
-    ? chats.filter(c => runner.getSessionStatus(c.id) === 'running').length : 0;
+  const runningCount = typeof chats !== 'undefined' ? chats.filter(c => isChatRunning(c.id)).length : 0;
   const projName = (() => { try { const s = document.getElementById('sp-select'); return s && s.options[s.selectedIndex] ? s.options[s.selectedIndex].text.substring(0,12) : '—'; } catch { return '—'; } })();
   const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
   set('ds-total-chats', chatCount || '0');
@@ -4370,13 +4397,13 @@ function renderRecentTasks() {
     // không đảm bảo theo thời gian), nên chat mới nhắn/tạo không tự nhảy lên đầu "Nhiệm vụ gần
     // đây" như tên gọi của nó. Chat đang CHẠY luôn ưu tiên lên đầu bất kể thời gian.
     const recent = [...chats].sort((a, b) => {
-      const aRun = typeof runner !== 'undefined' && runner.getSessionStatus && runner.getSessionStatus(a.id) === 'running';
-      const bRun = typeof runner !== 'undefined' && runner.getSessionStatus && runner.getSessionStatus(b.id) === 'running';
+      const aRun = isChatRunning(a.id);
+      const bRun = isChatRunning(b.id);
       if (aRun !== bRun) return aRun ? -1 : 1;
       return (b.updatedAt || 0) - (a.updatedAt || 0);
     });
     taskEl.innerHTML = recent.map(c => {
-      const isRunning = typeof runner !== 'undefined' && runner.getSessionStatus && runner.getSessionStatus(c.id) === 'running';
+      const isRunning = isChatRunning(c.id);
       const cls = isRunning ? 'tc-running' : 'tc-idle';
       const pill = isRunning
         ? '<span class="status-pill running">⚡ Chạy</span>'
