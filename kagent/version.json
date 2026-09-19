@@ -1,1 +1,1 @@
-{"version":"1.0.174","released":"2026-09-19","notes":"Token saving: skip KimTiem+rawHistory on turns 2-19, reinject every 20 turns"}
+{"version":"1.0.175","released":"2026-09-19","notes":"Kim Tiem per-user toggle — toggle cua nguoi nay khong anh huong nguoi khac"}
