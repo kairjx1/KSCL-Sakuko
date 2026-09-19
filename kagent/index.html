@@ -1229,7 +1229,7 @@ dialog.dlg,#pm-box{
   <div class="topbar-logo">
     <img class="tb-robot" src="/kagent-mascot-face.png" alt="KAgent">
     <div class="tb-brand">
-      <span class="logo">KAgent <span class="version" id="app-version">v1.0.173</span></span>
+      <span class="logo">KAgent <span class="version" id="app-version">v1.0.179</span></span>
       <span class="tagline">AI Agent Manager — KSCL Vietnam</span>
     </div>
   </div>
@@ -4623,11 +4623,7 @@ async function loadKimTiemModules() {
     if (!mods) {
       mods = await relayFetch('/api/modules');
     }
-    // Normalize: relay mới trả user_enabled (trạng thái riêng của user), dùng nó thay enabled global
-    _ktModules = (Array.isArray(mods) ? mods : []).map(m => ({
-      ...m,
-      enabled: typeof m.user_enabled !== 'undefined' ? !!m.user_enabled : !!m.enabled
-    }));
+    _ktModules = Array.isArray(mods) ? mods : [];
     if (!_ktModules.length) {
       list.innerHTML = '<div style="text-align:center;padding:16px;color:#9a9a9a;font-size:12px">Chưa có module nào<br><a href="/admin.html" style="color:#7c3aed">Vào Admin để thêm</a></div>';
       return;
@@ -5475,4 +5471,3 @@ setInterval(checkUpdate, 30 * 60 * 1000);
 
 </body>
 </html>
-
