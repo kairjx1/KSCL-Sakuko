@@ -1582,6 +1582,11 @@ wss.on('connection', (ws) => {
             // FULL hoặc MID inject
             const summaryMaxLen = isFullInject ? 1200 : 600;
 
+            // Nhắc Claude Code tự compact khi context lớn (chỉ áp dụng cho claude agent)
+            if (isClaudeAgent) {
+              systemParts.push(`[KAgent System]: Nếu context window của bạn vượt 150k token trong lượt làm việc này, hãy tự chạy /compact để rút gọn lịch sử trước khi tiếp tục — tránh mất context ở cuối hội thoại dài.`);
+            }
+
             // Kim Tiêm modules — chỉ FULL, chỉ claude/antigravity
             const allowKimTiem = isClaudeAgent || sessionAgentId === 'antigravity';
             if (isFullInject && relayMods.length > 0 && allowKimTiem) {
